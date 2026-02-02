@@ -2582,12 +2582,12 @@
 <h2 id="mcp-is-dead-long-live-mcp">MCP is Dead. Long Live MCP.<a class="headerlink" href="#mcp-is-dead-long-live-mcp" title="Permanent link">&para;</a></h2>
 <h3 id="the-kingdom">The Kingdom<a class="headerlink" href="#the-kingdom" title="Permanent link">&para;</a></h3>
 <p>AI is the King. Every developer is using AI to build software now -  from vibe coding to agentic engineering -  and we're producing more software than ever before.</p>
-<p>And MCP Servers are the current <strong>kings of AI coding</strong>. MCP Servers are remarkable: they extend your agent's capabilities into virtually any domain. With nearly 8,000 servers available on <a href="https://www.pulsemcp.com/">PulseMCP</a> and every major vendor releasing their own server, most developers already have three or four registered. Some have dozens.</p>
+<p>And MCP servers are the current <strong>kings of AI coding</strong>. MCP servers are remarkable: they extend your agent's capabilities into virtually any domain. With nearly 8,000 servers available on <a href="https://www.pulsemcp.com/">PulseMCP</a> and every major vendor releasing their own server, most developers already have three or four registered. Some have dozens.</p>
 <p>But here's the problem: <strong>all kings collect taxes.</strong></p>
 <h3 id="the-kings-tax">The King's Tax<a class="headerlink" href="#the-kings-tax" title="Permanent link">&para;</a></h3>
 <p>Using an MCP Server comes with two significant problems.</p>
 <h4 id="tool-tax">Tool Tax<a class="headerlink" href="#tool-tax" title="Permanent link">&para;</a></h4>
-<p>Like the kings of old, MCP Servers rob the poor (you and me) and give the money to the rich (the AI giants like OpenAI, Microsoft and Anthropic). Each MCP Server consumes between 3K and 30K (looking at you, GitHub MCP!) tokens <em>per request</em>. Every single request.</p>
+<p>Like the kings of old, MCP servers rob the poor (you and me) and give the money to the rich (the AI giants like OpenAI, Microsoft and Anthropic). Each MCP Server consumes between 3K and 30K (looking at you, GitHub MCP!) tokens <em>per request</em>. Every single request.</p>
 <p>This happens because the agent reads all the MCP Server instructions for every configured tool on every request. These "tool tokens" can easily cost a full-time engineer <strong>$30 per month</strong> -  even if they <strong>never use the tools</strong>.</p>
 <p>The maths is brutal: If you're using Claude Opus 4.5 at $5 per million input tokens - 20 days × 10 conversations × 10 messages × 3K tokens = 6M input tokens = <strong>$30</strong> in Tool Tax. Monthly. For nothing.</p>
 <p>Just read innocuously <a href="https://www.anthropic.com/engineering/code-execution-with-mcp">Code execution with MCP: Building more efficient agents</a>, where Anthropic openly stated: "This reduces the token usage from 150K tokens to 2K tokens -  a time and cost saving of 98.7%."</p>
@@ -2598,11 +2598,11 @@
 <p>The problem was clear, yet nobody was building a simple, viable solution.</p>
 <p>I was excited when Anthropic (the creators of the MCP standard) published <a href="https://www.anthropic.com/engineering/advanced-tool-use">Code execution with MCP: Building more efficient agents</a>, which clearly identified the issue. However, their solution was horrible -  the <a href="https://www.anthropic.com/engineering/advanced-tool-use">"Tool Search Tool"</a>. They essentially doubled down on the MCP Server Tool Tax, compounded by patchy client support across AI vendors and their multitude of products.</p>
 <p>The next solution I looked at was the <a href="https://docs.docker.com/ai/mcp-catalog-and-toolkit/mcp-gateway/">Docker MCP Gateway</a>. However, it was so convoluted and limited that I was (almost) happy to pay the Tool Tax.</p>
-<p>As a result, I limited myself to the absolute bare minimum: three MCP Servers -  web search, package version checks, and Context7. One of the biggest issues with agentic engineering is that technology changes so quickly that the "base data" is often outdated. For example, code I wrote frequently failed because my AI pair programmer (GPT-5.2) replaced the GPT-5.2 model with GPT-4o (released in May 2024) because it was convinced GPT-5.2 did <em>not</em> exist.</p>
-<p>So I was stuck: I needed MCP Servers to work efficiently, but I didn't want to pay the Tool Tax or suffer from Context Rot.</p>
+<p>As a result, I limited myself to the absolute bare minimum: three MCP servers -  web search, package version checks, and Context7. One of the biggest issues with agentic engineering is that technology changes so quickly that the "base data" is often outdated. For example, code I wrote frequently failed because my AI pair programmer (GPT-5.2) replaced the GPT-5.2 model with GPT-4o (released in May 2024) because it was convinced GPT-5.2 did <em>not</em> exist.</p>
+<p>So I was stuck: I needed MCP servers to work efficiently, but I didn't want to pay the Tool Tax or suffer from Context Rot.</p>
 <h2 id="eureka">Eureka<a class="headerlink" href="#eureka" title="Permanent link">&para;</a></h2>
 <p>It all came together on a train trip to work. All of a sudden, the pieces clicked into place.</p>
-<p>Maybe I could solve it. Maybe I could help <a href="https://www.youtube.com/@t3dotgg">Theo</a>, along with <a href="https://www.youtube.com/@maximilian-schwarzmueller">Max</a> (one of my favourite Udemy authors, who published <a href="https://www.youtube.com/watch?v=olvnjDadACI">Don't bother with MCP</a>), along with Kelly (<a href="https://www.youtube.com/watch?v=TUjQuC4ugak">Context Rot</a>), Dan (<a href="https://www.youtube.com/watch?v=itS3f1Y52t0">MCP's Biggest Problem</a>), Cole (<a href="https://www.youtube.com/watch?v=1_z3h2r93OY">The BIG Problem with MCP Servers)</a>) -  and many, many others -  avoid the terrible Tool Tax while still enjoying amazing MCP Servers like </p>
+<p>Maybe I could solve it. Maybe I could help <a href="https://www.youtube.com/@t3dotgg">Theo</a>, along with <a href="https://www.youtube.com/@maximilian-schwarzmueller">Max</a> (one of my favourite Udemy authors, who published <a href="https://www.youtube.com/watch?v=olvnjDadACI">Don't bother with MCP</a>), along with Kelly (<a href="https://www.youtube.com/watch?v=TUjQuC4ugak">Context Rot</a>), Dan (<a href="https://www.youtube.com/watch?v=itS3f1Y52t0">MCP's Biggest Problem</a>), Cole (<a href="https://www.youtube.com/watch?v=1_z3h2r93OY">The BIG Problem with MCP servers)</a>) -  and many, many others -  avoid the terrible Tool Tax while still enjoying amazing MCP servers like </p>
 <ul>
 <li><a href="https://github.com/microsoft/playwright-mcp">playwright</a></li>
 <li><a href="https://github.com/chromedevtools/chrome-devtools-mcp">chrome-devtools</a></li>
@@ -2617,7 +2617,7 @@
 <p>After six weeks of part-time hacking, vibing, coding and agentic engineering (which may be a topic for another time), I released <a href="https://github.com/beycom/onetool-mcp">OneTool 1.0.0 (beta)</a>.</p>
 <h2 id="onetool">OneTool<a class="headerlink" href="#onetool" title="Permanent link">&para;</a></h2>
 <h3 id="the-core-idea-stop-making-agents-call-tools-let-them-write-code">The core idea: stop making agents "call tools". Let them write code.<a class="headerlink" href="#the-core-idea-stop-making-agents-call-tools-let-them-write-code" title="Permanent link">&para;</a></h3>
-<p>MCP Servers expose tools to agents as detailed instructions on how to use the tool. The agent reads all these instructions and then selects the right tool. It's like reading the documentation for every Python library in your project, then writing: <code>print("Hello World")</code>.</p>
+<p>MCP servers expose tools to agents as detailed instructions on how to use the tool. The agent reads all these instructions and then selects the right tool. It's like reading the documentation for every Python library in your project, then writing: <code>print("Hello World")</code>.</p>
 <p>So I tried something different. I converted the tools into a developer-friendly API, then asked an agent to <strong>write code snippets</strong> that call the APIs.</p>
 <p>The results were striking.</p>
 <p>Using this approach, agents could handle <strong>unlimited tools</strong> without paying the Tool Tax or suffering from Context Rot. But the goodness didn't stop there. Tool calls were now explicit. No more asking the agent, "please search the web for the latest React docs" -  you could just use <code>brave.search(query="latest react docs 2025")</code>. Tool calls could be batched, chained, included inside loops, and used just like any other code.</p>
@@ -2653,7 +2653,7 @@
 <li><a href="../../learn/configuration/#external-mcp-servers">MCP server proxy</a> -  allows you to wrap any MCP Server with OneTool, configure it with YAML, and call it explicitly -  without the Tool Tax and Context Rot.</li>
 </ul>
 <h3 id="testing-benchmarking-and-proper-engineering">Testing, benchmarking, and proper engineering<a class="headerlink" href="#testing-benchmarking-and-proper-engineering" title="Permanent link">&para;</a></h3>
-<p>To make it easy to develop new tool packs (groups of tools), OneTool includes a powerful <a href="../../reference/cli/bench/">testing and benchmarking</a> harness that compares your tool against other MCP Servers using a real LLM. Define tasks in YAML and get objective metrics: token counts, costs, accuracy scores, timing, and more.</p>
+<p>To make it easy to develop new tool packs (groups of tools), OneTool includes a powerful <a href="../../reference/cli/bench/">testing and benchmarking</a> harness that compares your tool against other MCP servers using a real LLM. Define tasks in YAML and get objective metrics: token counts, costs, accuracy scores, timing, and more.</p>
 <p>OneTool was written with strong engineering practices:</p>
 <ul>
 <li><a href="../../extending/testing/">1,000+ tests</a> (smoke, unit, integration tiers)</li>
@@ -2661,7 +2661,7 @@
 <li>Python best practices: type hints, Ruff formatting/linting and other Python best practices</li>
 </ul>
 <h2 id="give-it-a-try-without-paying-the-tax">Give it a try (without paying the tax)<a class="headerlink" href="#give-it-a-try-without-paying-the-tax" title="Permanent link">&para;</a></h2>
-<p>If AI is the King, and MCP Servers are your thing, then OneTool will help you stop paying the "Tool Tax" (around $30 per tool per month), avoid Context Rot, and unlock superpowers for you and your AI coding buddy.</p>
+<p>If AI is the King, and MCP servers are your thing, then OneTool will help you stop paying the "Tool Tax" (around $30 per tool per month), avoid Context Rot, and unlock superpowers for you and your AI coding buddy.</p>
 <p>Download and install it, and give your agentic engineering the boost it needs.</p>
 <p><a href="/learn/" class="btn btn--primary">Get Started with OneTool</a>
 <a href="https://github.com/beycom/onetool-mcp" class="btn btn--secondary">OneTool on GitHub</a></p>
