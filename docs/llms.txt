@@ -26,7 +26,7 @@ __ot brave.search(query="AI news")
 - context7: search, doc
 - code: search, search_batch, research, autodoc, status
 - ripgrep: search, count, files, types
-- llm: transform
+- llm: transform, transform_file
 - db: tables, schema, query
 - excel: create, read, write, formula, info, search, tables (+17 more)
 - convert: auto, pdf, word, powerpoint, excel

@@ -52,9 +52,18 @@ If input is unclear, ASK the user to clarify before proceeding.
 3. Identify all affected areas:
    - Source files to modify
    - Tests to add/update
-   - Specs to update
+   - Specs to update (search `openspec/specs/` for related specs - see detection rules below)
    - Docs to sync
    - Config to migrate
+
+### Spec Detection Rules
+
+To find affected specs, check for specs matching these patterns:
+- **Tool changes** (`src/ot_tools/<name>.py`): Look for `openspec/specs/tool-<name>/spec.md`
+- **Serve/server changes** (`src/ot/`): Look for `openspec/specs/serve-*/spec.md`
+- **Feature/pack changes**: Search spec files for the feature name: `rg "<feature>" openspec/specs/`
+
+If a spec exists for the functionality being modified, it MUST be updated.
 
 ---
 
@@ -110,14 +119,22 @@ Report test results before proceeding.
 
 ## Step 5: Update Specs
 
-If specs exist for the changed functionality:
+**ALWAYS check for affected specs before skipping this step.**
 
-1. Locate relevant specs in `openspec/specs/`
-2. Update requirements to match new implementation
-3. Update or add scenarios as needed
-4. Run `openspec validate --strict` if available
+1. **Find related specs** using these strategies:
+   - For tool changes (`src/ot_tools/<name>.py`): Check `openspec/specs/tool-<name>/spec.md`
+   - For serve changes: Check `openspec/specs/serve-*/spec.md`
+   - Search for the feature name: `ls openspec/specs/ | grep <feature>`
+   - Search spec contents: `rg "<function_name>" openspec/specs/`
 
-Skip this step if no specs are affected.
+2. **If a spec exists**, update it to match the new implementation:
+   - Add new requirements/scenarios for new functionality
+   - Update existing scenarios if behavior changed
+   - Ensure all function signatures and parameters are documented
+
+3. Run `openspec validate --strict` if available
+
+Only skip this step if you have explicitly verified NO specs exist for the changed functionality.
 
 ---
 

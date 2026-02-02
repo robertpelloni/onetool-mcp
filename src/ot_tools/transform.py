@@ -1,10 +1,10 @@
 """Transform - LLM-powered data transformation.
 
-Takes input data and a prompt, uses an LLM to transform/process it.
+Takes data and a prompt, uses an LLM to transform/process it.
 
 Example:
     llm.transform(
-        brave.search(query="metal prices", count=10),
+        data=brave.search(query="metal prices", count=10),
         prompt="Extract prices as YAML with fields: metal, price, unit, url",
     )
 
@@ -23,7 +23,7 @@ from __future__ import annotations
 # Pack for dot notation: llm.transform()
 pack = "llm"
 
-__all__ = ["transform"]
+__all__ = ["transform", "transform_file"]
 
 # Dependency declarations for CLI validation
 __ot_requires__ = {
@@ -38,6 +38,7 @@ from pydantic import BaseModel, Field
 
 from ot.config import get_secret, get_tool_config
 from ot.logging import LogSpan
+from ot.paths import resolve_cwd_path
 
 
 class Config(BaseModel):
@@ -82,19 +83,19 @@ def _get_api_config() -> tuple[str | None, str | None, str | None, Config]:
 
 def transform(
     *,
-    input: Any,
+    data: Any,
     prompt: str,
     model: str | None = None,
     json_mode: bool = False,
 ) -> str:
-    """Transform input data using an LLM.
+    """Transform data using an LLM.
 
-    Takes any input data (typically a string result from another tool call)
+    Takes any data (typically a string result from another tool call)
     and processes it according to the prompt instructions.
 
     Args:
-        input: Data to transform (will be converted to string if not already)
-        prompt: Instructions for how to transform/process the input
+        data: Data to transform (will be converted to string if not already)
+        prompt: Instructions for how to transform/process the data
         model: AI model to use (uses transform.model from config if not specified)
         json_mode: If True, request JSON output format from the model
 
@@ -104,25 +105,25 @@ def transform(
     Examples:
         # Extract structured data from search results
         llm.transform(
-            input=brave.search(query="gold price today", count=5),
+            data=brave.search(query="gold price today", count=5),
             prompt="Extract the current gold price in USD/oz as a single number",
         )
 
         # Convert to YAML format
         llm.transform(
-            input=brave.search(query="metal prices", count=10),
+            data=brave.search(query="metal prices", count=10),
             prompt="Return ONLY valid YAML with fields: metal, price, unit, url",
         )
 
         # Summarize content
         llm.transform(
-            input=some_long_text,
+            data=some_long_text,
             prompt="Summarize this in 3 bullet points"
         )
 
         # Get JSON output
         llm.transform(
-            input=data,
+            data=my_data,
             prompt="Extract name and email as JSON",
             json_mode=True
         )
@@ -133,12 +134,12 @@ def transform(
             s.add(error="empty_prompt")
             return "Error: prompt is required and cannot be empty"
 
-        input_str = str(input)
-        if not input_str.strip():
-            s.add(error="empty_input")
-            return "Error: input is required and cannot be empty"
+        data_str = str(data)
+        if not data_str.strip():
+            s.add(error="empty_data")
+            return "Error: data is required and cannot be empty"
 
-        s.add(inputLen=len(input_str))
+        s.add(dataLen=len(data_str))
 
         # Get API config
         api_key, base_url, default_model, config = _get_api_config()
@@ -158,8 +159,8 @@ def transform(
         client = OpenAI(api_key=api_key, base_url=base_url, timeout=config.timeout)
 
         # Build the message
-        user_message = f"""Input data:
-{input_str}
+        user_message = f"""Data:
+{data_str}
 
 Instructions:
 {prompt}"""
@@ -211,3 +212,107 @@ Instructions:
                 error_msg = "Authentication error - check OPENAI_API_KEY in secrets.yaml"
             s.add(error=error_msg)
             return f"Error: {error_msg}"
+
+
+def transform_file(
+    *,
+    prompt: str,
+    in_file: str,
+    out_file: str,
+    model: str | None = None,
+    json_mode: bool = False,
+) -> str:
+    """Transform a file's content using an LLM and write to output file.
+
+    Reads the input file, transforms its content according to the prompt,
+    and writes the result to the output file.
+
+    Args:
+        prompt: Instructions for how to transform/process the content
+        in_file: Path to input file (relative to cwd or absolute)
+        out_file: Path to output file (relative to cwd or absolute)
+        model: AI model to use (uses transform.model from config if not specified)
+        json_mode: If True, request JSON output format from the model
+
+    Returns:
+        Success message with bytes written, or error message
+
+    Examples:
+        # Convert markdown to restructured text
+        llm.transform_file(
+            prompt="Convert this markdown to reStructuredText format",
+            in_file="README.md",
+            out_file="README.rst",
+        )
+
+        # Extract data as JSON
+        llm.transform_file(
+            prompt="Extract all URLs and their descriptions as JSON",
+            in_file="links.txt",
+            out_file="links.json",
+            json_mode=True,
+        )
+
+        # Translate content
+        llm.transform_file(
+            prompt="Translate this to Spanish",
+            in_file="greeting.txt",
+            out_file="greeting_es.txt",
+        )
+    """
+    with LogSpan(
+        span="llm.transform_file", promptLen=len(prompt), inFile=in_file, outFile=out_file
+    ) as s:
+        # Validate prompt
+        if not prompt or not prompt.strip():
+            s.add(error="empty_prompt")
+            return "Error: prompt is required and cannot be empty"
+
+        # Resolve and read input file
+        try:
+            in_path = resolve_cwd_path(in_file)
+            if not in_path.exists():
+                s.add(error="in_file_not_found")
+                return f"Error: Input file not found: {in_file}"
+            if not in_path.is_file():
+                s.add(error="in_file_not_file")
+                return f"Error: Input path is not a file: {in_file}"
+            in_content = in_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError as e:
+            s.add(error="in_file_decode_error")
+            return f"Error: Could not decode input file as UTF-8: {e}"
+        except OSError as e:
+            s.add(error=f"in_file_read_error: {e}")
+            return f"Error: Could not read input file: {e}"
+
+        if not in_content.strip():
+            s.add(error="empty_in_file")
+            return "Error: Input file is empty"
+
+        s.add(inLen=len(in_content))
+
+        # Transform the content
+        result = transform(
+            data=in_content,
+            prompt=prompt,
+            model=model,
+            json_mode=json_mode,
+        )
+
+        # Check if transform returned an error
+        if result.startswith("Error:"):
+            s.add(error="transform_failed")
+            return result
+
+        # Resolve and write output file
+        try:
+            out_path = resolve_cwd_path(out_file)
+            # Create parent directories if needed
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(result, encoding="utf-8")
+            bytes_written = len(result.encode("utf-8"))
+            s.add(outLen=bytes_written)
+            return f"OK: Transformed {in_file} -> {out_file} ({bytes_written} bytes)"
+        except OSError as e:
+            s.add(error=f"out_file_write_error: {e}")
+            return f"Error: Could not write output file: {e}"

@@ -97,7 +97,7 @@ class TestTransformValidation:
     def test_empty_prompt_returns_error(self):
         from ot_tools.transform import transform
 
-        result = transform(input="test data", prompt="")
+        result = transform(data="test data", prompt="")
 
         assert "Error" in result
         assert "prompt" in result
@@ -106,28 +106,28 @@ class TestTransformValidation:
     def test_whitespace_prompt_returns_error(self):
         from ot_tools.transform import transform
 
-        result = transform(input="test data", prompt="   ")
+        result = transform(data="test data", prompt="   ")
 
         assert "Error" in result
         assert "prompt" in result
         assert "empty" in result
 
-    def test_empty_input_returns_error(self):
+    def test_empty_data_returns_error(self):
         from ot_tools.transform import transform
 
-        result = transform(input="", prompt="transform this")
+        result = transform(data="", prompt="transform this")
 
         assert "Error" in result
-        assert "input" in result
+        assert "data" in result
         assert "empty" in result
 
-    def test_whitespace_input_returns_error(self):
+    def test_whitespace_data_returns_error(self):
         from ot_tools.transform import transform
 
-        result = transform(input="   ", prompt="transform this")
+        result = transform(data="   ", prompt="transform this")
 
         assert "Error" in result
-        assert "input" in result
+        assert "data" in result
         assert "empty" in result
 
 
@@ -154,7 +154,7 @@ class TestTransform:
             "Transformed result"
         )
 
-        result = transform(input="test data", prompt="Transform this")
+        result = transform(data="test data", prompt="Transform this")
 
         assert result == "Transformed result"
         mock_client.chat.completions.create.assert_called_once()
@@ -170,7 +170,7 @@ class TestTransform:
             _make_config(),
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         assert "OPENAI_API_KEY" in result
@@ -181,14 +181,14 @@ class TestTransform:
 
         mock_config.return_value = ("sk-test", None, "gpt-4", _make_config())
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         assert "base_url" in result
 
     @patch("ot_tools.transform.OpenAI")
     @patch("ot_tools.transform._get_api_config")
-    def test_missing_model(self, mock_config, mock_openai):
+    def test_missing_model(self, mock_config, _mock_openai):
         from ot_tools.transform import transform
 
         mock_config.return_value = (
@@ -198,7 +198,7 @@ class TestTransform:
             _make_config(),
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         assert "model" in result
@@ -219,7 +219,7 @@ class TestTransform:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform", model="custom-model")
+        transform(data="test", prompt="transform", model="custom-model")
 
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["model"] == "custom-model"
@@ -242,7 +242,7 @@ class TestTransform:
             "API rate limit exceeded"
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         assert "rate limit" in result
@@ -263,7 +263,7 @@ class TestTransform:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input={"key": "value"}, prompt="transform")
+        transform(data={"key": "value"}, prompt="transform")
 
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args.kwargs["messages"]
@@ -288,7 +288,7 @@ class TestTransform:
         mock_resp.choices[0].message.content = None
         mock_client.chat.completions.create.return_value = mock_resp
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert result == ""
 
@@ -308,7 +308,7 @@ class TestTransform:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="my data", prompt="my prompt")
+        transform(data="my data", prompt="my prompt")
 
         call_args = mock_client.chat.completions.create.call_args
         messages = call_args.kwargs["messages"]
@@ -336,7 +336,7 @@ class TestTransform:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform")
+        transform(data="test", prompt="transform")
 
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["temperature"] == 0.1
@@ -363,7 +363,7 @@ class TestTransformConfig:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform")
+        transform(data="test", prompt="transform")
 
         mock_openai.assert_called_once_with(
             api_key="sk-test",
@@ -387,7 +387,7 @@ class TestTransformConfig:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform")
+        transform(data="test", prompt="transform")
 
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["max_tokens"] == 1000
@@ -408,7 +408,7 @@ class TestTransformConfig:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform")
+        transform(data="test", prompt="transform")
 
         call_args = mock_client.chat.completions.create.call_args
         assert "max_tokens" not in call_args.kwargs
@@ -437,7 +437,7 @@ class TestTransformJsonMode:
             '{"key": "value"}'
         )
 
-        result = transform(input="test", prompt="transform to json", json_mode=True)
+        result = transform(data="test", prompt="transform to json", json_mode=True)
 
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["response_format"] == {"type": "json_object"}
@@ -459,7 +459,7 @@ class TestTransformJsonMode:
         mock_openai.return_value = mock_client
         mock_client.chat.completions.create.return_value = _mock_response()
 
-        transform(input="test", prompt="transform", json_mode=False)
+        transform(data="test", prompt="transform", json_mode=False)
 
         call_args = mock_client.chat.completions.create.call_args
         assert "response_format" not in call_args.kwargs
@@ -488,7 +488,7 @@ class TestTransformErrorSanitization:
             "Invalid api_key: sk-abc123xyz"
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         # The actual key value should not be exposed
@@ -513,7 +513,7 @@ class TestTransformErrorSanitization:
             "Error with key sk-proj-abc123"
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         # The actual key value should not be exposed
@@ -538,7 +538,206 @@ class TestTransformErrorSanitization:
             "Connection timeout"
         )
 
-        result = transform(input="test", prompt="transform")
+        result = transform(data="test", prompt="transform")
 
         assert "Error" in result
         assert "Connection timeout" in result
+
+
+# -----------------------------------------------------------------------------
+# Transform File Tests
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_cwd_path(tmp_path):
+    """Mock resolve_cwd_path to use tmp_path as base directory."""
+    with patch(
+        "ot_tools.transform.resolve_cwd_path", side_effect=lambda p: tmp_path / p
+    ):
+        yield tmp_path
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestTransformFileValidation:
+    """Test input validation for transform_file function."""
+
+    def test_empty_prompt_returns_error(self, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("test content")
+
+        result = transform_file(prompt="", in_file="input.txt", out_file="output.txt")
+
+        assert "Error" in result
+        assert "prompt" in result
+        assert "empty" in result
+
+    def test_input_file_not_found(self, mock_cwd_path):  # noqa: ARG002
+        from ot_tools.transform import transform_file
+
+        result = transform_file(
+            prompt="transform this", in_file="nonexistent.txt", out_file="output.txt"
+        )
+
+        assert "Error" in result
+        assert "not found" in result
+
+    def test_input_path_is_directory(self, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_dir = mock_cwd_path / "inputdir"
+        input_dir.mkdir()
+
+        result = transform_file(
+            prompt="transform this", in_file="inputdir", out_file="output.txt"
+        )
+
+        assert "Error" in result
+        assert "not a file" in result
+
+    def test_empty_input_file(self, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("")
+
+        result = transform_file(
+            prompt="transform this", in_file="input.txt", out_file="output.txt"
+        )
+
+        assert "Error" in result
+        assert "empty" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestTransformFile:
+    """Test transform_file function with mocked transform."""
+
+    @patch("ot_tools.transform.transform")
+    def test_successful_transform_file(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("original content")
+        output_file = mock_cwd_path / "output.txt"
+
+        mock_transform.return_value = "transformed content"
+
+        result = transform_file(
+            prompt="transform this", in_file="input.txt", out_file="output.txt"
+        )
+
+        assert "OK" in result
+        assert "input.txt" in result
+        assert "output.txt" in result
+        assert output_file.exists()
+        assert output_file.read_text() == "transformed content"
+        mock_transform.assert_called_once_with(
+            data="original content",
+            prompt="transform this",
+            model=None,
+            json_mode=False,
+        )
+
+    @patch("ot_tools.transform.transform")
+    def test_passes_model_parameter(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("content")
+
+        mock_transform.return_value = "result"
+
+        transform_file(
+            prompt="transform",
+            in_file="input.txt",
+            out_file="output.txt",
+            model="gpt-4",
+        )
+
+        mock_transform.assert_called_once_with(
+            data="content",
+            prompt="transform",
+            model="gpt-4",
+            json_mode=False,
+        )
+
+    @patch("ot_tools.transform.transform")
+    def test_passes_json_mode(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("content")
+
+        mock_transform.return_value = '{"key": "value"}'
+
+        transform_file(
+            prompt="to json",
+            in_file="input.txt",
+            out_file="output.json",
+            json_mode=True,
+        )
+
+        mock_transform.assert_called_once_with(
+            data="content",
+            prompt="to json",
+            model=None,
+            json_mode=True,
+        )
+
+    @patch("ot_tools.transform.transform")
+    def test_transform_error_propagates(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("content")
+        output_file = mock_cwd_path / "output.txt"
+
+        mock_transform.return_value = "Error: API rate limit exceeded"
+
+        result = transform_file(
+            prompt="transform", in_file="input.txt", out_file="output.txt"
+        )
+
+        assert "Error" in result
+        assert "rate limit" in result
+        assert not output_file.exists()
+
+    @patch("ot_tools.transform.transform")
+    def test_creates_parent_directories(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("content")
+        output_file = mock_cwd_path / "subdir" / "nested" / "output.txt"
+
+        mock_transform.return_value = "result"
+
+        result = transform_file(
+            prompt="transform",
+            in_file="input.txt",
+            out_file="subdir/nested/output.txt",
+        )
+
+        assert "OK" in result
+        assert output_file.exists()
+        assert output_file.read_text() == "result"
+
+    @patch("ot_tools.transform.transform")
+    def test_reports_bytes_written(self, mock_transform, mock_cwd_path):
+        from ot_tools.transform import transform_file
+
+        input_file = mock_cwd_path / "input.txt"
+        input_file.write_text("content")
+
+        mock_transform.return_value = "result data"  # 11 bytes
+
+        result = transform_file(
+            prompt="transform", in_file="input.txt", out_file="output.txt"
+        )
+
+        assert "11 bytes" in result
