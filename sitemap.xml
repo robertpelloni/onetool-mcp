@@ -5,6 +5,38 @@
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
+         <loc>https://onetool.beycom.online/_internal/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/architecture/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/attribution/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/cli-patterns/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/internal-tools/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/logging/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/specs-viewer/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/testing/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
          <loc>https://onetool.beycom.online/_internal/brand/brand/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
@@ -25,47 +57,23 @@
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
+         <loc>https://onetool.beycom.online/_internal/docs/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/docs/best-practices/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/_internal/docs/design-system/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
          <loc>https://onetool.beycom.online/about/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
          <loc>https://onetool.beycom.online/about/about-onetool/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/creating-clis/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/creating-tools/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/extensions/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/logging/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/testing/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/mkdocs/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/mkdocs/best-practices/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/extending/mkdocs/design-system/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
@@ -81,14 +89,6 @@
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
-         <loc>https://onetool.beycom.online/learn/database-queries/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
-         <loc>https://onetool.beycom.online/learn/examples/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
          <loc>https://onetool.beycom.online/learn/explicit-calls/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
@@ -97,15 +97,23 @@
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
-         <loc>https://onetool.beycom.online/learn/prompting-best-practices/</loc>
-         <lastmod>2026-02-02</lastmod>
-    </url>
-    <url>
          <loc>https://onetool.beycom.online/learn/quickstart/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
          <loc>https://onetool.beycom.online/learn/security/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/learn/extending/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/learn/extending/extension-tools/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/learn/extending/isolated-tools/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
@@ -118,6 +126,10 @@
     </url>
     <url>
          <loc>https://onetool.beycom.online/reference/cli/bench/</loc>
+         <lastmod>2026-02-02</lastmod>
+    </url>
+    <url>
+         <loc>https://onetool.beycom.online/reference/cli/onetool-config/</loc>
          <lastmod>2026-02-02</lastmod>
     </url>
     <url>
