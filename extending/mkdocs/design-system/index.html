@@ -316,17 +316,20 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../../../about/" class="md-tabs__link">
-        
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../about/" class="md-tabs__link">
+          
   
   
     
   
   About
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -1018,7 +1021,7 @@
   <span class="md-ellipsis">
     
   
-    MkDocs
+    Docs
   
 
     
@@ -1040,7 +1043,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    MkDocs
+    Docs
   
 
           </label>
@@ -2103,9 +2106,34 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../../about/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../../about/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -2119,7 +2147,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../about/about-onetool/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About OneTool
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2387,7 +2467,7 @@
         <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    MkDocs
+    Docs
   </span>
 
         </a>
@@ -2411,9 +2491,6 @@
 
 <h1 id="design-system">Design System<a class="headerlink" href="#design-system" title="Permanent link">&para;</a></h1>
 <p>Visual design tokens for OneTool documentation.</p>
-<p>Inspired by <a href="https://react.dev">react.dev</a>.</p>
-<p><strong>Related:</strong> <a href="../best-practices/">Best Practices</a> for how to use Material features.</p>
-<hr />
 <h2 id="colors">Colors<a class="headerlink" href="#colors" title="Permanent link">&para;</a></h2>
 <h3 id="light-theme">Light Theme<a class="headerlink" href="#light-theme" title="Permanent link">&para;</a></h3>
 <table>
@@ -2527,7 +2604,6 @@
 </tr>
 </tbody>
 </table>
-<hr />
 <h2 id="typography">Typography<a class="headerlink" href="#typography" title="Permanent link">&para;</a></h2>
 <h3 id="font-stack">Font Stack<a class="headerlink" href="#font-stack" title="Permanent link">&para;</a></h3>
 <div class="language-css highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c">/* Body text */</span>
@@ -2560,7 +2636,6 @@
 </tr>
 </tbody>
 </table>
-<hr />
 <h2 id="border-radius">Border Radius<a class="headerlink" href="#border-radius" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2584,7 +2659,6 @@
 </tr>
 </tbody>
 </table>
-<hr />
 <h2 id="shadows">Shadows<a class="headerlink" href="#shadows" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -2604,7 +2678,6 @@
 </tr>
 </tbody>
 </table>
-<hr />
 <h2 id="logo">Logo<a class="headerlink" href="#logo" title="Permanent link">&para;</a></h2>
 <p>Single SVG file with CSS-controlled color via <code>mask-image</code>:</p>
 <table>
@@ -2631,20 +2704,17 @@
 - Fill color in file doesn't matter (CSS overrides)
 - Use solid shapes (transparency becomes cutout)
 - Avoid gradients</p>
-<hr />
 <h2 id="links">Links<a class="headerlink" href="#links" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Content links: Underlined, brand primary color</li>
 <li>Nav/header links: No underline, brand text color</li>
 <li>Hover: Brand primary color</li>
 </ul>
-<hr />
 <h2 id="active-states">Active States<a class="headerlink" href="#active-states" title="Permanent link">&para;</a></h2>
 <p>Active navigation tabs use a pill style:
 - Rounded background (<code>2rem</code>)
 - Background: <code>--brand-primary-bg</code>
 - Text: <code>--brand-primary</code></p>
-<hr />
 <h2 id="icons">Icons<a class="headerlink" href="#icons" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Theme toggle: Material Design icons</li>
