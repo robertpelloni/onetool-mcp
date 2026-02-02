@@ -68,19 +68,11 @@ Details and methodology: [ref-claims.md](ref-claims.md)
 
 ## Short Descriptions
 
-### GitHub About
-
 ```text
 🧿 One MCP, unlimited tools
 ```
 
-### PyPI
-
-```text
-One MCP, unlimited tools.
-```
-
-### GitHub Tags
+## GitHub Tags
 
 ```text
 python, mcp, model-context-protocol, mcp-server, llm, code-execution, mcp-tools, agents, token-efficiency, fastmcp, context-rot

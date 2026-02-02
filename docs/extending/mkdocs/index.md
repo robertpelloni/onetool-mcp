@@ -1,4 +1,4 @@
-# MkDocs Documentation
+# OneTool Documentation
 
 Guides for writing and styling OneTool documentation.
 

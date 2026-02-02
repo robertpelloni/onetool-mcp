@@ -1,10 +1,6 @@
 # Best Practices
 
-Best practices for writing and maintaining documentation with MkDocs Material.
-
-**Related:** [Design System](design-system.md) for color values and design tokens.
-
----
+Best practices for writing and maintaining OneTool documentation with MkDocs Material.
 
 ## Configuration Strategy
 
@@ -26,8 +22,6 @@ When customizing Material for MkDocs, prefer this order (minimal maintenance):
 - **Templates** - Fragile, may break on theme updates
 - **Custom CSS** - Requires understanding Material internals
 
----
-
 ## Typography
 
 ### System Fonts (Recommended)
@@ -35,43 +29,11 @@ When customizing Material for MkDocs, prefer this order (minimal maintenance):
 Use system fonts for best performance and native feel.
 
 **Configuration:**
+
 ```yaml
 theme:
   font: false  # Disable Google Fonts
 ```
-
-**Benefits:**
-
-| Benefit | Description |
-|---------|-------------|
-| Zero latency | No font files to download |
-| GDPR compliant | No data sent to Google |
-| Native feel | Text looks familiar to each user's OS |
-| No maintenance | Nothing to update or host |
-
-**What users see:**
-
-| Platform | Text Font | Code Font |
-|----------|-----------|-----------|
-| macOS/iOS | San Francisco | SF Mono |
-| Windows | Segoe UI | Consolas |
-| Android | Roboto | Roboto Mono |
-| Linux | Noto Sans | Liberation Mono |
-
-### Alternative: Google Fonts
-
-If consistency across platforms is critical:
-
-```yaml
-theme:
-  font:
-    text: Inter
-    code: JetBrains Mono
-```
-
-**Trade-offs:** +100KB download, GDPR concerns, external dependency
-
----
 
 ## Logo with Theme Support
 
@@ -87,17 +49,10 @@ Use CSS `mask-image` to color a single SVG based on theme:
 }
 ```
 
-**How it works:**
-- SVG shape becomes a mask
-- `background-color` fills the visible area
-- Theme changes automatically update the color via CSS variable
-
 **SVG requirements:**
 - Fill color in the SVG doesn't matter
 - Use solid shapes (transparency becomes cutout)
 - Avoid complex gradients
-
----
 
 ## Bento Grid Layout
 
@@ -154,8 +109,6 @@ Content here.
 - `{ .class }` syntax requires `attr_list` extension
 - No template overrides needed
 
----
-
 ## Material for MkDocs Feature Reference
 
 ### Required Extensions
@@ -199,23 +152,24 @@ markdown_extensions:
   - pymdownx.tilde
 ```
 
----
-
 ### Admonitions (Callouts)
 
 **Basic:**
+
 ```markdown
 !!! note
     Content here. Indent with 4 spaces.
 ```
 
 **With custom title:**
+
 ```markdown
 !!! note "Custom Title"
     Content here.
 ```
 
 **Without title:**
+
 ```markdown
 !!! note ""
     Just content, no title bar.
@@ -239,18 +193,21 @@ markdown_extensions:
 | `quote` | Citations |
 
 **Collapsible (closed):**
+
 ```markdown
 ??? note "Click to expand"
     Hidden content.
 ```
 
 **Collapsible (open):**
+
 ```markdown
 ???+ note "Click to collapse"
     Visible by default.
 ```
 
 **Nested:**
+
 ```markdown
 !!! note "Outer"
     Content.
@@ -259,11 +216,10 @@ markdown_extensions:
         Nested content.
 ```
 
----
-
 ### Code Blocks
 
 **Basic:**
+
 ````markdown
 ```python
 def hello():
@@ -272,6 +228,7 @@ def hello():
 ````
 
 **With title:**
+
 ````markdown
 ```python title="example.py"
 code here
@@ -279,6 +236,7 @@ code here
 ````
 
 **With line numbers:**
+
 ````markdown
 ```python linenums="1"
 code here
@@ -286,6 +244,7 @@ code here
 ````
 
 **Starting from specific line:**
+
 ````markdown
 ```python linenums="42"
 code here
@@ -293,6 +252,7 @@ code here
 ````
 
 **Highlight specific lines:**
+
 ````markdown
 ```python hl_lines="2 3"
 line 1
@@ -302,6 +262,7 @@ line 3  # highlighted
 ````
 
 **With annotations:**
+
 ````markdown
 ```python
 def hello():
@@ -312,15 +273,15 @@ def hello():
 ````
 
 **Inline code highlighting:**
+
 ```markdown
 Use `#!python print("hello")` for inline.
 ```
 
----
-
 ### Content Tabs
 
 **Basic:**
+
 ```markdown
 === "Tab 1"
     Content for tab 1.
@@ -330,6 +291,7 @@ Use `#!python print("hello")` for inline.
 ```
 
 **With code blocks:**
+
 ````markdown
 === "Python"
     ```python
@@ -344,11 +306,10 @@ Use `#!python print("hello")` for inline.
 
 **Linked tabs** (sync across page): Enable `content.tabs.link` feature.
 
----
-
 ### Icons & Emoji
 
 **Material Design Icons:**
+
 ```markdown
 :material-account-circle:
 :material-check:
@@ -358,6 +319,7 @@ Use `#!python print("hello")` for inline.
 ```
 
 **Octicons:**
+
 ```markdown
 :octicons-arrow-right-24:
 :octicons-check-16:
@@ -366,6 +328,7 @@ Use `#!python print("hello")` for inline.
 ```
 
 **FontAwesome:**
+
 ```markdown
 :fontawesome-brands-github:
 :fontawesome-brands-python:
@@ -373,11 +336,13 @@ Use `#!python print("hello")` for inline.
 ```
 
 **Standard emoji:**
+
 ```markdown
 :smile: :rocket: :warning: :bulb:
 ```
 
 **With styling:**
+
 ```markdown
 :material-check:{ .green }
 :material-close:{ .red }
@@ -385,30 +350,30 @@ Use `#!python print("hello")` for inline.
 
 [Icon search tool](https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/#search)
 
----
-
 ### Buttons
 
 **Primary:**
+
 ```markdown
 [Button Text](url){ .md-button .md-button--primary }
 ```
 
 **Secondary:**
+
 ```markdown
 [Button Text](url){ .md-button }
 ```
 
 **With icon:**
+
 ```markdown
 [Get Started :material-arrow-right:](url){ .md-button }
 ```
 
----
-
 ### Tables
 
 **Basic:**
+
 ```markdown
 | Header 1 | Header 2 |
 |----------|----------|
@@ -416,6 +381,7 @@ Use `#!python print("hello")` for inline.
 ```
 
 **Alignment:**
+
 ```markdown
 | Left | Center | Right |
 |:-----|:------:|------:|
@@ -424,11 +390,10 @@ Use `#!python print("hello")` for inline.
 
 **Sortable tables:** Add tablesort.js (see Material docs).
 
----
-
 ### Lists
 
 **Task list:**
+
 ```markdown
 - [x] Completed
 - [ ] Incomplete
@@ -437,6 +402,7 @@ Use `#!python print("hello")` for inline.
 ```
 
 **Definition list:**
+
 ```markdown
 Term
 :   Definition of the term.
@@ -446,8 +412,6 @@ Another term
 ```
 
 **Nested lists:** Indent with 4 spaces.
-
----
 
 ### Text Formatting
 
@@ -459,8 +423,6 @@ Another term
 | `H~2~O` | Subscript (H₂O) |
 | `X^2^` | Superscript (X²) |
 
----
-
 ### Keyboard Keys
 
 ```markdown
@@ -471,11 +433,10 @@ Another term
 ++arrow-up++
 ```
 
----
-
 ### Tooltips
 
 **On abbreviations (automatic):**
+
 ```markdown
 The HTML spec is maintained by W3C.
 
@@ -484,25 +445,27 @@ The HTML spec is maintained by W3C.
 ```
 
 **On any element:**
+
 ```markdown
 :material-information-outline:{ title="Tooltip text" }
 ```
 
----
-
 ### Footnotes
 
 **Reference:**
+
 ```markdown
 Here is a statement[^1] with a footnote.
 ```
 
 **Definition:**
+
 ```markdown
 [^1]: This is the footnote content.
 ```
 
 **Multi-line:**
+
 ```markdown
 [^2]:
     Long footnote with multiple paragraphs.
@@ -510,11 +473,10 @@ Here is a statement[^1] with a footnote.
     Can include code blocks too.
 ```
 
----
-
 ### Diagrams (Mermaid)
 
 **Flowchart:**
+
 ````markdown
 ```mermaid
 graph LR
@@ -525,6 +487,7 @@ graph LR
 ````
 
 **Sequence:**
+
 ````markdown
 ```mermaid
 sequenceDiagram
@@ -534,6 +497,7 @@ sequenceDiagram
 ````
 
 **State:**
+
 ````markdown
 ```mermaid
 stateDiagram-v2
@@ -544,6 +508,7 @@ stateDiagram-v2
 ````
 
 **Class:**
+
 ````markdown
 ```mermaid
 classDiagram
@@ -554,6 +519,7 @@ classDiagram
 ````
 
 **ER Diagram:**
+
 ````markdown
 ```mermaid
 erDiagram
@@ -562,32 +528,30 @@ erDiagram
 ```
 ````
 
----
-
 ### Grids (Built-in)
 
 **Card grid (equal width):**
+
 ```markdown
 <div class="grid cards" markdown>
 
 - :material-clock-fast: **Title**
 
-  ---
-
+  
   Description text.
 
   [:octicons-arrow-right-24: Link](#)
 
 - :material-code-braces: **Another**
 
-  ---
-
+  
   More text.
 
 </div>
 ```
 
 **Generic grid (2 columns):**
+
 ```markdown
 <div class="grid" markdown>
 
@@ -600,46 +564,48 @@ erDiagram
 </div>
 ```
 
----
-
 ### Images
 
 **Basic:**
+
 ```markdown
 ![Alt text](path/to/image.png)
 ```
 
 **With sizing:**
+
 ```markdown
 ![Alt](image.png){ width="300" }
 ```
 
 **Alignment:**
+
 ```markdown
 ![Alt](image.png){ align=left }
 ![Alt](image.png){ align=right }
 ```
 
 **Light/dark variants:**
+
 ```markdown
 ![Light mode](img.png#only-light)
 ![Dark mode](img-dark.png#only-dark)
 ```
 
 **Lazy loading:**
+
 ```markdown
 ![Alt](image.png){ loading=lazy }
 ```
 
 **Caption (with figure):**
+
 ```markdown
 <figure markdown="span">
   ![Alt](image.png){ width="300" }
   <figcaption>Caption text</figcaption>
 </figure>
 ```
-
----
 
 ### Critic Markup (Track Changes)
 
@@ -652,6 +618,7 @@ erDiagram
 ```
 
 **Block highlight:**
+
 ```markdown
 {==
 
@@ -659,8 +626,6 @@ Entire paragraph highlighted.
 
 ==}
 ```
-
----
 
 ### Attribute Lists
 
@@ -677,12 +642,9 @@ Paragraph with class.
 ![Image](img.png){ width="200" loading="lazy" }
 ```
 
----
-
 ### Page Metadata (Front Matter)
 
 ```yaml
----
 title: Page Title
 description: Meta description for SEO
 hide:
@@ -691,15 +653,4 @@ hide:
   - footer
 icon: material/home
 status: new  # or: deprecated
----
 ```
-
----
-
-## References
-
-- [MkDocs Material Reference](https://squidfunk.github.io/mkdocs-material/reference/)
-- [MkDocs Material Setup](https://squidfunk.github.io/mkdocs-material/setup/)
-- [MkDocs Material Customization](https://squidfunk.github.io/mkdocs-material/customization/)
-- [PyMdown Extensions](https://facelessuser.github.io/pymdown-extensions/)
-- [Mermaid Diagrams](https://mermaid.js.org/)

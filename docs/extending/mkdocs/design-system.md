@@ -2,12 +2,6 @@
 
 Visual design tokens for OneTool documentation.
 
-Inspired by [react.dev](https://react.dev).
-
-**Related:** [Best Practices](best-practices.md) for how to use Material features.
-
----
-
 ## Colors
 
 ### Light Theme
@@ -41,8 +35,6 @@ Inspired by [react.dev](https://react.dev).
 | Warning | `#F59E0B` |
 | Error | `#EF4444` |
 
----
-
 ## Typography
 
 ### Font Stack
@@ -64,8 +56,6 @@ Inspired by [react.dev](https://react.dev).
 | Nav tabs | `0.9rem` | 500 |
 | Body text | `1rem` | 400 |
 
----
-
 ## Border Radius
 
 | Element | Radius |
@@ -74,16 +64,12 @@ Inspired by [react.dev](https://react.dev).
 | Search box | `2rem` |
 | Code blocks | Default |
 
----
-
 ## Shadows
 
 | State | Shadow |
 |-------|--------|
 | Header (default) | None |
 | Header (scrolled) | `0 0 0.2rem rgba(0,0,0,0.1), 0 0.2rem 0.4rem rgba(0,0,0,0.2)` |
-
----
 
 ## Logo
 
@@ -103,15 +89,11 @@ Single SVG file with CSS-controlled color via `mask-image`:
 - Use solid shapes (transparency becomes cutout)
 - Avoid gradients
 
----
-
 ## Links
 
 - Content links: Underlined, brand primary color
 - Nav/header links: No underline, brand text color
 - Hover: Brand primary color
-
----
 
 ## Active States
 
@@ -119,8 +101,6 @@ Active navigation tabs use a pill style:
 - Rounded background (`2rem`)
 - Background: `--brand-primary-bg`
 - Text: `--brand-primary`
-
----
 
 ## Icons
 

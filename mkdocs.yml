@@ -155,7 +155,7 @@ nav:
           - Logging: extending/logging.md
           - Testing: extending/testing.md
           - Creating CLIs: extending/creating-clis.md
-          - MkDocs:
+          - Docs:
               - extending/mkdocs/index.md
               - Best Practices: extending/mkdocs/best-practices.md
               - Design System: extending/mkdocs/design-system.md
@@ -183,4 +183,6 @@ nav:
           - Ripgrep: reference/tools/ripgrep.md
           - Scaffold: reference/tools/scaffold.md
           - Web: reference/tools/web.md
-  - About: about.md
+  - About:
+      - about/index.md
+      - About OneTool: about/about-onetool.md

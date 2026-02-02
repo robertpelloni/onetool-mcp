@@ -107,3 +107,6 @@ demo/tmp/
 
 # ChunkHound db files can be very large and are easily recreated
 **/.chunkhound/db
+
+# Claude Code
+.claude/commands/misc/

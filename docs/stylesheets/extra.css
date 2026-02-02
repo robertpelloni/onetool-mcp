@@ -481,11 +481,6 @@ html {
 .span-4 { grid-column: span 4; }
 .tall { grid-row: span 2; }
 
-@media (max-width: 1200px) {
-  .bento { grid-template-columns: repeat(3, 1fr); }
-  .span-4 { grid-column: span 3; }
-}
-
 @media (max-width: 900px) {
   .bento { grid-template-columns: repeat(2, 1fr); }
   .span-2, .span-3, .span-4 { grid-column: span 2; }
@@ -541,6 +536,14 @@ html {
 .card pre {
   margin: 1rem 0 0;
   border-radius: 0.5rem;
+}
+
+/* ============================================
+   LEFT SIDEBAR NAVIGATION
+   ============================================ */
+
+.md-sidebar--primary .md-nav {
+  font-size: 1rem;
 }
 
 /* ============================================
