@@ -64,7 +64,7 @@ scenarios:
           __ot
           ```python
           data = web.fetch_batch(urls=[["https://en.wikipedia.org/wiki/ChatGPT", "OpenAI"], ["https://en.wikipedia.org/wiki/Claude_(language_model)", "Anthropic"]])
-          llm.transform(input=data, prompt="Extract the latest model version and release date for each")
+          llm.transform(data=data, prompt="Extract the latest model version and release date for each")
           ```
 
       - name: "tool:web-fetch:openrouter"
@@ -83,5 +83,5 @@ scenarios:
           __ot
           ```python
           data = web.fetch_batch(urls=[["https://openrouter.ai/api/v1/models", "Models"]])
-          llm.transform(input=data, prompt="List the 5 most recent models with their release dates")
+          llm.transform(data=data, prompt="List the 5 most recent models with their release dates")
           ```

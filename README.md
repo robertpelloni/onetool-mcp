@@ -37,7 +37,7 @@ __ot brave.search(query="react docs 2026")
 
 Configure one MCP server. Use unlimited tools.
 
-> "This reduces the token usage from 150,000 tokens to 2,000 tokens."
+> "Agents scale better by writing code to call tools instead. This reduces the token usage from 150,000 tokens to 2,000 tokens...a cost saving of 98.7%"
 >
 > — [Anthropic Engineering](https://www.anthropic.com/engineering/code-execution-with-mcp)
 
@@ -51,9 +51,8 @@ Configure one MCP server. Use unlimited tools.
 
 | Demo | Description |
 | ---- | ----------- |
-| [Compare the Search](https://youtube.com/watch?v=TODO) | Side-by-side token comparison |
-| [Build a Wikipedia Tool](https://youtube.com/watch?v=TODO) | Create a custom tool in seconds |
-| [File Me Away](https://youtube.com/watch?v=TODO) | File operations demo |
+| [Compare the Search](https://youtu.be/Dv-_dtHVU_A) | Side-by-side token comparison |
+| [Build a Wikipedia Tool](https://youtu.be/AZz03Yw0s1E) | Create a custom tool in seconds |
 
 ---
 

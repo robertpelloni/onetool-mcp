@@ -63,7 +63,7 @@ scenarios:
           __ot
           ```python
           data = brave.search_batch(queries=[("OpenAI latest GPT model 2025", "OpenAI"), ("Anthropic latest Claude Opus 2025", "Anthropic")], count=5)
-          llm.transform(input=data, prompt="Extract the latest GPT model and Claude Opus model with version and release date.", model="google/gemini-3-flash-preview")
+          llm.transform(data=data, prompt="Extract the latest GPT model and Claude Opus model with version and release date.", model="google/gemini-3-flash-preview")
           ```
 
       - name: "tool:brave:count20"

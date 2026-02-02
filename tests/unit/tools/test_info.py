@@ -631,6 +631,43 @@ def test_schema_to_signature_type_mapping() -> None:
 
 @pytest.mark.unit
 @pytest.mark.serve
+def test_schema_to_signature_union_types() -> None:
+    """Verify _schema_to_signature handles JSON Schema union types (e.g., ["string", "null"])."""
+    from ot.meta import _schema_to_signature
+
+    # Test union with null (common pattern for optional values)
+    schema = {
+        "properties": {
+            "userAgent": {"type": ["string", "null"]},
+            "timeout": {"type": ["integer", "null"]},
+        },
+    }
+    result = _schema_to_signature("test.func", schema)
+    assert "userAgent: str | None = ..." in result
+    assert "timeout: int | None = ..." in result
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_schema_to_signature_union_multiple_types() -> None:
+    """Verify _schema_to_signature handles multi-type unions."""
+    from ot.meta import _schema_to_signature
+
+    schema = {
+        "properties": {
+            # Value can be string, number, or null
+            "value": {"type": ["string", "number", "null"]},
+            # Just null type
+            "empty": {"type": ["null"]},
+        },
+    }
+    result = _schema_to_signature("test.func", schema)
+    assert "value: str | float | None = ..." in result
+    assert "empty: None = ..." in result
+
+
+@pytest.mark.unit
+@pytest.mark.serve
 def test_parse_input_schema_extracts_descriptions() -> None:
     """Verify _parse_input_schema extracts argument descriptions."""
     from ot.meta import _parse_input_schema

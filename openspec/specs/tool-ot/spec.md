@@ -384,13 +384,13 @@ params:
   count: {default: 5, description: "Number of sources"}
 body: |
   results = brave.search(query="{{ topic }}", count={{ count }})
-  llm.transform(input=results, prompt="Extract key findings")
+  llm.transform(data=results, prompt="Extract key findings")
 
 # Example with defaults:
 # $brv_research topic=Python
 # Expands to:
 results = brave.search(query="Python", count=5)
-llm.transform(input=results, prompt="Extract key findings")
+llm.transform(data=results, prompt="Extract key findings")
 ```
 
 ### Requirement: Unified Help

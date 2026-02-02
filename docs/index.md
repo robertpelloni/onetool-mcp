@@ -47,7 +47,7 @@ Configure one MCP Server. Use unlimited tools.
 MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many tools and MCP servers you add. No tool tax. No context rot. **24× lower cost.**
 
 !!! quote ""
-    "This reduces the token usage from 150,000 tokens to 2,000 tokens."
+    "Agents scale better by writing code to call tools instead. This reduces the token usage from 150,000 tokens to 2,000 tokens...a cost saving of 98.7%"
      - [Anthropic Engineering](https://www.anthropic.com/engineering/code-execution-with-mcp)
 
 [:octicons-arrow-right-24: See comparison](learn/comparison.md)

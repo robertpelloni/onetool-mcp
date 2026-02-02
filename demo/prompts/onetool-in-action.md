@@ -14,8 +14,8 @@ Optimise calls to get the best results. Tweak onetool tool parameters for better
 Test both tools and relevant snippets to answer the questions below.
 Compare and score them (out of 10) based on quality.
 
-Columns:
-Task | Claude Speed | Claude Quality | OT Speed | OT Quality | Recommended For | Call/Snippet
+Result MUST be in a markdown table with columns:
+Tool | Speed | Quality | Recommended For | Call/Snippet
 Call/Snippet should have all parameters for both Claude and OneTool.
 
 Run searches sequentially.
@@ -32,10 +32,11 @@ Also test batch_fetch with these URLs for comparison:
 - https://modelcontextprotocol.info/docs/concepts/resources/
 - https://modelcontextprotocol.info/docs/concepts/tools/
 
-Questions:
+Question:
 - MCP resources vs tools?
-- When to use MCP resources?
-- When to use MCP tools?
+
+Provide a simple summary table of the tools at the end
+
 Finally, list all Claude and onetool commands used.
 ```
 
@@ -48,10 +49,11 @@ Explain each step so it is easy to follow what you did and why. Use 🧿 to high
 - Learn onetool with `ot.help(info="full")` and `scaffold.templates()`
 - Verify tools_dir is configured for ~/.onetool/tools using `ot.config()`. If not, add `~/.onetool/tools/**/*.py` to the config.
 - Scaffold a "wiki" pack using `scaffold.create(name="wiki", scope="global", template="extension")`
+- Hint: Check `ot.tools(pattern="...", info="full")` for the correct parameter names
 
 - Implement these tools:
   - `page(slug, size=10)` - Fetch HTML from https://en.wikipedia.org/wiki/{slug}, truncate to size KB
-  - `summary(slug, prompt)` - Use call_tool("llm.transform", ...) to summarize page content  
+  - `summary(slug, prompt)` - Use call_tool("llm.transform", ...) to summarize page content
   - `data(slug)` - Fetch JSON from https://en.wikipedia.org/api/rest_v1/page/summary/{slug}
 
 - Implementation notes:
@@ -82,7 +84,7 @@ Optimise calls to get the best results. Tweak onetool tool parameters for better
 Test both tools for each task below.
 Compare and score them (out of 10) based on quality.
 
-Columns:
+Result MUST be in a markdown table with columns:
 Task | Claude Speed | Claude | OneTool | Recommended For | Call/Snippet
 Call/Snippet should have all parameters for both Claude and OneTool.
 

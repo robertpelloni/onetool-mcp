@@ -23,7 +23,7 @@ snippets:
       count: { default: 10, description: "Number of sources" }
     body: |
       results = brave.search(query="{{ q }}", count={{ count }})
-      llm.transform(input=results, prompt="Extract key findings as bullet points with sources")
+      llm.transform(data=results, prompt="Extract key findings as bullet points with sources")
 
 
 
@@ -151,7 +151,7 @@ snippets:
       schema: { description: "What to extract (e.g., 'prices as {item, price}')" }
     body: |
       content = web.fetch(url="{{ u }}", include_tables=True)
-      llm.transform(input=content, prompt="Extract {{ schema }} as YAML")
+      llm.transform(data=content, prompt="Extract {{ schema }} as YAML")
 
   web_summary:
     description: Fetch and summarize a web page
@@ -160,7 +160,7 @@ snippets:
       focus: { default: "", description: "What to focus on" }
     body: |
       content = web.fetch(url="{{ u }}", output_format="markdown", fast=True)
-      llm.transform(input=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
+      llm.transform(data=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
   # ============================================================================
   # FIRECRAWL (f_)
   # ============================================================================

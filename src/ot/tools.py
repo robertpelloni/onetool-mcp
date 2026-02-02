@@ -93,7 +93,7 @@ def get_pack(name: str) -> Any:
         results = brave.search(query="python")
 
         llm = get_pack("llm")
-        summary = llm.transform(input=text, prompt="Summarize")
+        summary = llm.transform(data=text, prompt="Summarize")
     """
     from ot.executor.pack_proxy import build_execution_namespace
     from ot.executor.tool_loader import load_tool_registry

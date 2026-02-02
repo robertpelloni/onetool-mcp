@@ -676,7 +676,7 @@ Public License instead of this License.  But first, please read
 --------------------------------------------------------------------------------
 
 OneTool
-Copyright 2024-present, OneTool Authors
+Copyright 2024-present, Gavin Lasnitzki
 Licensed under the GNU General Public License v3.0.
 
 Third-Party Credits:

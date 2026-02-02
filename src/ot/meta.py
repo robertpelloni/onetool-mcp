@@ -580,7 +580,20 @@ def _schema_to_signature(full_name: str, schema: dict[str, Any]) -> str:
             "array": "list",
             "object": "dict",
         }
-        py_type = type_map.get(prop_type, prop_type)
+
+        # Handle JSON Schema union types (e.g., ["string", "null"])
+        if isinstance(prop_type, list):
+            # Filter out "null" and map remaining types
+            non_null = [t for t in prop_type if t != "null"]
+            if non_null:
+                mapped = [type_map.get(t, t) for t in non_null]
+                py_type = " | ".join(mapped)
+                if "null" in prop_type:
+                    py_type = f"{py_type} | None"
+            else:
+                py_type = "None"
+        else:
+            py_type = type_map.get(prop_type, prop_type)
 
         if prop_name in required:
             params.append(f"{prop_name}: {py_type}")

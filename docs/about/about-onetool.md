@@ -100,7 +100,7 @@ You'll also get tired of typing `query="..."`, so I added smart parameter prefix
 
 ### Batteries included: 100+ tools, plus "smart tools"
 
-OneTool includes [100+ tools](../reference/tools/index.md), including web search (Brave, Grounding, Firecrawl), web fetch using [trafilatura](https://github.com/adbar/trafilatura), databases, file operations, diagrams, file conversions, and more - ready to use out of the box.
+OneTool includes [100+ tools](../reference/tools/index.md), including web search (Brave, Grounding, Firecrawl), web fetch using trafilatura, databases, file operations, diagrams, file conversions, and more - ready to use out of the box.
 
 It even has "Smart Tools" -  [LLM-powered transformation](../reference/tools/llm.md). Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.
 
@@ -123,7 +123,7 @@ OneTool is built for developers. It's very powerful -  so knowledge is your grea
 
 Every developer loves plugins, extensions, and ways to make tools even better. OneTool is highly configurable and extensible.
 
-- [Scaffold tools](../learn/extending/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtube.com/watch?v=TODO) of Claude building a Wikipedia fetcher in under three minutes.
+- [Scaffold tools](../learn/extending/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtu.be/AZz03Yw0s1E) of Claude building a Wikipedia fetcher in under three minutes.
 - [MCP server proxy](../reference/cli/onetool-config.md#external-mcp-servers) - allows you to wrap any MCP Server with OneTool, configure it with YAML, and call it explicitly - without the tool tax and context rot.
 
 ### Testing, benchmarking, and proper engineering
