@@ -450,7 +450,15 @@ async def execute_command(
     # Determine validation behavior
     should_validate = not skip_validation and prepared_code is None
 
-    with LogSpan(span="runner.execute", mode="code", command=stripped[:200]) as span:
+    # Extract tool name from command (e.g., "brave.search(query=...)" -> "brave.search")
+    # Only extract for single-line commands to avoid misleading results for code blocks
+    tool_name = None
+    if "(" in stripped:
+        prefix = stripped.split("(")[0].strip()
+        if "\n" not in prefix:
+            tool_name = prefix
+
+    with LogSpan(span="runner.execute", command=stripped, tool=tool_name) as span:
         try:
             if use_thread_pool:
                 # Run in thread pool so event loop can process proxy calls

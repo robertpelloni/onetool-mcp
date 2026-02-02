@@ -210,8 +210,9 @@ Field-based truncation limits (applied unless `OT_LOG_VERBOSE=true`):
 | Field Pattern                           | Limit |
 | --------------------------------------- | ----- |
 | path, filepath, source, dest, directory | 200   |
+| command                                 | 200   |
 | url                                     | 120   |
-| query, topic, pattern                   | 100   |
+| query, topic, pattern, prompt           | 100   |
 | error                                   | 300   |
 | default                                 | 120   |
 

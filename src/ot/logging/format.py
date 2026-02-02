@@ -7,9 +7,10 @@ Field-based truncation limits:
     | Pattern                                        | Limit |
     |------------------------------------------------|-------|
     | path, filepath, source, dest, directory        | 200   |
+    | command                                        | 200   |
     | url                                            | 120   |
     | query, topic                                   | 100   |
-    | pattern                                        | 100   |
+    | pattern, prompt                                | 100   |
     | error                                          | 300   |
     | default                                        | 120   |
 
@@ -31,10 +32,12 @@ FIELD_LIMITS: dict[str, int] = {
     "source": 200,
     "dest": 200,
     "directory": 200,
+    "command": 200,
     "url": 120,
     "query": 100,
     "topic": 100,
     "pattern": 100,
+    "prompt": 100,
     "error": 300,
 }
 DEFAULT_LIMIT = 120

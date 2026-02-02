@@ -694,7 +694,7 @@ def deep_research(
             urls=["https://company1.com/pricing", "https://company2.com/pricing"]
         )
     """
-    with LogSpan(span="firecrawl.deep_research", prompt=prompt[:100]) as span:
+    with LogSpan(span="firecrawl.deep_research", prompt=prompt) as span:
         client = _get_client()
         if client is None:
             return "Error: FIRECRAWL_API_KEY secret not configured"

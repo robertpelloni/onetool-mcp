@@ -195,30 +195,21 @@ The system SHALL log every MCP tool call with full context.
 #### Scenario: Tool call logging
 - **GIVEN** an MCP `run()` call is received
 - **WHEN** the call is processed
-- **THEN** it SHALL log:
-  - `span: "mcp.request"`
-  - `tool`: Function name being called
-  - `kwargs`: Arguments (truncated if large)
+- **THEN** it SHALL log with `span: "runner.execute"` including:
+  - `tool`: Function name being called (e.g., `brave.search`)
+  - `command`: Full command syntax (truncated via central FIELD_LIMITS)
   - `duration`: Time to complete
+  - `status`: SUCCESS or FAILED
 
 #### Scenario: Tool call arguments
 - **GIVEN** a tool call with arguments
 - **WHEN** the call is logged
-- **THEN** arguments SHALL be logged with values truncated at `OT_LOG_TRUNCATE` characters
+- **THEN** the `command` field SHALL be truncated according to `FIELD_LIMITS["command"]`
 
 #### Scenario: Tool call result
 - **GIVEN** a tool call completes
 - **WHEN** the result is logged
 - **THEN** it SHALL include `resultLength` (character count of output)
-
-### Requirement: Execution Mode Logging
-
-The system SHALL log executor information for each call.
-
-#### Scenario: Host execution logging
-- **GIVEN** a tool executes in host process
-- **WHEN** execution completes
-- **THEN** it SHALL log `executor: "simple"`
 
 ### Requirement: FastMCP Context Integration
 
