@@ -155,6 +155,7 @@ def get_ot_pack_functions() -> dict[str, Any]:
     return {
         "tools": tools,
         "packs": packs,
+        "servers": servers,
         "aliases": aliases,
         "snippets": snippets,
         "config": config,
@@ -227,7 +228,8 @@ def _format_general_help() -> str:
 ## Discovery
   ot.tools()              - List all tools
   ot.tools(pattern="web") - Filter by pattern
-  ot.packs()              - List all packs
+  ot.packs()              - List all packs (local + MCP)
+  ot.servers()            - List MCP proxy servers
   ot.snippets()           - List all snippets
   ot.aliases()            - List all aliases
   ot.help(query="..")     - Search for help
@@ -235,7 +237,7 @@ def _format_general_help() -> str:
 ## Info Levels
   info="list" - Names only
   info="min"  - Name + description (default)
-  info="full" - Everything
+  info="full" - Everything (includes instructions)
 
 ## Quick Examples
   brave.search(query="AI news")
@@ -448,7 +450,8 @@ def _format_search_results(
         lines.append("")
         lines.append("Try browsing with:")
         lines.append("  ot.tools()    - List all tools")
-        lines.append("  ot.packs()    - List all packs")
+        lines.append("  ot.packs()    - List all packs (local + MCP)")
+        lines.append("  ot.servers()  - List MCP proxy servers")
         lines.append("  ot.snippets() - List all snippets")
         lines.append("  ot.aliases()  - List all aliases")
 
@@ -504,7 +507,7 @@ def _build_tool_info(
     Args:
         full_name: Full tool name (e.g., "brave.search")
         func: The function object
-        source: Source identifier (e.g., "local", "proxy:github")
+        source: Source identifier (e.g., "local", "mcp:github")
         info: Output verbosity level ("list", "min", "full")
 
     Returns:
@@ -626,7 +629,7 @@ def _build_proxy_tool_info(
         full_name: Full tool name (e.g., "github.search")
         description: Tool description from MCP server
         input_schema: JSON Schema for tool input
-        source: Source identifier (e.g., "proxy:github")
+        source: Source identifier (e.g., "mcp:github")
         info: Output verbosity level ("list", "min", "full")
 
     Returns:
@@ -718,7 +721,7 @@ def tools(
                     tool_name,
                     proxy_tool.description or "",
                     proxy_tool.input_schema,
-                    f"proxy:{proxy_tool.server}",
+                    f"mcp:{proxy_tool.server}",
                     info,
                 )
             )
@@ -777,21 +780,43 @@ def packs(
         # info="full" - detailed info for each matching pack
         if info == "full":
             results: list[dict[str, Any] | str] = []
+            cfg = get_config()
+
             for pack_name in all_pack_names:
                 is_local = pack_name in local_packs
 
                 # Build detailed pack info
                 lines = [f"# {pack_name} pack", ""]
 
-                # Get instructions
+                # Show source type
+                if is_local:
+                    lines.append("**Type:** Local")
+                else:
+                    lines.append("**Type:** MCP Proxy Server")
+                lines.append("")
+
+                # Get instructions from prompts.yaml
                 try:
                     prompts_config = get_prompts()
                     configured = get_pack_instructions(prompts_config, pack_name)
                     if configured:
+                        lines.append("## Instructions")
+                        lines.append("")
                         lines.append(configured)
                         lines.append("")
                 except PromptsError:
                     pass
+
+                # For proxy packs, also check server config for instructions
+                if not is_local and pack_name in cfg.servers:
+                    server_cfg = cfg.servers[pack_name]
+                    if server_cfg.instructions:
+                        # Only add header if not already added from prompts
+                        if "## Instructions" not in "\n".join(lines):
+                            lines.append("## Instructions")
+                            lines.append("")
+                        lines.append(server_cfg.instructions.strip())
+                        lines.append("")
 
                 # List tools in this pack
                 lines.append("## Tools")
@@ -827,7 +852,7 @@ def packs(
 
         for pack_name in all_pack_names:
             is_local = pack_name in local_packs
-            source = "local" if is_local else "proxy"
+            source = "local" if is_local else "mcp"
 
             # Count tools in pack
             if is_local:
@@ -849,6 +874,116 @@ def packs(
 
         s.add("count", len(packs_list))
         return packs_list
+
+
+def servers(
+    *,
+    pattern: str = "",
+    info: InfoLevel = "min",
+) -> list[dict[str, Any] | str]:
+    """List configured MCP proxy servers with optional filtering.
+
+    Shows all MCP servers configured in servers.yaml, including their
+    connection status, tool count, and instructions.
+
+    Args:
+        pattern: Filter servers by name pattern (case-insensitive substring)
+        info: Output verbosity level - "list" (names only), "min" (name + status + tool_count),
+              or "full" (detailed info with instructions and tools)
+
+    Returns:
+        List of server names (info="list") or server dicts/strings (info="min"/"full")
+
+    Example:
+        ot.servers()
+        ot.servers(pattern="github")
+        ot.servers(info="full")
+        ot.servers(pattern="devtools", info="full")
+    """
+    proxy = get_proxy_manager()
+    cfg = get_config()
+
+    with log(span="ot.servers", pattern=pattern or None, info=info) as s:
+        # Get all configured servers
+        all_server_names = sorted(cfg.servers.keys())
+
+        # Filter by pattern
+        if pattern:
+            all_server_names = [
+                name for name in all_server_names if pattern.lower() in name.lower()
+            ]
+
+        # info="list" - just names
+        if info == "list":
+            s.add("count", len(all_server_names))
+            return all_server_names  # type: ignore[return-value]
+
+        # info="full" - detailed info for each server
+        if info == "full":
+            results: list[dict[str, Any] | str] = []
+
+            for server_name in all_server_names:
+                server_cfg = cfg.servers[server_name]
+                conn = proxy.get_connection(server_name)
+                status = "connected" if conn else "disconnected"
+                tool_count = len(proxy.list_tools(server=server_name)) if conn else 0
+
+                lines = [f"# {server_name} server", ""]
+                lines.append(f"**Type:** MCP Proxy Server ({server_cfg.type})")
+                lines.append(f"**Status:** {status}")
+                lines.append(f"**Enabled:** {server_cfg.enabled}")
+                if server_cfg.type == "http" and server_cfg.url:
+                    lines.append(f"**URL:** {server_cfg.url}")
+                elif server_cfg.type == "stdio" and server_cfg.command:
+                    cmd = f"{server_cfg.command} {' '.join(server_cfg.args)}"
+                    lines.append(f"**Command:** {cmd}")
+                lines.append("")
+
+                # Show instructions if configured
+                if server_cfg.instructions:
+                    lines.append("## Instructions")
+                    lines.append("")
+                    lines.append(server_cfg.instructions.strip())
+                    lines.append("")
+
+                # List tools if connected
+                if conn:
+                    lines.append(f"## Tools ({tool_count})")
+                    lines.append("")
+                    proxy_tools = proxy.list_tools(server=server_name)
+                    for tool in sorted(proxy_tools, key=lambda t: t.name):
+                        desc = tool.description or "(no description)"
+                        first_line = desc.split("\n")[0].strip()
+                        lines.append(f"- **{server_name}.{tool.name}**: {first_line}")
+                elif server_cfg.enabled:
+                    lines.append("## Tools")
+                    lines.append("")
+                    lines.append("(not connected)")
+
+                results.append("\n".join(lines))
+
+            s.add("count", len(results))
+            return results
+
+        # info="min" (default) - summary for each server
+        servers_list: list[dict[str, Any] | str] = []
+
+        for server_name in all_server_names:
+            server_cfg = cfg.servers[server_name]
+            conn = proxy.get_connection(server_name)
+            status = "connected" if conn else "disconnected"
+            tool_count = len(proxy.list_tools(server=server_name)) if conn else 0
+
+            servers_list.append({
+                "name": server_name,
+                "type": server_cfg.type,
+                "enabled": server_cfg.enabled,
+                "status": status,
+                "tool_count": tool_count,
+            })
+
+        s.add("count", len(servers_list))
+        return servers_list
 
 
 # ============================================================================
@@ -1493,6 +1628,15 @@ def help(*, query: str = "", info: InfoLevel = "min") -> str:
                     s.add("type", "tool")
                     s.add("match", query)
                     return _format_tool_help(tool, pack)
+
+        # Check for exact server match (MCP proxy servers)
+        server_names = servers(info="list")
+        if query in server_names:
+            server_results = servers(pattern=query, info="full")
+            if server_results:
+                s.add("type", "server")
+                s.add("match", query)
+                return str(server_results[0])
 
         # Check for exact pack match
         pack_names = packs(info="list")

@@ -68,8 +68,23 @@ def _get_instructions() -> str:
     # Load prompts from config (loaded via include: or inline prompts:)
     prompts = get_prompts(inline_prompts=_config.prompts)
 
-    # Return instructions from prompts.yaml
-    return prompts.instructions.strip()
+    parts = [prompts.instructions.strip()]
+
+    # Append server-specific instructions from enabled servers
+    if _config.servers:
+        server_instructions = []
+        for name, cfg in _config.servers.items():
+            if cfg.enabled and cfg.instructions:
+                server_instructions.append(f"## {name}\n{cfg.instructions.strip()}")
+
+        if server_instructions:
+            parts.append("\n# MCP Server Instructions\n")
+            parts.append(
+                "The following MCP servers have provided instructions for how to use their tools and resources:\n"
+            )
+            parts.append("\n\n".join(server_instructions))
+
+    return "\n".join(parts)
 
 
 @asynccontextmanager

@@ -135,6 +135,10 @@ class McpServerConfig(BaseModel):
         default_factory=dict, description="Environment variables for stdio servers"
     )
     timeout: int = Field(default=30, description="Connection timeout in seconds")
+    instructions: str | None = Field(
+        default=None,
+        description="Agent instructions for using this server's tools (surfaced in MCP instructions)",
+    )
 
     @field_validator("url", "command", mode="before")
     @classmethod

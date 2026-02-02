@@ -37,7 +37,7 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **WHEN** `ot.tools(info="full")` is called
 - **THEN** each entry SHALL include: `{name, signature, description, source}`
 - **AND** each entry SHALL include `{args, returns, example}` when available
-- **AND** source SHALL be "local" or "proxy:{server}"
+- **AND** source SHALL be "local" or "mcp:{server}"
 
 #### Scenario: Proxy tool signature from schema
 - **GIVEN** a proxy MCP server with tools exposing `inputSchema`
@@ -229,14 +229,15 @@ The `ot.packs()` function SHALL list packs with optional filtering.
 - **GIVEN** `info="min"` parameter (or default)
 - **WHEN** `ot.packs()` or `ot.packs(info="min")` is called
 - **THEN** each entry SHALL include: `{name, source, tool_count}`
-- **AND** source SHALL be "local" or "proxy"
+- **AND** source SHALL be "local" or "mcp"
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.packs(pattern="brave", info="full")` is called
 - **THEN** it SHALL return detailed pack info including:
   - Pack header with name
-  - Configured instructions (if present in prompts.yaml)
+  - Type indicator ("Local" or "MCP Proxy Server")
+  - Configured instructions (if present in prompts.yaml or server config)
   - List of tools in the pack with descriptions
 
 #### Scenario: Pack with configured instructions
@@ -244,11 +245,64 @@ The `ot.packs()` function SHALL list packs with optional filtering.
 - **WHEN** `ot.packs(pattern="excel", info="full")` is called
 - **THEN** it SHALL include the configured instructions text
 
-#### Scenario: Proxy pack
+#### Scenario: MCP server pack
 - **GIVEN** a proxy server "github" is configured
 - **WHEN** `ot.packs(pattern="github", info="full")` is called
 - **THEN** it SHALL list tools from the proxy server
-- **AND** show source as "proxy"
+- **AND** show type as "MCP Proxy Server"
+- **AND** include server instructions if configured in servers.yaml
+
+---
+
+### Requirement: Server Discovery
+
+The `ot.servers()` function SHALL list configured MCP proxy servers with optional filtering.
+
+#### Scenario: List all servers
+- **GIVEN** MCP servers are configured in servers.yaml
+- **WHEN** `ot.servers()` is called
+- **THEN** it SHALL return a list of all configured servers
+- **AND** default info level SHALL be `min`
+
+#### Scenario: Filter by pattern
+- **GIVEN** a pattern parameter
+- **WHEN** `ot.servers(pattern="git")` is called
+- **THEN** it SHALL return only servers with names containing the pattern (case-insensitive substring)
+
+#### Scenario: Info level list
+- **GIVEN** `info="list"` parameter
+- **WHEN** `ot.servers(info="list")` is called
+- **THEN** it SHALL return only server names as a list of strings
+
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter (or default)
+- **WHEN** `ot.servers()` or `ot.servers(info="min")` is called
+- **THEN** each entry SHALL include: `{name, type, enabled, status, tool_count}`
+- **AND** type SHALL be "stdio" or "http"
+- **AND** status SHALL be "connected" or "disconnected"
+
+#### Scenario: Info level full
+- **GIVEN** `info="full"` parameter
+- **WHEN** `ot.servers(pattern="devtools", info="full")` is called
+- **THEN** it SHALL return detailed server info including:
+  - Server name as heading
+  - Type (MCP Proxy Server with stdio/http)
+  - Connection status
+  - Enabled state
+  - URL or command (depending on type)
+  - Instructions (if configured)
+  - List of tools (if connected)
+
+#### Scenario: Server with instructions
+- **GIVEN** a server has `instructions` configured in servers.yaml
+- **WHEN** `ot.servers(pattern="devtools", info="full")` is called
+- **THEN** it SHALL include the configured instructions text
+
+#### Scenario: Disconnected server
+- **GIVEN** a server is configured but not connected
+- **WHEN** `ot.servers(info="full")` is called
+- **THEN** it SHALL show status as "disconnected"
+- **AND** tools section SHALL show "(not connected)"
 
 ---
 
@@ -347,7 +401,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
 - **GIVEN** no query parameter
 - **WHEN** `ot.help()` is called
 - **THEN** it SHALL return a general overview with:
-  - Discovery commands (`ot.tools()`, `ot.packs()`, etc.)
+  - Discovery commands (`ot.tools()`, `ot.packs()`, `ot.servers()`, etc.)
   - Info level documentation
   - Quick examples
   - Usage tips
@@ -363,6 +417,16 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - Return type
   - Example usage
   - Documentation URL
+
+#### Scenario: Exact server lookup
+- **GIVEN** a query matching an MCP server name exactly (e.g., `devtools`)
+- **WHEN** `ot.help(query="devtools")` is called
+- **THEN** it SHALL return server help including:
+  - Server name as heading
+  - Type (MCP Proxy Server)
+  - Connection status
+  - Server instructions (if configured)
+  - List of tools (if connected)
 
 #### Scenario: Exact pack lookup
 - **GIVEN** a query matching a pack name exactly (e.g., `firecrawl`)

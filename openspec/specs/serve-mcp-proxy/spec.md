@@ -186,3 +186,26 @@ The system SHALL support stdio transport for local MCP servers.
 - **GIVEN** a stdio MCP subprocess crashes
 - **WHEN** a tool call is attempted
 - **THEN** it SHALL return an error indicating server unavailable
+
+### Requirement: Server Instructions
+
+The system SHALL support per-server instructions for guiding agent usage.
+
+#### Scenario: Server config with instructions
+- **GIVEN** an MCP server config with `instructions` field
+- **WHEN** the server is enabled
+- **THEN** instructions SHALL be surfaced in MCP protocol instructions
+- **AND** instructions SHALL be available via `ot.servers(info="full")`
+- **AND** instructions SHALL be available via `ot.help(query="servername")`
+
+#### Scenario: Instructions in MCP protocol
+- **GIVEN** enabled servers with instructions configured
+- **WHEN** client connects to OneTool
+- **THEN** MCP protocol instructions SHALL include a "MCP Server Instructions" section
+- **AND** each server's instructions SHALL be under a `## servername` heading
+
+#### Scenario: Server without instructions
+- **GIVEN** an MCP server config without `instructions` field
+- **WHEN** the server is enabled
+- **THEN** it SHALL function normally without instructions
+- **AND** no placeholder instructions SHALL be generated

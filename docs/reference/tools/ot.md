@@ -15,9 +15,10 @@ Internal tools for OneTool introspection and management.
 
 | Function | Description |
 |----------|-------------|
-| `ot.help(query, info)` | Unified help - search tools, packs, snippets, aliases |
+| `ot.help(query, info)` | Unified help - search tools, packs, servers, snippets, aliases |
 | `ot.tools(pattern, info)` | List tools, filter by pattern |
-| `ot.packs(pattern, info)` | List packs, filter by pattern |
+| `ot.packs(pattern, info)` | List packs (local + MCP), filter by pattern |
+| `ot.servers(pattern, info)` | List MCP proxy servers, filter by pattern |
 | `ot.aliases(pattern, info)` | List aliases, filter by pattern |
 | `ot.snippets(pattern, info)` | List snippets, filter by pattern |
 | `ot.config()` | Show aliases, snippets, and server names |
@@ -38,7 +39,7 @@ All discovery functions (`help`, `tools`, `packs`, `aliases`, `snippets`) suppor
 
 ## ot.help()
 
-Unified help entry point - search across tools, packs, snippets, and aliases.
+Unified help entry point - search across tools, packs, servers, snippets, and aliases.
 
 ```python
 # General help overview
@@ -49,6 +50,10 @@ ot.help(query="brave.search")
 
 # Exact pack lookup
 ot.help(query="firecrawl")
+
+# Exact server lookup (MCP proxy servers)
+ot.help(query="devtools")
+ot.help(query="github")
 
 # Snippet lookup (prefix with $)
 ot.help(query="$b_q")
@@ -64,12 +69,13 @@ ot.help(query="search", info="list")
 **Behaviour:**
 
 - No query: Returns general help overview with discovery commands and examples
+- Exact server match: Returns server help with type, status, instructions, and tool list
 - Exact tool match (contains `.`): Returns detailed tool help with signature, args, returns, example
 - Exact pack match: Returns pack help with instructions and tool list
 - Snippet match (starts with `$`): Returns snippet definition with params and body
 - Alias match: Returns alias mapping and target description
 - Fuzzy matches: Groups results by type (Tools, Packs, Snippets, Aliases)
-- No matches: Suggests using `ot.tools()`, `ot.packs()`, etc. to browse
+- No matches: Suggests using `ot.tools()`, `ot.packs()`, `ot.servers()`, etc. to browse
 
 The `info` parameter controls detail level for all search results.
 
@@ -103,7 +109,7 @@ Returns a list of tool names (info="list") or tool dicts.
 
 ## ot.packs()
 
-List all packs, filter by pattern.
+List all packs (local and MCP), filter by pattern.
 
 ```python
 # List all packs (default: info="min")
@@ -115,11 +121,46 @@ ot.packs(pattern="brav")
 # Names only
 ot.packs(info="list")
 
-# Full details (instructions + tool list)
+# Full details (type, instructions, tool list)
 ot.packs(pattern="brave", info="full")
+
+# MCP server packs show source="mcp"
+ot.packs(pattern="devtools")
 ```
 
-Returns a list of pack names (info="list") or pack summaries/details.
+Returns a list of pack names (info="list") or pack summaries/details. MCP proxy servers appear as packs with `source: "mcp"`.
+
+## ot.servers()
+
+List configured MCP proxy servers with connection status.
+
+```python
+# List all servers (default: info="min")
+ot.servers()
+
+# Filter by pattern
+ot.servers(pattern="git")
+
+# Names only
+ot.servers(info="list")
+
+# Full details (type, status, instructions, tools)
+ot.servers(pattern="devtools", info="full")
+```
+
+Returns server configuration including:
+
+- `name` - Server name from config
+- `type` - Connection type (stdio or http)
+- `enabled` - Whether server is enabled
+- `status` - Connection status (connected/disconnected)
+- `tool_count` - Number of tools available
+
+With `info="full"`, also shows:
+
+- Server instructions (if configured)
+- List of available tools (if connected)
+- URL or command details
 
 ## ot.aliases()
 

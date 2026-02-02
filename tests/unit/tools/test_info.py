@@ -683,7 +683,7 @@ def test_build_proxy_tool_info_min() -> None:
         "github.search",
         "Search GitHub",
         {"properties": {"query": {"type": "string"}}},
-        "proxy:github",
+        "mcp:github",
         info="min",
     )
     assert result == {"name": "github.search", "description": "Search GitHub"}
@@ -699,7 +699,7 @@ def test_build_proxy_tool_info_list() -> None:
         "github.search",
         "Search GitHub",
         {"properties": {"query": {"type": "string"}}},
-        "proxy:github",
+        "mcp:github",
         info="list",
     )
     assert result == "github.search"
@@ -722,12 +722,12 @@ def test_build_proxy_tool_info_full() -> None:
         "github.search",
         "Search GitHub repositories",
         schema,
-        "proxy:github",
+        "mcp:github",
         info="full",
     )
     assert result["name"] == "github.search"
     assert result["description"] == "Search GitHub repositories"
-    assert result["source"] == "proxy:github"
+    assert result["source"] == "mcp:github"
     assert "query: str" in result["signature"]
     assert "limit: int = 10" in result["signature"]
     assert "query: Search query" in result["args"]
@@ -769,10 +769,153 @@ def test_tools_proxy_returns_enriched_info(mock_proxy_manager: MagicMock) -> Non
     tool = result[0]
     assert isinstance(tool, dict)
     assert tool["name"] == "github.search"
-    assert tool["source"] == "proxy:github"
+    assert tool["source"] == "mcp:github"
     # Signature should be derived from schema, not just (...)
     assert "query: str" in tool["signature"]
     assert "repo: str = ..." in tool["signature"]
     # Args should be extracted from schema descriptions
     assert "query: Search query" in tool["args"]
     assert "repo: Repository name" in tool["args"]
+
+
+# ============================================================================
+# ot.servers() Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_servers_list_info(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(info='list') returns server names only."""
+    from unittest.mock import MagicMock as MM
+    from unittest.mock import patch
+
+    from ot.meta import servers
+
+    # Mock config with servers
+    mock_cfg = MM()
+    mock_cfg.servers = {"devtools": MM(), "github": MM()}
+
+    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            result = servers(info="list")
+
+    assert result == ["devtools", "github"]
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_servers_min_info(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(info='min') returns server summaries."""
+    from unittest.mock import MagicMock as MM
+    from unittest.mock import patch
+
+    from ot.meta import servers
+
+    # Mock config with servers
+    mock_devtools = MM()
+    mock_devtools.type = "stdio"
+    mock_devtools.enabled = True
+
+    mock_cfg = MM()
+    mock_cfg.servers = {"devtools": mock_devtools}
+
+    mock_proxy_manager.get_connection.return_value = None  # Not connected
+    mock_proxy_manager.list_tools.return_value = []
+
+    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            result = servers(info="min")
+
+    assert len(result) == 1
+    assert result[0]["name"] == "devtools"
+    assert result[0]["type"] == "stdio"
+    assert result[0]["enabled"] is True
+    assert result[0]["status"] == "disconnected"
+    assert result[0]["tool_count"] == 0
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_servers_full_with_instructions(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(info='full') includes instructions."""
+    from unittest.mock import MagicMock as MM
+    from unittest.mock import patch
+
+    from ot.meta import servers
+
+    # Mock config with server that has instructions
+    mock_devtools = MM()
+    mock_devtools.type = "stdio"
+    mock_devtools.enabled = True
+    mock_devtools.command = "npx"
+    mock_devtools.args = ["-y", "chrome-devtools-mcp@latest"]
+    mock_devtools.instructions = "Use take_screenshot after actions."
+
+    mock_cfg = MM()
+    mock_cfg.servers = {"devtools": mock_devtools}
+
+    mock_proxy_manager.get_connection.return_value = None  # Not connected
+
+    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            result = servers(pattern="devtools", info="full")
+
+    assert len(result) == 1
+    output = result[0]
+    assert "# devtools server" in output
+    assert "MCP Proxy Server (stdio)" in output
+    assert "## Instructions" in output
+    assert "Use take_screenshot after actions." in output
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_servers_pattern_filter(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(pattern=...) filters by name."""
+    from unittest.mock import MagicMock as MM
+    from unittest.mock import patch
+
+    from ot.meta import servers
+
+    mock_cfg = MM()
+    mock_cfg.servers = {"devtools": MM(), "github": MM(), "gitlab": MM()}
+
+    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            result = servers(pattern="git", info="list")
+
+    assert result == ["github", "gitlab"]
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_help_server_lookup(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.help(query='servername') returns server info."""
+    from unittest.mock import MagicMock as MM
+    from unittest.mock import patch
+
+    from ot.meta import help
+
+    # Mock config with server
+    mock_devtools = MM()
+    mock_devtools.type = "stdio"
+    mock_devtools.enabled = True
+    mock_devtools.command = "npx"
+    mock_devtools.args = ["-y", "chrome-devtools-mcp"]
+    mock_devtools.instructions = "Browser automation tools."
+
+    mock_cfg = MM()
+    mock_cfg.servers = {"devtools": mock_devtools}
+    mock_cfg.alias = {}
+
+    mock_proxy_manager.get_connection.return_value = None
+    mock_proxy_manager.servers = []
+    mock_proxy_manager.list_tools.return_value = []
+
+    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            result = help(query="devtools")
+
+    assert "# devtools server" in result
+    assert "Browser automation tools." in result
