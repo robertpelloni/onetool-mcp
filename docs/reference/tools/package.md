@@ -1,7 +1,5 @@
 # Package
 
-**Latest versions. npm, PyPI, OpenRouter. No API key needed.**
-
 Check latest versions for npm, PyPI packages and search OpenRouter AI models.
 
 ## Highlights
@@ -51,11 +49,3 @@ package.models(query="claude-sonnet-4.*", provider="anthropic")
 # Unified version check
 package.version(registry="npm", packages=["express", "fastify"])
 ```
-
-## Source
-
-[npm Registry API](https://github.com/npm/registry) | [PyPI JSON API](https://warehouse.pypa.io/api-reference/json.html) | [OpenRouter API](https://openrouter.ai/docs)
-
-## Based on
-
-[mcp-package-version](https://github.com/sammcj/mcp-package-version) by Sam McLeod (MIT)

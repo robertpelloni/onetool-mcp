@@ -23,7 +23,7 @@
 
 Each MCP server consumes **3K-30K tokens per request**. Connect 5 servers and you've burned 55K tokens before the conversation starts. Connect 10+ and you're at 100K tokens.
 
-The math is brutal: Claude Opus 4.5 at $15/M input tokens, 20 days × 10 conversations × 10 messages × 3K tokens = **$30/month per MCP server** - even if you never use the tools.
+The math is brutal: Claude Opus 4.5 at $5/M input tokens, 20 days × 10 conversations × 10 messages × 3K tokens = **$30/month per MCP server** - even if you never use the tools.
 
 And then there's **context rot** - your AI literally gets dumber as you add more tools ([Chroma Research, 2025](https://research.trychroma.com/context-rot)).
 
@@ -167,7 +167,7 @@ def summary(*, title: str) -> str:
 __ot wiki.summary(title="Python_(programming_language)")
 ```
 
-[📖 Creating tools guide](https://onetool.beycom.online/extending/creating-tools/)
+[📖 Creating tools guide](https://onetool.beycom.online/learn/extending/extension-tools/)
 
 ---
 
@@ -178,7 +178,7 @@ __ot wiki.summary(title="Python_(programming_language)")
 - [Configuration](https://onetool.beycom.online/learn/configuration/) - YAML schema
 - [Tools Reference](https://onetool.beycom.online/reference/tools/) - All 100+ tools
 - [Security](https://onetool.beycom.online/learn/security/) - Security layers
-- [Extending](https://onetool.beycom.online/extending/) - Build your own
+- [Extending](https://onetool.beycom.online/learn/extending/) - Build your own
 
 ---
 

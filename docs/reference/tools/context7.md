@@ -1,7 +1,5 @@
 # Context7
 
-**Up-to-date docs for any library. Flexible key formats.**
-
 Library documentation search and retrieval with extensive key normalization.
 
 ## Highlights
@@ -60,11 +58,3 @@ context7.doc(library_key="https://github.com/vercel/next.js")
 # Get version-specific documentation
 context7.doc(library_key="vercel/next.js", topic="app router", version="v14")
 ```
-
-## Source
-
-[Context7 API](https://context7.com/)
-
-## Based on
-
-[context7](https://github.com/upstash/context7) by Upstash (MIT)

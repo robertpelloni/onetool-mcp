@@ -1,7 +1,5 @@
 # Explicit Tool Calls
 
-**Write code. Call APIs. No guessing.**
-
 OneTool's `__ot` prefix gives you explicit control over tool invocation. You write the code - the agent doesn't have to guess which tool or which parameters.
 
 ## Trigger Prefixes

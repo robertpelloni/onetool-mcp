@@ -1,7 +1,5 @@
 # Diagram
 
-**Professional diagrams from text descriptions. No ASCII art.**
-
 Generates and renders diagrams using Kroki as the unified backend, supporting Mermaid, PlantUML, D2, and 25+ other diagram types.
 
 ## Highlights
@@ -127,7 +125,3 @@ tools:
       prefer: self_hosted
       self_hosted_url: http://localhost:8000
 ```
-
-## Source
-
-[Kroki](https://kroki.io/) | [Mermaid](https://mermaid.js.org/) | [PlantUML](https://plantuml.com/) | [D2](https://d2lang.com/)

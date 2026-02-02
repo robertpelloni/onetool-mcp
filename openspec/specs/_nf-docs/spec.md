@@ -5,23 +5,23 @@ TBD - created by archiving change add-project-docs. Update Purpose after archive
 ## Requirements
 ### Requirement: Getting Started Documentation
 
-The project SHALL provide getting started documentation in `docs/getting-started/`.
+The project SHALL provide getting started documentation in `docs/learn/`.
 
 #### Scenario: Quickstart guide
 - **GIVEN** a new user
-- **WHEN** they read `getting-started/quickstart.md`
+- **WHEN** they read `learn/quickstart.md`
 - **THEN** they can install with `uv tool install onetool-mcp`
 - **AND** they can make their first tool call within 2 minutes
 
 #### Scenario: Detailed installation
 - **GIVEN** a user needing platform-specific setup
-- **WHEN** they read `getting-started/installation.md`
-- **THEN** they find instructions for `uv tool install` and `pip install`
+- **WHEN** they read `learn/installation.md`
+- **THEN** they find instructions for `uv tool install`
 - **AND** they find MCP configuration examples
 
 #### Scenario: Configuration reference
 - **GIVEN** a user configuring OneTool
-- **WHEN** they read `getting-started/configuration.md`
+- **WHEN** they read `learn/configuration.md`
 - **THEN** they find all config options documented
 
 ### Requirement: CLI Reference Documentation
@@ -66,10 +66,10 @@ The project SHALL provide a landing page at `docs/index.md`.
 - **WHEN** the user reads it
 - **THEN** they understand what content that section contains
 
-#### Scenario: Badges displayed
+#### Scenario: Hero section displayed
 - **GIVEN** the home page
 - **WHEN** a user views it
-- **THEN** they see shields.io badges for version, license, and Python version
+- **THEN** they see a hero section with logo, tagline, and call-to-action buttons
 
 ---
 
@@ -94,64 +94,60 @@ The project SHALL document all tools at `docs/reference/tools/`.
 
 ### Requirement: How-to Guides
 
-The project SHALL provide task-oriented guides at `docs/guides/`.
+The project SHALL provide task-oriented guides in `docs/learn/`.
 
 #### Scenario: Explicit calls guide
 - **GIVEN** a user wanting to understand explicit invocation
-- **WHEN** they read `guides/explicit-calls.md`
+- **WHEN** they read `learn/explicit-calls.md`
 - **THEN** they learn how to use the `__ot` prefix
 
-#### Scenario: Prompting guide
-- **GIVEN** a user optimizing their prompts
-- **WHEN** they read `guides/prompting-best-practices.md`
-- **THEN** they find patterns, anti-patterns, and snippet usage
+#### Scenario: Security guide
+- **GIVEN** a user concerned about security
+- **WHEN** they read `learn/security.md`
+- **THEN** they find security layers, AST validation, and path boundaries
 
-#### Scenario: Database queries guide
-- **GIVEN** a user working with databases
-- **WHEN** they read `guides/database-queries.md`
-- **THEN** they find db.* workflow examples and best practices
+#### Scenario: Comparison guide
+- **GIVEN** a user evaluating OneTool
+- **WHEN** they read `learn/comparison.md`
+- **THEN** they find token savings and cost comparisons
 
-### Requirement: Examples Section
+### Requirement: Extension Documentation
 
-The project SHALL provide examples at `docs/examples/`.
+The project SHALL provide user-facing extension docs at `docs/learn/extending/`.
 
-#### Scenario: Examples index
-- **GIVEN** a user at `examples/index.md`
-- **WHEN** they scan the page
-- **THEN** they find recipes organized by category: web, code, data
-
-#### Scenario: Recipe format
-- **GIVEN** an example recipe
-- **WHEN** the user reads it
-- **THEN** they find: goal, code snippet, expected output
-
-### Requirement: Beta Features Documentation
-
-The project SHALL document experimental features at `docs/beta/`.
-
-#### Scenario: Beta index
-- **GIVEN** a user at `beta/index.md`
+#### Scenario: Extension overview
+- **GIVEN** a user wanting to build tools at `learn/extending/index.md`
 - **WHEN** they read it
-- **THEN** they see a stability warning and list of beta features
+- **THEN** they find an overview of extension options and quick start
 
-### Requirement: Developer Documentation
+#### Scenario: Extension tool guide
+- **GIVEN** a user creating an extension tool
+- **WHEN** they read `learn/extending/extension-tools.md`
+- **THEN** they find the full guide for building in-process tools
 
-The project SHALL provide developer docs at `docs/extending/`.
+#### Scenario: Isolated tool guide
+- **GIVEN** a user needing external dependencies
+- **WHEN** they read `learn/extending/isolated-tools.md`
+- **THEN** they find the PEP 723 subprocess tool guide
 
-#### Scenario: Contributing overview
-- **GIVEN** a contributor at `extending/index.md`
+### Requirement: Internal Documentation
+
+The project SHALL provide contributor docs at `docs/_internal/`.
+
+#### Scenario: Contributor overview
+- **GIVEN** a contributor at `_internal/index.md`
 - **WHEN** they read it
-- **THEN** they find how to: create tools, create CLIs, run tests
+- **THEN** they find links to architecture, testing, logging, and CLI patterns
 
-#### Scenario: Tool creation guide
-- **GIVEN** a developer creating a new tool
-- **WHEN** they read `extending/creating-tools.md`
-- **THEN** they find the full guide including attribution requirements
+#### Scenario: Internal tool creation
+- **GIVEN** a contributor creating a bundled tool
+- **WHEN** they read `_internal/internal-tools.md`
+- **THEN** they find the guide for tools in `src/ot_tools/`
 
 #### Scenario: Testing and logging
-- **GIVEN** a developer debugging
+- **GIVEN** a contributor debugging or writing tests
 - **WHEN** they look for help
-- **THEN** they find testing.md and logging.md in extending/
+- **THEN** they find `_internal/testing.md` and `_internal/logging.md`
 
 ### Requirement: Directory Index Files
 
@@ -221,8 +217,8 @@ The generated documentation site SHALL provide enhanced navigation, search, and 
 #### Scenario: Typography
 - **GIVEN** the documentation site
 - **WHEN** rendered
-- **THEN** body text uses Inter font
-- **AND** code blocks use JetBrains Mono font
+- **THEN** body text uses system fonts (Google Fonts disabled)
+- **AND** code blocks use system monospace fonts
 
 ### Requirement: GitHub Pages Deployment
 
@@ -431,7 +427,6 @@ The project SHALL provide learning materials in `docs/learn/`.
 #### Scenario: Consolidated guides
 - **GIVEN** the learn section
 - **WHEN** checked
-- **THEN** it contains quickstart, installation, configuration, security, and guides
-- **AND** examples are in `learn/examples.md`
-- **AND** comparison data is in `learn/comparison.md`
+- **THEN** it contains quickstart, installation, configuration, security, explicit-calls, and comparison
+- **AND** extending documentation is in `learn/extending/`
 

@@ -1,7 +1,5 @@
 # Code Search
 
-**Find code by meaning. Not just text.**
-
 Semantic code search using ChunkHound indexes and DuckDB.
 
 ## Highlights
@@ -113,7 +111,3 @@ code.search_batch(queries="error handling|validation", exclude="test")
 # Check index status
 code.status()
 ```
-
-## Source
-
-[ChunkHound](https://github.com/chunkhound/chunkhound) | [DuckDB](https://duckdb.org/)

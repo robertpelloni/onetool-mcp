@@ -1,7 +1,5 @@
 # Web Fetch
 
-**Clean content from any URL. No noise.**
-
 Extracts main content from web pages, filtering navigation, ads, and boilerplate.
 
 ## Highlights
@@ -78,7 +76,3 @@ web.fetch_batch(
     fast=True
 )
 ```
-
-## Source
-
-[trafilatura](https://trafilatura.readthedocs.io/)

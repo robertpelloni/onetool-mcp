@@ -1,7 +1,5 @@
 # LLM Tools
 
-**Data in. Structured output. One function.**
-
 LLM-powered data transformation tools. Takes input data and a prompt, uses an LLM to process/transform it.
 
 ## Highlights
@@ -14,14 +12,17 @@ LLM-powered data transformation tools. Takes input data and a prompt, uses an LL
 
 | Function | Description |
 |----------|-------------|
-| `llm.transform(input, prompt, ...)` | Transform data using LLM instructions |
+| `llm.transform(data, prompt, ...)` | Transform data using LLM instructions |
+| `llm.transform_file(prompt, in_file, out_file, ...)` | Transform file content and write to output |
 
 ## Key Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `input` | any | Data to transform (converted to string, required) |
-| `prompt` | str | Instructions for transformation (required) |
+| `data` | any | Data to transform (converted to string) |
+| `prompt` | str | Instructions for transformation |
+| `in_file` | str | Input file path (for transform_file) |
+| `out_file` | str | Output file path (for transform_file) |
 | `model` | str | AI model to use (uses `transform.model` from config) |
 | `json_mode` | bool | If True, request JSON output format (default: False) |
 
@@ -37,27 +38,34 @@ Configuration (tool not available until all are set):
 ```python
 # Extract structured data from search results
 llm.transform(
-    input=brave.search(query="gold price today"),
+    data=brave.search(query="gold price today"),
     prompt="Extract the current gold price in USD/oz as a single number"
 )
 
 # Convert to YAML format
 llm.transform(
-    input=some_data,
+    data=some_data,
     prompt="Return ONLY valid YAML with fields: name, price, url"
 )
 
 # Summarize content
 llm.transform(
-    input=web.fetch(url="https://example.com/article"),
+    data=web.fetch(url="https://example.com/article"),
     prompt="Summarize the main points in 3 bullet points"
 )
 
 # Get JSON output with json_mode
 llm.transform(
-    input=raw_data,
+    data=raw_data,
     prompt="Extract name and email fields",
     json_mode=True
+)
+
+# Transform a file
+llm.transform_file(
+    prompt="Convert this markdown to reStructuredText format",
+    in_file="README.md",
+    out_file="README.rst"
 )
 ```
 
@@ -73,7 +81,3 @@ tools:
     timeout: 30        # API timeout in seconds (default: 30)
     max_tokens: 4096   # Maximum tokens in response (optional)
 ```
-
-## Source
-
-[OpenRouter API](https://openrouter.ai/docs) | [OpenAI API](https://platform.openai.com/docs)

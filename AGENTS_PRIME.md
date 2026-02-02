@@ -12,5 +12,5 @@ MCP server with single `run` tool for LLM Python code execution.
 ## Config
 
 - `pyproject.toml` - deps, scripts, tools
-- `justfile` - dev tasks (`just check`, `just demo-*`)
+- `justfile` - dev tasks (`just check`, `just demo::*`)
 - `AGENTS_RULES.md` - coding/testing rules

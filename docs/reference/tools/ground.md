@@ -1,7 +1,5 @@
 # Grounding Search
 
-**Google-backed answers. Real-time data. Source citations.**
-
 Web search with Google's grounding capabilities via Gemini API. Provides current information with source citations.
 
 ## Highlights
@@ -71,7 +69,3 @@ ground.docs(query="connection pooling", technology="postgresql")
 # Reddit discussions
 ground.reddit(query="best IDE for Python", subreddit="learnpython")
 ```
-
-## Source
-
-[Gemini API Grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search)

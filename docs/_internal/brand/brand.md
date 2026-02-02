@@ -14,7 +14,7 @@ Brand assets, messaging, and reference materials for OneTool.
 | [ref-links.md](ref-links.md) | External references and resources |
 | [ref-tool-packs.md](ref-tool-packs.md) | Tool pack descriptions |
 
-**Documentation styling:** See [extending/mkdocs](../../extending/mkdocs/index.md) for design system and best practices.
+**Documentation styling:** See [docs](../docs/index.md) for design system and best practices.
 
 ---
 
@@ -83,8 +83,8 @@ python, mcp, model-context-protocol, mcp-server, llm, code-execution, mcp-tools,
 ## Stats
 
 ```text
-- 15 packs
-- 90+ tools
+- 16 packs
+- 105 tools
 - 2 CLIs (onetool, bench)
 - 96% token reduction
 - 24x cost reduction

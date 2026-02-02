@@ -1,7 +1,5 @@
 # Ripgrep
 
-**Blazing fast file search. Regex or literal. Any codebase.**
-
 Fast text and regex search in files using ripgrep.
 
 ## Highlights
@@ -95,11 +93,3 @@ ripgrep.files(glob="tests/**/test_*.py")
 ripgrep.search(pattern="TODO", glob="**/*.{js,ts}")
 ripgrep.count(pattern="import", glob="src/**/*.py")
 ```
-
-## Source
-
-[ripgrep](https://github.com/BurntSushi/ripgrep)
-
-## Inspired by
-
-[mcp-ripgrep](https://github.com/mcollina/mcp-ripgrep) by Matteo Collina (MIT)

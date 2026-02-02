@@ -1,7 +1,5 @@
 # onetool
 
-**The MCP server. One tool. Unlimited capabilities.**
-
 Exposes a single `run` tool that executes Python code. Your agent writes code; OneTool runs it.
 
 ## Usage
@@ -70,11 +68,18 @@ onetool --config config/onetool.yaml
 
 ## Configuration
 
-Configuration file: `config/onetool.yaml` or `.onetool/onetool.yaml`
+Configuration files: `.onetool/onetool.yaml` (project) or `~/.onetool/onetool.yaml` (global)
 
-See [Configuration Reference](../../learn/configuration.md) for full schema.
+See [onetool Configuration](onetool-config.md) for full schema reference.
 
-## Environment Variables
+### Quick Setup
+
+```bash
+onetool init           # Create ~/.onetool/ with defaults
+onetool init validate  # Check for errors
+```
+
+### Environment Variables
 
 | Variable | Description |
 |----------|-------------|

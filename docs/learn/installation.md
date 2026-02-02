@@ -84,7 +84,7 @@ rm -rf ~/.onetool/  # Optional: remove global config
 ## From Source (Development)
 
 ```bash
-git clone https://github.com/beycom/onetool.git
+git clone https://github.com/beycom/onetool-mcp.git
 cd onetool
 uv sync --group dev
 ```
@@ -210,4 +210,3 @@ OT_CWD=demo bench run demo/bench/features.yaml
 
 - [Configuration](configuration.md) - YAML schema and options
 - [CLI Reference](../reference/cli/onetool.md) - Command-line tools
-- [Examples](examples.md) - Demo project usage

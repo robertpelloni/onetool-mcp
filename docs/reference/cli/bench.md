@@ -1,7 +1,5 @@
 # bench
 
-**Measure what matters. Tokens, cost, accuracy.**
-
 Real agent + MCP testing. Define tasks in YAML, get objective metrics: token counts, costs, accuracy scores, timing.
 
 ## Usage
@@ -113,11 +111,14 @@ Use `---PROMPT---` delimiter to split a task into sequential prompts. Each promp
 
 ## Configuration
 
-Configuration file: `.onetool/config/bench.yaml` (project) or `~/.onetool/bench.yaml` (global)
+| File | Location | Purpose |
+|------|----------|---------|
+| `bench.yaml` | `.onetool/bench.yaml` or `~/.onetool/bench.yaml` | Benchmark harness config |
+| `bench-secrets.yaml` | `.onetool/bench-secrets.yaml` or `~/.onetool/bench-secrets.yaml` | LLM API keys (OPENAI_API_KEY, etc.) |
 
-| Variable | Description |
-|----------|-------------|
-| `BENCH_CONFIG` | Config file path override |
+**Resolution:** `BENCH_CONFIG` env var → project → global
+
+**Note:** Benchmark API keys (for running LLMs) go in `bench-secrets.yaml`, not `secrets.yaml` (which is for tool API keys).
 
 ## Output
 
@@ -126,3 +127,71 @@ Benchmarks produce:
 - Cost estimates (USD)
 - Timing information
 - Evaluation scores
+
+## Demo Project
+
+The `demo/` folder provides sample configurations and data for testing.
+
+### Structure
+
+```
+demo/
+  .onetool/
+    onetool.yaml      # MCP server config
+    bench.yaml        # Benchmark harness config
+    prompts.yaml      # Prompt templates
+  bench/              # Benchmark YAML files
+  db/                 # Sample databases (northwind.db)
+```
+
+### Running with Demo Config
+
+```bash
+# Run benchmarks
+OT_CWD=demo bench run demo/bench/features.yaml
+
+# Or use justfile
+just demo::bench       # TUI picker for demo benchmarks
+```
+
+### Benchmark Files
+
+| File | Description |
+|------|-------------|
+| `features.yaml` | Feature showcase (search, docs, transform) |
+| `compare.yaml` | Compare base vs OneTool responses |
+| `tool_*.yaml` | Per-tool benchmarks |
+
+## Prompting Best Practices
+
+Two rules prevent 90% of tool-calling problems:
+
+```yaml
+system_prompt: |
+  Never retry successful tool calls to get "better" results.
+  If a tool call fails, report the error - do not compute the result yourself.
+```
+
+**Why:**
+
+- **No retries on success:** Agents sometimes want to "improve" results by calling the same tool again. This wastes tokens and can cause loops.
+- **No manual computation on failure:** When a tool fails, agents often try to compute the answer themselves. This defeats the purpose of using tools.
+
+### Batch Operations
+
+For multiple related queries, use batch functions:
+
+```python
+# Instead of multiple calls
+brave.search(query="topic 1")
+brave.search(query="topic 2")
+
+# Use batch
+brave.search_batch(queries=["topic 1", "topic 2"])
+```
+
+### Token Efficiency
+
+- Use short prefixes (`__ot`) for simple calls
+- Use code fences for multi-step operations
+- Prefer batch operations over multiple calls

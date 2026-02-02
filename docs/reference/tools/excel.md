@@ -1,7 +1,5 @@
 # Excel
 
-**25 functions. Tables, formulas, structure. Full spreadsheet control.**
-
 Excel file manipulation using openpyxl. Create, read, write workbooks, apply formulas, manage tables, and inspect spreadsheet structure.
 
 ## Highlights
@@ -178,10 +176,3 @@ A sample spreadsheet is available at `demo/data/sample_sales.xlsx` with:
 - **Inventory** sheet: Stock levels with conditional formulas
 - **Summary** sheet: Cross-sheet formulas and merged cells
 
-## Source
-
-[openpyxl Documentation](https://openpyxl.readthedocs.io/)
-
-## Based on
-
-[excel-mcp-server](https://github.com/haris-musa/excel-mcp-server) by Haris Musa (MIT)

@@ -86,13 +86,13 @@ Span names use dot-notation: `{component}.{operation}[.{detail}]`
 
 ### Tool Operations
 
-See [Creating Tools](creating-tools.md#logging-with-logspan) for tool span naming conventions.
+See [Internal Tools](internal-tools.md#logging-with-logspan) for tool span naming conventions.
 
 ## Examples
 
 ### Tool Functions
 
-See [Creating Tools](creating-tools.md#logging-with-logspan) for comprehensive tool logging examples.
+See [Internal Tools](internal-tools.md#logging-with-logspan) for comprehensive tool logging examples.
 
 ### Async MCP Tool
 

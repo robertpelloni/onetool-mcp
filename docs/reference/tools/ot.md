@@ -1,7 +1,5 @@
 # ot.* Internal Tools
 
-**Introspect. Configure. Manage. OneTool from the inside.**
-
 Internal tools for OneTool introspection and management.
 
 ## Highlights
@@ -304,6 +302,3 @@ ot.reload()
 
 Clears cached configuration and reloads from disk. Use after modifying config files during a session.
 
-## Source
-
-OneTool internal implementation

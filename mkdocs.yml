@@ -144,26 +144,17 @@ nav:
       - Configuration: learn/configuration.md
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
-      - Database Queries: learn/database-queries.md
-      - Prompting Best Practices: learn/prompting-best-practices.md
-      - Examples: learn/examples.md
       - Comparison: learn/comparison.md
       - Extending:
-          - extending/index.md
-          - Creating Tools: extending/creating-tools.md
-          - Extensions: extending/extensions.md
-          - Logging: extending/logging.md
-          - Testing: extending/testing.md
-          - Creating CLIs: extending/creating-clis.md
-          - Docs:
-              - extending/mkdocs/index.md
-              - Best Practices: extending/mkdocs/best-practices.md
-              - Design System: extending/mkdocs/design-system.md
+          - learn/extending/index.md
+          - Extension Tools: learn/extending/extension-tools.md
+          - Isolated Tools: learn/extending/isolated-tools.md
   - Reference:
       - reference/index.md
       - CLIs:
           - reference/cli/index.md
           - onetool: reference/cli/onetool.md
+          - onetool Configuration: reference/cli/onetool-config.md
           - bench: reference/cli/bench.md
       - Tools:
           - reference/tools/index.md

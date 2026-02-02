@@ -1,7 +1,5 @@
 # Quickstart
 
-**30 seconds to install. 2 minutes to first tool call.**
-
 ## 1. Install
 
 ```bash

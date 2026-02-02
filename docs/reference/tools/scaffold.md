@@ -1,7 +1,5 @@
 # Scaffold
 
-**Create extensions. Validate before reload. Manage your tools.**
-
 Generate new extension tools from templates with a single command. Project or global scope.
 
 ## Highlights

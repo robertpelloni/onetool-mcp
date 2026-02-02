@@ -1,7 +1,5 @@
 # Security Model
 
-**No hidden calls. No magic. You read the code before you run it.**
-
 ## Philosophy
 
 OneTool takes a different approach to AI tool security:

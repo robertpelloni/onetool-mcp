@@ -38,7 +38,7 @@ I was excited when Anthropic (the creators of the MCP standard) published [Code 
 
 The next solution I looked at was the [Docker MCP Gateway](https://docs.docker.com/ai/mcp-catalog-and-toolkit/mcp-gateway/). However, it was so convoluted and limited that I was (almost) happy to pay the tool tax.
 
-As a result, I limited myself to the absolute bare minimum: three MCP servers -  web search, package version checks, and Context7. One of the biggest issues with agentic engineering is that technology changes so quickly that the "base data" is often outdated. For example, code I wrote frequently failed because my AI pair programmer (GPT-5.2) replaced the GPT-5.2 model with GPT-4o (released in May 2024) because it was convinced GPT-5.2 did *not* exist.
+As a result, I limited myself to the absolute bare minimum: three MCP servers -  web search, package version checks, and Context7. One of the biggest issues with agentic engineering is that technology changes so quickly that the "base data" is often outdated. For example, code I wrote frequently failed because my AI coding buddy (GPT-5.2) replaced the GPT-5.2 model with GPT-4o (released in May 2024) because it was convinced GPT-5.2 did *not* exist.
 
 So I was stuck: I needed MCP servers to work efficiently, but I didn't want to pay the tool tax or suffer from context rot.
 
@@ -53,7 +53,7 @@ Maybe I could solve it. Maybe I could help [Theo](https://www.youtube.com/@t3dot
 - [context7](https://github.com/upstash/context7)
 - [github/github-mcp-server](https://github.com/github/github-mcp-server)
 
-I was a developer. I worked with code. My AI pair programmer (Claude Opus 4.5 at the time) was amazing at coding. It could write complex Python programs.
+I am a developer. I work with code. My AI coding buddy (Claude Opus 4.5 at the time) was amazing at coding. It could write complex Python programs.
 
 **What if Claude used code to call tools? What if tools were just code?**
 
@@ -92,7 +92,7 @@ Write Python like: `__ot brave.search(query="latest react docs 2025")`
 
 You can see exactly what runs. No tool-selection guessing. No non-deterministic behaviour. No more guessing what the agent actually searched for.
 
-#### Great DX
+#### Great Developer Experience (DX)
 
 If you're now coding in your agent prompt, you need powerful snippets for reusable code templates with Jinja2 substitution, aliases for common tools, and an easy way to configure them (in a single, well-structured YAML file).
 
@@ -108,13 +108,13 @@ Normally, with great power comes configurability challenges.
 
 However, OneTool keeps it simple and consistent with sensible defaults: a single, well-structured [YAML config](../learn/configuration.md), with global and project scopes, and per-tool-pack configuration (timeouts, limits, models, etc).
 
-You also get a range of meta tools to help with the coding aspects, plus [structured logging](../extending/logging.md) and [runtime statistics](../reference/tools/ot.md#otstats) to track tool calls, success rates, context saved, and cost estimates.
+You also get a range of meta tools to help with the coding aspects, plus [structured logging](../learn/extending/extension-tools.md#logging-with-logspan) and [runtime statistics](../reference/tools/ot.md#otstats) to track tool calls, success rates, context saved, and cost estimates.
 
 ### Security: powerful, with guardrails
 
 OneTool is built for developers. It's very powerful -  so knowledge is your greatest protection. However, OneTool still includes multiple layers of security:
 
-- Isolated [`secrets.yaml`](../learn/configuration.md#secrets-configuration) - so you can share your configuration without leaking secrets
+- Isolated [`secrets.yaml`](../reference/cli/onetool-config.md#secrets-configuration) - so you can share your configuration without leaking secrets
 - [AST code validation](../learn/security.md) -  configurable permissions that warn or block risky function calls
 - [Path boundaries](../learn/security.md#4-path-boundary-enforcement) -  ensures file operations are constrained to allowed directories, handles symlink resolution, and honours sensitive exclusions
 - [Output sanitisation](../learn/security.md#7-output-sanitization-prompt-injection-protection) -  protection against indirect prompt injection via external content wrapping and sanitisation
@@ -123,8 +123,8 @@ OneTool is built for developers. It's very powerful -  so knowledge is your grea
 
 Every developer loves plugins, extensions, and ways to make tools even better. OneTool is highly configurable and extensible.
 
-- [Scaffold tools](../extending/creating-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the demo of Claude building a Wikipedia fetcher in under three minutes.
-- [MCP server proxy](../learn/configuration.md#external-mcp-servers) -  allows you to wrap any MCP Server with OneTool, configure it with YAML, and call it explicitly -  without the tool tax and context rot.
+- [Scaffold tools](../learn/extending/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtube.com/watch?v=TODO) of Claude building a Wikipedia fetcher in under three minutes.
+- [MCP server proxy](../reference/cli/onetool-config.md#external-mcp-servers) - allows you to wrap any MCP Server with OneTool, configure it with YAML, and call it explicitly - without the tool tax and context rot.
 
 ### Testing, benchmarking, and proper engineering
 
@@ -132,7 +132,7 @@ To make it easy to develop new tool packs (groups of tools), OneTool includes a 
 
 OneTool was written with strong engineering practices:
 
-- [1,000+ tests](../extending/testing.md) (smoke, unit, integration tiers)
+- 1,200+ tests (smoke, unit, integration tiers)
 - OpenSpec as a change proposal process (specs before code; architecture decisions documented)
 - Python best practices: type hints, Ruff formatting/linting and other Python best practices
 
@@ -143,5 +143,7 @@ If AI is the King, and MCP servers are your thing, then OneTool will help you st
 Download and install it, and give your agentic engineering the boost it needs.
 
 <a href="/learn/" class="btn btn--primary">Get Started with OneTool</a>
+
+
 <a href="https://github.com/beycom/onetool-mcp" class="btn btn--secondary">OneTool on GitHub</a>
 

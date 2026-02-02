@@ -1,7 +1,5 @@
 # Database
 
-**Any SQL database. Three functions. LLM-friendly output.**
-
 Database introspection and query execution via SQLAlchemy. Supports any SQLAlchemy-compatible database (PostgreSQL, MySQL, SQLite, Oracle, MS SQL Server, etc.).
 
 ## Highlights
@@ -42,9 +40,6 @@ db.tables(db_url=db_url)
 # Filter tables
 db.tables(db_url=db_url, filter="user")
 
-# Case-insensitive filter
-db.tables(db_url=db_url, filter="USER", ignore_case=True)
-
 # Get schema for tables
 db.schema(["users", "orders"], db_url=db_url)
 
@@ -57,10 +52,45 @@ db.query(
 )
 ```
 
-## Source
+## Project Configuration
 
-[SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+Configure database connections in `onetool.yaml`:
 
-## Based on
+```yaml
+projects:
+  myapp:
+    path: /path/to/project
+    attrs:
+      db_url: postgresql://localhost/myapp
 
-[mcp-alchemy](https://github.com/runekaagaard/mcp-alchemy) by Rui Machado (MPL-2.0)
+  demo:
+    path: .
+    attrs:
+      db_url: sqlite:///demo/db/northwind.db
+```
+
+### Supported Databases
+
+Any SQLAlchemy-compatible database:
+
+- SQLite: `sqlite:///path/to/db.db`
+- PostgreSQL: `postgresql://user:pass@host/db`
+- MySQL: `mysql://user:pass@host/db`
+
+## Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `db.max_chars` | 4000 | Maximum output characters |
+
+```yaml
+tools:
+  db:
+    max_chars: 8000  # Larger output
+```
+
+## Security
+
+- Queries are read-only by default
+- Use parameterized queries for user input
+- Configure `max_chars` to prevent excessive output

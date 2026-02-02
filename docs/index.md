@@ -82,7 +82,7 @@ __ot brave.search(q="AI")
 
 Build new tools as part of the conversation. New tools are just Python functions. Drop a file, get a pack.
 
-[:octicons-arrow-right-24: Create tools](extending/creating-tools.md)
+[:octicons-arrow-right-24: Create tools](learn/extending/extension-tools.md)
 
 </div>
 
@@ -92,7 +92,7 @@ Build new tools as part of the conversation. New tools are just Python functions
 
 Wrap any existing MCP server. Configure in YAML. Call explicitly - without the Tool Tax. Pre-configured: Chrome DevTools, GitHub.
 
-[:octicons-arrow-right-24: Use other MCP servers](learn/configuration.md#external-mcp-servers)
+[:octicons-arrow-right-24: Use other MCP servers](reference/cli/onetool-config.md#external-mcp-servers)
 
 </div>
 
@@ -116,7 +116,7 @@ Single, well-structured [YAML config](learn/configuration.md) with global and pr
 
 ### :material-chart-box: Observability
 
-Meta tools for introspection. [Structured logging](extending/logging.md) with LogSpan. [Runtime statistics](reference/tools/ot.md#otstats) for costs and success rates.
+Meta tools for introspection. [Structured logging](learn/extending/extension-tools.md#logging-with-logspan) with LogSpan. [Runtime statistics](reference/tools/ot.md#otstats) for costs and success rates.
 
 </div>
 
@@ -144,7 +144,7 @@ Delegate to cheaper agents. Fetch a page, summarise with Gemini Flash ($0.50/M),
 
 ### :material-shield-check: Security
 
-Multiple layers built in: isolated [`secrets.yaml`](learn/configuration.md#secrets-configuration), [AST validation](learn/security.md), [path boundaries](learn/security.md#4-path-boundary-enforcement), [output sanitisation](learn/security.md#7-output-sanitization-prompt-injection-protection).
+Multiple layers built in: isolated [`secrets.yaml`](reference/cli/onetool-config.md#secrets-configuration), [AST validation](learn/security.md), [path boundaries](learn/security.md#4-path-boundary-enforcement), [output sanitisation](learn/security.md#7-output-sanitization-prompt-injection-protection).
 
 </div>
 
@@ -163,8 +163,6 @@ The **bench** harness compares tools against other MCP servers using a real agen
 ### :material-check-circle: Engineering Practices
 
 1,200+ tests (smoke, unit, integration). OpenSpec for change proposals - specs before code. Type hints throughout. Ruff + Mypy.
-
-[:octicons-arrow-right-24: Testing guide](extending/testing.md)
 
 </div>
 

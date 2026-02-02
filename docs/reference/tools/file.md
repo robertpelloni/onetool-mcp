@@ -1,7 +1,5 @@
 # File
 
-**Read. Write. Edit. Move. All with security boundaries.**
-
 Secure file operations with configurable security boundaries. Read, write, edit, and manage files with path validation against allowed directories.
 
 ## Highlights
@@ -197,10 +195,3 @@ All paths are validated against:
 - **Exclude patterns**: Paths matching patterns like `.git` are blocked
 - **File size limits**: Large files are rejected to prevent memory issues
 
-## Source
-
-[Python pathlib](https://docs.python.org/3/library/pathlib.html) | [shutil](https://docs.python.org/3/library/shutil.html)
-
-## Inspired by
-
-[fast-filesystem-mcp](https://github.com/efforthye/fast-filesystem-mcp) by efforthye (Apache 2.0)

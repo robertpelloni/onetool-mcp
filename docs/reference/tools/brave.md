@@ -1,7 +1,5 @@
 # Brave Search
 
-**Five search types. Batch support. Query validation.**
-
 Web, news, local, image, and video search via Brave Search API.
 
 ## Highlights
@@ -9,7 +7,6 @@ Web, news, local, image, and video search via Brave Search API.
 - Five search types: web, news, local, image, video
 - Batch search with concurrent execution
 - Query validation (400 char / 50 word limits)
-- AI-generated summaries (Pro plan)
 
 ## Functions
 
@@ -21,7 +18,6 @@ Web, news, local, image, and video search via Brave Search API.
 | `brave.image(query, ...)` | Image search |
 | `brave.video(query, ...)` | Video search |
 | `brave.search_batch(queries, ...)` | Multiple searches concurrently |
-| `brave.summarize(query, ...)` | AI-generated summary (Pro plan) |
 
 ## Key Parameters
 
@@ -50,11 +46,4 @@ brave.local(query="coffee shops near Times Square")
 
 # Batch search
 brave.search_batch(queries=["react hooks", "vue composition api"])
-
-# AI summary (Pro plan)
-brave.summarize(query="latest developments in quantum computing")
 ```
-
-## Source
-
-[Brave Search API](https://api.search.brave.com/app/documentation)

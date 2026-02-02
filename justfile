@@ -102,6 +102,10 @@ docs-clean:
 docs-deploy:
     uv run mkdocs gh-deploy --force
 
+# Regenerate the OpenSpec specifications viewer HTML
+docs-specs:
+    uv run python scripts/generate_specs_html.py
+
 # ============================================================================
 # BUILD & RELEASE
 # ============================================================================

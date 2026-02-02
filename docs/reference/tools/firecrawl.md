@@ -1,7 +1,5 @@
 # Firecrawl
 
-**Web scraping, crawling, and structured extraction.**
-
 Scrape single pages, batch URLs, discover sitemaps, crawl sites, and extract structured data via the Firecrawl API.
 
 ## Highlights
@@ -85,7 +83,3 @@ firecrawl.extract(
 # Autonomous research
 firecrawl.deep_research(prompt="Compare pricing of top 5 CRM tools")
 ```
-
-## Source
-
-[Firecrawl API](https://docs.firecrawl.dev/)

@@ -14,24 +14,24 @@ From the project root:
 
 ```bash
 # Download required assets (Northwind DB + OpenTelemetry project)
-just demo-setup
+just demo::setup
 
 # Start the MCP server with demo config
-just demo-serve
+just demo::serve
 
 # Run benchmark scenarios interactively
-just demo-bench
+just demo::bench
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `just demo-setup` | Download DB, code project, and create search index |
-| `just demo-serve` | Start MCP server with demo config |
-| `just demo-bench` | Run benchmarks (interactive TUI picker) |
-| `just demo-clean` | Remove all downloaded assets |
-| `just demo-logs-clean` | Truncate log files |
+| `just demo::setup` | Download DB, code project, and create search index |
+| `just demo::serve` | Start MCP server with demo config |
+| `just demo::bench` | Run benchmarks (interactive TUI picker) |
+| `just demo::clean` | Remove all downloaded assets |
+| `just demo::logs-clean` | Truncate log files |
 
 ## Benchmark Scenarios
 
@@ -63,5 +63,5 @@ demo/
 ## Cleanup
 
 ```bash
-just demo-clean   # Remove all demo assets (db, zip, extracted project)
+just demo::clean   # Remove all demo assets (db, zip, extracted project)
 ```
