@@ -1,6 +1,6 @@
 # Installation
 
-**Python 3.11+ required. Install with uv or pip.**
+**Python 3.11+ required.**
 
 For the quickest path, see [Quickstart](quickstart.md). This page covers all platforms and optional features.
 
@@ -9,7 +9,7 @@ For the quickest path, see [Quickstart](quickstart.md). This page covers all pla
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
 | **Python** | >= 3.11 | Runtime environment |
-| **uv** | Latest | Package management (recommended) |
+| **uv** | Latest | Package management |
 
 ### Installing System Requirements
 
@@ -34,9 +34,7 @@ winget install Python.Python.3.11
 irm https://astral.sh/uv/install.ps1 | iex
 ```
 
-## Installation Methods
-
-### Using uv tool (Recommended)
+## Install
 
 ```bash
 uv tool install onetool-mcp
@@ -44,13 +42,46 @@ uv tool install onetool-mcp
 
 This installs `onetool` and `bench` commands globally.
 
-### Using pip
+**Optional:** For safe file deletion (moves to trash instead of permanent delete):
 
 ```bash
-pip install onetool-mcp
+uv tool install onetool-mcp --with send2trash
 ```
 
-### From Source (Development)
+## Upgrade
+
+```bash
+uv tool upgrade onetool-mcp
+```
+
+Or to upgrade all tools:
+
+```bash
+uv tool upgrade --all
+```
+
+## Uninstall
+
+```bash
+uv tool uninstall onetool-mcp
+```
+
+This removes the tool and its isolated environment. **Config is preserved.**
+
+| Location | Preserved on Uninstall? |
+|----------|------------------------|
+| `~/.onetool/` (global config) | Yes |
+| `.onetool/` (project config) | Yes |
+| Tool environment | No (removed) |
+
+To fully reset (including config):
+
+```bash
+uv tool uninstall onetool-mcp
+rm -rf ~/.onetool/  # Optional: remove global config
+```
+
+## From Source (Development)
 
 ```bash
 git clone https://github.com/beycom/onetool.git
@@ -147,67 +178,7 @@ Create a `.onetool/` directory in your project:
 | macOS/Linux | `~/.onetool/` | `.onetool/` |
 | Windows | `%USERPROFILE%\.onetool\` | `.onetool\` |
 
-## Optional Dependencies
-
-Some tools require additional Python packages. When installed via `uv tool`, you must include these at install time using `--with` flags:
-
-### Document Conversion (`convert` pack)
-
-```bash
-uv tool install onetool-mcp \
-  --with pymupdf \
-  --with python-docx \
-  --with python-pptx \
-  --with openpyxl \
-  --with Pillow
-```
-
-### Code Search (`code` pack)
-
-```bash
-uv tool install onetool-mcp \
-  --with duckdb \
-  --with openai
-```
-
-### All Optional Dependencies
-
-Install everything at once:
-
-```bash
-uv tool install onetool-mcp \
-  --with pymupdf \
-  --with python-docx \
-  --with python-pptx \
-  --with openpyxl \
-  --with Pillow \
-  --with duckdb \
-  --with openai
-```
-
-### Verify Dependencies
-
-Check which dependencies are installed:
-
-```bash
-onetool init validate
-```
-
-The Dependencies section shows each tool's requirements and their status (OK or missing).
-
-> **Note:** Using `pip install` after `uv tool install` won't work - the packages install to a different environment. Always use `--with` during installation.
-
-## Feature-Specific Requirements
-
-### Semantic Code Search (`code` pack)
-
-**Requires pre-indexed codebase:**
-
-```bash
-chunkhound index /path/to/project
-```
-
-See [Optional Dependencies](#optional-dependencies) for installing `duckdb` and `openai`.
+## External Tools
 
 ### Ripgrep Search
 

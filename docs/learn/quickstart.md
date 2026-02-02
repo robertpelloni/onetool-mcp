@@ -8,12 +8,6 @@
 uv tool install onetool-mcp
 ```
 
-Or with pip:
-
-```bash
-pip install onetool-mcp
-```
-
 ## 2. Connect to Claude Code
 
 Add to `~/.claude/settings.json`:

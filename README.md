@@ -1,64 +1,66 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/beycom/onetool-mcp/main/docs/assets/logo.svg" alt="OneTool" width="400">
+  <img src="https://raw.githubusercontent.com/beycom/onetool-mcp/main/docs/assets/logo.svg" alt="OneTool" width="80">
 </p>
 
 <p align="center">
-  <em>One tool to rule them all, one tool to find them, one tool to bring them all, and in the development bind them.</em>
+  <strong>🧿 One MCP, unlimited tools</strong>
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/onetool-mcp/"><img alt="PyPI" src="https://img.shields.io/pypi/v/onetool-mcp"></a>
   <a href="https://github.com/beycom/onetool-mcp/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-GPLv3-blue"></a>
   <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/badge/python-3.11%2B-blue"></a>
+  <a href="https://github.com/beycom/onetool-mcp/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/beycom/onetool-mcp"></a>
 </p>
 
-> **v1.0.0 Pre-Release** - API stable, actively tested.
+<p align="center">
+  Works with Claude Code · Cursor · Windsurf · Any MCP client
+</p>
 
-OneTool is a local-first MCP server that exposes a single `run` tool for code execution, giving your AI assistant access to unlimited capabilities through one interface.
+---
 
 ## The Problem
 
-Connect 5 MCP servers and you've burned 55K tokens before the conversation starts. Connect 10+ and you're at 100K tokens. Your AI gets worse as you add more tools - that's not a bug, it's how context windows work.
+Each MCP server consumes **3K-30K tokens per request**. Connect 5 servers and you've burned 55K tokens before the conversation starts. Connect 10+ and you're at 100K tokens.
+
+The math is brutal: Claude Opus 4.5 at $15/M input tokens, 20 days × 10 conversations × 10 messages × 3K tokens = **$30/month per MCP server** - even if you never use the tools.
+
+And then there's **context rot** - your AI literally gets dumber as you add more tools ([Chroma Research, 2025](https://research.trychroma.com/context-rot)).
 
 ## The Solution
 
-**98.7% fewer tokens. Same accuracy. 10x lower cost.**
-
-Instead of loading 50 separate tool schemas, you write Python directly:
+OneTool is **one MCP server** that exposes tools as a Python API. Instead of reading tool definitions, your agent writes code:
 
 ```python
-__ot brave.search(query="AI trends 2026")
+__ot brave.search(query="react docs 2026")
 ```
 
-No JSON schema parsing. No tool selection loops. No hoping the model guesses correctly. You write explicit code to call APIs - deterministic, visible, no hidden magic.
+Configure one MCP server. Use unlimited tools.
 
-Based on [Anthropic's research](https://www.anthropic.com/engineering/code-execution-with-mcp), which found token usage dropped from 150,000 to 2,000 when presenting tools as code APIs.
+> "This reduces the token usage from 150,000 tokens to 2,000 tokens."
+>
+> — [Anthropic Engineering](https://www.anthropic.com/engineering/code-execution-with-mcp)
 
-## Core Capabilities
+**96% fewer tokens. 24× lower cost. No context rot.**
 
-- **30-second setup** - Install with uv or pip
-- **Drop-in extensibility** - Add a Python file, get a new pack
-- **AST security** - All code validated before execution
-- **Benchmark harness** - Test LLM + MCP combinations with `bench`
+[📖 Read the full story](https://onetool.beycom.online/about/about-onetool/)
 
-## Batteries Included with 100+ Tools
+---
 
-See [Tool Reference](docs/reference/tools/index.md) for the complete list of packs and tools.
+## See It In Action
 
-## Installation
+| Demo | Description |
+| ---- | ----------- |
+| [Compare the Search](https://youtube.com/watch?v=TODO) | Side-by-side token comparison |
+| [Build a Wikipedia Tool](https://youtube.com/watch?v=TODO) | Create a custom tool in seconds |
+| [File Me Away](https://youtube.com/watch?v=TODO) | File operations demo |
+
+---
+
+## Install
 
 ```bash
 uv tool install onetool-mcp
-```
-
-Or with pip: `pip install onetool-mcp`
-
-**With optional dependencies** (for convert, excel, code search):
-
-```bash
-uv tool install onetool-mcp \
-  --with pymupdf --with python-docx --with python-pptx \
-  --with openpyxl --with Pillow --with duckdb --with openai
 ```
 
 Add to Claude Code (`~/.claude/settings.json`):
@@ -73,41 +75,134 @@ Add to Claude Code (`~/.claude/settings.json`):
 }
 ```
 
+That's it. All 100+ tools work out of the box.
+
+Verify: `onetool --version`
+
+[📖 Full installation guide](https://onetool.beycom.online/learn/installation/)
+
+---
+
+## Features
+
+| Feature                 | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| **96% Token Savings**   | ~2K tokens no matter how many tools you add            |
+| **100+ Built-in Tools** | Web search, databases, file ops, diagrams, conversions |
+| **Explicit Execution**  | See exactly what runs - `__ot brave.search(q="AI")`    |
+| **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
+| **Scaffold Tools**      | Build new tools as part of the conversation            |
+| **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
+| **Single YAML Config**  | Global and project scopes, per-pack settings           |
+| **Security Layers**     | AST validation, path boundaries, output sanitisation   |
+
+---
+
+## Tools
+
+16 packs, 100+ tools ready to use:
+
+| Pack        | Tools                                   | Description            |
+| ----------- | --------------------------------------- | ---------------------- |
+| `brave`     | `search`, `news`                        | Web and news search    |
+| `code`      | `search`, `search_batch`, `status`      | Semantic code search   |
+| `context7`  | `resolve`, `get_docs`                   | Library documentation  |
+| `convert`   | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
+| `db`        | `query`, `schema`, `tables`             | Database operations    |
+| `diagram`   | `create`                                | Mermaid diagrams       |
+| `excel`     | `read`, `write`, `query`                | Excel files            |
+| `file`      | `read`, `write`, `list`, `search`       | File operations        |
+| `firecrawl` | `scrape`, `crawl`, `map`                | Web scraping           |
+| `ground`    | `search`                                | Google Grounding       |
+| `llm`       | `transform`, `transform_file`           | LLM-powered transforms |
+| `ot`        | `help`, `tools`, `stats`                | Introspection          |
+| `package`   | `npm`, `pypi`, `cargo`                  | Package versions       |
+| `ripgrep`   | `search`, `count`                       | Fast code search       |
+| `scaffold`  | `tool`                                  | Generate new tools     |
+| `web`       | `fetch`, `fetch_batch`                  | Web fetching           |
+
+[📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 104 tools
+
+---
+
+## MCP Server Proxy
+
+Wrap any existing MCP server and call it explicitly - without the tool tax:
+
+```yaml
+# .onetool/onetool.yaml
+mcp_servers:
+  chrome-devtools:
+    command: npx
+    args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]
+  github:
+    command: npx
+    args: ["-y", "@anthropic-ai/github-mcp-server@latest"]
+```
+
+```python
+__ot mcp.call(server="github", tool="get_file_contents", arguments={"path": "README.md"})
+```
+
+[📖 Configuration guide](https://onetool.beycom.online/learn/configuration/#external-mcp-servers)
+
+---
+
 ## Extending
 
 Drop a Python file, get a pack. No registration, no config:
 
 ```python
-# tools/mytool.py
-pack = "mytool"
+# .onetool/tools/wiki.py
+pack = "wiki"
 
-def search(*, query: str) -> str:
-    """Search for something."""
-    return f"Results for: {query}"
+def summary(*, title: str) -> str:
+    """Get Wikipedia article summary."""
+    import httpx
+    url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
+    return httpx.get(url).json().get("extract", "Not found")
 ```
 
-## Why this approach
+```python
+__ot wiki.summary(title="Python_(programming_language)")
+```
 
-LLMs write Python instead of parsing JSON schemas. You see what's being called. 2K tokens instead of 150K. Adding your own packs is just dropping in a file.
+[📖 Creating tools guide](https://onetool.beycom.online/extending/creating-tools/)
+
+---
 
 ## Documentation
 
-- [Learn](docs/learn/index.md) - Getting started guide
-- [Quickstart](docs/learn/quickstart.md) - 2-minute setup
-- [Tools Reference](docs/reference/tools/index.md) - All built-in tools
-- [Extending](docs/extending/index.md) - Create your own tools
+- [Quickstart](https://onetool.beycom.online/learn/quickstart/) - 30 seconds to first tool call
+- [Installation](https://onetool.beycom.online/learn/installation/) - All platforms
+- [Configuration](https://onetool.beycom.online/learn/configuration/) - YAML schema
+- [Tools Reference](https://onetool.beycom.online/reference/tools/) - All 100+ tools
+- [Security](https://onetool.beycom.online/learn/security/) - Security layers
+- [Extending](https://onetool.beycom.online/extending/) - Build your own
+
+---
 
 ## References
 
 - [Code Execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp) - Anthropic Engineering
 - [Context Rot](https://research.trychroma.com/context-rot) - Chroma Research
 
-## Licensing
+---
 
-**GPLv3** - Will transition to **MIT** at v2.0. Contribute via PRs to help us get there.
+## Contributing
+
+[Contribution guidelines](https://github.com/beycom/onetool-mcp/blob/main/CONTRIBUTING.md)
+
+---
+
+## License
+
+**GPLv3** - Will transition to **MIT** at v2.0.
+
+---
 
 ## Support
 
-If you use or like this project, please consider buying me a coffee:
+If you find OneTool useful:
 
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-ff5e5b?logo=ko-fi)](https://ko-fi.com/beycom)

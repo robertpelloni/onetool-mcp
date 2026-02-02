@@ -21,7 +21,7 @@ hide:
 
 ### Tool Tax
 Each MCP Server consumes between 3K and 30K (looking at you, GitHub MCP!) in tokens **per request**. Every single request.
-The maths is brutal: If you're using Claude Opus 4.5 at $5 per million input tokens - 20 days × 10 conversations × 10 messages × 3K tokens = 6M input tokens. You waste approx. **$30 in Tool Tax per MCP Server, per month**
+The maths is brutal: If you're using Claude Opus 4.5 at $5 per million input tokens - 20 days × 10 conversations × 10 messages × 3K tokens = 6M input tokens. You waste approx. **$30 in Tool Tax per MCP Server, per month**.
 
 ### Context Rot
 And then there's **context rot** -  the phenomenon where the agent's performance degrades as the context window fills ([Chroma Research, 2025](https://research.trychroma.com/context-rot)). Every tool description pushes valuable conversation history out of the context window. Your AI literally **gets dumber as you add more tools**.
@@ -30,7 +30,7 @@ And then there's **context rot** -  the phenomenon where the agent's performance
 
 OneTool is **one MCP server** that exposes tools as a Python API. Instead of reading tool definitions, your agent writes code  - `brave.search(q="react docs")`  - and OneTool runs it.
 
-Register one MCP Server. Access unlimited tools. 
+Configure one MCP Server. Use unlimited tools. 
 
 **96% fewer tokens. 24× lower cost. No context rot. 100+ tools, extensible and configurable**
 
@@ -44,7 +44,7 @@ Register one MCP Server. Access unlimited tools.
 
 ### :material-chart-line: 96% Token Savings
 
-MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many packs you add. No tool tax. No context rot. **24× lower cost.**
+MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many tools and MCP servers you add. No tool tax. No context rot. **24× lower cost.**
 
 !!! quote ""
     "This reduces the token usage from 150,000 tokens to 2,000 tokens."
@@ -92,7 +92,7 @@ Build new tools as part of the conversation. New tools are just Python functions
 
 Wrap any existing MCP server. Configure in YAML. Call explicitly - without the Tool Tax. Pre-configured: Chrome DevTools, GitHub.
 
-[:octicons-arrow-right-24: Use other MCP Servers](learn/configuration.md#external-mcp-servers)
+[:octicons-arrow-right-24: Use other MCP servers](learn/configuration.md#external-mcp-servers)
 
 </div>
 
