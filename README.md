@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/beycom/onetool/main/docs/assets/onetool-logo.png" alt="OneTool" width="400">
+  <img src="https://raw.githubusercontent.com/beycom/onetool-mcp/main/docs/assets/logo.svg" alt="OneTool" width="400">
 </p>
 
 <p align="center">
@@ -43,7 +43,7 @@ Based on [Anthropic's research](https://www.anthropic.com/engineering/code-execu
 
 ## Batteries Included with 100+ Tools
 
-See [Tool Reference](docs/tool-reference.md) for the complete list of packs and tools.
+See [Tool Reference](docs/reference/tools/index.md) for the complete list of packs and tools.
 
 ## Installation
 
@@ -92,8 +92,8 @@ LLMs write Python instead of parsing JSON schemas. You see what's being called. 
 
 ## Documentation
 
-- [Why OneTool](docs/intro/index.md) - The problem and our solution
-- [Getting Started](docs/getting-started/quickstart.md) - 2-minute setup
+- [Learn](docs/learn/index.md) - Getting started guide
+- [Quickstart](docs/learn/quickstart.md) - 2-minute setup
 - [Tools Reference](docs/reference/tools/index.md) - All built-in tools
 - [Extending](docs/extending/index.md) - Create your own tools
 

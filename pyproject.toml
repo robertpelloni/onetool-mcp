@@ -32,25 +32,21 @@ dependencies = [
     "docstring-parser>=0.17",     # ot.help() and ot.tools() docstring parsing
     "aiofiles>=25.1.0",           # Message tool async file I/O
     "questionary>=2.1.1",         # bench interactive prompts
-
     # === LLM & Search ===
     "openai>=2.15.0",             # code_search embeddings, LLM tools
     "google-genai>=1.60.0",       # grounding_search (Gemini)
-
     # === Database ===
     "duckdb>=1.4.3",              # code_search, db tool
     "sqlalchemy>=2.0.46",         # db tool
-
     # === Web ===
     "trafilatura>=2.0.0",         # web_fetch content extraction
     "firecrawl>=4.13.4",          # firecrawl web scraping
-
     # === Documents ===
     "openpyxl>=3.1.5",            # excel, convert (Excel files)
     "pillow>=12.1.0",             # convert (PDF image handling)
     "pymupdf>=1.26.7",            # convert (PDF)
     "python-docx>=1.2.0",         # convert (Word)
-    "python-pptx>=1.0.2",         # convert (PowerPoint)
+    "python-pptx>=1.0.2"          # convert (PowerPoint)
 
 ]
 

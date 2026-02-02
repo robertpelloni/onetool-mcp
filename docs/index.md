@@ -1,54 +1,131 @@
-<figure markdown="span">
-  ![OneTool](assets/onetool-logo.png){ width="400" }
-</figure>
+---
+hide:
+  - navigation
+  - toc
+---
 
-<!-- [![PyPI version](https://img.shields.io/pypi/v/onetool-mcp.svg)](https://pypi.org/project/onetool-mcp/) -->
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://github.com/beycom/onetool-mcp/blob/main/LICENSE)
+<h1 class="sr-only">OneTool</h1>
 
-**Don't enumerate tools. Execute code.**
-
-MCP doesn't scale. Each MCP server costs ~$30/month in wasted tokens. OneTool fixes this.
-
-**[96% fewer tokens. 24x lower cost. Improved accuracy.](learn/comparison.md)**
+<div class="hero">
+<div class="hero__logo" role="img" aria-label="OneTool logo"></div>
+<p class="hero__title">OneTool</p>
+<p class="hero__tagline">One MCP, unlimited tools</p>
+<div class="hero__buttons">
+<a href="learn/" class="btn btn--primary">Learn OneTool</a>
+<a href="reference/" class="btn btn--secondary">Reference</a>
+</div>
+</div>
 
 ---
 
-## Get Started
+## Features
 
-- **[Quickstart](learn/quickstart.md)** - Running in 2 minutes
-- **[Installation](learn/installation.md)** - All platforms
-- **[Configuration](learn/configuration.md)** - YAML schema
-- **[Security](learn/security.md)** - Security model and policies
+<div class="bento" markdown>
 
-## Learn
+<div class="card span-2 tall" markdown>
 
-- **[Features](features.md)** - What's in OneTool
-- **[Guides](learn/explicit-calls.md)** - How-to guides
-- **[Examples](learn/examples.md)** - Demo project
+### :material-chart-line: 96% Token Savings
 
-## Reference
+MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many packs or proxy servers you add.
 
-- **[Tools](reference/tools/index.md)** - Batteries Included with 100+ Tools
-- **[CLIs](reference/cli/onetool.md)** - onetool, bench
+No context rot. No token bloat. **24x lower cost.**
 
-## Extend
+[:octicons-arrow-right-24: See comparison](learn/comparison.md)
 
-- **[Creating Tools](extending/creating-tools.md)** - Drop a file, get a pack
-- **[Creating CLIs](extending/creating-clis.md)** - Build command-line tools
+</div>
 
----
+<div class="card" markdown>
 
-## Batteries Included with 100+ Tools
+### :material-code-braces: Explicit Execution
 
-See [Tool Reference](reference/tools/index.md) for the complete list of packs and tools.
-
----
-
-## How It Works
+Write Python, not tool definitions. You see exactly what runs.
 
 ```python
-__ot brave.search(query="AI trends 2026")
+__ot brave.search(q="AI")
 ```
 
-One prefix. Direct execution. No tool definitions. No tool selection loops.
+[:octicons-arrow-right-24: Learn more](learn/explicit-calls.md)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-package-variant: 100+ Tools
+
+Search, web, database, files, diagrams, conversions—batteries included.
+
+[:octicons-arrow-right-24: Browse tools](reference/tools/index.md)
+
+</div>
+
+<div class="card span-2" markdown>
+
+### :material-server-network: MCP Server Proxy
+
+Wrap any existing MCP server. Configure in YAML. Call explicitly. Pre-configured: Chrome DevTools, GitHub.
+
+[:octicons-arrow-right-24: Learn more](learn/configuration.md#external-mcp-servers)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-shield-check: Security
+
+AST validation blocks dangerous code. Configurable policies (Allow/Ask/Warn/Block). Path boundaries. Output sanitization.
+
+[:octicons-arrow-right-24: Learn more](learn/security.md)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-cog: Developer Experience
+
+Snippets with Jinja2. Aliases for common tools. Parameter prefixes. Single YAML config with three-tier inheritance.
+
+[:octicons-arrow-right-24: Configuration](learn/configuration.md)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-puzzle: Extensibility
+
+Drop a Python file, get a pack. Worker isolation via PEP 723. Scaffold CLI for templates.
+
+[:octicons-arrow-right-24: Create tools](extending/creating-tools.md)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-chart-box: Observability
+
+Structured logging with LogSpan. Runtime statistics. Automatic credential sanitization.
+
+[:octicons-arrow-right-24: Learn more](extending/logging.md)
+
+</div>
+
+<div class="card span-2" markdown>
+
+### :material-test-tube: Testing & Benchmarking
+
+**bench** harness for real agent + MCP testing. Multi-prompt tasks. AI evaluators. Token counts, costs, accuracy scores.
+
+[:octicons-arrow-right-24: Learn more](reference/cli/bench.md)
+
+</div>
+
+<div class="card" markdown>
+
+### :material-check-circle: Quality
+
+1,200+ tests. Type hints throughout. Ruff + Mypy. Built with OpenSpec.
+
+[:octicons-arrow-right-24: Testing guide](extending/testing.md)
+
+</div>
+
+</div>

@@ -50,5 +50,5 @@ ripgrep.count(pattern="import", path="src/", file_type="py")
 Use OneTool web search:
 
 ```text
-__ot $q_b q=query one|query two|query three
+__ot $g q=query one|query two|query three
 ```

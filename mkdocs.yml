@@ -28,9 +28,8 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
-  font:
-    text: Inter
-    code: JetBrains Mono
+  # Disable Google Fonts - use system fonts
+  font: false
   features:
     - content.code.copy
     - content.code.annotate
@@ -55,8 +54,8 @@ theme:
     - toc.follow
   icon:
     repo: fontawesome/brands/github
-  favicon: assets/onetool-favicon-64.png
-  logo: assets/logo-white.png
+  favicon: assets/logo.svg
+  logo: assets/logo.svg  # Single file, CSS handles color
 
 plugins:
   - search:
@@ -137,8 +136,7 @@ extra:
       link: https://pypi.org/project/onetool-mcp/
 
 nav:
-  - 🧿 Home: index.md
-  - Features: features.md
+  - Home: index.md
   - Learn:
       - learn/index.md
       - Quickstart: learn/quickstart.md
@@ -150,6 +148,17 @@ nav:
       - Prompting Best Practices: learn/prompting-best-practices.md
       - Examples: learn/examples.md
       - Comparison: learn/comparison.md
+      - Extending:
+          - extending/index.md
+          - Creating Tools: extending/creating-tools.md
+          - Extensions: extending/extensions.md
+          - Logging: extending/logging.md
+          - Testing: extending/testing.md
+          - Creating CLIs: extending/creating-clis.md
+          - MkDocs:
+              - extending/mkdocs/index.md
+              - Best Practices: extending/mkdocs/best-practices.md
+              - Design System: extending/mkdocs/design-system.md
   - Reference:
       - reference/index.md
       - CLIs:
@@ -174,11 +183,4 @@ nav:
           - Ripgrep: reference/tools/ripgrep.md
           - Scaffold: reference/tools/scaffold.md
           - Web: reference/tools/web.md
-  - Extending:
-      - extending/index.md
-      - Creating Tools: extending/creating-tools.md
-      - Extensions: extending/extensions.md
-      - Logging: extending/logging.md
-      - Testing: extending/testing.md
-      - Creating CLIs: extending/creating-clis.md
   - About: about.md

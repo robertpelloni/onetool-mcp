@@ -83,8 +83,12 @@ secrets-check:
 # ============================================================================
 
 # Serve documentation locally with hot reload
-docs-serve:
-    uv run mkdocs serve --dev-addr 127.0.0.1:8000
+docs-serve *args:
+    uv run mkdocs serve --dev-addr 127.0.0.1:8000 {{ args }}
+
+# Stop the documentation server
+docs-serve-stop:
+    @lsof -ti :8000 | xargs kill 2>/dev/null && echo "Docs server stopped" || echo "No server running on port 8000"
 
 # Build documentation site (strict mode)
 docs-build:
@@ -110,6 +114,7 @@ build:
 clean:
     rm -rf dist/ build/ *.egg-info tmp/
     find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+    uv cache clean
 
 # ============================================================================
 # CODE SEARCH (ChunkHound)
