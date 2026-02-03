@@ -102,6 +102,7 @@ __all__ = [
     "packs",
     "reload",
     "result",
+    "security",
     "snippets",
     "stats",
     "timed",
@@ -120,6 +121,45 @@ def version() -> str:
         ot.version()
     """
     return __version__
+
+
+def security(*, check: str = "") -> dict[str, Any]:
+    """Check security rules for code validation.
+
+    OneTool uses an allowlist-based security model: everything is blocked
+    by default, and only explicitly allowed builtins, imports, and calls
+    are permitted. Tool namespaces (ot.*, brave.*, etc.) are auto-allowed.
+
+    Args:
+        check: Pattern to check (e.g., "os", "json.loads", "pickle.*").
+               If empty, returns a summary of all security rules.
+
+    Returns:
+        If check is provided: Dict with 'pattern', 'status' (allowed/blocked/warned),
+            'category', and 'reason' explaining why.
+        If check is empty: Dict with summary of all security categories
+            (builtins, imports, calls, dunders, tool_namespaces).
+
+    Example:
+        ot.security()                      # Show all rules
+        ot.security(check="os")            # "blocked: import"
+        ot.security(check="json")          # "allowed: import"
+        ot.security(check="json.loads")    # "allowed: module in imports"
+        ot.security(check="pickle.load")   # "blocked: calls"
+        ot.security(check="brave.search")  # "allowed: tool namespace"
+    """
+    from ot.executor.validator import get_security_status, get_security_summary
+
+    with log(span="ot.security", check=check or None) as s:
+        if check:
+            result = get_security_status(check)
+            s.add("status", result["status"])
+            s.add("category", result["category"])
+            return result
+        else:
+            summary = get_security_summary()
+            s.add("status", summary.get("status", "unknown"))
+            return summary
 
 
 def timed(func: _Callable[..., _T], **kwargs: Any) -> dict[str, Any]:
@@ -162,6 +202,7 @@ def get_ot_pack_functions() -> dict[str, Any]:
         "health": health,
         "help": help,
         "result": result,
+        "security": security,
         "stats": stats,
         "notify": notify,
         "reload": reload,
@@ -1222,6 +1263,7 @@ def reload() -> str:
     - Prompts
     - MCP proxy connections
     - Parameter resolution caches
+    - Security validation caches
 
     Use after modifying config files, adding/removing tools, or
     changing secrets during a session.
@@ -1268,6 +1310,11 @@ def reload() -> str:
         # Clear param resolver cache (depends on registry)
         ot.executor.param_resolver.get_tool_param_names.cache_clear()
         ot.executor.param_resolver._mcp_param_cache.clear()
+
+        # Clear security validator caches (depends on config and registry)
+        import ot.executor.validator
+        ot.executor.validator._get_tool_namespaces.cache_clear()
+        ot.executor.validator._get_security_config.cache_clear()
 
         # Reload config to validate and report stats
         cfg = get_config()

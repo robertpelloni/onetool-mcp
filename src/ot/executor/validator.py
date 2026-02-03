@@ -2,23 +2,28 @@
 
 Validates Python code before execution:
 - Syntax validation via ast.parse()
-- Security pattern detection (dangerous calls)
+- Allowlist-based security validation (dangerous calls, imports, builtins)
 - Optional Ruff linting integration for style warnings
 
-Security patterns are configurable via onetool.yaml and support wildcards:
+Security Model:
+    Block everything by default, explicitly allow what's safe.
+    Configuration via security.yaml with three categories:
+    - builtins: Allowed builtin functions and types
+    - imports: Allowed modules for import statements
+    - calls: Blocked/warned qualified function calls
 
+    Tool namespaces (ot.*, brave.*, etc.) are auto-allowed.
+
+Configuration:
     security:
-      validate_code: true
-      enabled: true
-      blocked: [exec, eval, compile, __import__, subprocess.*, os.system]
-      warned: [subprocess, os, open, pickle.*, yaml.load]
-
-Pattern matching logic (automatic based on pattern structure):
-- Patterns WITHOUT dots (e.g., 'exec', 'subprocess') match:
-  * Builtin function calls: exec(), eval()
-  * Import statements: import subprocess, from os import system
-- Patterns WITH dots (e.g., 'subprocess.*', 'os.system') match:
-  * Qualified function calls: subprocess.run(), os.system()
+      builtins:
+        allow: [str, int, list, print, ...]
+      imports:
+        allow: [json, re, math, ...]
+        warn: [yaml]
+      calls:
+        block: [pickle.*, yaml.load]
+        warn: [random.seed]
 
 Wildcard patterns use fnmatch syntax:
 - '*' matches any characters (e.g., 'subprocess.*' matches 'subprocess.run')
@@ -37,8 +42,10 @@ from __future__ import annotations
 
 import ast
 import fnmatch
+import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ot.config.loader import SecurityConfig
@@ -55,47 +62,43 @@ class ValidationResult:
 
 
 # =============================================================================
-# Default Security Patterns
+# Fallback Defaults (used when config is unavailable)
 # =============================================================================
-# These are used when config is not available. Patterns use fnmatch wildcards.
-#
-# Pattern matching is determined by structure:
-# - No dot in pattern → matches builtins (calls) AND imports
-# - Dot in pattern → matches qualified function calls only
-#
-# This two-category design (blocked/warned) replaces the previous four-category
-# design (blocked_builtins, blocked_functions, warned_functions, warned_imports).
-# The validator automatically determines the match type based on pattern structure.
-# =============================================================================
+# These are minimal safe defaults used only when security.yaml cannot be loaded.
+# In normal operation, the full allowlists come from security.yaml.
 
-DEFAULT_BLOCKED = frozenset(
-    {
-        # Builtins - arbitrary code execution risk (no dots = match calls + imports)
-        "exec",
-        "eval",
-        "compile",
-        "__import__",
-        # Qualified functions - command injection (dots = match calls only)
-        "subprocess.*",  # All subprocess functions
-        "os.system",  # Shell command execution
-        "os.popen",  # Shell command execution
-        "os.spawn*",  # spawnl, spawnle, spawnv, etc.
-        "os.exec*",  # execl, execle, execv, etc.
-    }
-)
+FALLBACK_ALLOWED_BUILTINS = frozenset({
+    # Type constructors
+    "str", "int", "float", "bool", "bytes", "list", "dict", "set", "tuple",
+    # Type checking
+    "isinstance", "issubclass", "type", "callable",
+    # Iteration
+    "len", "iter", "next", "range", "enumerate", "zip", "reversed", "sorted",
+    # Math
+    "min", "max", "sum", "abs", "round", "pow",
+    # Sequence operations
+    "all", "any", "filter", "map",
+    # String/repr
+    "repr", "format", "print",
+    # Exceptions
+    "Exception", "ValueError", "TypeError", "KeyError",
+})
 
-DEFAULT_WARNED = frozenset(
-    {
-        # Module imports - enables dangerous operations (no dots = match imports)
-        "subprocess",
-        "os",
-        # Qualified functions - file access, deserialization (dots = match calls)
-        "open",  # File access (common but risky)
-        "pickle.*",  # Deserialization attacks
-        "yaml.load",  # Unsafe YAML deserialization
-        "marshal.*",  # Object deserialization
-    }
-)
+FALLBACK_ALLOWED_IMPORTS = frozenset({
+    "json", "re", "math", "datetime", "collections", "typing",
+    "itertools", "functools", "copy", "dataclasses",
+})
+
+FALLBACK_WARNED_IMPORTS = frozenset({
+    "yaml",
+})
+
+# Cache stdlib module names for performance (checked per qualified call)
+# Python 3.10+ has sys.stdlib_module_names; older versions get empty set
+try:
+    STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
+except AttributeError:
+    STDLIB_MODULE_NAMES = frozenset()
 
 
 def _matches_pattern(name: str, patterns: frozenset[str]) -> str | None:
@@ -124,18 +127,11 @@ def _matches_pattern(name: str, patterns: frozenset[str]) -> str | None:
     return None
 
 
-def _has_dot(pattern: str) -> bool:
-    """Check if a pattern contains a dot (qualified name).
-
-    Used to determine matching strategy:
-    - No dot: match builtins and imports
-    - Has dot: match qualified function calls
-    """
-    return "." in pattern
-
-
+@lru_cache(maxsize=1)
 def _get_security_config() -> SecurityConfig | None:
     """Get security configuration from global config.
+
+    Results are cached for performance. Cache is cleared on ot.reload().
 
     Returns:
         SecurityConfig if available, None otherwise.
@@ -146,123 +142,390 @@ def _get_security_config() -> SecurityConfig | None:
         config = get_config()
         return config.security
     except Exception:
-        # Config not loaded yet or error - use defaults
+        # Config not loaded yet or error - use fallback defaults
         return None
 
 
-class DangerousPatternVisitor(ast.NodeVisitor):
-    """AST visitor that detects dangerous code patterns.
+@lru_cache(maxsize=1)
+def _get_tool_namespaces() -> frozenset[str]:
+    """Get all tool pack namespaces for auto-allow.
 
-    Patterns are configurable via onetool.yaml security section.
-    Supports fnmatch wildcards (*, ?, [seq]).
+    Tool namespaces (ot.*, brave.*, file.*, etc.) are auto-allowed
+    since they're the whole point of OneTool.
 
-    Pattern matching is automatic based on structure:
-    - Patterns without dots match builtins and imports
-    - Patterns with dots match qualified function calls
+    Results are cached for performance (registry doesn't change during session).
 
-    Two-tier priority: allow > warned > blocked
+    Returns:
+        Frozenset of namespace patterns like "ot.*", "brave.*"
+    """
+    try:
+        from ot.executor.tool_loader import load_tool_registry
+        from ot.proxy import get_proxy_manager
+
+        registry = load_tool_registry()
+        proxy = get_proxy_manager()
+
+        # Collect all pack names
+        namespaces = set(registry.packs.keys())
+        namespaces.update(proxy.servers)
+
+        # Convert to wildcard patterns
+        return frozenset(f"{ns}.*" for ns in namespaces)
+    except Exception:
+        # Registry not loaded - return minimal set
+        return frozenset({"ot.*"})
+
+
+class AllowlistValidator(ast.NodeVisitor):
+    """AST visitor that validates code against allowlists.
+
+    Security model: Block everything by default, allow what's explicitly listed.
+    Tool namespaces are auto-allowed.
+
+    Categories:
+    - builtins: Allowed builtin function calls
+    - imports: Allowed module imports
+    - calls: Blocked/warned qualified function calls
+
+    Tracks import aliases and from-imports to prevent bypass attacks:
+    - `import subprocess as sp; sp.run()` - alias tracked
+    - `from subprocess import run; run()` - function tracked
     """
 
     def __init__(
         self,
-        blocked: frozenset[str] | None = None,
-        warned: frozenset[str] | None = None,
+        allowed_builtins: frozenset[str],
+        allowed_imports: frozenset[str],
+        warned_imports: frozenset[str],
+        blocked_calls: frozenset[str],
+        warned_calls: frozenset[str],
+        allowed_calls: frozenset[str],
+        tool_namespaces: frozenset[str],
+        allowed_dunders: frozenset[str],
     ) -> None:
-        """Initialize visitor with security patterns.
+        """Initialize validator with allowlists.
 
         Args:
-            blocked: Patterns that block execution (cause errors)
-            warned: Patterns that generate warnings (allow execution)
+            allowed_builtins: Allowed builtin functions and types
+            allowed_imports: Allowed module imports
+            warned_imports: Imports that trigger warnings but are allowed
+            blocked_calls: Blocked qualified function calls
+            warned_calls: Qualified calls that trigger warnings
+            allowed_calls: Explicitly allowed qualified calls
+            tool_namespaces: Auto-allowed tool namespace patterns (e.g., "ot.*")
+            allowed_dunders: Allowed magic variables (e.g., "__format__")
         """
         self.errors: list[str] = []
         self.warnings: list[str] = []
 
-        # Use provided patterns or defaults
-        blocked_all = blocked or DEFAULT_BLOCKED
-        warned_all = warned or DEFAULT_WARNED
+        self.allowed_builtins = allowed_builtins
+        self.allowed_imports = allowed_imports
+        self.warned_imports = warned_imports
+        self.blocked_calls = blocked_calls
+        self.warned_calls = warned_calls
+        self.allowed_calls = allowed_calls
+        self.tool_namespaces = tool_namespaces
+        self.allowed_dunders = allowed_dunders
 
-        # Split patterns by type for efficient matching
-        # Patterns without dots → match builtins and imports
-        # Patterns with dots → match qualified calls
-        self.blocked_simple = frozenset(p for p in blocked_all if not _has_dot(p))
-        self.blocked_qualified = frozenset(p for p in blocked_all if _has_dot(p))
-        self.warned_simple = frozenset(p for p in warned_all if not _has_dot(p))
-        self.warned_qualified = frozenset(p for p in warned_all if _has_dot(p))
+        # Track import aliases: alias_name -> original_module
+        # e.g., "import subprocess as sp" -> {"sp": "subprocess"}
+        self._import_aliases: dict[str, str] = {}
+
+        # Track from-imports from blocked modules: function_name -> original_module
+        # e.g., "from subprocess import run" -> {"run": "subprocess"}
+        self._from_imports: dict[str, str] = {}
+
+    def _is_tool_namespace(self, name: str) -> bool:
+        """Check if a qualified name is in an auto-allowed tool namespace."""
+        return _matches_pattern(name, self.tool_namespaces) is not None
+
+    def _is_allowed_dunder(self, name: str) -> bool:
+        """Check if a name is an allowed magic variable."""
+        return name in self.allowed_dunders
 
     def visit_Call(self, node: ast.Call) -> None:
-        """Check function calls for dangerous patterns.
+        """Check function calls against allowlists."""
+        # First check for __builtins__ bypass via getattr/hasattr
+        if self._is_builtins_bypass_call(node):
+            self.errors.append(
+                f"Line {node.lineno}: Access to '__builtins__' via getattr/hasattr is not allowed "
+                f"(potential security bypass)"
+            )
+            self.generic_visit(node)
+            return
 
-        Priority order: blocked > warned (allow handled at setup)
-        """
         func_name = self._get_call_name(node)
 
         if not func_name:
             self.generic_visit(node)
             return
 
-        # Determine which pattern sets to check based on call type
         is_qualified = "." in func_name
 
         if is_qualified:
-            # Qualified call (e.g., subprocess.run) - check qualified patterns
-            # Priority: blocked > warned
-            if pattern := _matches_pattern(func_name, self.blocked_qualified):
-                self.errors.append(
-                    f"Line {node.lineno}: Dangerous function '{func_name}' is not "
-                    f"allowed (matches '{pattern}')"
-                )
-            elif pattern := _matches_pattern(func_name, self.warned_qualified):
-                self.warnings.append(
-                    f"Line {node.lineno}: Potentially unsafe function '{func_name}' "
-                    f"(matches '{pattern}')"
-                )
+            # Qualified call (e.g., json.loads, subprocess.run)
+            self._check_qualified_call(func_name, node.lineno)
         else:
-            # Simple call (e.g., exec) - check simple patterns (builtins)
-            # Priority: blocked > warned
-            if pattern := _matches_pattern(func_name, self.blocked_simple):
-                self.errors.append(
-                    f"Line {node.lineno}: Dangerous builtin '{func_name}' is not "
-                    f"allowed (matches '{pattern}')"
-                )
-            elif pattern := _matches_pattern(func_name, self.warned_simple):
-                self.warnings.append(
-                    f"Line {node.lineno}: Potentially unsafe function '{func_name}' "
-                    f"(matches '{pattern}')"
-                )
+            # Simple call (builtin like print, len, etc.)
+            self._check_builtin_call(func_name, node.lineno)
 
-        # Continue visiting child nodes
         self.generic_visit(node)
 
-    def visit_Import(self, node: ast.Import) -> None:
-        """Check imports for dangerous modules."""
-        for alias in node.names:
-            # Check simple patterns (no dots) against import names
-            if pattern := _matches_pattern(alias.name, self.blocked_simple):
+    def _is_builtins_bypass_call(self, node: ast.Call) -> bool:
+        """Check if this is an attempt to bypass via getattr(__builtins__, ...).
+
+        Detects patterns like:
+        - getattr(__builtins__, 'exec')
+        - hasattr(__builtins__, 'exec')
+        """
+        func_name = self._get_call_name(node)
+        if func_name not in ("getattr", "hasattr"):
+            return False
+
+        # Check if first argument is __builtins__
+        if node.args and isinstance(node.args[0], ast.Name):
+            if node.args[0].id == "__builtins__":
+                return True
+
+        return False
+
+    def _check_builtin_call(self, func_name: str, lineno: int) -> None:
+        """Check if a builtin call is allowed.
+
+        Also checks for from-import bypass:
+        `from subprocess import run; run()` - run is tracked as from subprocess
+
+        Only checks known dangerous builtins. User-defined functions
+        (like functions defined in the same code) are allowed.
+        """
+        # Check for from-import bypass first
+        # e.g., "from subprocess import run; run()" -> func_name is "run"
+        if func_name in self._from_imports:
+            source_module = self._from_imports[func_name]
+            # Check if the source module is allowed
+            if _matches_pattern(source_module, self.allowed_imports) is None:
                 self.errors.append(
-                    f"Line {node.lineno}: Import of '{alias.name}' is not allowed "
-                    f"(matches '{pattern}')"
+                    f"Line {lineno}: Call to '{func_name}' is not allowed "
+                    f"(imported from blocked module '{source_module}'). "
+                    f"Use ot.security(check='{source_module}') to check security rules."
                 )
-            elif pattern := _matches_pattern(alias.name, self.warned_simple):
-                self.warnings.append(
-                    f"Line {node.lineno}: Import of '{alias.name}' may enable "
-                    f"dangerous operations (matches '{pattern}')"
+                return
+            # Module is allowed, check if specific call is blocked
+            qualified_name = f"{source_module}.{func_name}"
+            if pattern := _matches_pattern(qualified_name, self.blocked_calls):
+                self.errors.append(
+                    f"Line {lineno}: Call to '{func_name}' is blocked "
+                    f"(matches '{pattern}' via 'from {source_module} import'). "
+                    f"Use ot.security(check='{qualified_name}') to check security rules."
                 )
+                return
+            # Allowed module, not blocked call - allow
+            return
+
+        # Allowed dunders pass through
+        if self._is_allowed_dunder(func_name):
+            return
+
+        # Check against allowed builtins
+        if _matches_pattern(func_name, self.allowed_builtins) is not None:
+            return
+
+        # Check if this is a known dangerous builtin that we explicitly block
+        # User-defined functions (not in Python's builtins) are allowed
+        try:
+            import builtins
+            if not hasattr(builtins, func_name):
+                # Not a builtin - allow user-defined functions
+                return
+        except (ImportError, AttributeError):
+            pass
+
+        # Not allowed - block
+        self.errors.append(
+            f"Line {lineno}: Builtin '{func_name}' is not allowed. "
+            f"Use ot.security(check='{func_name}') to check security rules."
+        )
+
+    def _check_qualified_call(self, func_name: str, lineno: int) -> None:
+        """Check if a qualified call is allowed.
+
+        Also resolves import aliases:
+        `import subprocess as sp; sp.run()` -> resolves sp to subprocess
+
+        Only checks known dangerous patterns. Method calls on variables
+        (like results.append()) are allowed by default since we can't
+        statically determine if 'results' is a dangerous module.
+        """
+        # Resolve import aliases first
+        # e.g., "import subprocess as sp; sp.run()" -> func_name is "sp.run"
+        # We need to resolve "sp" to "subprocess"
+        parts = func_name.split(".")
+        module_part = parts[0]
+        original_module = self._import_aliases.get(module_part, module_part)
+
+        # If alias was resolved, reconstruct the full name
+        if original_module != module_part:
+            resolved_name = ".".join([original_module] + parts[1:])
+        else:
+            resolved_name = func_name
+
+        # Tool namespaces are auto-allowed
+        if self._is_tool_namespace(resolved_name):
+            return
+
+        # Explicitly allowed calls pass through
+        if _matches_pattern(resolved_name, self.allowed_calls) is not None:
+            return
+
+        # Check blocked patterns first - these are explicitly dangerous
+        if pattern := _matches_pattern(resolved_name, self.blocked_calls):
+            if original_module != module_part:
+                # Alias was used - include both in error message
+                self.errors.append(
+                    f"Line {lineno}: Call '{func_name}' is blocked "
+                    f"('{module_part}' is alias for '{original_module}', matches '{pattern}'). "
+                    f"Use ot.security(check='{resolved_name}') to check security rules."
+                )
+            else:
+                self.errors.append(
+                    f"Line {lineno}: Call '{func_name}' is blocked (matches '{pattern}'). "
+                    f"Use ot.security(check='{func_name}') to check security rules."
+                )
+            return
+
+        # Check warned patterns
+        if pattern := _matches_pattern(resolved_name, self.warned_calls):
+            self.warnings.append(
+                f"Line {lineno}: Call '{resolved_name}' may be unsafe (matches '{pattern}')"
+            )
+            return
+
+        # Check if the module part is in allowed imports
+        # e.g., for json.loads, check if "json" is allowed
+        if _matches_pattern(original_module, self.allowed_imports) is not None:
+            # Module is allowed, so its functions are implicitly allowed
+            return
+
+        # For method calls on variables (not known modules), allow by default
+        # We can't statically determine if 'results.append()' is dangerous
+        # vs 'os.system()' without runtime type information.
+        # Only block if explicitly in blocked_calls or if module_part is
+        # a known dangerous import that's not allowed.
+        #
+        # Check if module_part looks like a known stdlib module that
+        # should be blocked (e.g., os, subprocess, pickle)
+        # Uses cached STDLIB_MODULE_NAMES for performance
+        if STDLIB_MODULE_NAMES and original_module in STDLIB_MODULE_NAMES:
+            if original_module != module_part:
+                self.errors.append(
+                    f"Line {lineno}: Module '{original_module}' "
+                    f"(aliased as '{module_part}') is not in allowed imports. "
+                    f"Use ot.security(check='{original_module}') to check security rules."
+                )
+            else:
+                self.errors.append(
+                    f"Line {lineno}: Module '{original_module}' is not in allowed imports. "
+                    f"Use ot.security(check='{original_module}') to check security rules."
+                )
+            return
+
+        # Not a known stdlib module - allow method calls on variables
+
+    def visit_Import(self, node: ast.Import) -> None:
+        """Check import statements against allowlists.
+
+        Also tracks aliases for bypass prevention:
+        `import subprocess as sp` -> tracks sp -> subprocess
+        """
+        for alias in node.names:
+            module_name = alias.name
+            self._check_import(module_name, node.lineno)
+
+            # Track alias if present (e.g., "import subprocess as sp")
+            # This prevents bypass via: import blocked as alias; alias.func()
+            if alias.asname:
+                self._import_aliases[alias.asname] = module_name
+            else:
+                # Even without alias, track the module name for consistency
+                # e.g., "import subprocess" -> subprocess.run() uses "subprocess"
+                self._import_aliases[module_name] = module_name
+
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        """Check from imports for dangerous modules."""
+        """Check from imports against allowlists.
+
+        Also tracks imported names for bypass prevention:
+        `from subprocess import run` -> tracks run -> subprocess
+        `from subprocess import run as r` -> tracks r -> subprocess
+        """
         if node.module:
-            # Check simple patterns against the module name
-            if pattern := _matches_pattern(node.module, self.blocked_simple):
+            self._check_import(node.module, node.lineno)
+
+            # Track all imported names from this module
+            # This prevents bypass via: from blocked import func; func()
+            for alias in node.names:
+                if alias.name == "*":
+                    # Star imports are dangerous - we can't track what's imported
+                    # The module check above will already block if not allowed
+                    self.warnings.append(
+                        f"Line {node.lineno}: Star import from '{node.module}' - "
+                        f"cannot track imported names for security validation"
+                    )
+                    continue
+
+                # Use the alias name if present, otherwise the original name
+                local_name = alias.asname if alias.asname else alias.name
+                # Map local name -> (module, original_name)
+                self._from_imports[local_name] = node.module
+
+        self.generic_visit(node)
+
+    def _check_import(self, module_name: str, lineno: int) -> None:
+        """Check if a module import is allowed."""
+        # Check allowed imports
+        if _matches_pattern(module_name, self.allowed_imports) is not None:
+            return
+
+        # Check warned imports
+        if pattern := _matches_pattern(module_name, self.warned_imports):
+            self.warnings.append(
+                f"Line {lineno}: Import of '{module_name}' may enable "
+                f"unsafe operations (matches '{pattern}')"
+            )
+            return
+
+        # Not allowed - block
+        self.errors.append(
+            f"Line {lineno}: Import of '{module_name}' is not allowed. "
+            f"Use ot.security(check='{module_name}') to check security rules."
+        )
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        """Check assignments to magic variables."""
+        for target in node.targets:
+            if (
+                isinstance(target, ast.Name)
+                and target.id.startswith("__")
+                and target.id.endswith("__")
+                and not self._is_allowed_dunder(target.id)
+            ):
                 self.errors.append(
-                    f"Line {node.lineno}: Import from '{node.module}' is not allowed "
-                    f"(matches '{pattern}')"
+                    f"Line {node.lineno}: Assignment to '{target.id}' is not allowed"
                 )
-            elif pattern := _matches_pattern(node.module, self.warned_simple):
-                self.warnings.append(
-                    f"Line {node.lineno}: Import from '{node.module}' may enable "
-                    f"dangerous operations (matches '{pattern}')"
-                )
+        self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        """Block subscript access to __builtins__.
+
+        Prevents bypass via: __builtins__['exec']('code')
+        """
+        # Check if subscripting __builtins__
+        if isinstance(node.value, ast.Name) and node.value.id == "__builtins__":
+            self.errors.append(
+                f"Line {node.lineno}: Access to '__builtins__' is not allowed "
+                f"(potential security bypass)"
+            )
         self.generic_visit(node)
 
     def _get_call_name(self, node: ast.Call) -> str:
@@ -295,9 +558,8 @@ def validate_python_code(
 ) -> ValidationResult:
     """Validate Python code for syntax and security issues.
 
-    Security patterns are loaded from onetool.yaml configuration.
-    If config is not available, built-in defaults are used.
-    Patterns support fnmatch wildcards (*, ?, [seq]).
+    Security validation uses allowlist-based rules from security.yaml.
+    If config is not available, minimal fallback defaults are used.
 
     Args:
         code: Python code to validate
@@ -320,40 +582,37 @@ def validate_python_code(
         result.errors.append(f"Syntax error{line_info}: {e.msg}")
         return result
 
-    # Step 2: Security pattern detection
+    # Step 2: Security validation
     if check_security:
-        # Load patterns from config or use defaults
         security_config = _get_security_config()
 
-        if security_config is not None and security_config.enabled:
-            # Merge config patterns with defaults (additive behavior)
-            # This prevents accidental removal of critical security patterns
-            allow_set = frozenset(security_config.allow)
-            warned_set = frozenset(security_config.warned)
-
-            # Pattern priority (highest to lowest):
-            # 1. allow - completely exempt, no action
-            # 2. warned (user) - downgrades blocked defaults to warnings
-            # 3. blocked - prevents execution
-            # 4. warned (default) - generates warnings
-            #
-            # This lets users:
-            # - Add to blocked/warned (extends defaults)
-            # - Downgrade blocked→warned (e.g., warned: [os.popen])
-            # - Exempt entirely (e.g., allow: [open])
-            blocked = (DEFAULT_BLOCKED | set(security_config.blocked)) - allow_set - warned_set
-            warned = (DEFAULT_WARNED | set(security_config.warned)) - allow_set
-
-            visitor = DangerousPatternVisitor(
-                blocked=frozenset(blocked),
-                warned=frozenset(warned),
-            )
-        elif security_config is not None and not security_config.enabled:
+        if security_config is not None and not security_config.enabled:
             # Security disabled in config - skip validation
             visitor = None
+        elif security_config is not None:
+            # Use config-driven allowlists
+            visitor = AllowlistValidator(
+                allowed_builtins=security_config.get_allowed_builtins(),
+                allowed_imports=security_config.get_allowed_imports(),
+                warned_imports=security_config.get_warned_imports(),
+                blocked_calls=security_config.get_blocked_calls(),
+                warned_calls=security_config.get_warned_calls(),
+                allowed_calls=security_config.get_allowed_calls(),
+                tool_namespaces=_get_tool_namespaces(),
+                allowed_dunders=security_config.get_allowed_dunders(),
+            )
         else:
-            # No config - use defaults
-            visitor = DangerousPatternVisitor()
+            # No config - use fallback defaults
+            visitor = AllowlistValidator(
+                allowed_builtins=FALLBACK_ALLOWED_BUILTINS,
+                allowed_imports=FALLBACK_ALLOWED_IMPORTS,
+                warned_imports=FALLBACK_WARNED_IMPORTS,
+                blocked_calls=frozenset(),
+                warned_calls=frozenset(),
+                allowed_calls=frozenset(),
+                tool_namespaces=_get_tool_namespaces(),
+                allowed_dunders=frozenset({"__format__", "__sanitize__"}),
+            )
 
         if visitor is not None:
             visitor.visit(tree)
@@ -396,3 +655,183 @@ def validate_for_exec(code: str) -> ValidationResult:
     # For example, checking for top-level returns outside functions
 
     return result
+
+
+# =============================================================================
+# Security Introspection (used by ot.security())
+# =============================================================================
+
+
+def get_security_status(pattern: str) -> dict[str, str | bool]:
+    """Check the security status of a specific pattern.
+
+    Used by ot.security(check=pattern) for agent introspection.
+
+    Args:
+        pattern: Pattern to check (e.g., "os", "json.loads", "pickle.*")
+
+    Returns:
+        Dict with 'pattern', 'status' (allowed/blocked/warned), 'category',
+        and 'reason' explaining why.
+    """
+    security_config = _get_security_config()
+    tool_namespaces = _get_tool_namespaces()
+
+    is_qualified = "." in pattern
+
+    if is_qualified:
+        # Check if it's a tool namespace
+        if _matches_pattern(pattern, tool_namespaces):
+            namespace = pattern.split(".")[0]
+            return {
+                "pattern": pattern,
+                "status": "allowed",
+                "category": "tool_namespace",
+                "reason": f"Tool namespace '{namespace}' is auto-allowed",
+            }
+
+        if security_config:
+            # Check explicitly allowed calls
+            if _matches_pattern(pattern, security_config.get_allowed_calls()):
+                return {
+                    "pattern": pattern,
+                    "status": "allowed",
+                    "category": "calls",
+                    "reason": "Explicitly allowed in security.yaml calls.allow",
+                }
+
+            # Check blocked calls
+            if match := _matches_pattern(pattern, security_config.get_blocked_calls()):
+                return {
+                    "pattern": pattern,
+                    "status": "blocked",
+                    "category": "calls",
+                    "reason": f"Blocked by pattern '{match}' in security.yaml calls.block",
+                }
+
+            # Check warned calls
+            if match := _matches_pattern(pattern, security_config.get_warned_calls()):
+                return {
+                    "pattern": pattern,
+                    "status": "warned",
+                    "category": "calls",
+                    "reason": f"Warned by pattern '{match}' in security.yaml calls.warn",
+                }
+
+            # Check if module part is allowed
+            module_part = pattern.split(".")[0]
+            if _matches_pattern(module_part, security_config.get_allowed_imports()):
+                return {
+                    "pattern": pattern,
+                    "status": "allowed",
+                    "category": "imports",
+                    "reason": f"Module '{module_part}' is in allowed imports",
+                }
+
+        # Default: blocked
+        return {
+            "pattern": pattern,
+            "status": "blocked",
+            "category": "calls",
+            "reason": "Not in any allowlist (default: block)",
+        }
+
+    else:
+        # Unqualified name - check builtins and imports
+        if security_config:
+            # Check allowed builtins
+            if _matches_pattern(pattern, security_config.get_allowed_builtins()):
+                return {
+                    "pattern": pattern,
+                    "status": "allowed",
+                    "category": "builtins",
+                    "reason": "In security.yaml builtins.allow",
+                }
+
+            # Check allowed imports
+            if _matches_pattern(pattern, security_config.get_allowed_imports()):
+                return {
+                    "pattern": pattern,
+                    "status": "allowed",
+                    "category": "imports",
+                    "reason": "In security.yaml imports.allow",
+                }
+
+            # Check warned imports
+            if match := _matches_pattern(pattern, security_config.get_warned_imports()):
+                return {
+                    "pattern": pattern,
+                    "status": "warned",
+                    "category": "imports",
+                    "reason": f"Warned by pattern '{match}' in security.yaml imports.warn",
+                }
+
+            # Check allowed dunders
+            if pattern in security_config.get_allowed_dunders():
+                return {
+                    "pattern": pattern,
+                    "status": "allowed",
+                    "category": "dunders",
+                    "reason": "In security.yaml dunders.allow",
+                }
+
+        # Default: blocked
+        return {
+            "pattern": pattern,
+            "status": "blocked",
+            "category": "builtins",
+            "reason": "Not in any allowlist (default: block)",
+        }
+
+
+def get_security_summary() -> dict[str, Any]:
+    """Get a summary of the current security configuration.
+
+    Used by ot.security() for agent introspection.
+
+    Returns:
+        Dict with counts and sample items for each category.
+    """
+    security_config = _get_security_config()
+    tool_namespaces = _get_tool_namespaces()
+
+    if security_config is None:
+        return {
+            "status": "fallback",
+            "message": "Using fallback defaults (security.yaml not loaded)",
+            "builtins_allowed": len(FALLBACK_ALLOWED_BUILTINS),
+            "imports_allowed": len(FALLBACK_ALLOWED_IMPORTS),
+            "tool_namespaces": sorted(tool_namespaces),
+        }
+
+    builtins = security_config.get_allowed_builtins()
+    imports = security_config.get_allowed_imports()
+    warned_imports = security_config.get_warned_imports()
+    blocked_calls = security_config.get_blocked_calls()
+    warned_calls = security_config.get_warned_calls()
+    dunders = security_config.get_allowed_dunders()
+
+    return {
+        "status": "configured",
+        "enabled": security_config.enabled,
+        "builtins": {
+            "allowed_count": len(builtins),
+            "sample": sorted(builtins)[:10],
+        },
+        "imports": {
+            "allowed_count": len(imports),
+            "warned_count": len(warned_imports),
+            "sample_allowed": sorted(imports)[:10],
+            "warned": sorted(warned_imports),
+        },
+        "calls": {
+            "blocked_count": len(blocked_calls),
+            "warned_count": len(warned_calls),
+            "blocked": sorted(blocked_calls),
+            "warned": sorted(warned_calls),
+        },
+        "dunders": {
+            "allowed": sorted(dunders),
+        },
+        "tool_namespaces": sorted(tool_namespaces),
+    }

@@ -47,11 +47,21 @@ The system SHALL detect and block dangerous code patterns.
 - **WHEN** validate_python_code() is called with check_security=True
 - **THEN** it SHALL return valid=False with error "Dangerous builtin 'compile' is not allowed (matches 'compile')"
 
-#### Scenario: Open generates warning
+#### Scenario: Open blocked
 - **GIVEN** code containing `open("file.txt")`
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=True with warning "Potentially unsafe function 'open'"
-- **RATIONALE** File access is commonly needed by legitimate tools
+- **THEN** it SHALL return valid=False with error "Dangerous builtin 'open' is not allowed"
+- **RATIONALE** Use file.* tools instead (sandboxed)
+
+#### Scenario: Network imports blocked
+- **GIVEN** code containing `import socket` or `import requests`
+- **WHEN** validate_python_code() is called with check_security=True
+- **THEN** it SHALL return valid=False with error
+
+#### Scenario: Filesystem imports blocked
+- **GIVEN** code containing `import os` or `import pathlib`
+- **WHEN** validate_python_code() is called with check_security=True
+- **THEN** it SHALL return valid=False with error
 
 #### Scenario: Security check disabled
 - **GIVEN** code containing dangerous patterns
@@ -125,15 +135,25 @@ The system SHALL return structured validation results.
 - **WHEN** validate_python_code() is called
 - **THEN** security issues SHALL be in errors, style issues in warnings
 
-### Requirement: Security Pattern Detection (modified)
+### Requirement: Comprehensive Security Blocking
 
-The system SHALL generate warnings for potentially unsafe but commonly-needed functions.
+The system SHALL block dangerous builtins, imports, and function calls.
 
-#### Scenario: Open generates warning (modified from "Open blocked")
-- **GIVEN** code containing `open("file.txt")`
+#### Scenario: Dangerous builtins blocked
+- **GIVEN** code containing `exec()`, `eval()`, `compile()`, `open()`, `input()`, `breakpoint()`, `globals()`, `locals()`, `__import__()`, or `memoryview()`
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=True with warning "Potentially unsafe function 'open'"
-- **RATIONALE** File access is often required by legitimate tools. Warning is appropriate.
+- **THEN** it SHALL return valid=False with error
+- **NOTE** `getattr`, `setattr`, `delattr`, `hasattr`, `dir`, `vars`, `type` are allowed for object introspection
+
+#### Scenario: Dangerous imports blocked
+- **GIVEN** code containing imports of: os, sys, socket, urllib, http, shutil, glob, tempfile, pickle, marshal, shelve, ctypes, multiprocessing, threading, ssl, asyncio, aiohttp, requests, httpx
+- **WHEN** validate_python_code() is called with check_security=True
+- **THEN** it SHALL return valid=False with error
+
+#### Scenario: Safe imports allowed
+- **GIVEN** code containing `import json` or `import re` or `import math`
+- **WHEN** validate_python_code() is called with check_security=True
+- **THEN** it SHALL return valid=True (safe modules are not blocked)
 
 ### Requirement: Configurable Security Patterns
 
@@ -176,11 +196,12 @@ The system SHALL support configurable security patterns via onetool.yaml.
   ```yaml
   security:
     allow:
-      - open
+      - os
   ```
 
-- **WHEN** code containing `open()` is validated
-- **THEN** it SHALL pass without warning (exempted from defaults)
+- **WHEN** code containing `import os` is validated
+- **THEN** it SHALL pass without error (exempted from defaults)
+- **RATIONALE** Allows users to selectively enable blocked patterns when needed
 
 ### Requirement: Wildcard Pattern Matching
 
@@ -208,43 +229,120 @@ The system SHALL support fnmatch wildcards in security patterns.
 - **THEN** message SHALL include both the function name and the matched pattern
 - **EXAMPLE** "subprocess.check_output is not allowed (matches 'subprocess.*')"
 
-### Requirement: Four-Level Security Pattern Categories
+### Requirement: Allowlist-Based Security Model
 
-The system SHALL support four categories of security patterns with automatic type detection.
+The system SHALL use an allowlist-based security model where everything is blocked by default.
 
-#### Scenario: Blocked patterns
-- **GIVEN** `blocked: [exec, eval, subprocess.*, os.system]`
-- **WHEN** code uses these patterns
-- **THEN** validation SHALL fail with error
-- **AND** execution SHALL be denied
+#### Scenario: Allowlist philosophy
+- **GIVEN** the security model
+- **WHEN** code is validated
+- **THEN** only explicitly allowed builtins, imports, and calls SHALL pass
+- **AND** everything else SHALL be blocked by default
+- **RATIONALE** Industry best practice - "block everything, explicitly allow what's safe"
 
-#### Scenario: Ask patterns
-- **GIVEN** `ask: [requests.*, urllib.*]`
-- **WHEN** code uses these patterns
-- **THEN** validation SHALL return `requires_confirmation=True`
-- **AND** the caller SHALL prompt the user for confirmation before execution
-- **AND** if denied, execution SHALL be blocked
+#### Scenario: Builtins allowlist
+- **GIVEN** security.yaml with `builtins.allow: [str, int, len, ...]`
+- **WHEN** code uses allowed builtins
+- **THEN** validation SHALL pass
+- **AND** unlisted builtins SHALL be blocked
 
-#### Scenario: Warned patterns
-- **GIVEN** `warned: [subprocess, os, open, pickle.*]`
-- **WHEN** code uses these patterns
+#### Scenario: Imports allowlist
+- **GIVEN** security.yaml with `imports.allow: [json, re, math, ...]`
+- **WHEN** code imports allowed modules
+- **THEN** validation SHALL pass
+- **AND** unlisted imports SHALL be blocked
+
+#### Scenario: Imports warn list
+- **GIVEN** security.yaml with `imports.warn: [yaml]`
+- **WHEN** code imports warned modules
 - **THEN** validation SHALL pass with warning
-- **AND** warning SHALL be logged
+- **AND** warning SHALL indicate potential unsafe operations
 
-#### Scenario: Allow patterns
-- **GIVEN** `allow: [open]`
-- **WHEN** code uses these patterns
-- **THEN** validation SHALL pass without warning
-- **AND** pattern SHALL be exempt from warned/ask defaults
+#### Scenario: Calls blocklist
+- **GIVEN** security.yaml with `calls.block: [pickle.*, yaml.load]`
+- **WHEN** code uses blocked calls
+- **THEN** validation SHALL fail with error
+- **EVEN IF the module part is in allowed imports
 
-#### Scenario: Pattern precedence
-- **GIVEN** a pattern appears in multiple categories
-- **WHEN** validation occurs
-- **THEN** precedence SHALL be: `blocked` > `ask` > `warned` > `allow`
-- **EXAMPLE** If `open` is in both `blocked` and `allow`, it SHALL be blocked
+#### Scenario: Tool namespaces auto-allowed
+- **GIVEN** registered tool packs (ot, brave, file, web, etc.)
+- **WHEN** code calls tool functions (e.g., `brave.search()`, `file.read()`)
+- **THEN** validation SHALL pass without explicit allowlist entry
+- **RATIONALE** Tool namespaces are the point of OneTool
 
-#### Scenario: Pattern type detection
-- **GIVEN** patterns without dots (e.g., `exec`, `subprocess`)
-- **WHEN** pattern matching occurs
-- **THEN** they SHALL match builtin calls AND import statements
-- **AND** patterns with dots (e.g., `subprocess.*`) SHALL match qualified calls only
+#### Scenario: User-defined functions allowed
+- **GIVEN** code defines a function `def foo(): pass`
+- **WHEN** that function is called later in the code
+- **THEN** validation SHALL pass
+- **RATIONALE** User-defined functions are not dangerous builtins
+
+#### Scenario: Method calls on variables allowed
+- **GIVEN** code with `results = []; results.append(x)`
+- **WHEN** the code is validated
+- **THEN** validation SHALL pass
+- **RATIONALE** Cannot statically determine if variable is dangerous
+
+#### Scenario: External config file
+- **GIVEN** security.yaml in bundled defaults
+- **WHEN** config is loaded
+- **THEN** security rules SHALL be visible and auditable
+- **AND** users CAN customize via project/global security.yaml
+
+### Requirement: Security Introspection Tool
+
+The system SHALL provide ot.security() for agents to query security rules.
+
+#### Scenario: Security summary
+- **GIVEN** no arguments to ot.security()
+- **WHEN** called
+- **THEN** it SHALL return summary of all security categories
+- **INCLUDING** builtins count, imports count, blocked calls, tool namespaces
+
+#### Scenario: Check specific pattern
+- **GIVEN** `ot.security(check="os")`
+- **WHEN** called
+- **THEN** it SHALL return status (allowed/blocked/warned), category, and reason
+- **EXAMPLE** `{"pattern": "os", "status": "blocked", "category": "builtins", "reason": "Not in any allowlist"}`
+
+#### Scenario: Check tool namespace
+- **GIVEN** `ot.security(check="brave.search")`
+- **WHEN** called
+- **THEN** it SHALL return allowed status with reason "Tool namespace auto-allowed"
+
+#### Scenario: Check allowed module call
+- **GIVEN** `ot.security(check="json.loads")`
+- **WHEN** called
+- **THEN** it SHALL return allowed status with reason "Module 'json' is in allowed imports"
+
+### Requirement: Magic Variables (Dunders)
+
+The system SHALL support configurable magic variables.
+
+#### Scenario: Allowed dunders
+- **GIVEN** security.yaml with `dunders.allow: [__format__, __sanitize__]`
+- **WHEN** code assigns to these variables
+- **THEN** validation SHALL pass
+
+#### Scenario: Blocked dunders
+- **GIVEN** code assigns to `__class__` or `__dict__`
+- **WHEN** validation runs
+- **THEN** validation SHALL fail with error
+- **RATIONALE** Prevents namespace manipulation attacks
+
+### Requirement: Compact Array Format
+
+The system SHALL support grouped arrays in security.yaml for readability.
+
+#### Scenario: Nested arrays flattened
+- **GIVEN** security.yaml with:
+  ```yaml
+  builtins:
+    allow:
+      - [str, int, float]
+      - [list, dict, set]
+      - print
+  ```
+- **WHEN** config is loaded
+- **THEN** nested arrays SHALL be flattened to single list
+- **AND** single items SHALL be preserved
+

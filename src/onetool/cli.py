@@ -5,9 +5,69 @@ from __future__ import annotations
 import atexit
 import os
 import signal
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
+
+if TYPE_CHECKING:
+    from rich.console import Console
+
+
+def _is_initialized() -> bool:
+    """Check if OneTool is initialized (global config exists).
+
+    Returns:
+        True if ~/.onetool/config/onetool.yaml exists
+    """
+    from ot.paths import CONFIG_SUBDIR, get_global_dir
+
+    global_config = get_global_dir() / CONFIG_SUBDIR / "onetool.yaml"
+    return global_config.exists()
+
+
+def _check_first_run(console: Console) -> None:
+    """Check for first-run state and prompt for initialization.
+
+    If OneTool is not initialized:
+    - Interactive (TTY): Prompt user to initialize, then exit
+    - Non-interactive: Print error and exit
+
+    After first-run init, exits so user can review config before starting server.
+
+    Args:
+        console: Rich console for output
+
+    Raises:
+        typer.Exit: Always exits if not initialized (after init or on decline)
+    """
+    if _is_initialized():
+        return
+
+    # Check if stdin is a TTY (interactive mode)
+    is_interactive = sys.stdin.isatty()
+
+    if not is_interactive:
+        console.print("[red]OneTool not initialized.[/red] Run: onetool init")
+        raise typer.Exit(1)
+
+    # Interactive mode - prompt for initialization
+    console.print("[yellow]OneTool is not initialized.[/yellow]")
+    do_init = typer.confirm("Initialize now?", default=True)
+
+    if not do_init:
+        console.print("Run 'onetool init' when ready.")
+        raise typer.Exit(1)
+
+    # Initialize
+    from ot.paths import ensure_global_dir
+
+    ensure_global_dir(quiet=False, force=False)
+
+    # Exit after first-run init so user can configure their MCP client
+    console.print("\n[green]OneTool initialized. Configure your MCP client to run OneTool.[/green]")
+    raise typer.Exit(0)
 
 
 def _suppress_shutdown_warnings() -> None:
@@ -355,12 +415,9 @@ def serve(
         onetool
         onetool --config config/onetool.yaml
     """
-    # Bootstrap global config directory on first run
-    # Skip for 'init' subcommand - it handles its own directory creation with messaging
+    # Check for first-run initialization (skip for 'init' subcommand)
     if ctx.invoked_subcommand != "init":
-        from ot.paths import ensure_global_dir
-
-        ensure_global_dir(quiet=True)
+        _check_first_run(console)
 
     # Only run if no subcommand was invoked (handles --help automatically)
     if ctx.invoked_subcommand is not None:

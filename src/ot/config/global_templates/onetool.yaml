@@ -5,10 +5,12 @@
 version: 1
 
 # Include external config files (merged left-to-right)
-# Paths are relative to OT_DIR (~/.onetool/), with fallback to bundled defaults
+# Paths are relative to OT_DIR (~/.onetool/), with fallback to global config
 include:
   - config/snippets.yaml   # Snippet workflows
   - config/servers.yaml    # External MCP servers
+  - config/security.yaml   # Security allowlists (builtins, imports, calls)
+  - config/diagram.yaml    # Diagram tool settings and templates
 
 tools_dir: []
 

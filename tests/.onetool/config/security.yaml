@@ -1,0 +1,34 @@
+# OneTool Test Security Configuration
+# Allowlist model: everything blocked by default, explicitly allow what's safe.
+
+security:
+  validate_code: true
+  enabled: true
+
+  builtins:
+    allow:
+      # Types
+      - [bool, bytes, dict, float, frozenset, int, list, set, str, tuple, type]
+      # Functions
+      - [abs, all, any, ascii, callable, chr, delattr, dir, divmod, enumerate]
+      - [filter, format, getattr, hasattr, hash, id, isinstance, issubclass]
+      - [iter, len, map, max, min, next, ord, pow, print, range]
+      - [repr, reversed, round, setattr, slice, sorted, sum, vars, zip]
+      # Exceptions
+      - ["*Error", "*Exception", StopIteration]
+
+  imports:
+    allow:
+      - [abc, array, base64, bisect, calendar, collections, copy, csv]
+      - [dataclasses, datetime, decimal, difflib, enum, fractions, functools]
+      - [hashlib, heapq, html, html.parser, itertools, json, math, operator]
+      - [random, re, statistics, string, textwrap, time]
+      - [types, typing, urllib.parse, uuid, zoneinfo]
+    warn: [yaml]
+
+  dunders:
+    allow: [__format__, __sanitize__]
+
+  # Disabled for tests - test_sanitize.py tests it explicitly
+  sanitize:
+    enabled: false

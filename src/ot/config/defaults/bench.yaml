@@ -1,4 +1,0 @@
-# Benchmark Harness configuration
-# Run benchmarks to test OneTool performance and tool behavior
-
-log_level: INFO

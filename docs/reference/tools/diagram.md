@@ -101,8 +101,32 @@ Or use `include:` to load from a shared config file:
 
 ```yaml
 include:
-  - diagram.yaml  # Falls back to global or bundled defaults
+  - config/diagram.yaml  # Falls back to global
 ```
+
+## Templates
+
+OneTool includes built-in diagram templates for common patterns. Templates are installed to `~/.onetool/config/diagram-templates/` during `onetool init`.
+
+**Available templates:**
+
+| Name | Provider | Type | Description |
+|------|----------|------|-------------|
+| `api-flow` | mermaid | sequence | REST API request/response flow |
+| `microservices` | d2 | architecture | Microservices architecture layout |
+| `c4-context` | plantuml | c4 | C4 system context diagram |
+| `state-machine` | mermaid | state | State machine diagram |
+| `class-diagram` | mermaid | class | Class/data model diagram |
+| `project-gantt` | mermaid | gantt | Project timeline Gantt chart |
+| `feature-mindmap` | mermaid | mindmap | Feature brainstorming mindmap |
+
+**Load a template:**
+
+```python
+diagram.get_template(name="api-flow")
+```
+
+Templates can be customized by editing files in `~/.onetool/config/diagram-templates/`.
 
 ## Self-Hosted Setup
 

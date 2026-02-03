@@ -223,6 +223,24 @@ The `diagram.get_template()` function SHALL return diagram starter templates.
 - **THEN** it SHALL return "Template 'unknown' not found"
 - **AND** it SHALL list available templates
 
+#### Scenario: Template file resolution
+- **GIVEN** template config with `file: config/diagram-templates/api-flow.mmd`
+- **WHEN** `diagram.get_template(name="api-flow")` is called
+- **THEN** it SHALL resolve path relative to `.onetool/` directory
+- **AND** template files SHALL be installed to `~/.onetool/config/diagram-templates/` during `onetool init`
+
+#### Scenario: Built-in templates
+- **GIVEN** `onetool init` has been run
+- **WHEN** templates are queried
+- **THEN** the following built-in templates SHALL be available:
+  - `api-flow` (mermaid/sequence)
+  - `microservices` (d2/architecture)
+  - `c4-context` (plantuml/c4)
+  - `state-machine` (mermaid/state)
+  - `class-diagram` (mermaid/class)
+  - `project-gantt` (mermaid/gantt)
+  - `feature-mindmap` (mermaid/mindmap)
+
 ### Requirement: List Providers
 
 The `diagram.list_providers()` function SHALL return available Kroki providers.

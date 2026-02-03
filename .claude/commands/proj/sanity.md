@@ -34,7 +34,7 @@ Based on the `retest` argument:
 
 When errors are encountered, check if they are caused by:
 - **Your mistake**: Add a hint to `tests/sanity/test_sanity-hints.md` to avoid in future
-- **OneTool defect**: Create `./plan/fix/{issue-name}.md` with issue details
+- **OneTool defect**: Create `./plan/issues/{issue-name}.md` with issue details
 
 ## Status Update
 

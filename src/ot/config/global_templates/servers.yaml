@@ -1,5 +1,5 @@
 # OneTool Shared Server Definitions
-# Load via: include: [servers.yaml] (falls back to bundled)
+# Load via: include: [config/servers.yaml]
 #
 # These are common MCP server configurations that can be included
 # in project-specific onetool.yaml files.

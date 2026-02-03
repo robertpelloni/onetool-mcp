@@ -17,7 +17,7 @@ import ast
 import asyncio
 import io
 from contextlib import redirect_stdout
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from loguru import logger
@@ -320,6 +320,7 @@ class PreparedCommand:
     code: str
     original: str
     error: str | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 def prepare_command(command: str) -> PreparedCommand:
@@ -380,9 +381,14 @@ def prepare_command(command: str) -> PreparedCommand:
             error=f"Code validation failed: {errors}",
         )
 
+    # Log warnings (validation passed but has warnings)
+    for warning in validation.warnings:
+        logger.warning(f"Code validation warning: {warning}")
+
     return PreparedCommand(
         code=stripped,
         original=command,
+        warnings=validation.warnings,
     )
 
 
@@ -393,8 +399,8 @@ def prepare_command(command: str) -> PreparedCommand:
 
 async def execute_command(
     command: str,
-    registry: ToolRegistry,  # noqa: ARG001
-    executor: SimpleExecutor,  # noqa: ARG001
+    registry: ToolRegistry,  # noqa: ARG001 - kept for API compatibility
+    executor: SimpleExecutor,  # noqa: ARG001 - kept for API compatibility
     tools_dir: Path | None = None,
     *,
     skip_validation: bool = False,
@@ -411,8 +417,8 @@ async def execute_command(
 
     Args:
         command: Raw command from LLM (may have fences)
-        registry: Tool registry for looking up functions
-        executor: Executor for running tool functions
+        registry: Tool registry (unused, kept for API compatibility)
+        executor: Executor (unused, kept for API compatibility)
         tools_dir: Path to tools directory
         skip_validation: If True, skip validation (use when already validated)
         prepared_code: Pre-processed code to execute (bypasses preparation steps)

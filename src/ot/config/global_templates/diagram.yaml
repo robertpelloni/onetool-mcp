@@ -1,5 +1,5 @@
 # Diagram tool configuration
-# Load via: include: [config/diagram.yaml]
+# Provides templates, instructions, and output settings for diagram generation.
 
 tools:
   diagram:
@@ -7,7 +7,7 @@ tools:
       type: kroki
       remote_url: https://kroki.io
       self_hosted_url: http://localhost:8000
-      prefer: self_hosted  # remote | self_hosted | auto
+      prefer: remote  # remote | self_hosted | auto
       timeout: 30.0
 
     policy:
@@ -24,7 +24,7 @@ tools:
         - plantuml
 
     output:
-      dir: ../diagrams  # Relative to config dir (.onetool/../diagrams)
+      dir: ../diagrams  # Relative to .onetool/ directory
       naming: "{provider}_{name}_{timestamp}"
       default_format: svg
       save_source: true

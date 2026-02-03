@@ -89,6 +89,7 @@ composer.lock
 *.cert
 secrets/
 credentials/
+.mcpregistry_*_token
 
 # Project
 .browse/

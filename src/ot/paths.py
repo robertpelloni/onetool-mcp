@@ -1,7 +1,6 @@
 """Path resolution for OneTool global and project directories.
 
-OneTool uses a three-tier directory structure:
-- Bundled: package data in ot.config.defaults — read-only defaults
+OneTool uses a two-tier directory structure:
 - Global: ~/.onetool/ — user-wide settings, secrets
 - Project: .onetool/ — project-specific config
 
@@ -12,6 +11,7 @@ Each .onetool/ directory uses subdirectories to organise files by purpose:
 - tools/ — Reserved for installed tool packs
 
 Directories are created lazily on first use, not on install.
+Templates in ot.config.global_templates are copied to ~/.onetool/ on init.
 """
 
 from __future__ import annotations
@@ -31,10 +31,7 @@ LOGS_SUBDIR = "logs"
 STATS_SUBDIR = "stats"
 TOOLS_SUBDIR = "tools"
 
-# Package containing bundled config defaults
-BUNDLED_CONFIG_PACKAGE = "ot.config.defaults"
-
-# Package containing global templates (copied to ~/.onetool/ on first run)
+# Package containing global templates (copied to ~/.onetool/ on init)
 GLOBAL_TEMPLATES_PACKAGE = "ot.config.global_templates"
 
 
@@ -47,7 +44,7 @@ def _resolve_package_dir(package_name: str, description: str) -> Path:
     - Development mode
 
     Args:
-        package_name: Dotted package name (e.g., "ot.config.defaults")
+        package_name: Dotted package name (e.g., "ot.config.global_templates")
         description: Human-readable description for error messages
 
     Returns:
@@ -103,29 +100,13 @@ def _resolve_package_dir(package_name: str, description: str) -> Path:
     )
 
 
-def get_bundled_config_dir() -> Path:
-    """Get the bundled config defaults directory path.
-
-    Uses importlib.resources to access package data. Works correctly across:
-    - Regular pip/uv install (wheel)
-    - Editable install (uv tool install -e .)
-    - Development mode
-
-    Returns:
-        Path to bundled defaults directory (read-only package data)
-
-    Raises:
-        FileNotFoundError: If bundled defaults package is not found or not on filesystem
-    """
-    return _resolve_package_dir(BUNDLED_CONFIG_PACKAGE, "Bundled config")
-
-
 def get_global_templates_dir() -> Path:
     """Get the global templates directory path.
 
     Global templates are user-facing config files with commented examples,
-    copied to ~/.onetool/ on first run. Unlike bundled defaults (which are
-    minimal working configs), these provide rich documentation and examples.
+    copied to ~/.onetool/ on init. These provide documentation and examples
+    for configuration. Also contains subdirectories like diagram-templates/
+    and tool_templates/ for tool-specific resources.
 
     Returns:
         Path to global templates directory (read-only package data)
@@ -238,8 +219,6 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
     Creates ~/.onetool/ with subdirectories (config/, logs/, stats/, tools/)
     and copies template config files from global_templates to config/.
     Templates are user-facing files with commented examples for customization.
-    Subdirectories (like diagram-templates/) are NOT copied - they remain in
-    bundled defaults and are accessed via config inheritance.
 
     Args:
         quiet: Suppress creation messages
@@ -263,7 +242,7 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
         (global_dir / subdir).mkdir(exist_ok=True)
 
     # Copy template config files to config/ subdirectory
-    # Only YAML files are copied; subdirectories stay in bundled defaults
+    # Only YAML files are copied from global_templates/
     # Files named *-template.yaml are copied without the -template suffix
     # (to avoid gitignore patterns on secrets.yaml)
     config_dir = global_dir / CONFIG_SUBDIR
@@ -278,6 +257,20 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
             if not dest.exists() or force:
                 shutil.copy(config_file, dest)
                 copied_items.append(f"config/{dest_name}")
+
+        # Copy resource subdirectories (e.g., diagram-templates/)
+        # These contain user-customizable template files
+        for subdir in templates_dir.iterdir():
+            if subdir.is_dir() and not subdir.name.startswith("_"):
+                # Skip tool_templates - those are code templates accessed via get_global_templates_dir()
+                if subdir.name == "tool_templates":
+                    continue
+                dest_subdir = config_dir / subdir.name
+                if not dest_subdir.exists() or force:
+                    if dest_subdir.exists():
+                        shutil.rmtree(dest_subdir)
+                    shutil.copytree(subdir, dest_subdir)
+                    copied_items.append(f"config/{subdir.name}/")
     except FileNotFoundError:
         # Global templates not available (dev environment without package install)
         pass

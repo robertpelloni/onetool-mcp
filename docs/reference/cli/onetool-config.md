@@ -2,23 +2,22 @@
 
 Complete reference for `onetool.yaml` configuration.
 
-## Three-Tier System
+## Two-Tier System
 
 ```text
-┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│    Bundled       │ --> │     Global       │ --> │    Project       │
-│ (package data)   │     │  (~/.onetool/)   │     │ (cwd/.onetool/)  │
-└──────────────────┘     └──────────────────┘     └──────────────────┘
-   Read-only              User preferences        Project overrides
+┌──────────────────┐     ┌──────────────────┐
+│     Global       │ --> │    Project       │
+│  (~/.onetool/)   │     │ (cwd/.onetool/)  │
+└──────────────────┘     └──────────────────┘
+   User preferences        Project overrides
 ```
 
 | Location | Purpose | Scope |
 |----------|---------|-------|
-| Bundled defaults | Read-only package defaults | All installs |
 | `~/.onetool/config/onetool.yaml` | Global config | User |
 | `.onetool/config/onetool.yaml` | Project config | Project |
 
-**Resolution order:** CLI flags → `ONETOOL_CONFIG` env var → project → global → bundled
+**Resolution order:** CLI flags → `ONETOOL_CONFIG` env var → project → global
 
 **Windows paths:** Replace `~/.onetool/` with `%USERPROFILE%\.onetool\`
 
@@ -37,8 +36,12 @@ Creating ~/.onetool/
   ✓ config/snippets.yaml
   ✓ config/servers.yaml
   ✓ config/secrets.yaml
+  ✓ config/prompts.yaml
+  ✓ config/security.yaml
+  ✓ config/diagram.yaml
   ✓ config/bench.yaml
   ✓ config/bench-secrets.yaml
+  ✓ config/diagram-templates/
 ```
 
 Manage manually:
@@ -51,11 +54,11 @@ onetool init validate  # Check for errors
 
 ## Configuration Inheritance
 
-Project configs can inherit from global or bundled defaults:
+Project configs can inherit from global config:
 
 ```yaml
 version: 1
-inherit: global  # global (default), bundled, or none
+inherit: global  # global (default) or none
 
 tools_dir:
   - ./tools/*.py
@@ -64,7 +67,6 @@ tools_dir:
 | Value | Behaviour |
 |-------|-----------|
 | `global` (default) | Merge global config first, project overrides |
-| `bundled` | Merge bundled defaults only (skip global) |
 | `none` | No inheritance, use project config as-is |
 
 **Merge semantics:**
@@ -107,9 +109,9 @@ Compose configuration from multiple files:
 version: 1
 
 include:
-  - prompts.yaml       # Falls back to global or bundled if not in project
-  - snippets.yaml
-  - local-snippets.yaml  # Project-only additions
+  - config/prompts.yaml     # Relative to OT_DIR (.onetool/)
+  - config/snippets.yaml
+  - local-snippets.yaml     # Project-only additions
 
 servers:
   local_dev:
@@ -117,11 +119,10 @@ servers:
     command: python
 ```
 
-**Include resolution (three-tier fallback):**
+**Include resolution (two-tier fallback):**
 
-1. Project config directory (where the including file is)
+1. OT_DIR (project `.onetool/` or wherever the config is)
 2. Global (`~/.onetool/`)
-3. Bundled (package defaults)
 
 **Merge behaviour:**
 
@@ -278,7 +279,7 @@ External snippet files:
 
 ```yaml
 include:
-  - snippets.yaml              # Falls back to global or bundled
+  - config/snippets.yaml       # Falls back to global
   - local-snippets.yaml        # Project-specific additions
 
 snippets:

@@ -1,6 +1,6 @@
 # OneTool Prompts Configuration
 # See: docs/guides/explicit-calls.md, docs/guides/prompting-best-practices.md
-# Load via: include: [prompts.yaml] (falls back to bundled)
+# Load via: include: [config/prompts.yaml]
 
 prompts:
   # Per-tool descriptions (override docstrings)
@@ -54,6 +54,11 @@ prompts:
     - Wrong arguments? `ot.tools(pattern="tool.name", info="full")` for signature
     - General confusion? `ot.help(query="topic")` searches everything
     - If introspection fails, report the error - do not compute results yourself
+
+    **Security:** Code is validated before execution. Some builtins, imports, and calls are blocked.
+    - Blocked code? Use `ot.security()` to see what's allowed/blocked
+    - Check specific pattern: `ot.security(check="os")` → shows if allowed or blocked
+    - Use OneTool tools instead of blocked imports (e.g., `file.read()` instead of `open()`)
 
     ## Aliases & Snippets
     - Aliases: Short names for functions. `__ot ws(query="test")` calls `brave.web_search`

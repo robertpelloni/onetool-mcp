@@ -41,7 +41,6 @@ from pydantic import (
 from ot.config.mcp import McpServerConfig, expand_secrets
 from ot.paths import (
     CONFIG_SUBDIR,
-    get_bundled_config_dir,
     get_config_dir,
     get_effective_cwd,
     get_global_dir,
@@ -49,6 +48,14 @@ from ot.paths import (
 
 # Current config schema version
 CURRENT_CONFIG_VERSION = 1
+
+
+class ConfigNotFoundError(Exception):
+    """Raised when configuration file is not found and no fallback is available.
+
+    This error indicates that OneTool has not been initialized. Users should run
+    `onetool init` to create the global configuration directory.
+    """
 
 
 class TransformConfig(BaseModel):
@@ -129,41 +136,137 @@ class OutputSanitizationConfig(BaseModel):
     )
 
 
+def _flatten_nested_list(items: list[Any]) -> list[str]:
+    """Flatten nested lists/arrays into a single list of strings.
+
+    Supports the compact array format in security.yaml:
+        allow:
+          - [str, int, float]  # Grouped for readability
+          - print              # Single item
+
+    Args:
+        items: List that may contain strings or nested lists
+
+    Returns:
+        Flattened list of strings
+    """
+    result: list[str] = []
+    for item in items:
+        if isinstance(item, list):
+            result.extend(str(x) for x in item)
+        else:
+            result.append(str(item))
+    return result
+
+
+class BuiltinsConfig(BaseModel):
+    """Builtins allowlist configuration."""
+
+    allow: list[str] = Field(
+        default_factory=list,
+        description="Allowed builtin functions and types",
+    )
+
+    @field_validator("allow", mode="before")
+    @classmethod
+    def flatten_allow(cls, v: Any) -> list[str]:
+        """Flatten nested arrays in allow list."""
+        if isinstance(v, list):
+            return _flatten_nested_list(v)
+        return v if v else []
+
+
+class ImportsConfig(BaseModel):
+    """Imports allowlist configuration."""
+
+    allow: list[str] = Field(
+        default_factory=list,
+        description="Allowed import modules",
+    )
+    warn: list[str] = Field(
+        default_factory=list,
+        description="Imports that trigger warnings but are allowed",
+    )
+
+    @field_validator("allow", "warn", mode="before")
+    @classmethod
+    def flatten_lists(cls, v: Any) -> list[str]:
+        """Flatten nested arrays in lists."""
+        if isinstance(v, list):
+            return _flatten_nested_list(v)
+        return v if v else []
+
+
+class CallsConfig(BaseModel):
+    """Qualified calls configuration."""
+
+    allow: list[str] = Field(
+        default_factory=list,
+        description="Allowed qualified function calls (e.g., 'json.loads')",
+    )
+    block: list[str] = Field(
+        default_factory=list,
+        description="Blocked qualified function calls (e.g., 'pickle.*')",
+    )
+    warn: list[str] = Field(
+        default_factory=list,
+        description="Qualified calls that trigger warnings",
+    )
+
+    @field_validator("allow", "block", "warn", mode="before")
+    @classmethod
+    def flatten_lists(cls, v: Any) -> list[str]:
+        """Flatten nested arrays in lists."""
+        if isinstance(v, list):
+            return _flatten_nested_list(v)
+        return v if v else []
+
+
+class DundersConfig(BaseModel):
+    """Magic variable (dunder) configuration."""
+
+    allow: list[str] = Field(
+        default_factory=list,
+        description="Allowed magic variables (e.g., '__format__')",
+    )
+
+    @field_validator("allow", mode="before")
+    @classmethod
+    def flatten_allow(cls, v: Any) -> list[str]:
+        """Flatten nested arrays in allow list."""
+        if isinstance(v, list):
+            return _flatten_nested_list(v)
+        return v if v else []
+
+
 class SecurityConfig(BaseModel):
     """Code validation security configuration.
 
-    Controls code validation with three-tier pattern system:
-    - allow: Execute silently (highest priority)
-    - warned: Log warning but allow execution
-    - blocked: Reject with error (lowest priority)
+    Allowlist-based security model: block everything by default, explicitly
+    allow what's safe. Tool namespaces (ot.*, brave.*, etc.) are auto-allowed.
 
-    Priority order: allow > warned > blocked
+    Configuration structure:
+        security:
+          builtins:
+            allow: [str, int, list, ...]
+          imports:
+            allow: [json, re, math, ...]
+            warn: [yaml]
+          calls:
+            block: [pickle.*, yaml.load]
+            warn: [random.seed]
+          dunders:
+            allow: [__format__, __sanitize__]
 
     Patterns support fnmatch wildcards:
     - '*' matches any characters (e.g., 'subprocess.*' matches 'subprocess.run')
     - '?' matches a single character
     - '[seq]' matches any character in seq
 
-    Pattern matching logic (handled automatically by validator):
-    - Patterns WITHOUT dots (e.g., 'exec', 'subprocess') match:
-      * Builtin function calls: exec(), eval()
-      * Import statements: import subprocess, from os import system
-    - Patterns WITH dots (e.g., 'subprocess.*', 'os.system') match:
-      * Qualified function calls: subprocess.run(), os.system()
-
-    Configuration behavior:
-    - blocked/warned lists EXTEND the built-in defaults (additive)
-    - Adding a pattern to 'warned' downgrades it from blocked (if in defaults)
-    - Use 'allow' list to exempt specific patterns entirely (no warning)
-
-    Example configurations:
-        # Air-gapped mode - block network tools
-        security:
-          block: [brave.*, web.*, context7.*]
-
-        # Trust file ops
-        security:
-          allow: [file.*]
+    Compact array format for readability:
+        allow:
+          - [str, int, float]  # Grouped items
+          - print              # Single item
     """
 
     validate_code: bool = Field(
@@ -176,24 +279,25 @@ class SecurityConfig(BaseModel):
         description="Enable security pattern checking (requires validate_code)",
     )
 
-    # Blocked patterns - EXTENDS built-in defaults (prevents accidental removal)
-    # Use 'allow' to exempt specific patterns if needed
-    blocked: list[str] = Field(
-        default_factory=list,
-        description="Additional patterns to block (extends defaults, not replaces)",
+    # New category-based allowlist configuration
+    builtins: BuiltinsConfig = Field(
+        default_factory=BuiltinsConfig,
+        description="Builtins allowlist configuration",
     )
 
-    # Warned patterns - EXTENDS built-in defaults
-    warned: list[str] = Field(
-        default_factory=list,
-        description="Additional patterns to warn on (extends defaults, not replaces)",
+    imports: ImportsConfig = Field(
+        default_factory=ImportsConfig,
+        description="Imports allowlist configuration",
     )
 
-    # Allow list - explicitly exempt patterns from defaults
-    # Use this to remove a default pattern you need (e.g., allow 'open' for file tools)
-    allow: list[str] = Field(
-        default_factory=list,
-        description="Patterns to exempt from blocking/warning (removes from defaults)",
+    calls: CallsConfig = Field(
+        default_factory=CallsConfig,
+        description="Qualified calls configuration",
+    )
+
+    dunders: DundersConfig = Field(
+        default_factory=DundersConfig,
+        description="Magic variable (dunder) configuration",
     )
 
     # Output sanitization configuration
@@ -201,6 +305,34 @@ class SecurityConfig(BaseModel):
         default_factory=OutputSanitizationConfig,
         description="Output sanitization for prompt injection protection",
     )
+
+    def get_allowed_builtins(self) -> frozenset[str]:
+        """Get the set of allowed builtins."""
+        return frozenset(self.builtins.allow)
+
+    def get_allowed_imports(self) -> frozenset[str]:
+        """Get the set of allowed imports."""
+        return frozenset(self.imports.allow)
+
+    def get_warned_imports(self) -> frozenset[str]:
+        """Get the set of imports that trigger warnings."""
+        return frozenset(self.imports.warn)
+
+    def get_blocked_calls(self) -> frozenset[str]:
+        """Get the set of blocked qualified calls."""
+        return frozenset(self.calls.block)
+
+    def get_warned_calls(self) -> frozenset[str]:
+        """Get the set of qualified calls that trigger warnings."""
+        return frozenset(self.calls.warn)
+
+    def get_allowed_calls(self) -> frozenset[str]:
+        """Get the set of explicitly allowed qualified calls."""
+        return frozenset(self.calls.allow)
+
+    def get_allowed_dunders(self) -> frozenset[str]:
+        """Get the set of allowed magic variables."""
+        return frozenset(self.dunders.allow)
 
 
 class OutputConfig(BaseModel):
@@ -310,14 +442,12 @@ class OneToolConfig(BaseModel):
         description="Config schema version for migration support",
     )
 
-    inherit: Literal["global", "bundled", "none"] = Field(
+    inherit: Literal["global", "none"] = Field(
         default="global",
         description=(
             "Config inheritance mode:\n"
-            "  - 'global' (default): Merge ~/.onetool/onetool.yaml first, then "
-            "bundled defaults as fallback. Use for project configs that extend user prefs.\n"
-            "  - 'bundled': Merge package defaults only, skip global config. "
-            "Use for reproducible configs that shouldn't depend on user settings.\n"
+            "  - 'global' (default): Merge ~/.onetool/onetool.yaml first. "
+            "Use for project configs that extend user prefs.\n"
             "  - 'none': Standalone config with no inheritance. "
             "Use for fully self-contained configs."
         ),
@@ -699,11 +829,18 @@ def _validate_version(data: dict[str, Any], config_path: Path) -> None:
             f"Add 'version: {CURRENT_CONFIG_VERSION}' to {config_path}"
         )
         data["version"] = 1
-    elif config_version > CURRENT_CONFIG_VERSION:
+        config_version = 1
+
+    if config_version > CURRENT_CONFIG_VERSION:
         raise ValueError(
             f"Config version {config_version} is not supported. "
             f"Maximum supported version is {CURRENT_CONFIG_VERSION}. "
             f"Please upgrade OneTool: uv tool upgrade onetool"
+        )
+    elif config_version < CURRENT_CONFIG_VERSION:
+        logger.warning(
+            f"Config version {config_version} is outdated (current: {CURRENT_CONFIG_VERSION}). "
+            f"Run 'onetool init reset' to update config templates."
         )
 
 
@@ -720,17 +857,16 @@ def _remove_legacy_fields(data: dict[str, Any]) -> None:
 
 
 def _resolve_include_path(include_path_str: str, ot_dir: Path) -> Path | None:
-    """Resolve an include path using three-tier fallback.
+    """Resolve an include path using two-tier fallback.
 
     Search order:
     1. ot_dir (project .onetool/ or wherever the config's OT_DIR is)
     2. global (~/.onetool/)
-    3. bundled (package defaults)
 
     Supports:
     - Absolute paths (used as-is)
     - ~ expansion (expands to home directory)
-    - Relative paths (searched in three-tier order)
+    - Relative paths (searched in two-tier order)
 
     Args:
         include_path_str: Path string from include directive
@@ -761,18 +897,7 @@ def _resolve_include_path(include_path_str: str, ot_dir: Path) -> Path | None:
         logger.debug(f"Include resolved (global): {tier2}")
         return tier2
 
-    # Tier 3: bundled (package defaults)
-    try:
-        bundled_dir = get_bundled_config_dir()
-        tier3 = (bundled_dir / include_path).resolve()
-        if tier3.exists():
-            logger.debug(f"Include resolved (bundled): {tier3}")
-            return tier3
-    except FileNotFoundError:
-        # Bundled defaults not available
-        pass
-
-    logger.debug(f"Include not found in any tier: {include_path_str}")
+    logger.debug(f"Include not found: {include_path_str}")
     return None
 
 
@@ -782,6 +907,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     - Nested dicts are recursively merged
     - Non-dict values (lists, scalars) are replaced entirely
     - Keys in override not in base are added
+    - None values in override are skipped (won't override existing values)
 
     Args:
         base: Base dictionary (inputs not mutated)
@@ -793,6 +919,11 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     result = base.copy()
 
     for key, override_value in override.items():
+        # Skip None values - they shouldn't override existing values
+        # This handles YAML files with keys but no values (e.g., "security:" with comments)
+        if override_value is None:
+            continue
+
         if key in result:
             base_value = result[key]
             # Only deep merge if both are dicts
@@ -816,10 +947,9 @@ def _load_includes(
     Files are merged left-to-right (later files override earlier).
     Inline content in the main file overrides everything.
 
-    Include resolution uses three-tier fallback:
+    Include resolution uses two-tier fallback:
     1. ot_dir (project .onetool/ or current OT_DIR)
     2. global (~/.onetool/)
-    3. bundled (package defaults)
 
     Args:
         data: Config data dict containing optional 'include' key
@@ -840,7 +970,7 @@ def _load_includes(
     merged: dict[str, Any] = {}
 
     for include_path_str in include_list:
-        # Use three-tier resolution
+        # Use two-tier resolution (ot_dir -> global)
         include_path = _resolve_include_path(include_path_str, ot_dir)
 
         if include_path is None:
@@ -888,7 +1018,7 @@ def _load_base_config(inherit: str, current_config_path: Path | None) -> dict[st
     """Load base configuration for inheritance.
 
     Args:
-        inherit: Inheritance mode (global, bundled, none)
+        inherit: Inheritance mode (global or none)
         current_config_path: Path to the current config file (to avoid self-include)
 
     Returns:
@@ -897,7 +1027,7 @@ def _load_base_config(inherit: str, current_config_path: Path | None) -> dict[st
     if inherit == "none":
         return {}
 
-    # Try global first for 'global' mode
+    # 'global' mode - inherit from global config
     if inherit == "global":
         global_config_path = get_config_dir(get_global_dir()) / "onetool.yaml"
         if global_config_path.exists():
@@ -909,33 +1039,24 @@ def _load_base_config(inherit: str, current_config_path: Path | None) -> dict[st
                 logger.debug(
                     "Skipping global inheritance (loading global config itself)"
                 )
-            else:
-                try:
-                    raw_data = _load_yaml_file(global_config_path)
-                    # Process includes in global config - OT_DIR is ~/.onetool/
-                    global_ot_dir = get_global_dir()
-                    data = _load_includes(raw_data, global_ot_dir)
-                    logger.debug(
-                        f"Inherited base config from global: {global_config_path}"
-                    )
-                    return data
-                except (FileNotFoundError, ValueError) as e:
-                    logger.warning(f"Failed to load global config for inheritance: {e}")
+                return {}
+            try:
+                raw_data = _load_yaml_file(global_config_path)
+                # Process includes in global config - OT_DIR is ~/.onetool/
+                global_ot_dir = get_global_dir()
+                data = _load_includes(raw_data, global_ot_dir)
+                logger.debug(
+                    f"Inherited base config from global: {global_config_path}"
+                )
+                return data
+            except (FileNotFoundError, ValueError) as e:
+                logger.warning(f"Failed to load global config for inheritance: {e}")
+        # Global config not available - no fallback (user must run 'onetool init')
+        logger.debug("Global config not found for 'inherit: global' mode")
+        return {}
 
-    # Fall back to bundled for both 'global' (when global missing) and 'bundled' modes
-    try:
-        bundled_dir = get_bundled_config_dir()
-        bundled_config_path = bundled_dir / "onetool.yaml"
-        if bundled_config_path.exists():
-            raw_data = _load_yaml_file(bundled_config_path)
-            # Process includes in bundled config - bundled dir is flat (no config/ subdir)
-            data = _load_includes(raw_data, bundled_dir)
-            logger.debug(f"Inherited base config from bundled: {bundled_config_path}")
-            return data
-    except FileNotFoundError:
-        logger.debug("Bundled config not available for inheritance")
-
-    return {}
+    # Invalid inherit value - should never reach here due to validation
+    return {}  # pragma: no cover
 
 
 def load_config(config_path: Path | str | None = None) -> OneToolConfig:
@@ -945,19 +1066,14 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
         1. ONETOOL_CONFIG env var
         2. cwd/.onetool/onetool.yaml (project config)
         3. ~/.onetool/onetool.yaml (global config)
-        4. Built-in defaults (bundled with package)
+        4. ConfigNotFoundError (requires 'onetool init')
 
     Inheritance (controlled by 'inherit' field in your config):
 
         'global' (default):
-            Base: ~/.onetool/onetool.yaml → bundled defaults (if global missing)
+            Base: ~/.onetool/onetool.yaml
             Your config overrides the base. Use for project configs that
             extend user preferences (API keys, timeouts, etc.).
-
-        'bundled':
-            Base: bundled defaults only (ignores ~/.onetool/)
-            Your config overrides bundled. Use for reproducible configs
-            that shouldn't depend on user-specific settings.
 
         'none':
             No base config. Your config is standalone.
@@ -967,7 +1083,7 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
 
         # .onetool/onetool.yaml
         version: 1
-        # inherit: global  (implicit default - gets API keys from ~/.onetool/)
+        # inherit: global  (implicit default - gets settings from ~/.onetool/)
         tools_dir:
           - ./tools/*.py
 
@@ -978,16 +1094,16 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
         Validated OneToolConfig
 
     Raises:
+        ConfigNotFoundError: If no config found and OneTool not initialized
         FileNotFoundError: If explicit config path doesn't exist
         ValueError: If YAML is invalid or validation fails
     """
     resolved_path = _resolve_config_path(config_path)
 
     if resolved_path is None:
-        logger.debug("No config file found, using defaults")
-        config = OneToolConfig()
-        config._config_dir = get_effective_cwd() / ".onetool" / CONFIG_SUBDIR
-        return config
+        raise ConfigNotFoundError(
+            "No configuration file found. Run 'onetool init' to initialize."
+        )
 
     logger.debug(f"Loading config from {resolved_path}")
 
@@ -1002,7 +1118,7 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
 
     # Determine inheritance mode (default: global)
     inherit = merged_data.get("inherit", "global")
-    if inherit not in ("global", "bundled", "none"):
+    if inherit not in ("global", "none"):
         logger.warning(f"Invalid inherit value '{inherit}', using 'global'")
         inherit = "global"
 

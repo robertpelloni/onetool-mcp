@@ -20,6 +20,7 @@ Usage:
 """
 
 from ot.config.loader import (
+    ConfigNotFoundError,
     OneToolConfig,
     SnippetDef,
     SnippetParam,
@@ -32,6 +33,7 @@ from ot.config.secrets import get_secret, get_secrets, load_secrets
 from ot.config.tool_config import get_tool_config
 
 __all__ = [
+    "ConfigNotFoundError",
     "McpServerConfig",
     "OneToolConfig",
     "SnippetDef",

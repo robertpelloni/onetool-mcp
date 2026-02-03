@@ -48,6 +48,10 @@ class TestFirecrawlLive:
 
         result = search(query="python programming", limit=3)
 
+        # Skip if insufficient credits (billing issue, not code bug)
+        if isinstance(result, str) and "Insufficient credits" in result:
+            pytest.skip("Firecrawl account has insufficient credits")
+
         # Should get a non-empty list (not an error or empty results)
         assert isinstance(result, list), f"Expected list, got {type(result)}: {result}"
         assert len(result) > 0, "Search returned empty results"

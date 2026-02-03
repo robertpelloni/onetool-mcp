@@ -2,6 +2,10 @@
 
 *Written: January 2026*
 
+
+
+![MCP](../assets/MCP.jpeg){ width="600" }
+
 ## MCP is Dead. Long Live MCP.
 
 ### The Kingdom
@@ -59,6 +63,7 @@ I am a developer. I work with code. My AI coding buddy (Claude Opus 4.5 at the t
 And so OneTool was born — **One MCP, many tools**.
 
 To quote Gandalf the Wise:
+
 ["One tool to rule them all, one tool to find them, one tool to bring them all, and in the development bind them."](https://www.youtube.com/watch?v=lMSLM33PQDM&t=65s)
 
 After six weeks of part-time hacking, vibing, coding and agentic engineering (which may be a topic for another time), I released [OneTool 1.0.0)](https://github.com/beycom/onetool-mcp).
@@ -149,25 +154,28 @@ Download and install it, and give your agentic engineering the boost it needs.
 
 <a href="https://github.com/beycom/onetool-mcp" class="btn btn--secondary">OneTool on GitHub</a>
 
-🟢
+
 ## References
 
 ### Articles and research
+
 - [PulseMCP](https://www.pulsemcp.com/)
 - [Chroma Research (2025): Context rot](https://research.trychroma.com/context-rot)
 - [Anthropic: Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp)
 - [Anthropic: Code execution with MCP: Building more efficient agents (advanced tool use)](https://www.anthropic.com/engineering/advanced-tool-use)
 
 ### Videos
+
 - [Theo - t3.gg](https://www.youtube.com/@t3dotgg)
-  - [MCP is the wrong abstraction](https://www.youtube.com/watch?v=bAYZjVAodoo&pp=0gcJCZEKAYcqIYzv)
-  - [Anthropic admits that MCP sucks](https://www.youtube.com/watch?v=1piFEKA9XL0)
-  - [Anthropic is trying SO hard to fix MCP](https://www.youtube.com/watch?v=hPPTrsUzLA8)
-  - [Anthropic gave MCP to the Linux Foundation](https://www.youtube.com/watch?v=5DeqL844pH0)
+    - [MCP is the wrong abstraction](https://www.youtube.com/watch?v=bAYZjVAodoo&pp=0gcJCZEKAYcqIYzv)
+    - [Anthropic admits that MCP sucks](https://www.youtube.com/watch?v=1piFEKA9XL0)
+    - [Anthropic is trying SO hard to fix MCP](https://www.youtube.com/watch?v=hPPTrsUzLA8)
+    - [Anthropic gave MCP to the Linux Foundation](https://www.youtube.com/watch?v=5DeqL844pH0)
 - [Gandalf quote clip](https://www.youtube.com/watch?v=lMSLM33PQDM&t=65s)
 - [Claude builds a Wikipedia fetcher demo](https://youtu.be/AZz03Yw0s1E)
 
 ### Tools and projects
+
 - [Docker MCP Gateway](https://docs.docker.com/ai/mcp-catalog-and-toolkit/mcp-gateway/)
 - [OneTool 1.0.0 (beta)](https://github.com/beycom/onetool-mcp)
 - [playwright-mcp](https://github.com/microsoft/playwright-mcp)
@@ -176,6 +184,7 @@ Download and install it, and give your agentic engineering the boost it needs.
 - [github-mcp-server](https://github.com/github/github-mcp-server)
 
 ### OneTool documentation (internal)
+
 - [Comparison](../learn/comparison.md)
 - [Tools index](../reference/tools/index.md)
 - [LLM-powered transformation (Smart Tools)](../reference/tools/llm.md)
@@ -188,4 +197,3 @@ Download and install it, and give your agentic engineering the boost it needs.
 - [Output sanitisation / prompt injection protection](../learn/security.md#7-output-sanitization-prompt-injection-protection)
 - [External MCP servers](../reference/cli/onetool-config.md#external-mcp-servers)
 - [Testing and benchmarking](../reference/cli/bench.md)
-🟩

@@ -1,7 +1,8 @@
 [project]
 name = "onetool-mcp"
-version = "1.0.0b2"
+version = "1.0.0b1"
 description = "🧿 One MCP, unlimited tools."
+mcpName = "io.github.beycom/onetool"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0" }
@@ -97,7 +98,7 @@ line-length = 88
 src = ["src", "tests"]
 cache-dir = "tmp/.ruff_cache"
 # Exclude Jinja2 templates (not valid Python)
-extend-exclude = ["src/ot/config/defaults/tool_templates/*.py"]
+extend-exclude = ["src/ot/config/global_templates/tool_templates/*.py"]
 
 [tool.ruff.lint]
 select = [
@@ -136,7 +137,7 @@ known-first-party = ["ot", "ot_tools", "onetool", "bench"]
 python_version = "3.11"
 cache_dir = "tmp/.mypy_cache"
 # Exclude Jinja2 templates (not valid Python)
-exclude = ["src/ot/config/defaults/tool_templates/"]
+exclude = ["src/ot/config/global_templates/tool_templates/"]
 strict = true
 warn_return_any = true
 warn_unused_ignores = true

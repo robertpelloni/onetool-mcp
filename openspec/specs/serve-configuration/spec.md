@@ -14,7 +14,7 @@ The system SHALL load configuration from a YAML file using a standard resolution
 - **WHEN** the server starts
 - **THEN** it SHALL look for `cwd/.onetool/config/onetool.yaml` first
 - **AND** fall back to `~/.onetool/config/onetool.yaml` if not found
-- **AND** use bundled defaults if neither exists
+- **AND** require initialization if neither exists
 
 #### Scenario: Environment variable override
 - **GIVEN** `ONETOOL_CONFIG=/path/to/config.yaml` environment variable
@@ -37,7 +37,73 @@ The system SHALL load configuration from a YAML file using a standard resolution
 #### Scenario: Missing configuration file
 - **GIVEN** no configuration file exists at any resolution location
 - **WHEN** the server starts
-- **THEN** it SHALL use bundled default settings
+- **THEN** it SHALL prompt user to initialize (interactive mode)
+- **OR** exit with error message (non-interactive mode)
+
+### Requirement: First-Run Initialization
+
+The system SHALL require explicit initialization before first use.
+
+#### Scenario: First-run interactive mode
+- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
+- **AND** stdin is a TTY (interactive mode)
+- **WHEN** the server starts
+- **THEN** it SHALL prompt "OneTool is not initialized. Initialize now? [Y/n]"
+- **AND** on "y": call `ensure_global_dir()` and continue
+- **AND** on "n": print "Run 'onetool init' when ready." and exit(1)
+
+#### Scenario: First-run non-interactive mode
+- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
+- **AND** stdin is NOT a TTY (piped input)
+- **WHEN** the server starts
+- **THEN** it SHALL print "OneTool not initialized. Run: onetool init"
+- **AND** exit with code 1
+
+#### Scenario: First-run with init subcommand
+- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
+- **WHEN** user runs `onetool init`
+- **THEN** it SHALL create global config directory without prompting
+- **AND** copy template YAML files to `~/.onetool/config/`
+- **AND** copy resource subdirectories (e.g., `diagram-templates/`) to `~/.onetool/config/`
+- **AND** skip `tool_templates/` subdirectory (code templates accessed via package)
+
+#### Scenario: Resource subdirectory copying
+- **GIVEN** global templates contain subdirectories like `diagram-templates/`
+- **WHEN** `onetool init` is run
+- **THEN** subdirectories SHALL be copied to `~/.onetool/config/`
+- **AND** `tool_templates/` SHALL be excluded (accessed via `get_global_templates_dir()`)
+- **AND** subdirectories starting with `_` SHALL be excluded
+- **RATIONALE** Resource subdirectories contain user-customizable files (diagram templates), while `tool_templates/` contains code generation templates accessed directly from the package
+
+#### Scenario: Already initialized
+- **GIVEN** `~/.onetool/config/onetool.yaml` exists
+- **WHEN** the server starts
+- **THEN** it SHALL load configuration normally
+- **AND** no initialization prompt SHALL be shown
+
+### Requirement: Config Version Migration Detection
+
+The system SHALL detect outdated and incompatible config versions.
+
+#### Scenario: Outdated config version
+- **GIVEN** a config file with `version: N` where N < CURRENT_CONFIG_VERSION
+- **WHEN** configuration is loaded
+- **THEN** a warning SHALL be logged
+- **AND** the warning SHALL include: "Run 'onetool init reset' to update config templates"
+- **AND** the server SHALL continue normally
+
+#### Scenario: Future config version
+- **GIVEN** a config file with `version: N` where N > CURRENT_CONFIG_VERSION
+- **WHEN** configuration is loaded
+- **THEN** loading SHALL fail with error
+- **AND** the error SHALL indicate minimum OneTool version required
+- **AND** suggest upgrading: "uv tool upgrade onetool"
+
+#### Scenario: Missing version field
+- **GIVEN** a config file without `version` field
+- **WHEN** configuration is loaded
+- **THEN** version 1 SHALL be assumed
+- **AND** a warning SHALL be logged suggesting adding `version: 1`
 
 ### Requirement: Execution Settings
 
@@ -800,16 +866,15 @@ The system SHALL support a top-level `include:` key for merging external config 
 - **GIVEN** `include:` references `snippets.yaml`
 - **AND** the file does NOT exist in config directory
 - **WHEN** the config is loaded
-- **THEN** fallback resolution SHALL search global then bundled
-- **AND** if found, the fallback file SHALL be loaded
+- **THEN** fallback resolution SHALL search global config
+- **AND** if found, the global file SHALL be loaded
 
-#### Scenario: Path resolution with three-tier fallback
+#### Scenario: Path resolution with two-tier fallback
 - **GIVEN** a relative path in `include:`
 - **WHEN** the file is loaded
 - **THEN** the path SHALL be resolved in order:
-  1. Relative to the config file directory
-  2. In `~/.onetool/config/`
-  3. In bundled defaults
+  1. Relative to the config file directory (OT_DIR)
+  2. In `~/.onetool/`
 - **AND** `~` SHALL expand to user home directory
 
 #### Scenario: Nested includes
@@ -977,13 +1042,7 @@ The system SHALL support an `inherit` directive to control config merging behavi
 - **THEN** it SHALL load `~/.onetool/onetool.yaml` first
 - **AND** process its includes
 - **AND** deep merge the project config on top
-
-#### Scenario: Bundled inheritance
-- **GIVEN** a project config with `inherit: bundled`
-- **WHEN** the config is loaded
-- **THEN** it SHALL load bundled defaults first
-- **AND** skip global config
-- **AND** deep merge the project config on top
+- **AND** if global config does NOT exist, no base config SHALL be used
 
 #### Scenario: No inheritance
 - **GIVEN** a project config with `inherit: none`
@@ -991,15 +1050,9 @@ The system SHALL support an `inherit` directive to control config merging behavi
 - **THEN** it SHALL NOT merge with any other config
 - **AND** only the project config SHALL be used
 
-#### Scenario: Global config inheritance
-- **GIVEN** `~/.onetool/onetool.yaml` with `inherit: bundled`
-- **WHEN** the global config is loaded
-- **THEN** bundled defaults SHALL be merged first
-- **AND** global overrides SHALL be applied
+### Requirement: Two-Tier Include Resolution
 
-### Requirement: Three-Tier Include Resolution
-
-The system SHALL resolve `include:` paths with three-tier fallback.
+The system SHALL resolve `include:` paths with two-tier fallback (project → global).
 
 #### Scenario: Include found in project
 - **GIVEN** project config includes `prompts.yaml`
@@ -1014,17 +1067,9 @@ The system SHALL resolve `include:` paths with three-tier fallback.
 - **WHEN** the include is resolved
 - **THEN** the global file SHALL be used
 
-#### Scenario: Include falls back to bundled
-- **GIVEN** project config includes `prompts.yaml`
-- **AND** `cwd/.onetool/config/prompts.yaml` does NOT exist
-- **AND** `~/.onetool/config/prompts.yaml` does NOT exist
-- **AND** bundled `prompts.yaml` exists
-- **WHEN** the include is resolved
-- **THEN** the bundled file SHALL be used
-
 #### Scenario: Include not found anywhere
 - **GIVEN** project config includes `custom.yaml`
-- **AND** the file does NOT exist in project, global, or bundled
+- **AND** the file does NOT exist in project or global
 - **WHEN** the include is resolved
 - **THEN** a warning SHALL be logged
 - **AND** loading SHALL continue without that include

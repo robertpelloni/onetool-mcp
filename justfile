@@ -131,10 +131,11 @@ index path=".":
     @echo "=== Index complete. Use code.search() or code.status() ==="
 
 # ============================================================================
-# DEMO (submodule - use `just demo::task`)
+# MODULES (use `just <module>::<task>`)
 # ============================================================================
 
 mod demo
+mod release "release.just"
 
 # ============================================================================
 # TOOL: DIAGRAM (Kroki Server)

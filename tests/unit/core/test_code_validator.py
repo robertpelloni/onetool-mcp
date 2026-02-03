@@ -1,6 +1,6 @@
 """Unit tests for code validator.
 
-Tests the AST-based code validation for syntax and security patterns.
+Tests the AST-based allowlist validation for syntax and security patterns.
 """
 
 from __future__ import annotations
@@ -8,8 +8,10 @@ from __future__ import annotations
 import pytest
 
 from ot.executor.validator import (
-    DEFAULT_BLOCKED,
-    DEFAULT_WARNED,
+    FALLBACK_ALLOWED_BUILTINS,
+    FALLBACK_ALLOWED_IMPORTS,
+    get_security_status,
+    get_security_summary,
     validate_for_exec,
     validate_python_code,
 )
@@ -76,180 +78,170 @@ def test_empty_code_is_valid() -> None:
 
 
 # =============================================================================
-# Dangerous Builtin Tests
+# Allowlist Tests - Allowed Builtins
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_exec_detected() -> None:
-    """exec() call returns valid=False."""
-    result = validate_python_code("exec('print(1)')")
-    assert result.valid is False
-    assert any("exec" in e for e in result.errors)
+def test_allowed_builtins_pass() -> None:
+    """Builtins in the allowlist pass validation."""
+    # These should all be in FALLBACK_ALLOWED_BUILTINS
+    allowed_code = [
+        "x = len([1, 2, 3])",
+        "y = str(123)",
+        "z = list(range(10))",
+        "a = isinstance(x, int)",
+        "b = sorted([3, 1, 2])",
+        "print('hello')",
+    ]
+    for code in allowed_code:
+        result = validate_python_code(code)
+        assert result.valid is True, f"'{code}' should be allowed: {result.errors}"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_eval_detected() -> None:
-    """eval() call returns valid=False."""
-    result = validate_python_code("x = eval('1 + 2')")
-    assert result.valid is False
-    assert any("eval" in e for e in result.errors)
+def test_blocked_builtins_fail() -> None:
+    """Builtins NOT in the allowlist are blocked."""
+    # These should NOT be in FALLBACK_ALLOWED_BUILTINS
+    blocked_code = [
+        ("exec('print(1)')", "exec"),
+        ("eval('1 + 2')", "eval"),
+        ("compile('x=1', '', 'exec')", "compile"),
+        ("__import__('os')", "__import__"),
+        ("open('file.txt')", "open"),
+        ("input('Enter: ')", "input"),
+        ("breakpoint()", "breakpoint"),
+    ]
+    for code, name in blocked_code:
+        result = validate_python_code(code)
+        assert result.valid is False, f"'{name}' should be blocked"
+        assert any(name in e for e in result.errors), f"Error should mention '{name}'"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_compile_detected() -> None:
-    """compile() call returns valid=False."""
-    result = validate_python_code("code = compile('x=1', '', 'exec')")
-    assert result.valid is False
-    assert any("compile" in e for e in result.errors)
+def test_dynamic_attribute_builtins_allowed() -> None:
+    """Dynamic attribute access builtins are allowed per security config.
 
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_dunder_import_detected() -> None:
-    """__import__() returns valid=False."""
-    result = validate_python_code("os = __import__('os')")
-    assert result.valid is False
-    assert any("__import__" in e for e in result.errors)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_nested_dangerous_builtin() -> None:
-    """Dangerous call in nested context detected."""
-    code = """
-def run_code(s):
-    return eval(s)
-"""
-    result = validate_python_code(code)
-    assert result.valid is False
-    assert any("eval" in e for e in result.errors)
+    These are explicitly allowed in security.yaml under "Object introspection"
+    as they're commonly needed for legitimate operations.
+    """
+    allowed = ["getattr", "setattr", "delattr", "hasattr"]
+    for builtin in allowed:
+        result = validate_python_code(f"x = {builtin}(obj, 'attr')")
+        assert result.valid is True, f"{builtin}() should be allowed"
 
 
 # =============================================================================
-# Dangerous Function Tests
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_subprocess_run_detected() -> None:
-    """subprocess.run() returns valid=False."""
-    result = validate_python_code("subprocess.run(['ls'])")
-    assert result.valid is False
-    assert any("subprocess.run" in e for e in result.errors)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_subprocess_popen_detected() -> None:
-    """subprocess.Popen() returns valid=False."""
-    result = validate_python_code("p = subprocess.Popen(['ls'])")
-    assert result.valid is False
-    assert any("subprocess.Popen" in e for e in result.errors)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_os_system_detected() -> None:
-    """os.system() returns valid=False."""
-    result = validate_python_code("os.system('ls')")
-    assert result.valid is False
-    assert any("os.system" in e for e in result.errors)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_os_popen_detected() -> None:
-    """os.popen() returns valid=False."""
-    result = validate_python_code("os.popen('ls')")
-    assert result.valid is False
-    assert any("os.popen" in e for e in result.errors)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_os_exec_family_detected() -> None:
-    """os.execl/v/etc. detected."""
-    result = validate_python_code("os.execl('/bin/ls', 'ls')")
-    assert result.valid is False
-    assert any("os.execl" in e for e in result.errors)
-
-
-# =============================================================================
-# Warning Pattern Tests
+# Allowlist Tests - Imports
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_open_generates_warning() -> None:
-    """open() adds warning but valid=True."""
-    result = validate_python_code("f = open('file.txt')")
-    assert result.valid is True  # Warning, not error
-    assert any("open" in w for w in result.warnings)
+def test_allowed_imports_pass() -> None:
+    """Imports in the allowlist pass validation."""
+    allowed_imports = [
+        "import json",
+        "import re",
+        "import math",
+        "import datetime",
+        "import collections",
+        "from json import loads",
+        "from re import match",
+    ]
+    for code in allowed_imports:
+        result = validate_python_code(code)
+        assert result.valid is True, f"'{code}' should be allowed: {result.errors}"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_pickle_load_warning() -> None:
-    """pickle.load() adds warning."""
-    result = validate_python_code("data = pickle.load(f)")
+def test_blocked_imports_fail() -> None:
+    """Imports NOT in the allowlist are blocked."""
+    blocked_imports = [
+        ("import os", "os"),
+        ("import sys", "sys"),
+        ("import subprocess", "subprocess"),
+        ("import socket", "socket"),
+        ("import pickle", "pickle"),
+        ("from os import path", "os"),
+        ("from subprocess import run", "subprocess"),
+    ]
+    for code, name in blocked_imports:
+        result = validate_python_code(code)
+        assert result.valid is False, f"'{name}' import should be blocked"
+        assert any(name in e for e in result.errors), f"Error should mention '{name}'"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_yaml_import_warned() -> None:
+    """yaml import generates a warning (in FALLBACK_WARNED_IMPORTS)."""
+    result = validate_python_code("import yaml")
+    # yaml is in warned imports, so it passes but with warning
     assert result.valid is True
-    assert any("pickle.load" in w for w in result.warnings)
+    assert any("yaml" in w for w in result.warnings)
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_yaml_load_warning() -> None:
-    """yaml.load() adds warning."""
-    result = validate_python_code("data = yaml.load(f)")
-    assert result.valid is True
-    assert any("yaml.load" in w for w in result.warnings)
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_marshal_load_warning() -> None:
-    """marshal.load() adds warning."""
-    result = validate_python_code("data = marshal.load(f)")
-    assert result.valid is True
-    assert any("marshal.load" in w for w in result.warnings)
+def test_star_import_warned() -> None:
+    """Star imports generate warnings about tracking."""
+    result = validate_python_code("from json import *")
+    assert result.valid is True  # Allowed module
+    assert any("Star import" in w for w in result.warnings)
 
 
 # =============================================================================
-# Import Warning Tests
+# Allowlist Tests - Qualified Calls
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_import_subprocess_warning() -> None:
-    """import subprocess adds warning."""
-    result = validate_python_code("import subprocess")
-    assert result.valid is True
-    assert any("subprocess" in w for w in result.warnings)
+def test_allowed_module_calls_pass() -> None:
+    """Calls to allowed modules pass validation."""
+    allowed_calls = [
+        "data = json.loads('{}')",
+        "pattern = re.compile('test')",
+        "x = math.sqrt(4)",
+    ]
+    for code in allowed_calls:
+        result = validate_python_code(code)
+        assert result.valid is True, f"'{code}' should be allowed: {result.errors}"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_import_os_warning() -> None:
-    """import os adds warning."""
-    result = validate_python_code("import os")
-    assert result.valid is True
-    assert any("os" in w for w in result.warnings)
+def test_blocked_calls_fail() -> None:
+    """Calls to modules not in allowlist are blocked."""
+    # pickle and marshal are not in imports.allow, so they're blocked
+    blocked_calls = [
+        ("pickle.load(f)", "pickle"),
+        ("pickle.loads(data)", "pickle"),
+        ("marshal.loads(data)", "marshal"),
+    ]
+    for code, pattern in blocked_calls:
+        result = validate_python_code(code)
+        assert result.valid is False, f"'{pattern}' call should be blocked"
+        assert any(pattern in e for e in result.errors), f"Error should mention '{pattern}'"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_from_subprocess_import_warning() -> None:
-    """from subprocess import adds warning."""
-    result = validate_python_code("from subprocess import run")
-    assert result.valid is True
-    assert any("subprocess" in w for w in result.warnings)
+def test_unallowed_module_calls_blocked() -> None:
+    """Calls to modules not in allowlist are blocked."""
+    blocked_calls = [
+        ("subprocess.run(['ls'])", "subprocess"),
+        ("os.system('ls')", "os"),
+        ("socket.socket()", "socket"),
+    ]
+    for code, module in blocked_calls:
+        result = validate_python_code(code)
+        assert result.valid is False, f"'{module}.*' calls should be blocked"
 
 
 # =============================================================================
@@ -281,13 +273,11 @@ def test_security_check_enabled_by_default() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_chained_attribute_detection() -> None:
-    """os.path.join() not flagged as dangerous (safe function)."""
-    result = validate_python_code("p = os.path.join('a', 'b')")
-    # os.path.join is not in DANGEROUS_FUNCTIONS
+def test_chained_attribute_safe_module() -> None:
+    """json.loads() not flagged as dangerous (safe module)."""
+    result = validate_python_code("data = json.loads('{}')")
     assert result.valid is True
-    # But importing os still generates a warning
-    # (the code doesn't import os, just uses it)
+    assert result.errors == []
 
 
 @pytest.mark.unit
@@ -345,101 +335,136 @@ def test_validate_for_exec_blocks_dangerous() -> None:
 
 
 # =============================================================================
-# Pattern Set Tests
+# Fallback Pattern Set Tests
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_dangerous_builtins_set() -> None:
-    """DEFAULT_BLOCKED contains expected builtin patterns (no dots)."""
-    assert "exec" in DEFAULT_BLOCKED
-    assert "eval" in DEFAULT_BLOCKED
-    assert "compile" in DEFAULT_BLOCKED
-    assert "__import__" in DEFAULT_BLOCKED
+def test_fallback_allowed_builtins() -> None:
+    """FALLBACK_ALLOWED_BUILTINS contains expected safe builtins."""
+    # Type constructors
+    assert "str" in FALLBACK_ALLOWED_BUILTINS
+    assert "int" in FALLBACK_ALLOWED_BUILTINS
+    assert "list" in FALLBACK_ALLOWED_BUILTINS
+    assert "dict" in FALLBACK_ALLOWED_BUILTINS
+    # Type checking
+    assert "isinstance" in FALLBACK_ALLOWED_BUILTINS
+    # Iteration
+    assert "len" in FALLBACK_ALLOWED_BUILTINS
+    assert "range" in FALLBACK_ALLOWED_BUILTINS
+    # Math
+    assert "min" in FALLBACK_ALLOWED_BUILTINS
+    assert "max" in FALLBACK_ALLOWED_BUILTINS
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_dangerous_functions_set() -> None:
-    """DEFAULT_BLOCKED contains expected qualified function patterns (with dots)."""
-    assert "subprocess.*" in DEFAULT_BLOCKED
-    assert "os.system" in DEFAULT_BLOCKED
-    assert "os.spawn*" in DEFAULT_BLOCKED
-    assert "os.exec*" in DEFAULT_BLOCKED
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_warn_patterns_set() -> None:
-    """DEFAULT_WARNED contains expected warning patterns."""
-    assert "open" in DEFAULT_WARNED
-    assert "pickle.*" in DEFAULT_WARNED
-    assert "yaml.load" in DEFAULT_WARNED
-    assert "marshal.*" in DEFAULT_WARNED
+def test_fallback_allowed_imports() -> None:
+    """FALLBACK_ALLOWED_IMPORTS contains expected safe modules."""
+    assert "json" in FALLBACK_ALLOWED_IMPORTS
+    assert "re" in FALLBACK_ALLOWED_IMPORTS
+    assert "math" in FALLBACK_ALLOWED_IMPORTS
+    assert "datetime" in FALLBACK_ALLOWED_IMPORTS
 
 
 # =============================================================================
-# Wildcard Pattern Tests
+# Security Introspection Tests
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_wildcard_subprocess_all() -> None:
-    """subprocess.* wildcard matches any subprocess function."""
-    # subprocess.call should be blocked by subprocess.* pattern
-    result = validate_python_code("subprocess.call(['ls'])")
-    assert result.valid is False
-    assert any("subprocess.call" in e for e in result.errors)
-    assert any("subprocess.*" in e for e in result.errors)
+def test_get_security_status_allowed_builtin() -> None:
+    """get_security_status returns allowed for safe builtins."""
+    status = get_security_status("len")
+    assert status["status"] == "allowed"
+    assert status["category"] == "builtins"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_wildcard_os_spawn_variants() -> None:
-    """os.spawn* wildcard matches all spawn variants."""
-    for variant in ["os.spawnl", "os.spawnle", "os.spawnv", "os.spawnve"]:
-        result = validate_python_code(f"{variant}('/bin/ls', 'ls')")
-        assert result.valid is False, f"{variant} should be blocked"
-        assert any(variant in e for e in result.errors)
+def test_get_security_status_blocked_builtin() -> None:
+    """get_security_status returns blocked for dangerous builtins."""
+    status = get_security_status("exec")
+    assert status["status"] == "blocked"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_wildcard_os_exec_variants() -> None:
-    """os.exec* wildcard matches all exec variants."""
-    for variant in ["os.execl", "os.execle", "os.execv", "os.execve"]:
-        result = validate_python_code(f"{variant}('/bin/ls', 'ls')")
-        assert result.valid is False, f"{variant} should be blocked"
-        assert any(variant in e for e in result.errors)
+def test_get_security_status_allowed_import() -> None:
+    """get_security_status returns allowed for safe imports."""
+    status = get_security_status("json")
+    assert status["status"] == "allowed"
+    assert status["category"] == "imports"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_wildcard_pickle_all() -> None:
-    """pickle.* wildcard matches pickle.load and pickle.loads."""
-    for func in ["pickle.load", "pickle.loads", "pickle.dump"]:
-        result = validate_python_code(f"x = {func}(f)")
-        assert result.valid is True  # Warnings, not errors
-        assert any(func in w for w in result.warnings), f"{func} should warn"
+def test_get_security_status_blocked_import() -> None:
+    """get_security_status returns blocked for dangerous imports."""
+    status = get_security_status("os")
+    assert status["status"] == "blocked"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_wildcard_marshal_all() -> None:
-    """marshal.* wildcard matches marshal.load and marshal.loads."""
-    for func in ["marshal.load", "marshal.loads"]:
-        result = validate_python_code(f"x = {func}(f)")
-        assert result.valid is True
-        assert any(func in w for w in result.warnings), f"{func} should warn"
+def test_get_security_status_blocked_call() -> None:
+    """get_security_status returns blocked for dangerous calls."""
+    status = get_security_status("pickle.load")
+    assert status["status"] == "blocked"
+    assert status["category"] == "calls"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_error_message_shows_matched_pattern() -> None:
-    """Error messages include the matched pattern."""
-    result = validate_python_code("subprocess.check_output(['ls'])")
-    assert result.valid is False
-    # Should show both the function name and the pattern it matched
-    assert any("subprocess.check_output" in e and "subprocess.*" in e for e in result.errors)
+def test_get_security_status_allowed_module_call() -> None:
+    """get_security_status returns allowed for calls to allowed modules."""
+    status = get_security_status("json.loads")
+    assert status["status"] == "allowed"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_security_summary() -> None:
+    """get_security_summary returns expected structure."""
+    summary = get_security_summary()
+    # Should have status field
+    assert "status" in summary
+    # If configured, should have category counts
+    if summary["status"] == "configured":
+        assert "builtins" in summary
+        assert "imports" in summary
+        assert "calls" in summary
+
+
+# =============================================================================
+# Magic Variable (Dunder) Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_allowed_dunders_pass() -> None:
+    """Allowed magic variables pass validation."""
+    allowed = [
+        "__format__ = 'json'",
+        "__sanitize__ = False",
+    ]
+    for code in allowed:
+        result = validate_python_code(code)
+        assert result.valid is True, f"'{code}' should be allowed: {result.errors}"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_blocked_dunders_fail() -> None:
+    """Non-allowed magic variables are blocked."""
+    blocked = [
+        "__class__ = str",
+        "__dict__ = {}",
+        "__name__ = 'foo'",
+    ]
+    for code in blocked:
+        result = validate_python_code(code)
+        assert result.valid is False, f"'{code}' should be blocked"

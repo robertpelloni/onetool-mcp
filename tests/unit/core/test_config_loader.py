@@ -612,7 +612,7 @@ def test_include_with_prompts_section() -> None:
         )
 
         # Create main config using include instead of prompts_file
-        # Use inherit: none to isolate test from bundled defaults
+        # Use inherit: none to standalone test config
         config_path = config_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
@@ -658,7 +658,7 @@ def test_include_with_snippets_section() -> None:
         )
 
         # Create main config using include instead of snippets_dir
-        # Use inherit: none to isolate test from bundled defaults
+        # Use inherit: none to standalone test config
         config_path = config_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
@@ -774,25 +774,6 @@ def test_resolve_include_path_global_fallback(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_resolve_include_path_bundled_fallback(tmp_path: Path) -> None:
-    """_resolve_include_path falls back to bundled when not in config_dir or global."""
-    from ot.config.loader import _resolve_include_path
-    from ot.paths import get_bundled_config_dir
-
-    # prompts.yaml exists in bundled defaults
-    bundled_dir = get_bundled_config_dir()
-    bundled_dir / "prompts.yaml"
-
-    # tmp_path doesn't have the file, and we assume global doesn't either
-    result = _resolve_include_path("prompts.yaml", tmp_path)
-
-    # Should find it in bundled
-    assert result is not None
-    assert result.name == "prompts.yaml"
-
-
-@pytest.mark.unit
-@pytest.mark.core
 def test_resolve_include_path_absolute_used_as_is(tmp_path: Path) -> None:
     """_resolve_include_path uses absolute paths directly."""
     from ot.config.loader import _resolve_include_path
@@ -845,38 +826,8 @@ def test_inherit_none_no_merging() -> None:
 
         config = load_config(config_path)
 
-        # Should use values from config only (defaults from model, not from global/bundled)
+        # Should use values from config only (defaults from model, not from global)
         assert config.inherit == "none"
-        assert config.log_level == "ERROR"
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_inherit_bundled_merges_bundled_only() -> None:
-    """inherit: bundled merges from bundled defaults only."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config_dir = Path(tmpdir) / ".onetool"
-        config_dir.mkdir()
-
-        # Create project config with inherit: bundled and override
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "inherit": "bundled",
-                    "log_level": "ERROR",
-                }
-            )
-        )
-
-        config = load_config(config_path)
-
-        # Should have bundled inheritance
-        assert config.inherit == "bundled"
-        # Our override should apply
         assert config.log_level == "ERROR"
 
 
@@ -925,7 +876,7 @@ def test_inherit_deep_merges_tools() -> None:
             yaml.dump(
                 {
                     "version": 1,
-                    "inherit": "bundled",
+                    "inherit": "none",
                     "tools": {
                         "brave": {"timeout": 120.0},
                     },
@@ -937,32 +888,43 @@ def test_inherit_deep_merges_tools() -> None:
 
         # Override should apply (tool configs stored as extra dicts)
         assert config.tools.model_extra.get("brave", {}).get("timeout") == 120.0
-        # Other tool configs may come from bundled defaults if present
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_include_three_tier_fallback() -> None:
-    """include: uses three-tier fallback resolution."""
+def test_include_two_tier_fallback() -> None:
+    """include: uses two-tier fallback resolution (ot_dir -> global).
+
+    Include paths resolve from OT_DIR (.onetool/), not config_dir (.onetool/config/).
+    The loader computes ot_dir = config_dir.parent.
+    """
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        config_dir = Path(tmpdir) / ".onetool"
-        config_dir.mkdir()
+        # Standard directory structure: .onetool/config/onetool.yaml
+        ot_dir = Path(tmpdir) / ".onetool"
+        config_dir = ot_dir / "config"
+        config_dir.mkdir(parents=True)
 
-        # Create project config that includes bundled prompts.yaml
+        # Create prompts.yaml in OT_DIR (where includes resolve from)
+        (ot_dir / "prompts.yaml").write_text(
+            "prompts:\n  instructions: 'test instructions'"
+        )
+
+        # Create project config that includes prompts.yaml
         config_path = config_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
                     "version": 1,
                     "inherit": "none",
-                    "include": ["prompts.yaml"],  # Should fall back to bundled
+                    "include": ["prompts.yaml"],
                 }
             )
         )
 
         config = load_config(config_path)
 
-        # Should have loaded prompts from bundled defaults
+        # Should have loaded prompts from OT_DIR
         assert config.prompts is not None
+        assert config.prompts.get("instructions") == "test instructions"

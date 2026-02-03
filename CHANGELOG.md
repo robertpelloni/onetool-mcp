@@ -30,7 +30,6 @@ All notable changes to OneTool will be documented in this file.
 
 ```bash
 uv tool install onetool-mcp
-# or: pip install onetool-mcp
 ```
 
 ### Links

@@ -24,9 +24,9 @@ __all__ = ["create", "extensions", "templates", "validate"]
 
 def _get_templates_dir() -> Path:
     """Get the extension templates directory."""
-    from ot.paths import get_bundled_config_dir
+    from ot.paths import get_global_templates_dir
 
-    return get_bundled_config_dir() / "tool_templates"
+    return get_global_templates_dir() / "tool_templates"
 
 
 def templates() -> str:

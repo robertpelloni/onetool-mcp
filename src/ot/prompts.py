@@ -46,16 +46,16 @@ class PromptsError(Exception):
     """Error loading prompts configuration."""
 
 
-def _get_bundled_prompts_path() -> Path:
-    """Get path to bundled default prompts.yaml."""
-    return Path(__file__).parent / "config" / "defaults" / "prompts.yaml"
+def _get_template_prompts_path() -> Path:
+    """Get path to prompts.yaml in global_templates (for development/testing)."""
+    return Path(__file__).parent / "config" / "global_templates" / "prompts.yaml"
 
 
 def load_prompts(prompts_path: Path | str | None = None) -> PromptsConfig:
     """Load prompts configuration from YAML file.
 
     Args:
-        prompts_path: Path to prompts file. Falls back to bundled default.
+        prompts_path: Path to prompts file. Falls back to global_templates for development.
 
     Returns:
         PromptsConfig with loaded prompts.
@@ -68,10 +68,10 @@ def load_prompts(prompts_path: Path | str | None = None) -> PromptsConfig:
         if not prompts_path.exists():
             raise PromptsError(f"Prompts file not found: {prompts_path}")
     else:
-        # Try config/prompts.yaml, fall back to bundled default
+        # Try config/prompts.yaml, fall back to global_templates for development
         prompts_path = Path("config/prompts.yaml")
         if not prompts_path.exists():
-            prompts_path = _get_bundled_prompts_path()
+            prompts_path = _get_template_prompts_path()
 
     logger.debug(f"Loading prompts from {prompts_path}")
 
@@ -86,7 +86,7 @@ def load_prompts(prompts_path: Path | str | None = None) -> PromptsConfig:
     if raw_data is None or not isinstance(raw_data, dict):
         raise PromptsError(f"Empty or invalid prompts file: {prompts_path}")
 
-    # Handle nested 'prompts:' key (used in bundled default)
+    # Handle nested 'prompts:' key (used in template files)
     if "prompts" in raw_data and isinstance(raw_data["prompts"], dict):
         raw_data = raw_data["prompts"]
 
