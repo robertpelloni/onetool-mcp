@@ -76,6 +76,7 @@ class TestProxyManagerReconnectSync:
 
         manager = ProxyManager()
         mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+        mock_loop.is_running.return_value = True
         manager._loop = mock_loop
 
         # Mock run_coroutine_threadsafe to avoid actual async execution
@@ -90,6 +91,10 @@ class TestProxyManagerReconnectSync:
             # Verify it was called with the stored loop
             call_args = mock_threadsafe.call_args
             assert call_args[0][1] is mock_loop
+
+            # Close the coroutine to avoid "never awaited" warning
+            # (the mock doesn't actually schedule it)
+            call_args[0][0].close()
 
 
 @pytest.mark.unit

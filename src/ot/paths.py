@@ -260,17 +260,17 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
 
         # Copy resource subdirectories (e.g., diagram-templates/)
         # These contain user-customizable template files
-        for subdir in templates_dir.iterdir():
-            if subdir.is_dir() and not subdir.name.startswith("_"):
+        for template_subdir in templates_dir.iterdir():
+            if template_subdir.is_dir() and not template_subdir.name.startswith("_"):
                 # Skip tool_templates - those are code templates accessed via get_global_templates_dir()
-                if subdir.name == "tool_templates":
+                if template_subdir.name == "tool_templates":
                     continue
-                dest_subdir = config_dir / subdir.name
+                dest_subdir = config_dir / template_subdir.name
                 if not dest_subdir.exists() or force:
                     if dest_subdir.exists():
                         shutil.rmtree(dest_subdir)
-                    shutil.copytree(subdir, dest_subdir)
-                    copied_items.append(f"config/{subdir.name}/")
+                    shutil.copytree(template_subdir, dest_subdir)
+                    copied_items.append(f"config/{template_subdir.name}/")
     except FileNotFoundError:
         # Global templates not available (dev environment without package install)
         pass

@@ -283,11 +283,11 @@ class AllowlistValidator(ast.NodeVisitor):
             return False
 
         # Check if first argument is __builtins__
-        if node.args and isinstance(node.args[0], ast.Name):
-            if node.args[0].id == "__builtins__":
-                return True
-
-        return False
+        return (
+            bool(node.args)
+            and isinstance(node.args[0], ast.Name)
+            and node.args[0].id == "__builtins__"
+        )
 
     def _check_builtin_call(self, func_name: str, lineno: int) -> None:
         """Check if a builtin call is allowed.
@@ -365,7 +365,7 @@ class AllowlistValidator(ast.NodeVisitor):
 
         # If alias was resolved, reconstruct the full name
         if original_module != module_part:
-            resolved_name = ".".join([original_module] + parts[1:])
+            resolved_name = ".".join([original_module, *parts[1:]])
         else:
             resolved_name = func_name
 

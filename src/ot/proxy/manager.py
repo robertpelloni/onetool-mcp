@@ -337,8 +337,10 @@ class ProxyManager:
             with contextlib.suppress(RuntimeError):
                 loop = asyncio.get_running_loop()
 
-        if loop is None:
-            # No event loop available - just reset state, connect will happen on next use
+        # Must have a running loop to schedule the coroutine
+        # If loop exists but isn't running, we can't await the coroutine
+        if loop is None or not loop.is_running():
+            # No running event loop available - just reset state, connect will happen on next use
             self._clients.clear()
             self._tools_by_server.clear()
             self._initialized = False
