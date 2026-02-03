@@ -108,7 +108,7 @@ Verify: `onetool init validate`
 
 ## Tools
 
-16 packs, 100+ tools ready to use:
+15 packs, 100+ tools ready to use:
 
 | Pack        | Tools                                   | Description            |
 | ----------- | --------------------------------------- | ---------------------- |
@@ -128,7 +128,7 @@ Verify: `onetool init validate`
 | `scaffold`  | `tool`                                  | Generate new tools     |
 | `web`       | `fetch`, `fetch_batch`                  | Web fetching           |
 
-[📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 104 tools
+[📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
 
 ---
 

@@ -1013,6 +1013,11 @@ def servers(
                     lines.append("## Tools")
                     lines.append("")
                     lines.append("(not connected)")
+                    # Show error if available
+                    error = proxy.get_error(server_name)
+                    if error:
+                        lines.append("")
+                        lines.append(f"**Error:** {error}")
 
                 results.append("\n".join(lines))
 
@@ -1028,13 +1033,19 @@ def servers(
             status = "connected" if conn else "disconnected"
             tool_count = len(proxy.list_tools(server=server_name)) if conn else 0
 
-            servers_list.append({
+            server_info: dict[str, Any] = {
                 "name": server_name,
                 "type": server_cfg.type,
                 "enabled": server_cfg.enabled,
                 "status": status,
                 "tool_count": tool_count,
-            })
+            }
+            # Include error if disconnected
+            if not conn:
+                error = proxy.get_error(server_name)
+                if error:
+                    server_info["error"] = error
+            servers_list.append(server_info)
 
         s.add("count", len(servers_list))
         return servers_list
@@ -1224,14 +1235,21 @@ def health() -> dict[str, Any]:
             "tool_count": tool_count,
         }
 
-        server_statuses: dict[str, str] = {}
+        server_statuses: dict[str, Any] = {}
         for server_name in cfg.servers:
             conn = proxy.get_connection(server_name)
-            server_statuses[server_name] = "connected" if conn else "disconnected"
+            if conn:
+                server_statuses[server_name] = "connected"
+            else:
+                error = proxy.get_error(server_name)
+                server_statuses[server_name] = {"status": "disconnected", "error": error} if error else "disconnected"
 
         proxy_status: dict[str, Any] = {
             "status": "ok"
-            if all(status == "connected" for status in server_statuses.values())
+            if all(
+                (s == "connected" if isinstance(s, str) else s.get("status") == "connected")
+                for s in server_statuses.values()
+            )
             or not server_statuses
             else "degraded",
             "server_count": len(cfg.servers),

@@ -47,7 +47,7 @@ Title: Build a Wikipedia Tool
 Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
 
 - Learn onetool with `ot.help(info="full")` and `scaffold.templates()`
-- Verify tools_dir is configured for ~/.onetool/tools using `ot.config()`. If not, add `~/.onetool/tools/**/*.py` to the config.
+- Verify tools_dir is configured using `ot.config()`. If not, add `tools/**/*.py` to the config.
 - Scaffold a "wiki" pack using `scaffold.create(name="wiki", scope="global", template="extension")`
 - Hint: Check `ot.tools(pattern="...", info="full")` for the correct parameter names
 

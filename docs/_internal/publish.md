@@ -40,7 +40,7 @@ just release::check
 
 - Runs lint, typecheck, and all tests
 - Scans for secrets with gitleaks
-- Runs `/sanity retest=all` via Claude Code CLI
+- Runs `/sanity retest=all` via `claude -p` CLI
 
 ---
 

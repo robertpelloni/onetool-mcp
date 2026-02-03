@@ -42,6 +42,7 @@ class ProxyManager:
         """Initialize the proxy manager."""
         self._clients: dict[str, Client] = {}  # type: ignore[type-arg]
         self._tools_by_server: dict[str, list[types.Tool]] = {}
+        self._errors: dict[str, str] = {}  # server name -> last error message
         self._initialized = False
         self._loop: asyncio.AbstractEventLoop | None = None
 
@@ -58,6 +59,10 @@ class ProxyManager:
     def get_connection(self, server: str) -> Client | None:  # type: ignore[type-arg]
         """Get a client by server name."""
         return self._clients.get(server)
+
+    def get_error(self, server: str) -> str | None:
+        """Get the last connection error for a server."""
+        return self._errors.get(server)
 
     def list_tools(self, server: str | None = None) -> list[ProxyToolInfo]:
         """List available tools from proxied servers.
@@ -211,8 +216,10 @@ class ProxyManager:
                 try:
                     await self._connect_server(name, config)
                     connected += 1
+                    self._errors.pop(name, None)  # Clear any previous error
                 except Exception as e:
                     failed += 1
+                    self._errors[name] = str(e)
                     logger.warning(f"Failed to connect to MCP server '{name}': {e}")
 
             span.add("connected", connected)
@@ -309,6 +316,7 @@ class ProxyManager:
 
             self._clients.clear()
             self._tools_by_server.clear()
+            self._errors.clear()
             self._initialized = False
 
     async def reconnect(self, configs: dict[str, McpServerConfig]) -> None:
@@ -343,6 +351,7 @@ class ProxyManager:
             # No running event loop available - just reset state, connect will happen on next use
             self._clients.clear()
             self._tools_by_server.clear()
+            self._errors.clear()
             self._initialized = False
             return
 
@@ -395,4 +404,5 @@ def reconnect_proxy_manager() -> None:
         # No servers configured - just reset state
         proxy._clients.clear()
         proxy._tools_by_server.clear()
+        proxy._errors.clear()
         proxy._initialized = False
