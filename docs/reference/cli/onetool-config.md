@@ -15,8 +15,8 @@ Complete reference for `onetool.yaml` configuration.
 | Location | Purpose | Scope |
 |----------|---------|-------|
 | Bundled defaults | Read-only package defaults | All installs |
-| `~/.onetool/onetool.yaml` | Global config | User |
-| `.onetool/onetool.yaml` | Project config | Project |
+| `~/.onetool/config/onetool.yaml` | Global config | User |
+| `.onetool/config/onetool.yaml` | Project config | Project |
 
 **Resolution order:** CLI flags → `ONETOOL_CONFIG` env var → project → global → bundled
 
@@ -29,12 +29,16 @@ On first `onetool` invocation, OneTool creates `~/.onetool/` with default config
 ```bash
 $ onetool --help
 Creating ~/.onetool/
-  ✓ onetool.yaml
-  ✓ prompts.yaml
-  ✓ snippets.yaml
-  ✓ servers.yaml
-  ✓ diagram.yaml
-  ✓ secrets.yaml
+  ✓ config/
+  ✓ logs/
+  ✓ stats/
+  ✓ tools/
+  ✓ config/onetool.yaml
+  ✓ config/snippets.yaml
+  ✓ config/servers.yaml
+  ✓ config/secrets.yaml
+  ✓ config/bench.yaml
+  ✓ config/bench-secrets.yaml
 ```
 
 Manage manually:
@@ -129,13 +133,21 @@ servers:
 | Pack | Field | Type | Default | Range | Description |
 |------|-------|------|---------|-------|-------------|
 | brave | timeout | float | 60.0 | 1-300 | API request timeout (seconds) |
-| code_search | limit | int | 10 | 1-100 | Max search results |
+| code | base_url | string | https://openrouter.ai/api/v1 | - | Embedding API base URL |
+| code | content_limit | int | 500 | 100-10K | Content preview character limit |
+| code | content_limit_expanded | int | 2000 | 500-20K | Expanded content character limit |
+| code | db_path | string | .chunkhound/chunks.db | - | Chunks database path |
+| code | dimensions | int | 1536 | - | Embedding dimensions |
+| code | limit | int | 10 | 1-100 | Max search results |
+| code | model | string | text-embedding-3-small | - | Embedding model |
+| code | provider | string | openai | - | Embedding provider |
 | context7 | docs_limit | int | 10 | 1-20 | Max documentation results |
 | context7 | timeout | float | 30.0 | 1-120 | API request timeout (seconds) |
 | db | max_chars | int | 4000 | 100-100K | Query output truncation |
 | firecrawl | api_url | string | null | - | Custom API URL for self-hosted |
 | ground | model | string | gemini-2.5-flash | - | Gemini model for grounding |
 | package | timeout | float | 30.0 | 1-120 | Registry request timeout |
+| ripgrep | relative_paths | bool | true | - | Use relative paths in output |
 | ripgrep | timeout | float | 60.0 | 1-300 | Search timeout (seconds) |
 | stats | chars_per_token | float | 4.0 | ≥1.0 | Characters per token estimate |
 | stats | context_per_call | int | 30000 | ≥0 | Context tokens saved per call |
@@ -144,10 +156,15 @@ servers:
 | stats | enabled | bool | true | - | Enable statistics collection |
 | stats | flush_interval_seconds | int | 30 | 1-300 | Disk flush interval |
 | stats | model | string | anthropic/claude-opus-4.5 | - | Model for cost estimation |
+| stats | persist_dir | string | stats | - | Stats directory path |
 | stats | persist_path | string | stats.jsonl | - | Stats file path |
 | stats | time_overhead_per_call_ms | int | 4000 | ≥0 | Time overhead saved (ms) |
-| web_fetch | max_length | int | 50000 | 1K-500K | Max content characters |
-| web_fetch | timeout | float | 30.0 | 1-120 | Page fetch timeout (seconds) |
+| transform | base_url | string | "" | - | OpenAI-compatible API base URL |
+| transform | max_tokens | int | null | - | Max output tokens (null=no limit) |
+| transform | model | string | "" | - | Model for transformations |
+| transform | timeout | int | 30 | - | API timeout in seconds |
+| web | max_length | int | 50000 | 1K-500K | Max content characters |
+| web | timeout | float | 30.0 | 1-120 | Page fetch timeout (seconds) |
 
 Example:
 
@@ -186,21 +203,19 @@ API keys stored separately in `secrets.yaml` (gitignored):
 
 | Location | Purpose | Scope |
 |----------|---------|-------|
-| `.onetool/secrets.yaml` | Project secrets | Project |
-| `~/.onetool/secrets.yaml` | Global secrets | User |
+| `.onetool/config/secrets.yaml` | Project secrets | Project |
+| `~/.onetool/config/secrets.yaml` | Global secrets | User |
 
 **Resolution:** `OT_SECRETS_FILE` env var → project → global
 
 ```yaml
-# API keys for tools
+# API keys for tools (values are literal, no ${VAR} expansion)
 BRAVE_API_KEY: "your-brave-api-key"
 OPENAI_API_KEY: "sk-..."
 CONTEXT7_API_KEY: "your-context7-key"
 GEMINI_API_KEY: "your-gemini-key"
 FIRECRAWL_API_KEY: "your-firecrawl-key"
-
-# Environment variable references
-DATABASE_URL: "${PROD_DATABASE_URL}"
+DATABASE_URL: "postgresql://user:pass@localhost/db"
 ```
 
 ### Accessing Secrets in Tools
@@ -298,6 +313,36 @@ ot.stats(period="week", tool="brave.search")
 ot.stats(output="stats_report.html") # HTML report
 ```
 
+## Transform Configuration
+
+Configure the `llm.transform()` tool for LLM-powered text transformations:
+
+```yaml
+tools:
+  transform:
+    model: "gpt-4o-mini"                    # Model for transformations
+    base_url: "https://api.openai.com/v1"   # OpenAI-compatible API endpoint
+    max_tokens: 4096                        # Max output tokens
+```
+
+Requires `OPENAI_API_KEY` in secrets.yaml (or compatible provider key).
+
+## Message Configuration
+
+Configure `ot.notify()` topic-to-file routing:
+
+```yaml
+tools:
+  msg:
+    topics:
+      - pattern: "status:*"           # Glob-style topic pattern
+        file: "~/.onetool/status.log" # Output file (supports ~ and ${VAR})
+      - pattern: "doc:*"
+        file: "./docs/notes.md"
+```
+
+Messages are appended to matching files. First pattern match wins.
+
 ## Output Configuration
 
 Control large output handling:
@@ -324,11 +369,23 @@ security:
     - custom_risky.*
   allow:                       # Patterns to exempt
     - open
+  sanitize:                    # Output sanitization for prompt injection protection
+    enabled: true              # Global toggle (default: true)
 ```
 
 **Default blocked:** `exec`, `eval`, `compile`, `__import__`, `subprocess.*`, `os.system`, `os.popen`, `os.spawn*`, `os.exec*`
 
 **Default warned:** `subprocess`, `os`, `open`, `pickle.*`, `yaml.load`, `marshal.*`
+
+### Output Sanitization
+
+The `security.sanitize` subsection protects against indirect prompt injection by sanitizing tool outputs:
+
+1. **Trigger sanitization:** Replace `__ot`, `mcp__onetool` patterns
+2. **Tag sanitization:** Remove `<external-content-*>` patterns
+3. **GUID-tagged boundaries:** Wrap content in unpredictable tags
+
+Disable per-call with `__sanitize__ = False` prefix.
 
 ## Environment Variables
 
@@ -336,6 +393,7 @@ security:
 |----------|-------------|
 | `ONETOOL_CONFIG` | Config file path override |
 | `OT_LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) |
+| `OT_LOG_VERBOSE` | Enable verbose logging (true/false) |
 | `OT_LOG_DIR` | Log directory path |
 | `OT_SECRETS_FILE` | Secrets file path override |
 | `OT_COMPACT_MAX_LENGTH` | Max value length in compact output |

@@ -68,7 +68,7 @@ onetool --config config/onetool.yaml
 
 ## Configuration
 
-Configuration files: `.onetool/onetool.yaml` (project) or `~/.onetool/onetool.yaml` (global)
+Configuration files: `.onetool/config/onetool.yaml` (project) or `~/.onetool/config/onetool.yaml` (global)
 
 See [onetool Configuration](onetool-config.md) for full schema reference.
 

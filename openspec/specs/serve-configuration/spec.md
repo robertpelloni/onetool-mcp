@@ -50,28 +50,36 @@ The system SHALL use direct (host) execution.
 
 ### Requirement: Transform Tool Configuration
 
-The transform() tool SHALL use OpenRouter configuration.
-
-#### Scenario: Default model
-- **GIVEN** no model specified in configuration
-- **WHEN** transform() is called
-- **THEN** it SHALL use `openai/gpt-5-mini` via OpenRouter
+The transform() tool SHALL use OpenAI-compatible API configuration via `tools.transform`.
 
 #### Scenario: Model configuration
-- **GIVEN** `OT_TRANSFORM_MODEL=anthropic/claude-3-5-haiku`
-- **WHEN** transform() is called
-- **THEN** it SHALL use the specified model
+- **GIVEN** configuration with:
+  ```yaml
+  tools:
+    transform:
+      model: "openai/gpt-4o-mini"
+      base_url: "https://openrouter.ai/api/v1"
+  ```
+- **WHEN** llm.transform() is called
+- **THEN** it SHALL use the specified model and base URL
+- **DEFAULT** model: "" (empty - must be configured), base_url: "" (empty)
 
 #### Scenario: Max tokens configuration
-- **GIVEN** `transform.max_tokens: 8192`
-- **WHEN** transform() is called
+- **GIVEN** `tools.transform.max_tokens: 8192`
+- **WHEN** llm.transform() is called
 - **THEN** it SHALL limit output to 8192 tokens
-- **DEFAULT** 4096
+- **DEFAULT** null (no limit)
+
+#### Scenario: Timeout configuration
+- **GIVEN** `tools.transform.timeout: 60`
+- **WHEN** llm.transform() is called
+- **THEN** it SHALL use 60 second timeout
+- **DEFAULT** 30 seconds
 
 #### Scenario: API key from secrets
 - **GIVEN** `OPENAI_API_KEY` configured in `secrets.yaml`
-- **WHEN** transform() is called
-- **THEN** it SHALL use the key for OpenRouter API calls
+- **WHEN** llm.transform() is called
+- **THEN** it SHALL use the key for API calls
 
 ### Requirement: Advanced Configuration
 
@@ -419,9 +427,9 @@ The system SHALL validate configuration on load using discovered tool schemas.
 - **AND** indicate max is 300.0
 
 #### Scenario: Tool limit out of range
-- **GIVEN** config with `tools.code_search.limit: 0`
+- **GIVEN** config with `tools.code.limit: 0`
 - **WHEN** configuration loads
-- **THEN** it SHALL fail with validation error from CodeSearchConfig schema
+- **THEN** it SHALL fail with validation error from CodeConfig schema
 - **AND** indicate min is 1
 
 ### Requirement: Tools Configuration Section
@@ -485,13 +493,13 @@ The system SHALL support tool-specific configuration via the `tools:` section, w
 - **GIVEN** configuration with:
   ```yaml
   tools:
-    web_fetch:
+    web:
       timeout: 60.0
       max_length: 100000
   ```
-- **WHEN** web_fetch.* functions are called
+- **WHEN** web.* functions are called
 - **THEN** they SHALL use 60 second timeout and 100000 max length
-- **DEFAULT** timeout: 30.0, max_length: 50000 (from web_fetch.py Config class)
+- **DEFAULT** timeout: 30.0, max_length: 50000 (from web.py Config class)
 - **RANGE** timeout: 1.0-120.0, max_length: 1000-500000
 
 #### Scenario: Ripgrep configuration
@@ -510,12 +518,12 @@ The system SHALL support tool-specific configuration via the `tools:` section, w
 - **GIVEN** configuration with:
   ```yaml
   tools:
-    code_search:
+    code:
       limit: 25
   ```
-- **WHEN** code_search.* functions are called
+- **WHEN** code.* functions are called
 - **THEN** they SHALL return up to 25 results
-- **DEFAULT** 10 (from code_search.py Config class)
+- **DEFAULT** 10 (from code.py Config class)
 - **RANGE** 1 - 100
 
 #### Scenario: Database configuration

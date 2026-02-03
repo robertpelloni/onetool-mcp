@@ -1,5 +1,8 @@
 # Isolated Tools
 
+!!! warning "Beta Feature"
+    Isolated tools are experimental and not fully tested. Consider using [Extension Tools](extension-tools.md) instead, which cover most use cases.
+
 If your tool needs external packages that aren't bundled with OneTool (numpy, pandas, specialized libraries), use an isolated tool with PEP 723 headers.
 
 ## When to Use Isolated Tools

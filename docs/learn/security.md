@@ -69,7 +69,7 @@ security:
 security:
   block:
     - brave.*
-    - web_fetch.*
+    - web.*
     - context7.*
     - ground.*
 

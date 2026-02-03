@@ -66,8 +66,8 @@ See [CLI Patterns](cli-patterns.md) for CLI development patterns.
 
 ```text
 1. CLI starts → load_env() → configure_logging()
-2. Find config → .onetool/onetool.yaml (project) or ~/.onetool/ (global)
-3. Load secrets → secrets.yaml
+2. Find config → .onetool/config/onetool.yaml (project) or ~/.onetool/config/ (global)
+3. Load secrets → config/secrets.yaml
 4. Discover tools → tools_dir patterns + src/ot_tools/
 5. Start MCP server → FastMCP with discovered tools
 ```

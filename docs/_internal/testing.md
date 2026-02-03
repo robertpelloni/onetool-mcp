@@ -41,7 +41,7 @@ Every test requires two markers: a **speed tier** and a **component tag**.
 | Marker | Requires |
 |--------|----------|
 | `network` | Network access |
-| `api` | API keys (OT_BRAVE_API_KEY, etc.) |
+| `api` | API keys (BRAVE_API_KEY, etc. in secrets.yaml) |
 | `playwright` | Playwright browsers installed |
 | `docker` | Docker daemon running |
 

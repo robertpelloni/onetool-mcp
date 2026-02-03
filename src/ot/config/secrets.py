@@ -5,9 +5,9 @@ Secrets are passed to workers via JSON-RPC, not exposed as environment variables
 
 The secrets file path is resolved in order:
 1. Explicit path passed to get_secrets()
-2. Config's secrets_file setting (if config loaded and file exists)
-3. Default locations: project (.onetool/config/secrets.yaml) then global (~/.onetool/config/secrets.yaml)
-4. OT_SECRETS_FILE environment variable
+2. OT_SECRETS_FILE environment variable
+3. Config's secrets_file setting (if config loaded and file exists)
+4. Default locations: project (.onetool/config/secrets.yaml) then global (~/.onetool/config/secrets.yaml)
 
 Example secrets.yaml:
 
@@ -124,9 +124,9 @@ def get_secrets(
 
     Resolution order (first match wins):
     1. Explicit secrets_path argument
-    2. Config's secrets_file setting (if config loaded and file exists)
-    3. Default locations (.onetool/config/secrets.yaml)
-    4. OT_SECRETS_FILE environment variable
+    2. OT_SECRETS_FILE environment variable
+    3. Config's secrets_file setting (if config loaded and file exists)
+    4. Default locations (.onetool/config/secrets.yaml)
 
     Args:
         secrets_path: Path to secrets file (only used on first load or reload).
@@ -138,7 +138,13 @@ def get_secrets(
     global _secrets
 
     if _secrets is None or reload:
-        # Resolution chain: explicit > config (if loaded) > defaults > env var
+        # Resolution chain: explicit > env var > config (if loaded) > defaults
+        if secrets_path is None:
+            # Check OT_SECRETS_FILE env var first (highest priority after explicit path)
+            env_path = os.getenv("OT_SECRETS_FILE")
+            if env_path:
+                secrets_path = env_path
+
         if secrets_path is None:
             # WARNING: Do NOT call get_config() here!
             # =========================================
@@ -163,10 +169,6 @@ def get_secrets(
             if loaded:
                 _secrets = loaded
                 return _secrets
-
-        # Final fallback to OT_SECRETS_FILE env var
-        if secrets_path is None:
-            secrets_path = os.getenv("OT_SECRETS_FILE")
 
         _secrets = load_secrets(secrets_path)
 

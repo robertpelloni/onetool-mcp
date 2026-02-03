@@ -66,9 +66,12 @@ def test_secrets_expansion() -> None:
             )
         )
 
-        # Set OT_CWD so secrets are found
+        # Set OT_CWD so secrets are found, and clear OT_SECRETS_FILE so default
+        # locations are used (OT_SECRETS_FILE takes priority)
         old_cwd = os.environ.get("OT_CWD")
+        old_secrets_file = os.environ.get("OT_SECRETS_FILE")
         os.environ["OT_CWD"] = tmpdir
+        os.environ.pop("OT_SECRETS_FILE", None)
 
         try:
             config = load_config(config_path)
@@ -78,6 +81,8 @@ def test_secrets_expansion() -> None:
                 os.environ["OT_CWD"] = old_cwd
             else:
                 os.environ.pop("OT_CWD", None)
+            if old_secrets_file is not None:
+                os.environ["OT_SECRETS_FILE"] = old_secrets_file
 
 
 @pytest.mark.unit

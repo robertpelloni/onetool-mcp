@@ -1,6 +1,6 @@
 # Configuration
 
-OneTool uses YAML configuration files with a three-tier system: bundled defaults → global (`~/.onetool/`) → project (`.onetool/`).
+OneTool uses YAML configuration files with a three-tier system: bundled defaults → global (`~/.onetool/config/`) → project (`.onetool/config/`).
 
 ## Quick Start
 

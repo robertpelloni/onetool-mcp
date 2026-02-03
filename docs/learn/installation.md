@@ -103,20 +103,20 @@ API keys are stored in `secrets.yaml` (gitignored):
 
 | Key | Service | Used By |
 |-----|---------|---------|
-| `OPENAI_API_KEY` | OpenRouter | `transform`, `code_search` |
+| `OPENAI_API_KEY` | OpenRouter | `llm.transform`, `code.*` |
 | `BRAVE_API_KEY` | [Brave Search](https://brave.com/search/api/) | `brave.*` tools |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) | `context7.*` tools |
 
 ### Example secrets.yaml
 
 ```yaml
-# .onetool/secrets.yaml
+# .onetool/config/secrets.yaml
 BRAVE_API_KEY: "BSA..."
 OPENAI_API_KEY: "sk-..."
 CONTEXT7_API_KEY: "c7-..."
 ```
 
-**Resolution order:** `OT_SECRETS_FILE` > `.onetool/secrets.yaml` > `~/.onetool/secrets.yaml`
+**Resolution order:** `OT_SECRETS_FILE` > `.onetool/config/secrets.yaml` > `~/.onetool/config/secrets.yaml`
 
 ### Configuration Variables
 
@@ -149,21 +149,6 @@ Add to `~/.claude/settings.json`:
   "mcpServers": {
     "onetool": {
       "command": "onetool"
-    }
-  }
-}
-```
-
-### With Environment Variables
-
-```json
-{
-  "mcpServers": {
-    "onetool": {
-      "command": "onetool",
-      "env": {
-        "OT_BRAVE_API_KEY": "your-brave-api-key"
-      }
     }
   }
 }

@@ -181,9 +181,10 @@ For development, create a `.onetool/` directory in your extension repository:
 ```
 my-extension/
 ├── .onetool/
-│   ├── onetool.yaml     # Server config (tools_dir, etc.)
-│   ├── secrets.yaml     # API keys for testing
-│   └── bench.yaml       # Benchmark harness config (optional)
+│   └── config/
+│       ├── onetool.yaml     # Server config (tools_dir, etc.)
+│       ├── secrets.yaml     # API keys for testing
+│       └── bench.yaml       # Benchmark harness config (optional)
 ├── demo.yaml            # Test scenarios
 └── src/
     └── mytool.py
@@ -194,19 +195,19 @@ my-extension/
 Point `tools_dir` at your extension source:
 
 ```yaml
-# .onetool/onetool.yaml
+# .onetool/config/onetool.yaml
 tools_dir:
   - ./src/*.py
 ```
 
-Run `onetool` from your extension directory. It finds `.onetool/onetool.yaml` automatically.
+Run `onetool` from your extension directory. It finds `.onetool/config/onetool.yaml` automatically.
 
 ### secrets.yaml
 
 Add API keys your tool needs during development:
 
 ```yaml
-# .onetool/secrets.yaml
+# .onetool/config/secrets.yaml
 MY_API_KEY: "dev-key-for-testing"
 ```
 
@@ -266,7 +267,7 @@ When users want to use your extension, they add it to their `tools_dir`:
 ### Global Installation
 
 ```yaml
-# ~/.onetool/onetool.yaml
+# ~/.onetool/config/onetool.yaml
 tools_dir:
   - ~/extensions/my-extension/src/*.py
 ```
@@ -274,7 +275,7 @@ tools_dir:
 ### Project-Specific
 
 ```yaml
-# project/.onetool/onetool.yaml
+# project/.onetool/config/onetool.yaml
 tools_dir:
   - ~/extensions/my-extension/src/*.py
   - ./local-tools/*.py

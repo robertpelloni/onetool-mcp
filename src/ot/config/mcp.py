@@ -60,7 +60,7 @@ def expand_secrets(value: str) -> str:
     if missing_vars:
         raise ValueError(
             f"Missing variables in secrets.yaml: {', '.join(missing_vars)}. "
-            f"Add them to .onetool/secrets.yaml or use ${{VAR:-default}} syntax."
+            f"Add them to .onetool/config/secrets.yaml or use ${{VAR:-default}} syntax."
         )
 
     return result

@@ -159,7 +159,7 @@ class SecurityConfig(BaseModel):
     Example configurations:
         # Air-gapped mode - block network tools
         security:
-          block: [brave.*, web_fetch.*, context7.*]
+          block: [brave.*, web.*, context7.*]
 
         # Trust file ops
         security:
