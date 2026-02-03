@@ -88,7 +88,7 @@ snippets:
       ctx: { default: 0, description: "Lines of context before/after match" }
       count: { default: "", description: "Max matching lines to return" }
     body: |
-      ripgrep.search(pattern="{{ p }}", path="{{ path }}"{% if glob %}, glob="{{ glob }}"{% endif %}{% if ft %}, file_type="{{ ft }}"{% endif %}{% if ctx %}, context={{ ctx }}{% endif %}{% if count %}, max_results={{ count }}{% endif %})
+      ripgrep.search(pattern="{{ p }}", path="{{ path }}"{% if glob %}, glob="{{ glob }}"{% endif %}{% if ft %}, file_type="{{ ft }}"{% endif %}{% if ctx %}, context={{ ctx }}{% endif %}{% if count %}, limit={{ count }}{% endif %})
 
   rg_count:
     description: Count pattern occurrences by file
