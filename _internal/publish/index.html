@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://onetool.beycom.online/_internal/specs-viewer/">
+        <link rel="canonical" href="https://onetool.beycom.online/_internal/publish/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Full Specifications - OneTool</title>
+        <title>Release & Publish Guide - OneTool</title>
       
     
     
@@ -91,7 +91,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#full-specifications" class="md-skip">
+        <a href="#release-publish-guide" class="md-skip">
           Skip to content
         </a>
       
@@ -126,7 +126,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Full Specifications
+              Release &amp; Publish Guide
             
           </span>
         </div>
@@ -1074,8 +1074,6 @@
       
         
       
-        
-      
     
     
     
@@ -1341,34 +1339,6 @@
     
   
     File
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/firecrawl/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Firecrawl
   
 
     
@@ -1724,10 +1694,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#regenerating" class="md-nav__link">
+  <a href="#release-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regenerating
+        Release Workflow
       
     </span>
   </a>
@@ -1735,10 +1705,76 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#source-files" class="md-nav__link">
+  <a href="#step-1-prepare" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Source Files
+        Step 1: Prepare
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Check
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-publish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Publish
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#helper-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helper Tasks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#individual-publish-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Individual Publish Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification Links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#community-submissions-major-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Community Submissions (Major Releases)
       
     </span>
   </a>
@@ -1773,19 +1809,77 @@
   
 
 
-<h1 id="full-specifications">Full Specifications<a class="headerlink" href="#full-specifications" title="Permanent link">&para;</a></h1>
-<p>Interactive viewer for all OpenSpec specifications. Browse requirements and scenarios with filtering by category, spec, and full-text search.</p>
-<iframe src="specs.html" style="width:100%; height:900px; border:1px solid var(--md-default-fg-color--lightest); border-radius:8px;"></iframe>
-
-<h2 id="regenerating">Regenerating<a class="headerlink" href="#regenerating" title="Permanent link">&para;</a></h2>
-<p>The specs viewer is generated from OpenSpec markdown files:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>just<span class="w"> </span>docs-specs
+<h1 id="release-publish-guide">Release &amp; Publish Guide<a class="headerlink" href="#release-publish-guide" title="Permanent link">&para;</a></h1>
+<p>Internal guide for publishing new versions of OneTool.</p>
+<hr />
+<h2 id="release-workflow">Release Workflow<a class="headerlink" href="#release-workflow" title="Permanent link">&para;</a></h2>
+<p>Three steps: <strong>prep → check → publish</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>just<span class="w"> </span>release::prep<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w">      </span><span class="c1"># Step 1: Bump version, generate changelog</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Edit CHANGELOG.md</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>just<span class="w"> </span>release::check<span class="w">             </span><span class="c1"># Step 2: Lint, typecheck, tests, gitleaks, sanity</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>just<span class="w"> </span>release::publish<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w">   </span><span class="c1"># Step 3: Build, publish, tag, docs</span>
 </span></code></pre></div>
-<h2 id="source-files">Source Files<a class="headerlink" href="#source-files" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="step-1-prepare">Step 1: Prepare<a class="headerlink" href="#step-1-prepare" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>just<span class="w"> </span>release::prep<span class="w"> </span><span class="m">1</span>.0.0b2
+</span></code></pre></div>
 <ul>
-<li><a href="https://github.com/beycom/onetool-mcp/blob/main/openspec/specs/INDEX.md">OpenSpec INDEX.md</a> - Categorized specification index</li>
-<li><a href="https://github.com/beycom/onetool-mcp/blob/main/openspec/AGENTS.md">AGENTS.md</a> - Guidelines for AI agents</li>
+<li>Updates version in <code>pyproject.toml</code> and <code>server.json</code></li>
+<li>Generates changelog from git commits (via git-cliff)</li>
+<li>Opens <code>CHANGELOG.md</code> and <code>tmp/changelog-entry.md</code> in editor</li>
+<li>Copy/paste the generated entry into CHANGELOG.md</li>
 </ul>
+<hr />
+<h2 id="step-2-check">Step 2: Check<a class="headerlink" href="#step-2-check" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>just<span class="w"> </span>release::check
+</span></code></pre></div>
+<ul>
+<li>Runs lint, typecheck, and all tests</li>
+<li>Scans for secrets with gitleaks</li>
+<li>Runs <code>/sanity retest=all</code> via <code>claude -p</code> CLI</li>
+</ul>
+<hr />
+<h2 id="step-3-publish">Step 3: Publish<a class="headerlink" href="#step-3-publish" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>just<span class="w"> </span>release::publish<span class="w"> </span><span class="m">1</span>.0.0b2
+</span></code></pre></div>
+<p>Prompts before each step:
+1. Build package (<code>uv build</code>)
+2. Publish to PyPI (<code>uv publish</code>)
+3. Commit, tag, push to GitHub
+4. Publish to MCP Registry
+5. Create GitHub release
+6. Deploy docs to GitHub Pages</p>
+<hr />
+<h2 id="helper-tasks">Helper Tasks<a class="headerlink" href="#helper-tasks" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>just<span class="w"> </span>release::set-version<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w">  </span><span class="c1"># Update version only</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>just<span class="w"> </span>release::changelog<span class="w">            </span><span class="c1"># Preview changelog</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>just<span class="w"> </span>release::sanity<span class="w">               </span><span class="c1"># Run sanity tests only</span>
+</span></code></pre></div>
+<h2 id="individual-publish-steps">Individual Publish Steps<a class="headerlink" href="#individual-publish-steps" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>just<span class="w"> </span>release::build<span class="w">     </span><span class="c1"># uv build</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>just<span class="w"> </span>release::pypi<span class="w">      </span><span class="c1"># uv publish</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>just<span class="w"> </span>release::tag<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w">  </span><span class="c1"># Commit, tag, push</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>just<span class="w"> </span>release::mcp<span class="w">       </span><span class="c1"># mcp-publisher publish</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>just<span class="w"> </span>release::docs<span class="w">      </span><span class="c1"># mkdocs gh-deploy</span>
+</span></code></pre></div>
+<hr />
+<h2 id="verification-links">Verification Links<a class="headerlink" href="#verification-links" title="Permanent link">&para;</a></h2>
+<p>After release, verify at:
+- PyPI: https://pypi.org/project/onetool-mcp/
+- MCP Registry: https://registry.modelcontextprotocol.io
+- GitHub: https://github.com/beycom/onetool/releases
+- Docs: https://onetool.beycom.online</p>
+<hr />
+<h2 id="community-submissions-major-releases">Community Submissions (Major Releases)<a class="headerlink" href="#community-submissions-major-releases" title="Permanent link">&para;</a></h2>
+<p>For significant releases, submit to directories:</p>
+<ul>
+<li>https://smithery.ai/new</li>
+<li>https://mcpservers.org/submit</li>
+<li>PR to punkpeye/awesome-mcp-servers</li>
+</ul>
+<p>See <code>plan/consult/register.md</code> for details.</p>
 
 
 

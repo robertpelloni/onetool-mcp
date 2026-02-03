@@ -1090,8 +1090,6 @@
       
         
       
-        
-      
     
     
     
@@ -1455,6 +1453,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#self-hosted-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1517,34 +1526,6 @@
     
   
     File
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../firecrawl/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Firecrawl
   
 
     
@@ -1999,6 +1980,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#self-hosted-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2270,22 +2262,83 @@
 </span></code></pre></div>
 <p>Or use <code>include:</code> to load from a shared config file:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">include</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">diagram.yaml</span><span class="w">  </span><span class="c1"># Falls back to global or bundled defaults</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">config/diagram.yaml</span><span class="w">  </span><span class="c1"># Falls back to global</span>
 </span></code></pre></div>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p>OneTool includes built-in diagram templates for common patterns. Templates are installed to <code>~/.onetool/config/diagram-templates/</code> during <code>onetool init</code>.</p>
+<p><strong>Available templates:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Provider</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api-flow</code></td>
+<td>mermaid</td>
+<td>sequence</td>
+<td>REST API request/response flow</td>
+</tr>
+<tr>
+<td><code>microservices</code></td>
+<td>d2</td>
+<td>architecture</td>
+<td>Microservices architecture layout</td>
+</tr>
+<tr>
+<td><code>c4-context</code></td>
+<td>plantuml</td>
+<td>c4</td>
+<td>C4 system context diagram</td>
+</tr>
+<tr>
+<td><code>state-machine</code></td>
+<td>mermaid</td>
+<td>state</td>
+<td>State machine diagram</td>
+</tr>
+<tr>
+<td><code>class-diagram</code></td>
+<td>mermaid</td>
+<td>class</td>
+<td>Class/data model diagram</td>
+</tr>
+<tr>
+<td><code>project-gantt</code></td>
+<td>mermaid</td>
+<td>gantt</td>
+<td>Project timeline Gantt chart</td>
+</tr>
+<tr>
+<td><code>feature-mindmap</code></td>
+<td>mermaid</td>
+<td>mindmap</td>
+<td>Feature brainstorming mindmap</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Load a template:</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">diagram</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;api-flow&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Templates can be customized by editing files in <code>~/.onetool/config/diagram-templates/</code>.</p>
 <h2 id="self-hosted-setup">Self-Hosted Setup<a class="headerlink" href="#self-hosted-setup" title="Permanent link">&para;</a></h2>
 <p>For batch operations or high-volume rendering, use the Kroki docker-compose from <a href="https://kroki.io/#install">kroki.io</a>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Download Kroki docker-compose</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>curl<span class="w"> </span>-LO<span class="w"> </span>https://raw.githubusercontent.com/yuzutech/kroki/main/docker-compose.yml
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Start Kroki</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Download Kroki docker-compose</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>curl<span class="w"> </span>-LO<span class="w"> </span>https://raw.githubusercontent.com/yuzutech/kroki/main/docker-compose.yml
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Start Kroki</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
 </span></code></pre></div>
 <p>Then configure <code>onetool.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">diagram</span><span class="p">:</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">backend</span><span class="p">:</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">      </span><span class="nt">prefer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self_hosted</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="nt">self_hosted_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://localhost:8000</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">diagram</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">backend</span><span class="p">:</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">prefer</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">self_hosted</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">self_hosted_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://localhost:8000</span>
 </span></code></pre></div>
 
 

@@ -1168,8 +1168,6 @@
       
         
       
-        
-      
     
     
     
@@ -1435,34 +1433,6 @@
     
   
     File
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/firecrawl/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Firecrawl
   
 
     
@@ -1919,6 +1889,7 @@
 
 
 <h1 id="benchmark-comparison-results">Benchmark Comparison Results<a class="headerlink" href="#benchmark-comparison-results" title="Permanent link">&para;</a></h1>
+<p><em>Benchmarks run: January 2026</em></p>
 <h2 id="scenario-impact-of-tool-usage-one-shot">Scenario: Impact of tool usage - one-shot<a class="headerlink" href="#scenario-impact-of-tool-usage-one-shot" title="Permanent link">&para;</a></h2>
 <p>With 18 MCP servers loaded, <code>multiple-mcp</code> consumes <strong>23x more input tokens</strong> (46,130 vs 1,999) than OneTool for the same task. This translates to <strong>18x higher cost</strong> (2.34¢ vs 0.13¢) and <strong>2x slower</strong> execution (12s vs 6s). The token overhead comes from sending all tool definitions with every request—a cost that scales with the number of configured servers regardless of which tools are actually used.</p>
 <table>
@@ -2023,7 +1994,7 @@
 <h2 id="assumptions">Assumptions<a class="headerlink" href="#assumptions" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Benchmark model: google/gemini-3-flash-preview</li>
-<li>multi-mpc has the following MCP servers: package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, chunkhound, mcp-alchemy, magic, firecrawl, supabase, railway</li>
+<li>multi-mpc has the following MCP servers: package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, chunkhound, mcp-alchemy, magic, supabase, railway</li>
 </ul>
 
 

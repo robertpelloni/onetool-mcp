@@ -641,6 +641,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#security-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checking-security-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking Security Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1168,8 +1196,6 @@
       
         
       
-        
-      
     
     
     
@@ -1435,34 +1461,6 @@
     
   
     File
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/firecrawl/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Firecrawl
   
 
     
@@ -1840,6 +1838,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#security-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checking-security-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking Security Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reference" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1919,7 +1945,7 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>OneTool uses YAML configuration files with a three-tier system: bundled defaults → global (<code>~/.onetool/</code>) → project (<code>.onetool/</code>).</p>
+<p>OneTool uses YAML configuration files with a two-tier system: global (<code>~/.onetool/config/</code>) → project (<code>.onetool/config/</code>).</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Initialize global config</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>onetool<span class="w"> </span>init
@@ -1950,6 +1976,35 @@
 </tr>
 </tbody>
 </table>
+<h2 id="security-configuration">Security Configuration<a class="headerlink" href="#security-configuration" title="Permanent link">&para;</a></h2>
+<p>OneTool uses an allowlist-based security model. Everything is blocked by
+default; you must explicitly allow what's safe.</p>
+<p>Include <code>security.yaml</code> in your config:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">include</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">config/security.yaml</span>
+</span></code></pre></div>
+<p>Or define inline:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">security</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">builtins</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">str</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">list</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dict</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">set</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tuple</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Types</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">len</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">range</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">enumerate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">zip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sorted</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># Iteration</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">print</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">repr</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">]</span><span class="w">                      </span><span class="c1"># Output</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">imports</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">json</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">re</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">math</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">datetime</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">collections</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nt">warn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">yaml</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">calls</span><span class="p">:</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nt">block</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">pickle.*</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">yaml.load</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">dunders</span><span class="p">:</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">__format__</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">__sanitize__</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<p>Tool namespaces (<code>ot.*</code>, <code>brave.*</code>, <code>file.*</code>, etc.) are auto-allowed.</p>
+<h3 id="checking-security-rules">Checking Security Rules<a class="headerlink" href="#checking-security-rules" title="Permanent link">&para;</a></h3>
+<p>Use introspection to check what's allowed:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>                    <span class="c1"># Summary of all rules</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>        <span class="c1"># Check specific pattern</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span> <span class="c1"># Check qualified call</span>
+</span></code></pre></div>
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong><a href="../../reference/cli/onetool-config/">onetool Configuration</a></strong> - Full YAML schema, pack settings, secrets, MCP servers, aliases, snippets, security</li>

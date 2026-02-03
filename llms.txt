@@ -33,7 +33,6 @@ __ot brave.search(query="AI news")
 - package: npm, pypi, audit, version
 - file: read, write, edit, info, list, tree, search, copy, move, delete
 - diagram: generate_source, render_diagram, list_providers (+8 more)
-- firecrawl: scrape, scrape_batch, map_urls, search, crawl, crawl_status, extract, deep_research
 - scaffold: create, list_extensions, templates
 - ot: tools, packs, aliases, snippets, config, health, help, stats, notify, reload
 

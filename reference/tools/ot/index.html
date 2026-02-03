@@ -1090,8 +1090,6 @@
       
         
       
-        
-      
     
     
     
@@ -1380,34 +1378,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../firecrawl/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Firecrawl
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../ground/" class="md-nav__link">
         
   
@@ -1671,6 +1641,17 @@
     <span class="md-ellipsis">
       
         ot.reload()
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#otsecurity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot.security()
       
     </span>
   </a>
@@ -2097,6 +2078,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#otsecurity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot.security()
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2245,6 +2237,10 @@
 <td><code>ot.reload()</code></td>
 <td>Force configuration reload</td>
 </tr>
+<tr>
+<td><code>ot.security(check)</code></td>
+<td>Check security rules and allowlists</td>
+</tr>
 </tbody>
 </table>
 <h2 id="info-levels">Info Levels<a class="headerlink" href="#info-levels" title="Permanent link">&para;</a></h2>
@@ -2280,7 +2276,7 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Exact pack lookup</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;firecrawl&quot;</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;brave&quot;</span><span class="p">)</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Exact server lookup (MCP proxy servers)</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;devtools&quot;</span><span class="p">)</span>
@@ -2476,6 +2472,23 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Clears cached configuration and reloads from disk. Use after modifying config files during a session.</p>
+<h2 id="otsecurity">ot.security()<a class="headerlink" href="#otsecurity" title="Permanent link">&para;</a></h2>
+<p>Check security rules and allowlists.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Summary of all security rules</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Check specific pattern</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>         <span class="c1"># → allowed (in imports.allow)</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span>  <span class="c1"># → blocked (matches calls.block)</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;exec&quot;</span><span class="p">)</span>         <span class="c1"># → blocked (not in builtins.allow)</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span> <span class="c1"># → allowed (tool namespace)</span>
+</span></code></pre></div>
+<p>Returns:</p>
+<ul>
+<li>Without <code>check</code>: Summary with counts and samples for each category (builtins, imports, calls, dunders, tool namespaces)</li>
+<li>With <code>check</code>: Status dict with <code>pattern</code>, <code>status</code> (allowed/blocked/warned), <code>category</code>, and <code>reason</code></li>
+</ul>
+<p>Use this to understand why code is being blocked or to verify security configuration.</p>
 
 
 
