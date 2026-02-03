@@ -118,16 +118,38 @@ def _format_error(
     return f"Error: {message}"
 
 
+def _is_html_content_type(content_type: str | None) -> bool:
+    """Check if content type indicates HTML content."""
+    if not content_type:
+        return True  # Assume HTML if no content type (legacy behavior)
+    ct_lower = content_type.lower().split(";")[0].strip()
+    return ct_lower in ("text/html", "application/xhtml+xml")
+
+
 @cache(ttl=300)  # Cache fetched pages for 5 minutes
-def _fetch_url_cached(url: str, timeout: float) -> str | None:
-    """Fetch URL with caching to avoid redundant requests."""
+def _fetch_url_cached(url: str, timeout: float) -> tuple[str | None, str | None]:
+    """Fetch URL with caching to avoid redundant requests.
+
+    Returns:
+        Tuple of (content, content_type). Content is the decoded response,
+        content_type is the Content-Type header value.
+    """
     with LogSpan(span="web.download", url=url, timeout=timeout) as span:
         config = _create_config(timeout)
-        result = trafilatura.fetch_url(url, config=config)
-        span.add(success=result is not None)
-        if result:
-            span.add(responseLen=len(result))
-        return result
+        response = trafilatura.fetch_response(
+            url, config=config, with_headers=True, decode=True
+        )
+        if response is None:
+            span.add(success=False)
+            return None, None
+        content = response.html
+        content_type = (
+            response.headers.get("content-type") if response.headers else None
+        )
+        span.add(success=content is not None, contentType=content_type)
+        if content:
+            span.add(responseLen=len(content))
+        return content, content_type
 
 
 def fetch(
@@ -152,6 +174,9 @@ def fetch(
 
     Uses trafilatura to extract the main content, filtering out navigation,
     ads, and boilerplate. Returns clean text optimized for LLM consumption.
+
+    For non-HTML content types (text/plain, application/json, text/xml, text/csv,
+    etc.), returns the raw content directly without extraction.
 
     Args:
         url: The URL to fetch
@@ -208,9 +233,20 @@ def fetch(
 
             # Fetch the page (with optional caching)
             if use_cache:
-                downloaded = _fetch_url_cached(url, timeout)
+                downloaded, content_type = _fetch_url_cached(url, timeout)
             else:
-                downloaded = trafilatura.fetch_url(url, config=config)
+                response = trafilatura.fetch_response(
+                    url, config=config, with_headers=True, decode=True
+                )
+                if response is None:
+                    downloaded, content_type = None, None
+                else:
+                    downloaded = response.html
+                    content_type = (
+                        response.headers.get("content-type")
+                        if response.headers
+                        else None
+                    )
 
             if downloaded is None:
                 s.add(error="fetch_failed")
@@ -218,37 +254,42 @@ def fetch(
                     url, "fetch_failed", f"Failed to fetch URL: {url}", output_format
                 )
 
-            # Map output format to trafilatura format
-            trafilatura_format: str = output_format
-            if output_format == "text":
-                trafilatura_format = "txt"
+            # For non-HTML content, return raw content directly (no extraction needed)
+            if not _is_html_content_type(content_type):
+                s.add(contentType=content_type, rawContent=True)
+                result = downloaded
+            else:
+                # Map output format to trafilatura format
+                trafilatura_format: str = output_format
+                if output_format == "text":
+                    trafilatura_format = "txt"
 
-            # Extract content
-            result = trafilatura.extract(
-                downloaded,
-                url=url,
-                output_format=trafilatura_format,
-                include_links=include_links,
-                include_images=include_images,
-                include_tables=include_tables,
-                include_comments=include_comments,
-                include_formatting=include_formatting,
-                favor_precision=favor_precision,
-                favor_recall=favor_recall,
-                fast=fast,
-                target_language=target_language,
-                with_metadata=output_format == "json",
-                config=config,
-            )
-
-            if result is None:
-                s.add(error="no_content")
-                return _format_error(
-                    url,
-                    "no_content",
-                    f"No content could be extracted from: {url}",
-                    output_format,
+                # Extract content from HTML
+                result = trafilatura.extract(
+                    downloaded,
+                    url=url,
+                    output_format=trafilatura_format,
+                    include_links=include_links,
+                    include_images=include_images,
+                    include_tables=include_tables,
+                    include_comments=include_comments,
+                    include_formatting=include_formatting,
+                    favor_precision=favor_precision,
+                    favor_recall=favor_recall,
+                    fast=fast,
+                    target_language=target_language,
+                    with_metadata=output_format == "json",
+                    config=config,
                 )
+
+                if result is None:
+                    s.add(error="no_content")
+                    return _format_error(
+                        url,
+                        "no_content",
+                        f"No content could be extracted from: {url}",
+                        output_format,
+                    )
 
             # Wrap with metadata if requested (JSON only)
             if include_metadata and output_format == "json":
@@ -278,16 +319,24 @@ def fetch(
         except TimeoutError:
             s.add(error="timeout")
             return _format_error(
-                url, "timeout", f"Timeout after {timeout}s fetching: {url}", output_format
+                url,
+                "timeout",
+                f"Timeout after {timeout}s fetching: {url}",
+                output_format,
             )
         except ConnectionError as e:
             s.add(error="connection_failed")
             return _format_error(
-                url, "connection_failed", f"Connection failed for {url}: {e}", output_format
+                url,
+                "connection_failed",
+                f"Connection failed for {url}: {e}",
+                output_format,
             )
         except Exception as e:
             s.add(error=str(e))
-            return _format_error(url, "error", f"Error fetching {url}: {e}", output_format)
+            return _format_error(
+                url, "error", f"Error fetching {url}: {e}", output_format
+            )
 
 
 def fetch_batch(
@@ -356,7 +405,9 @@ def fetch_batch(
 
     normalized = normalize_items(urls)
 
-    with LogSpan(span="web.batch", urlCount=len(normalized), output_format=output_format) as s:
+    with LogSpan(
+        span="web.batch", urlCount=len(normalized), output_format=output_format
+    ) as s:
 
         def _fetch_one(url: str, label: str) -> tuple[str, str]:
             """Fetch a single URL and return (label, result)."""

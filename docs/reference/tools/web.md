@@ -11,6 +11,7 @@ Extracts main content from web pages, filtering navigation, ads, and boilerplate
 - URL validation with helpful error messages
 - JSON-structured errors when using json output format
 - Optional HTTP response metadata
+- Non-HTML content (plain text, JSON, XML, CSV) returned directly without extraction
 
 ## Functions
 
@@ -75,4 +76,8 @@ web.fetch_batch(
     favor_precision=True,
     fast=True
 )
+
+# Fetch plain text or JSON files (returned directly without extraction)
+web.fetch(url="https://example.com/data.json")
+web.fetch(url="https://example.com/robots.txt")
 ```

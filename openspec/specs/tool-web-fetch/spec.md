@@ -32,7 +32,7 @@ The `web.fetch()` function SHALL support output length limiting.
 - **GIVEN** a URL with long content
 - **WHEN** `web.fetch(url=url, max_length=1000)` is called
 - **THEN** it SHALL truncate the output to the specified length
-- **AND** it SHALL append a truncation indicator "[Content truncated...]"
+- **AND** it SHALL append a truncation indicator "\n\n[Content truncated...]"
 
 #### Scenario: Default length
 - **GIVEN** a URL
@@ -191,6 +191,50 @@ The `web.fetch()` function SHALL handle errors gracefully.
 - **WHEN** `web.fetch(url=url)` is called
 - **THEN** it SHALL return "Error: No content could be extracted from: {url}"
 
+### Requirement: Non-HTML Content Handling
+
+The `web.fetch()` function SHALL detect content type and return non-HTML content directly.
+
+#### Scenario: Plain text files
+- **GIVEN** a URL returning `Content-Type: text/plain`
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL return the raw content without HTML extraction
+- **AND** it SHALL NOT call trafilatura extraction
+
+#### Scenario: JSON files
+- **GIVEN** a URL returning `Content-Type: application/json`
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL return the raw JSON content
+- **AND** it SHALL NOT call trafilatura extraction
+
+#### Scenario: XML files
+- **GIVEN** a URL returning `Content-Type: application/xml` or `text/xml`
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL return the raw XML content
+- **AND** it SHALL NOT call trafilatura extraction
+
+#### Scenario: CSV files
+- **GIVEN** a URL returning `Content-Type: text/csv`
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL return the raw CSV content
+- **AND** it SHALL NOT call trafilatura extraction
+
+#### Scenario: HTML content type detection
+- **GIVEN** a URL returning `Content-Type: text/html` or `application/xhtml+xml`
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL proceed with trafilatura extraction as normal
+
+#### Scenario: Missing content type
+- **GIVEN** a URL with no Content-Type header
+- **WHEN** `web.fetch(url=url)` is called
+- **THEN** it SHALL assume HTML and proceed with extraction (legacy behavior)
+
+#### Scenario: Non-HTML content truncation
+- **GIVEN** a non-HTML URL with content exceeding max_length
+- **WHEN** `web.fetch(url=url, max_length=N)` is called
+- **THEN** it SHALL truncate the raw content to N characters
+- **AND** it SHALL append "\n\n[Content truncated...]"
+
 #### Scenario: JSON error format
 - **GIVEN** `output_format="json"` and an error occurs
 - **WHEN** `web.fetch(url=url, output_format="json")` is called
@@ -219,20 +263,24 @@ The functions SHALL use trafilatura library for extraction.
 
 The tool SHALL log all fetch operations using LogSpan.
 
-#### Scenario: URL fetch logging
-- **GIVEN** a URL fetch is requested
-- **WHEN** the fetch completes
+#### Scenario: URL download logging
+- **GIVEN** a URL download is requested
+- **WHEN** the download completes
+- **THEN** it SHALL log:
+  - `span: "web.download"`
+  - `url`: Target URL
+  - `timeout`: Request timeout
+  - `success`: Whether download succeeded
+  - `responseLen`: Response size (if successful)
+  - `contentType`: Content-Type header value
+
+#### Scenario: Fetch operation logging
+- **GIVEN** a fetch operation is requested
+- **WHEN** the operation completes
 - **THEN** it SHALL log:
   - `span: "web.fetch"`
   - `url`: Target URL
-  - `status`: HTTP status code
-  - `contentLength`: Response size
-
-#### Scenario: Content parsing logging
-- **GIVEN** fetched content is parsed
-- **WHEN** parsing completes
-- **THEN** it SHALL log:
-  - `span: "web.parse"`
-  - `url`: Source URL
-  - `textLength`: Extracted text length
+  - `output_format`: Requested output format
+  - `contentLen`: Extracted content length (if successful)
+  - `cached`: Whether cache was used
 

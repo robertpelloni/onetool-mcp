@@ -20,11 +20,22 @@ pytest.importorskip("trafilatura")
 from ot_tools.web_fetch import (
     Config,
     _format_error,
+    _is_html_content_type,
     _validate_options,
     _validate_url,
     fetch,
     fetch_batch,
 )
+
+
+def _mock_response(html: str | None, content_type: str = "text/html"):
+    """Create a mock trafilatura Response object."""
+    from unittest.mock import MagicMock
+
+    response = MagicMock()
+    response.html = html
+    response.headers = {"content-type": content_type} if html is not None else None
+    return response
 
 
 @pytest.fixture
@@ -88,6 +99,42 @@ class TestValidateOptions:
     def test_both_true_raises(self):
         with pytest.raises(ValueError, match="Cannot set both"):
             _validate_options(favor_precision=True, favor_recall=True)
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestIsHtmlContentType:
+    """Test content type detection."""
+
+    def test_html_content_type(self):
+        assert _is_html_content_type("text/html") is True
+        assert _is_html_content_type("text/html; charset=utf-8") is True
+        assert _is_html_content_type("TEXT/HTML") is True
+
+    def test_xhtml_content_type(self):
+        assert _is_html_content_type("application/xhtml+xml") is True
+        assert _is_html_content_type("application/xhtml+xml; charset=utf-8") is True
+
+    def test_plain_text_content_type(self):
+        assert _is_html_content_type("text/plain") is False
+        assert _is_html_content_type("text/plain; charset=utf-8") is False
+
+    def test_json_content_type(self):
+        assert _is_html_content_type("application/json") is False
+        assert _is_html_content_type("application/json; charset=utf-8") is False
+
+    def test_xml_content_type(self):
+        assert _is_html_content_type("text/xml") is False
+        assert _is_html_content_type("application/xml") is False
+
+    def test_other_content_types(self):
+        assert _is_html_content_type("text/csv") is False
+        assert _is_html_content_type("text/markdown") is False
+        assert _is_html_content_type("application/javascript") is False
+
+    def test_none_defaults_to_html(self):
+        # Legacy behavior: assume HTML if no content type
+        assert _is_html_content_type(None) is True
 
 
 @pytest.mark.unit
@@ -157,7 +204,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_successful_fetch(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html><body>Content</body></html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html><body>Content</body></html>"
+        )
         mock_trafilatura.extract.return_value = "Extracted content from page."
 
         result = fetch(url="https://example.com", use_cache=False)
@@ -166,7 +215,7 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_returns_error_on_fetch_failure(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = None
+        mock_trafilatura.fetch_response.return_value = None
 
         result = fetch(url="https://example.com", use_cache=False)
 
@@ -175,7 +224,7 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_returns_error_on_no_content(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html></html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response("<html></html>")
         mock_trafilatura.extract.return_value = None
 
         result = fetch(url="https://example.com", use_cache=False)
@@ -185,7 +234,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_text_output_format(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "Plain text"
 
         fetch(url="https://example.com", output_format="text", use_cache=False)
@@ -196,19 +247,21 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_markdown_output_format(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "# Heading\n\nParagraph"
 
-        fetch(
-            url="https://example.com", output_format="markdown", use_cache=False
-        )
+        fetch(url="https://example.com", output_format="markdown", use_cache=False)
 
         call_args = mock_trafilatura.extract.call_args
         assert call_args.kwargs["output_format"] == "markdown"
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_include_links_option(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "content"
 
         fetch(url="https://example.com", include_links=True, use_cache=False)
@@ -218,7 +271,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_fast_option(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "content"
 
         fetch(url="https://example.com", fast=True, use_cache=False)
@@ -228,8 +283,12 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     @patch("ot_tools.web_fetch.truncate")
-    def test_truncates_long_content(self, mock_truncate, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+    def test_truncates_long_content(
+        self, mock_truncate, mock_trafilatura, mock_web_config
+    ):
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "x" * 200
         mock_truncate.return_value = "x" * 100 + "...[Content truncated...]"
 
@@ -240,7 +299,7 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_handles_exception(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.side_effect = Exception("Network error")
+        mock_trafilatura.fetch_response.side_effect = Exception("Network error")
 
         result = fetch(url="https://example.com", use_cache=False)
 
@@ -249,7 +308,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_favor_precision(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "content"
 
         fetch(url="https://example.com", favor_precision=True, use_cache=False)
@@ -259,7 +320,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_target_language(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = "content"
 
         fetch(url="https://example.com", target_language="en", use_cache=False)
@@ -286,11 +349,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_json_error_format(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = None
+        mock_trafilatura.fetch_response.return_value = None
 
-        result = fetch(
-            url="https://example.com", output_format="json", use_cache=False
-        )
+        result = fetch(url="https://example.com", output_format="json", use_cache=False)
 
         parsed = json.loads(result)
         assert parsed["error"] == "fetch_failed"
@@ -298,7 +359,9 @@ class TestFetch:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_include_metadata(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>content</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>content</html>"
+        )
         mock_trafilatura.extract.return_value = '{"text": "content", "title": "Test"}'
 
         result = fetch(
@@ -313,6 +376,79 @@ class TestFetch:
         assert "metadata" in parsed
         assert "final_url" in parsed["metadata"]
         assert parsed["metadata"]["final_url"] == "https://example.com"
+
+    # -------------------------------------------------------------------------
+    # Non-HTML Content Type Tests
+    # -------------------------------------------------------------------------
+
+    @patch("ot_tools.web_fetch.trafilatura")
+    def test_plain_text_returns_raw_content(self, mock_trafilatura, mock_web_config):
+        """Plain text files should return raw content without extraction."""
+        raw_content = "This is plain text content.\nLine 2."
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            raw_content, content_type="text/plain; charset=utf-8"
+        )
+
+        result = fetch(url="https://example.com/file.txt", use_cache=False)
+
+        assert result == raw_content
+        # extract() should NOT be called for plain text
+        mock_trafilatura.extract.assert_not_called()
+
+    @patch("ot_tools.web_fetch.trafilatura")
+    def test_json_returns_raw_content(self, mock_trafilatura, mock_web_config):
+        """JSON files should return raw content without extraction."""
+        raw_content = '{"key": "value", "number": 42}'
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            raw_content, content_type="application/json"
+        )
+
+        result = fetch(url="https://example.com/data.json", use_cache=False)
+
+        assert result == raw_content
+        mock_trafilatura.extract.assert_not_called()
+
+    @patch("ot_tools.web_fetch.trafilatura")
+    def test_xml_returns_raw_content(self, mock_trafilatura, mock_web_config):
+        """XML files should return raw content without extraction."""
+        raw_content = '<?xml version="1.0"?><root><item>data</item></root>'
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            raw_content, content_type="application/xml"
+        )
+
+        result = fetch(url="https://example.com/data.xml", use_cache=False)
+
+        assert result == raw_content
+        mock_trafilatura.extract.assert_not_called()
+
+    @patch("ot_tools.web_fetch.trafilatura")
+    def test_csv_returns_raw_content(self, mock_trafilatura, mock_web_config):
+        """CSV files should return raw content without extraction."""
+        raw_content = "name,age\nAlice,30\nBob,25"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            raw_content, content_type="text/csv"
+        )
+
+        result = fetch(url="https://example.com/data.csv", use_cache=False)
+
+        assert result == raw_content
+        mock_trafilatura.extract.assert_not_called()
+
+    @patch("ot_tools.web_fetch.trafilatura")
+    @patch("ot_tools.web_fetch.truncate")
+    def test_plain_text_truncated(
+        self, mock_truncate, mock_trafilatura, mock_web_config
+    ):
+        """Plain text should still be truncated if over max_length."""
+        raw_content = "x" * 200
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            raw_content, content_type="text/plain"
+        )
+        mock_truncate.return_value = "x" * 100 + "\n\n[Content truncated...]"
+
+        fetch(url="https://example.com/file.txt", max_length=100, use_cache=False)
+
+        mock_truncate.assert_called_once()
 
 
 # -----------------------------------------------------------------------------
@@ -460,8 +596,10 @@ class TestFetchCache:
 
     @patch("ot_tools.web_fetch._fetch_url_cached")
     @patch("ot_tools.web_fetch.trafilatura")
-    def test_uses_cache_by_default(self, mock_trafilatura, mock_cached, mock_web_config):
-        mock_cached.return_value = "<html>cached</html>"
+    def test_uses_cache_by_default(
+        self, mock_trafilatura, mock_cached, mock_web_config
+    ):
+        mock_cached.return_value = ("<html>cached</html>", "text/html")
         mock_trafilatura.extract.return_value = "Cached content"
 
         fetch(url="https://example.com")
@@ -470,9 +608,11 @@ class TestFetchCache:
 
     @patch("ot_tools.web_fetch.trafilatura")
     def test_bypasses_cache_when_disabled(self, mock_trafilatura, mock_web_config):
-        mock_trafilatura.fetch_url.return_value = "<html>fresh</html>"
+        mock_trafilatura.fetch_response.return_value = _mock_response(
+            "<html>fresh</html>"
+        )
         mock_trafilatura.extract.return_value = "Fresh content"
 
         fetch(url="https://example.com", use_cache=False)
 
-        mock_trafilatura.fetch_url.assert_called_once()
+        mock_trafilatura.fetch_response.assert_called_once()
