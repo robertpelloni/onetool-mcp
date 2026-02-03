@@ -1,14 +1,87 @@
 # Quickstart
 
-## 1. Install
+Get OneTool running in under 2 minutes.
+
+## 1. Install uv
+
+OneTool requires [uv](https://docs.astral.sh/uv/) - a fast Python package manager.
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+## 2. Install OneTool
 
 ```bash
 uv tool install onetool-mcp
 ```
 
-## 2. Connect to Claude Code
+## 3. Initialize
 
-Add to `~/.claude/settings.json`:
+```bash
+onetool init
+```
+
+This creates configuration files in `~/.onetool/config/`:
+
+- `onetool.yaml` - Global settings
+- `secrets.yaml` - API keys (gitignored)
+
+## 4. Set Up Secrets
+
+Edit `~/.onetool/config/secrets.yaml` to add your API keys:
+
+```yaml
+# Brave Search API
+# Get your key at: https://brave.com/search/api/
+# BRAVE_API_KEY: "your-brave-api-key"
+
+# OpenAI API (for transform tool with OpenAI models)
+# Get your key at: https://platform.openai.com/api-keys
+# OPENAI_API_KEY: "sk-..."
+
+# OpenRouter API (for transform tool with multiple providers)
+# Get your key at: https://openrouter.ai/keys
+# OPENROUTER_API_KEY: "sk-or-..."
+
+# Google Gemini API (for grounding search)
+# Get your key at: https://aistudio.google.com/apikey
+# GEMINI_API_KEY: "AIza..."
+
+# Context7 API (for library documentation)
+# Get your key at: https://context7.com/
+# CONTEXT7_API_KEY: "ctx7sk-..."
+
+# Anthropic API
+# Get your key at: https://console.anthropic.com/
+# ANTHROPIC_API_KEY: "sk-ant-..."
+
+# GitHub token for GitHub MCP server
+# Get your token at: https://github.com/settings/tokens
+# GITHUB_TOKEN: "ghp_xxxxxxxxxxxxxxxxxxxx"
+```
+
+Uncomment and add keys for the tools you want to use.
+
+## 5. Validate
+
+```bash
+onetool init validate
+```
+
+This checks your configuration is correct.
+
+## 6. Connect to Claude Code
+
+```bash
+claude mcp add onetool onetool
+```
+
+Or manually add to `~/.claude/mcp.json`:
 
 ```json
 {
@@ -20,14 +93,37 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-## 3. Use It
+## 7. Verify Connection
 
-```python
-__ot brave.search(query="AI news")
+Start Claude Code and run `/mcp`. You should see OneTool listed as a connected MCP server.
+
+![OneTool connected](../assets/quickstart/onetool-connected.png)
+
+## 8. Use It
+
+Try a simple health check:
+
+```
+__ot ot.health()
 ```
 
-That's it. One tool, unlimited capabilities.
+Or use a prompt like this to ask the agent to help you use OneTool. Note: the `ubad=` parameter is intentional to demonstrate how OneTool handles errors.
 
----
+```
+Issue each command, one at a time.
+Before each command explain what you are doing so it is easy for the new OneTool user to follow what you did and why. Use 🧿 to highlight these explanations.
+After each command output ✅ and the results of the call or ❌ and the error or issue. Provide a readable snippet of the results.
+Use OneTool ot.help() with info="full" to understand how best to use OneTool tools.
+Finally, list all OneTool commands used.
 
-**Next**: [Installation](installation.md) (all platforms) | [Configuration](configuration.md) | [Tools Reference](../reference/tools/index.md)
+Commands:
+__ot ot.health()
+__ot ot.help()
+__ot ot.help(q="web.fetch", i="full")
+__ot web.fetch(ubad="https://onetool.beycom.online/")
+__ot web.fetch(u="https://onetool.beycom.online/")
+__ot $pkg
+
+```
+
+That's it. 🧿 One MCP, unlimited tools.

@@ -9,7 +9,6 @@ Each .onetool/ directory uses subdirectories to organise files by purpose:
 - config/ — YAML configuration files
 - logs/ — Application log files
 - stats/ — Statistics data (stats.jsonl)
-- sessions/ — Browser session state
 - tools/ — Reserved for installed tool packs
 
 Directories are created lazily on first use, not on install.
@@ -30,7 +29,6 @@ PROJECT_DIR_NAME = ".onetool"
 CONFIG_SUBDIR = "config"
 LOGS_SUBDIR = "logs"
 STATS_SUBDIR = "stats"
-SESSIONS_SUBDIR = "sessions"
 TOOLS_SUBDIR = "tools"
 
 # Package containing bundled config defaults
@@ -156,9 +154,14 @@ def get_effective_cwd() -> Path:
 def get_global_dir() -> Path:
     """Get the global OneTool directory path.
 
+    Can be overridden via OT_GLOBAL_DIR environment variable.
+
     Returns:
-        Path to ~/.onetool/ (not necessarily existing)
+        Path to ~/.onetool/ or OT_GLOBAL_DIR if set (not necessarily existing)
     """
+    env_global = os.getenv("OT_GLOBAL_DIR")
+    if env_global:
+        return Path(env_global).resolve()
     return Path.home() / GLOBAL_DIR_NAME
 
 
@@ -232,7 +235,7 @@ def create_backup(file_path: Path) -> Path:
 def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
     """Ensure the global OneTool directory exists with subdirectory structure.
 
-    Creates ~/.onetool/ with subdirectories (config/, logs/, stats/, sessions/, tools/)
+    Creates ~/.onetool/ with subdirectories (config/, logs/, stats/, tools/)
     and copies template config files from global_templates to config/.
     Templates are user-facing files with commented examples for customization.
     Subdirectories (like diagram-templates/) are NOT copied - they remain in
@@ -255,7 +258,7 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
 
     # Create directory structure with subdirectories
     global_dir.mkdir(parents=True, exist_ok=True)
-    subdirs = [CONFIG_SUBDIR, LOGS_SUBDIR, STATS_SUBDIR, SESSIONS_SUBDIR, TOOLS_SUBDIR]
+    subdirs = [CONFIG_SUBDIR, LOGS_SUBDIR, STATS_SUBDIR, TOOLS_SUBDIR]
     for subdir in subdirs:
         (global_dir / subdir).mkdir(exist_ok=True)
 
@@ -295,7 +298,7 @@ def ensure_project_dir(path: Path | None = None, quiet: bool = False) -> Path:
     """Ensure the project OneTool directory exists with subdirectory structure.
 
     Creates .onetool/ in the specified directory or effective cwd,
-    including subdirectories (config/, logs/, stats/, sessions/, tools/).
+    including subdirectories (config/, logs/, stats/, tools/).
 
     Args:
         path: Project root (default: get_effective_cwd())
@@ -312,7 +315,7 @@ def ensure_project_dir(path: Path | None = None, quiet: bool = False) -> Path:
 
     # Create directory structure with subdirectories
     project_dir.mkdir(parents=True, exist_ok=True)
-    subdirs = [CONFIG_SUBDIR, LOGS_SUBDIR, STATS_SUBDIR, SESSIONS_SUBDIR, TOOLS_SUBDIR]
+    subdirs = [CONFIG_SUBDIR, LOGS_SUBDIR, STATS_SUBDIR, TOOLS_SUBDIR]
     for subdir in subdirs:
         (project_dir / subdir).mkdir(exist_ok=True)
 
@@ -407,19 +410,6 @@ def get_stats_dir(base_dir: Path | None = None) -> Path:
     """
     base = base_dir or get_global_dir()
     return base / STATS_SUBDIR
-
-
-def get_sessions_dir(base_dir: Path | None = None) -> Path:
-    """Get the sessions directory path within a .onetool directory.
-
-    Args:
-        base_dir: Base .onetool directory (default: global dir)
-
-    Returns:
-        Path to sessions/ subdirectory
-    """
-    base = base_dir or get_global_dir()
-    return base / SESSIONS_SUBDIR
 
 
 def resolve_cwd_path(path: str) -> Path:

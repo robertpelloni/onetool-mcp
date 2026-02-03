@@ -137,6 +137,9 @@ class TestGetSecrets:
 
         secrets_module._secrets = None
 
+        # Prevent default location lookup from finding dev environment secrets
+        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
+        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
         monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
 
         # First call loads
@@ -161,6 +164,9 @@ class TestGetSecrets:
 
         secrets_module._secrets = None
 
+        # Prevent default location lookup from finding dev environment secrets
+        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
+        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
         monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
 
         result1 = get_secrets()
@@ -197,6 +203,9 @@ class TestGetSecret:
 
         secrets_module._secrets = None
 
+        # Prevent default location lookup from finding dev environment secrets
+        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
+        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
         monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
 
         result = get_secret("MY_SECRET")

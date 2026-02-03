@@ -1,5 +1,6 @@
 # Benchmark Comparison Results
 
+*Benchmarks run: January 2026*
 
 ## Scenario: Impact of tool usage - one-shot
 

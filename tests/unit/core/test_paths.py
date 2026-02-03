@@ -89,3 +89,30 @@ class TestCreateBackup:
         backup = create_backup(original)
 
         assert backup.name == "test.yaml.bak.2"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestGetGlobalDir:
+    """Tests for get_global_dir()."""
+
+    def test_returns_home_onetool_by_default(self) -> None:
+        """Returns ~/.onetool/ when no env var set."""
+        from ot.paths import get_global_dir
+
+        result = get_global_dir()
+
+        assert result == Path.home() / ".onetool"
+
+    def test_respects_ot_global_dir_env_var(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Returns OT_GLOBAL_DIR path when env var is set."""
+        from ot.paths import get_global_dir
+
+        custom_dir = tmp_path / "custom-onetool"
+        monkeypatch.setenv("OT_GLOBAL_DIR", str(custom_dir))
+
+        result = get_global_dir()
+
+        assert result == custom_dir.resolve()

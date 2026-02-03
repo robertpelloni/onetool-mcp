@@ -46,7 +46,6 @@ The `.onetool/` directory SHALL use a subdirectory structure to organise files b
   - `config/` - YAML configuration files
   - `logs/` - Application log files
   - `stats/` - Statistics data (stats.jsonl)
-  - `sessions/` - Browser session state
   - `tools/` - Reserved for installed tool packs
 
 #### Scenario: Config files in config subdirectory
@@ -281,7 +280,7 @@ The `ensure_global_dir` function SHALL seed from global templates into the `conf
 - **GIVEN** `~/.onetool/` does not exist
 - **WHEN** `ensure_global_dir()` is called
 - **THEN** it SHALL create `~/.onetool/`
-- **AND** create `config/`, `logs/`, `stats/`, `sessions/`, `tools/` subdirectories
+- **AND** create `config/`, `logs/`, `stats/`, `tools/` subdirectories
 - **AND** copy YAML configs from global templates to `config/`
 - **AND** rename `*-template.yaml` files to remove the suffix (e.g., `secrets-template.yaml` → `secrets.yaml`)
 - **AND** NOT copy subdirectories (diagram-templates stays in bundled defaults)
@@ -407,7 +406,12 @@ The SDK paths module SHALL provide functions to get directory paths.
 - **THEN** it SHALL return `~/.onetool/`
 
 #### Scenario: get_global_dir returns global
-- **GIVEN** any context
+- **GIVEN** no `OT_GLOBAL_DIR` environment variable
 - **WHEN** `get_global_dir()` is called
 - **THEN** it SHALL return `~/.onetool/`
+
+#### Scenario: get_global_dir with OT_GLOBAL_DIR override
+- **GIVEN** `OT_GLOBAL_DIR=/custom/path` environment variable
+- **WHEN** `get_global_dir()` is called
+- **THEN** it SHALL return `/custom/path` (resolved)
 

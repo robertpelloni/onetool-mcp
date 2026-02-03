@@ -356,9 +356,11 @@ def serve(
         onetool --config config/onetool.yaml
     """
     # Bootstrap global config directory on first run
-    from ot.paths import ensure_global_dir
+    # Skip for 'init' subcommand - it handles its own directory creation with messaging
+    if ctx.invoked_subcommand != "init":
+        from ot.paths import ensure_global_dir
 
-    ensure_global_dir(quiet=True)
+        ensure_global_dir(quiet=True)
 
     # Only run if no subcommand was invoked (handles --help automatically)
     if ctx.invoked_subcommand is not None:

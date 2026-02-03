@@ -1,5 +1,7 @@
 # About OneTool
 
+*Written: January 2026*
+
 ## MCP is Dead. Long Live MCP.
 
 ### The Kingdom

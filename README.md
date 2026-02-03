@@ -58,11 +58,20 @@ Configure one MCP server. Use unlimited tools.
 
 ## Install
 
+Requires [uv](https://docs.astral.sh/uv/):
+
 ```bash
 uv tool install onetool-mcp
+onetool init
 ```
 
-Add to Claude Code (`~/.claude/settings.json`):
+Add to Claude Code:
+
+```bash
+claude mcp add onetool onetool
+```
+
+Or manually add to `~/.claude/mcp.json`:
 
 ```json
 {
@@ -76,7 +85,7 @@ Add to Claude Code (`~/.claude/settings.json`):
 
 That's it. All 100+ tools work out of the box.
 
-Verify: `onetool --version`
+Verify: `onetool init validate`
 
 [📖 Full installation guide](https://onetool.beycom.online/learn/installation/)
 

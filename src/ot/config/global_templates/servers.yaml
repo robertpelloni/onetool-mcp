@@ -22,8 +22,13 @@ servers:
   devtools:
     type: stdio
     command: npx
-    args: ["-y", "chrome-devtools-mcp@latest"]
-    timeout: 60
+    args:
+      - "-y"
+      - "chrome-devtools-mcp@latest"
+      - "--isolated"           # Temporary profile, auto-cleaned
+      - "--viewport=1280x720"  # Consistent window size
+      - "--no-usage-statistics" # Disable Data Collection
+    timeout: 120               # Browser launch can be slow
     instructions: |
       Chrome DevTools MCP - Browser automation and debugging via Chrome DevTools Protocol.
 
@@ -57,38 +62,38 @@ servers:
   #
   # SETUP:
   #   1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens
-  #   2. Add to ~/.onetool/secrets.yaml:
+  #   2. Add to ~/.onetool/config/secrets.yaml:
   #      GITHUB_TOKEN: ghp_your_token_here
+  #   3. Uncomment the github server config below
   #
   # TOOLSETS (configure via X-MCP-Tools header if needed):
   #   repos, issues, pull_requests, actions, code_security, experiments
   #
-  github:
-    type: http
-    url: https://api.githubcopilot.com/mcp/
-    headers:
-      Authorization: "Bearer ${GITHUB_TOKEN}"
-      Accept: "application/json, text/event-stream"
-    timeout: 60
-    enabled: false  # Enable after adding GITHUB_TOKEN to secrets.yaml
-    instructions: |
-      GitHub MCP Server - Official GitHub API integration for repository management.
-
-      **Toolsets:**
-      - **Repositories**: Browse code, search files, analyze commits, manage branches
-      - **Issues**: Create, update, list, search, and manage issues
-      - **Pull Requests**: Create PRs, review changes, merge, manage reviews
-      - **Actions**: Monitor workflows, analyze build failures, trigger runs
-      - **Code Security**: Review security findings, Dependabot alerts
-
-      **Usage patterns:**
-      - Search before creating: Use search tools to check for existing issues/PRs
-      - Batch operations: Use list tools to get multiple items at once
-      - For code changes: Create branch -> make commits -> create PR
-      - Issue workflow: search_issues -> get_issue -> update_issue or create_issue_comment
-
-      **Common mistakes to avoid:**
-      - Don't create duplicate issues - search first
-      - Don't forget to specify the repository (owner/repo format)
-      - Don't make multiple API calls when a single list/search call works
-      - Check PR status before attempting to merge
+  # github:
+  #   type: http
+  #   url: https://api.githubcopilot.com/mcp/
+  #   headers:
+  #     Authorization: "Bearer ${GITHUB_TOKEN}"
+  #     Accept: "application/json, text/event-stream"
+  #   timeout: 60
+  #   instructions: |
+  #     GitHub MCP Server - Official GitHub API integration for repository management.
+  #
+  #     **Toolsets:**
+  #     - **Repositories**: Browse code, search files, analyze commits, manage branches
+  #     - **Issues**: Create, update, list, search, and manage issues
+  #     - **Pull Requests**: Create PRs, review changes, merge, manage reviews
+  #     - **Actions**: Monitor workflows, analyze build failures, trigger runs
+  #     - **Code Security**: Review security findings, Dependabot alerts
+  #
+  #     **Usage patterns:**
+  #     - Search before creating: Use search tools to check for existing issues/PRs
+  #     - Batch operations: Use list tools to get multiple items at once
+  #     - For code changes: Create branch -> make commits -> create PR
+  #     - Issue workflow: search_issues -> get_issue -> update_issue or create_issue_comment
+  #
+  #     **Common mistakes to avoid:**
+  #     - Don't create duplicate issues - search first
+  #     - Don't forget to specify the repository (owner/repo format)
+  #     - Don't make multiple API calls when a single list/search call works
+  #     - Check PR status before attempting to merge

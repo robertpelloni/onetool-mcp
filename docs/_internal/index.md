@@ -6,7 +6,6 @@ Internal development documentation for OneTool contributors and LLM-assisted dev
 
 | Resource | Purpose |
 |----------|---------|
-| [Full Specifications](specs-viewer.md) | Interactive viewer for all 400+ requirements and 1300+ scenarios |
 | [INDEX.md](https://github.com/beycom/onetool-mcp/blob/main/openspec/specs/INDEX.md) | Categorized specification index |
 
 ## Documentation
