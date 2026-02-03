@@ -124,7 +124,7 @@ Meta tools for introspection. [Structured logging](learn/extending/extension-too
 
 ### :material-package-variant: 100+ Tools
 
-Web search (Brave, Grounding, Firecrawl), web fetch with trafilatura, databases, file operations, diagrams, conversions - ready to use.
+Web search (Brave, Grounding), web fetch with trafilatura, databases, file operations, diagrams, conversions - ready to use.
 
 [:octicons-arrow-right-24: Browse tools](reference/tools/index.md)
 
@@ -144,7 +144,7 @@ Delegate to cheaper agents. Fetch a page, summarise with Gemini Flash ($0.50/M),
 
 ### :material-shield-check: Security
 
-Multiple layers built in: isolated [`secrets.yaml`](reference/cli/onetool-config.md#secrets-configuration), [AST validation](learn/security.md), [path boundaries](learn/security.md#4-path-boundary-enforcement), [output sanitisation](learn/security.md#7-output-sanitization-prompt-injection-protection).
+Multiple layers built in: isolated [`secrets.yaml`](reference/cli/onetool-config.md#secrets-configuration), [AST validation](learn/security.md#2-allowlist-based-code-validation), [path boundaries](learn/security.md#6-path-boundary-enforcement), [output sanitisation](learn/security.md#9-output-sanitization-prompt-injection-protection).
 
 </div>
 

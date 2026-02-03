@@ -911,120 +911,60 @@ The system SHALL support a top-level `include:` key for merging external config 
 
 ### Requirement: Security Configuration
 
-The system SHALL support configurable security patterns for code validation at the root level.
+The system SHALL support allowlist-based security configuration via security.yaml.
 
-#### Scenario: Security section at root level
+**IMPORTANT:** The security model provides defense-in-depth but is NOT a sandbox. Never run code you do not trust.
+
+#### Scenario: Security section structure
 - **GIVEN** configuration with:
 
   ```yaml
   security:
     validate_code: true
     enabled: true
-    blocked:
-      - my_dangerous.*
-    ask:
-      - requests.*
-    warned:
-      - custom_risky.*
-    allow:
-      - open
+    builtins:
+      allow: [str, int, len, print]
+    imports:
+      allow: [json, re, math]
+      warn: [yaml]
+    calls:
+      block: [pickle.*, yaml.load]
+      warn: [random.seed]
+    dunders:
+      allow: [__format__, __sanitize__]
   ```
 
 - **WHEN** code is validated
-- **THEN** configured patterns SHALL be merged with defaults
-
-#### Scenario: Four security levels
-- **GIVEN** the security configuration
-- **WHEN** patterns are evaluated
-- **THEN** the system SHALL support four levels:
-  - `blocked`: Deny execution with error
-  - `ask`: Prompt user for confirmation before execution
-  - `warned`: Allow with logged warning
-  - `allow`: Permit without warning (exempt from defaults)
-
-#### Scenario: Default security configuration
-- **GIVEN** no `security` section in configuration
-- **WHEN** code is validated
-- **THEN** built-in default patterns SHALL be used
+- **THEN** only explicitly allowed items SHALL pass validation
 
 #### Scenario: Security disabled
 - **GIVEN** configuration with `security.enabled: false`
 - **WHEN** code is validated
 - **THEN** security pattern checks SHALL be skipped
 
-#### Scenario: Additive pattern behavior
-- **GIVEN** configuration with custom patterns:
-
-  ```yaml
-  security:
-    blocked:
-      - my_dangerous.*
-  ```
-
-- **WHEN** patterns are loaded
-- **THEN** `my_dangerous.*` SHALL be added to defaults
-- **AND** default blocked patterns (exec, eval, subprocess.*, etc.) SHALL still apply
-- **RATIONALE** Prevents accidental removal of critical security patterns
-
-#### Scenario: Allow list exemption
-- **GIVEN** configuration with:
-
-  ```yaml
-  security:
-    allow:
-      - open
-  ```
-
-- **WHEN** code calls `open()`
-- **THEN** validation SHALL pass without warning
-- **AND** `open` SHALL be removed from warned defaults
-
-#### Scenario: Promoting warning to block
-- **GIVEN** configuration adding `open` to blocked:
-
-  ```yaml
-  security:
-    blocked:
-      - open
-  ```
-
-- **WHEN** code calls `open()`
-- **THEN** validation SHALL fail with error
-- **AND** blocked takes precedence over warned
+#### Scenario: Fallback defaults
+- **GIVEN** no security.yaml loaded
+- **WHEN** code is validated
+- **THEN** minimal fallback defaults SHALL be used (FALLBACK_ALLOWED_BUILTINS, FALLBACK_ALLOWED_IMPORTS)
 
 #### Scenario: Wildcard patterns in security config
 - **GIVEN** security patterns containing wildcards (*, ?, [seq])
 - **WHEN** patterns are loaded
 - **THEN** they SHALL be matched using fnmatch semantics
-- **EXAMPLE** `subprocess.*` matches `subprocess.run`, `subprocess.Popen`, etc.
+- **EXAMPLE** `pickle.*` matches `pickle.load`, `pickle.loads`, etc.
 
-#### Scenario: Ask level for network operations
-- **GIVEN** configuration with:
+#### Scenario: Compact array format
+- **GIVEN** configuration with nested arrays:
 
   ```yaml
-  security:
-    ask:
-      - requests.*
-      - urllib.*
-      - httpx.*
+  builtins:
+    allow:
+      - [str, int, float]
+      - print
   ```
 
-- **WHEN** code makes network requests
-- **THEN** user SHALL be prompted for confirmation
-- **RATIONALE** Network operations may exfiltrate data; user approval adds a security checkpoint
-
-#### Scenario: Ask level default patterns
-- **GIVEN** no `ask` section in configuration
-- **WHEN** code is validated
-- **THEN** no patterns SHALL require confirmation by default
-- **RATIONALE** Ask mode is opt-in to avoid disrupting existing workflows
-
-#### Scenario: Pattern type auto-detection
-- **GIVEN** patterns in blocked/warned lists
-- **WHEN** matching occurs
-- **THEN** patterns without dots SHALL match builtins and imports
-- **AND** patterns with dots SHALL match qualified function calls
-- **EXAMPLE** `subprocess` matches `import subprocess`; `subprocess.*` matches `subprocess.run()`
+- **WHEN** configuration is loaded
+- **THEN** nested arrays SHALL be flattened to single list
 
 ### Requirement: Config Inheritance Directive
 

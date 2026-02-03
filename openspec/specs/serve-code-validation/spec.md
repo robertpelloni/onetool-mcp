@@ -2,7 +2,9 @@
 
 ## Purpose
 
-Defines Python code validation for the run() tool. Includes syntax checking via AST parsing, security pattern detection for dangerous calls, and optional ruff linting for style warnings.
+Defines Python code validation for the run() tool. Includes syntax checking via AST parsing, allowlist-based security validation, and optional ruff linting for style warnings.
+
+**IMPORTANT:** The security model provides defense-in-depth but is NOT a sandbox. Never run code you do not trust. The allowlist model catches common dangerous patterns but cannot prevent all malicious code. Always review generated code before execution.
 ## Requirements
 ### Requirement: Syntax Validation
 
@@ -27,41 +29,25 @@ The system SHALL validate Python syntax before execution using AST parsing.
 
 The system SHALL detect and block dangerous code patterns.
 
-#### Scenario: Exec call blocked
-- **GIVEN** code containing `exec("code")`
+#### Scenario: Unlisted builtin blocked
+- **GIVEN** code containing `exec("code")` and exec is NOT in builtins.allow
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error "Dangerous builtin 'exec' is not allowed (matches 'exec')"
+- **THEN** it SHALL return valid=False with error "Builtin 'exec' is not allowed"
 
-#### Scenario: Eval call blocked
-- **GIVEN** code containing `eval("expression")`
+#### Scenario: Unlisted import blocked
+- **GIVEN** code containing `import os` and os is NOT in imports.allow
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error "Dangerous builtin 'eval' is not allowed (matches 'eval')"
+- **THEN** it SHALL return valid=False with error "Import of 'os' is not allowed"
 
-#### Scenario: Dynamic import blocked
-- **GIVEN** code containing `__import__("module")`
+#### Scenario: Blocked call rejected
+- **GIVEN** code containing `pickle.load(f)` and pickle.* is in calls.block
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error "Dangerous builtin '__import__' is not allowed (matches '__import__')"
+- **THEN** it SHALL return valid=False with error matching "blocked"
 
-#### Scenario: Compile blocked
-- **GIVEN** code containing `compile("code", "", "exec")`
+#### Scenario: Warned import passes with warning
+- **GIVEN** code containing `import yaml` and yaml is in imports.warn
 - **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error "Dangerous builtin 'compile' is not allowed (matches 'compile')"
-
-#### Scenario: Open blocked
-- **GIVEN** code containing `open("file.txt")`
-- **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error "Dangerous builtin 'open' is not allowed"
-- **RATIONALE** Use file.* tools instead (sandboxed)
-
-#### Scenario: Network imports blocked
-- **GIVEN** code containing `import socket` or `import requests`
-- **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error
-
-#### Scenario: Filesystem imports blocked
-- **GIVEN** code containing `import os` or `import pathlib`
-- **WHEN** validate_python_code() is called with check_security=True
-- **THEN** it SHALL return valid=False with error
+- **THEN** it SHALL return valid=True with warning about unsafe operations
 
 #### Scenario: Security check disabled
 - **GIVEN** code containing dangerous patterns
@@ -155,22 +141,9 @@ The system SHALL block dangerous builtins, imports, and function calls.
 - **WHEN** validate_python_code() is called with check_security=True
 - **THEN** it SHALL return valid=True (safe modules are not blocked)
 
-### Requirement: Configurable Security Patterns
+### Requirement: Configurable Security via security.yaml
 
-The system SHALL support configurable security patterns via onetool.yaml.
-
-#### Scenario: Custom blocked patterns
-- **GIVEN** configuration with:
-
-  ```yaml
-  security:
-    blocked:
-      - my_dangerous.*
-  ```
-
-- **WHEN** code containing `my_dangerous.func()` is validated
-- **THEN** it SHALL return valid=False with error
-- **AND** built-in default blocked patterns SHALL still apply
+The system SHALL support configurable security allowlists via security.yaml.
 
 #### Scenario: Security disabled
 - **GIVEN** configuration with `security.enabled: false`
@@ -178,30 +151,10 @@ The system SHALL support configurable security patterns via onetool.yaml.
 - **THEN** security checks SHALL be skipped
 - **AND** only syntax validation SHALL occur
 
-#### Scenario: Default patterns used
-- **GIVEN** no security configuration in onetool.yaml
+#### Scenario: Fallback defaults used
+- **GIVEN** security.yaml cannot be loaded
 - **WHEN** code is validated
-- **THEN** built-in default patterns SHALL be used
-
-#### Scenario: Additive configuration
-- **GIVEN** configuration with only custom patterns
-- **WHEN** patterns are loaded
-- **THEN** custom patterns SHALL be merged with defaults
-- **AND** defaults SHALL NOT be replaced
-- **RATIONALE** Prevents accidental removal of critical security patterns
-
-#### Scenario: Allow list exemption
-- **GIVEN** configuration with:
-
-  ```yaml
-  security:
-    allow:
-      - os
-  ```
-
-- **WHEN** code containing `import os` is validated
-- **THEN** it SHALL pass without error (exempted from defaults)
-- **RATIONALE** Allows users to selectively enable blocked patterns when needed
+- **THEN** minimal fallback defaults SHALL be used (FALLBACK_ALLOWED_BUILTINS, FALLBACK_ALLOWED_IMPORTS)
 
 ### Requirement: Wildcard Pattern Matching
 

@@ -106,7 +106,7 @@ You'll also get tired of typing `query="..."`, so I added smart parameter prefix
 
 ### Batteries included: 100+ tools, plus "smart tools"
 
-OneTool includes [100+ tools](../reference/tools/index.md), including web search (Brave, Grounding, Firecrawl), web fetch using trafilatura, databases, file operations, diagrams, file conversions, and more - ready to use out of the box.
+OneTool includes [100+ tools](../reference/tools/index.md), including web search (Brave, Grounding), web fetch using trafilatura, databases, file operations, diagrams, file conversions, and more - ready to use out of the box.
 
 It even has "Smart Tools" -  [LLM-powered transformation](../reference/tools/llm.md). Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.
 
@@ -121,9 +121,9 @@ You also get a range of meta tools to help with the coding aspects, plus [struct
 OneTool is built for developers. It's very powerful -  so knowledge is your greatest protection. However, OneTool still includes multiple layers of security:
 
 - Isolated [`secrets.yaml`](../reference/cli/onetool-config.md#secrets-configuration) - so you can share your configuration without leaking secrets
-- [AST code validation](../learn/security.md) -  configurable permissions that warn or block risky function calls
-- [Path boundaries](../learn/security.md#4-path-boundary-enforcement) -  ensures file operations are constrained to allowed directories, handles symlink resolution, and honours sensitive exclusions
-- [Output sanitisation](../learn/security.md#7-output-sanitization-prompt-injection-protection) -  protection against indirect prompt injection via external content wrapping and sanitisation
+- [Allowlist-based code validation](../learn/security.md#2-allowlist-based-code-validation) - blocks everything by default, explicitly allows safe builtins, imports, and calls
+- [Path boundaries](../learn/security.md#6-path-boundary-enforcement) -  ensures file operations are constrained to allowed directories, handles symlink resolution, and honours sensitive exclusions
+- [Output sanitisation](../learn/security.md#9-output-sanitization-prompt-injection-protection) -  protection against indirect prompt injection via external content wrapping and sanitisation
 
 ### Extensible: build your own tools (and bring your existing MCP servers)
 
@@ -193,7 +193,7 @@ Download and install it, and give your agentic engineering the boost it needs.
 - [Runtime statistics (ot.stats)](../reference/tools/ot.md#otstats)
 - [Secrets configuration](../reference/cli/onetool-config.md#secrets-configuration)
 - [Security](../learn/security.md)
-- [Path boundary enforcement](../learn/security.md#4-path-boundary-enforcement)
-- [Output sanitisation / prompt injection protection](../learn/security.md#7-output-sanitization-prompt-injection-protection)
+- [Path boundary enforcement](../learn/security.md#6-path-boundary-enforcement)
+- [Output sanitisation / prompt injection protection](../learn/security.md#9-output-sanitization-prompt-injection-protection)
 - [External MCP servers](../reference/cli/onetool-config.md#external-mcp-servers)
 - [Testing and benchmarking](../reference/cli/bench.md)

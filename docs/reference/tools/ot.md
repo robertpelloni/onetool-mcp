@@ -24,6 +24,7 @@ Internal tools for OneTool introspection and management.
 | `ot.stats(period, tool, output)` | Get runtime usage statistics |
 | `ot.notify(topic, message)` | Publish message to configured topic |
 | `ot.reload()` | Force configuration reload |
+| `ot.security(check)` | Check security rules and allowlists |
 
 ## Info Levels
 
@@ -47,7 +48,7 @@ ot.help()
 ot.help(query="brave.search")
 
 # Exact pack lookup
-ot.help(query="firecrawl")
+ot.help(query="brave")
 
 # Exact server lookup (MCP proxy servers)
 ot.help(query="devtools")
@@ -301,4 +302,26 @@ ot.reload()
 ```
 
 Clears cached configuration and reloads from disk. Use after modifying config files during a session.
+
+## ot.security()
+
+Check security rules and allowlists.
+
+```python
+# Summary of all security rules
+ot.security()
+
+# Check specific pattern
+ot.security(check="json")         # → allowed (in imports.allow)
+ot.security(check="pickle.load")  # → blocked (matches calls.block)
+ot.security(check="exec")         # → blocked (not in builtins.allow)
+ot.security(check="brave.search") # → allowed (tool namespace)
+```
+
+Returns:
+
+- Without `check`: Summary with counts and samples for each category (builtins, imports, calls, dunders, tool namespaces)
+- With `check`: Status dict with `pattern`, `status` (allowed/blocked/warned), `category`, and `reason`
+
+Use this to understand why code is being blocked or to verify security configuration.
 

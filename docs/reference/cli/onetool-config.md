@@ -145,7 +145,6 @@ servers:
 | context7 | docs_limit | int | 10 | 1-20 | Max documentation results |
 | context7 | timeout | float | 30.0 | 1-120 | API request timeout (seconds) |
 | db | max_chars | int | 4000 | 100-100K | Query output truncation |
-| firecrawl | api_url | string | null | - | Custom API URL for self-hosted |
 | ground | model | string | gemini-2.5-flash | - | Gemini model for grounding |
 | package | timeout | float | 30.0 | 1-120 | Registry request timeout |
 | ripgrep | relative_paths | bool | true | - | Use relative paths in output |
@@ -215,7 +214,6 @@ BRAVE_API_KEY: "your-brave-api-key"
 OPENAI_API_KEY: "sk-..."
 CONTEXT7_API_KEY: "your-context7-key"
 GEMINI_API_KEY: "your-gemini-key"
-FIRECRAWL_API_KEY: "your-firecrawl-key"
 DATABASE_URL: "postgresql://user:pass@localhost/db"
 ```
 
@@ -360,23 +358,53 @@ When output exceeds `max_inline_size`, OneTool stores the result and returns a h
 
 ## Security Configuration
 
+OneTool uses an **allowlist-based** security model: everything is blocked by default, you explicitly allow what's safe. Tool namespaces (`ot.*`, `brave.*`, etc.) are auto-allowed.
+
+Security rules are defined in `security.yaml` (included by default):
+
 ```yaml
 security:
   validate_code: true          # Enable AST validation
-  enabled: true                # Enable security pattern checks
-  blocked:                     # Additional patterns to block
-    - my_dangerous.*
-  warned:                      # Additional patterns to warn on
-    - custom_risky.*
-  allow:                       # Patterns to exempt
-    - open
-  sanitize:                    # Output sanitization for prompt injection protection
-    enabled: true              # Global toggle (default: true)
+  enabled: true                # Enable security checks
+
+  builtins:
+    allow:
+      - [str, int, float, list, dict, set, tuple]  # Types
+      - [len, range, enumerate, zip, sorted]       # Iteration
+      - [print, repr, format]                      # Output
+
+  imports:
+    allow: [json, re, math, datetime, collections, itertools]
+    warn: [yaml]               # Allowed but logs warning
+
+  calls:
+    block: [pickle.*, yaml.load]  # Blocked qualified calls
+    warn: [random.seed]           # Warned qualified calls
+
+  dunders:
+    allow: [__format__, __sanitize__]  # Allowed magic variables
+
+  sanitize:
+    enabled: true              # Output sanitization (prompt injection protection)
 ```
 
-**Default blocked:** `exec`, `eval`, `compile`, `__import__`, `subprocess.*`, `os.system`, `os.popen`, `os.spawn*`, `os.exec*`
+**Compact array format:** Group related items for readability:
 
-**Default warned:** `subprocess`, `os`, `open`, `pickle.*`, `yaml.load`, `marshal.*`
+```yaml
+allow:
+  - [str, int, float]  # Grouped items
+  - print              # Single item
+```
+
+### Security Introspection
+
+Check what's allowed at runtime:
+
+```python
+ot.security()                    # Summary of all rules
+ot.security(check="json")        # Check specific pattern
+ot.security(check="pickle.load") # Check qualified call
+```
 
 ### Output Sanitization
 
@@ -387,6 +415,8 @@ The `security.sanitize` subsection protects against indirect prompt injection by
 3. **GUID-tagged boundaries:** Wrap content in unpredictable tags
 
 Disable per-call with `__sanitize__ = False` prefix.
+
+See [Security Model](../../learn/security.md) for full documentation.
 
 ## Environment Variables
 

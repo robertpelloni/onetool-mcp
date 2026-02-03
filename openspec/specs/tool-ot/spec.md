@@ -582,6 +582,46 @@ The `ot.result()` function SHALL follow logging conventions.
 
 ---
 
+### Requirement: Security Introspection
+
+The `ot.security()` function SHALL allow agents to query security rules.
+
+#### Scenario: Security summary
+- **GIVEN** no arguments
+- **WHEN** `ot.security()` is called
+- **THEN** it SHALL return a summary including:
+  - `status`: "configured" or "fallback"
+  - `enabled`: boolean
+  - `builtins`: count and sample of allowed builtins
+  - `imports`: count of allowed/warned imports
+  - `calls`: blocked and warned patterns
+  - `dunders`: allowed magic variables
+  - `tool_namespaces`: auto-allowed tool patterns
+
+#### Scenario: Check specific pattern
+- **GIVEN** a `check` parameter
+- **WHEN** `ot.security(check="json")` is called
+- **THEN** it SHALL return status dict with:
+  - `pattern`: the checked pattern
+  - `status`: "allowed", "blocked", or "warned"
+  - `category`: "builtins", "imports", "calls", or "tool_namespace"
+  - `reason`: explanation of why
+
+#### Scenario: Check tool namespace
+- **GIVEN** a tool namespace pattern
+- **WHEN** `ot.security(check="brave.search")` is called
+- **THEN** status SHALL be "allowed"
+- **AND** category SHALL be "tool_namespace"
+- **AND** reason SHALL indicate auto-allowed
+
+#### Scenario: Check blocked import
+- **GIVEN** a blocked import
+- **WHEN** `ot.security(check="os")` is called
+- **THEN** status SHALL be "blocked"
+- **AND** reason SHALL indicate not in allowlist
+
+---
+
 ### Requirement: Version
 
 The `ot.version()` function SHALL return the OneTool version string.
