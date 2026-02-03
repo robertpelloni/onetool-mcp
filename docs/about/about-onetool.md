@@ -20,9 +20,9 @@ Using an MCP Server comes with two significant problems.
 
 Like the kings of old, MCP servers rob the poor (you and me) and give the money to the rich (the AI giants like OpenAI, Microsoft and Anthropic). Each MCP Server consumes between 3K and 30K (looking at you, GitHub MCP!) tokens *per request*. Every single request.
 
-This happens because the agent reads all the MCP Server instructions for every configured tool on every request. These "tool tokens" can easily cost a full-time engineer **$30 per month** -  even if they **never use the tools**.
+This happens because the agent reads all the MCP Server instructions for every configured tool on every request. These "tool tokens" can easily cost a full-time engineer **$30 per MCP server per month** -  even if they **never use the tools**.
 
-The maths is brutal: If you're using Claude Opus 4.5 at $5 per million input tokens - 20 days × 10 conversations × 10 messages × 3K tokens = 6M input tokens = **$30** in tool tax. Monthly. For nothing.
+The maths is brutal: If you're using Claude Opus 4.5 at $5 per million input tokens - 20 days × 10 conversations × 10 messages × 3K tokens = 6M input tokens = **$30 per MCP server per month** in tool tax. For nothing.
 
 Just read innocuously [Code execution with MCP: Building more efficient agents](https://www.anthropic.com/engineering/code-execution-with-mcp), where Anthropic openly stated: "This reduces the token usage from 150K tokens to 2K tokens -  a time and cost saving of 98.7%."
 
@@ -140,7 +140,7 @@ OneTool was written with strong engineering practices:
 
 ## Give it a try (without paying the tax)
 
-If AI is the King, and MCP servers are your thing, then OneTool will help you stop paying the "tool tax" (around $30 per tool per month), avoid context rot, and unlock superpowers for you and your AI coding buddy.
+If AI is the King, and MCP servers are your thing, then OneTool will help you stop paying the "tool tax" (around $30 per MCP server per month), avoid context rot, and unlock superpowers for you and your AI coding buddy.
 
 Download and install it, and give your agentic engineering the boost it needs.
 

@@ -13,7 +13,7 @@ Consistent claims for OneTool marketing, based on benchmark evidence.
 
 ### $30 per MCP server per month
 
-Each MCP server you add costs approximately $30/month in wasted tokens.
+Each MCP server you add costs approximately $30 per MCP server per month in wasted tokens.
 
 **Assumptions:**
 
