@@ -129,6 +129,11 @@ tag version:
     git push origin main
     git push origin "v{{ version }}"
 
+# Create GitHub release (extracts notes from CHANGELOG.md)
+gh-release version:
+    uv run python -c "from scripts.release_publish import extract_release_notes; n=extract_release_notes('{{ version }}'); open('tmp/release-notes.md','w').write(n) if n else None"
+    gh release create "v{{ version }}" --title "v{{ version }}" --notes-file tmp/release-notes.md || gh release create "v{{ version }}" --title "v{{ version }}" --generate-notes
+
 # Delete a release (GitHub release + local/remote tags)
 delete-release version:
     gh release delete "v{{ version }}" --yes || true

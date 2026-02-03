@@ -131,6 +131,7 @@ def main():
         print("─" * 40)
         print("Step 4: Publish to MCP Registry")
         print("─" * 40)
+        run("mcp-publisher login github")
         run("mcp-publisher publish")
         print()
 
