@@ -56,24 +56,23 @@ def lazy_client(
 
     Example:
         from ot.utils import lazy_client
-        from ot.config import get_secret, get_tool_config
+        from ot.config import get_secret
 
-        def create_firecrawl():
-            from firecrawl import FirecrawlApp
-            api_key = get_secret("FIRECRAWL_API_KEY")
+        def create_brave():
+            from brave import Brave
+            api_key = get_secret("BRAVE_API_KEY")
             if not api_key:
                 return None
-            api_url = get_tool_config("firecrawl", Config).api_url
-            return FirecrawlApp(api_key=api_key, api_url=api_url or None)
+            return Brave(api_key=api_key)
 
-        get_firecrawl = lazy_client(create_firecrawl)
+        get_brave = lazy_client(create_brave)
 
         # Later, in tool functions:
-        def scrape(url: str) -> str:
-            client = get_firecrawl()
+        def search(query: str) -> str:
+            client = get_brave()
             if client is None:
-                return "Error: FIRECRAWL_API_KEY not configured"
-            return client.scrape_url(url)
+                return "Error: BRAVE_API_KEY not configured"
+            return client.search(query)
     """
     client: T | None = None
     initialized = False

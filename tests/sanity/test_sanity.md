@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Find do sanity testing and find issues. 
 
 Test out the following packs:
-Packs: brave, code, context7, convert, db, diagram, excel, file, firecrawl, github, ground, llm, package, ripgrep, scaffold, web, wiki                                                                                                
+Packs: brave, code, context7, convert, db, diagram, excel, file, github, ground, llm, package, ripgrep, scaffold, web, wiki                                                                                                
 
 When testing
 - code with db at demo/.chunkhound

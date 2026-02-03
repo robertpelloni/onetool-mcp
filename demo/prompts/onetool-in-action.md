@@ -22,8 +22,8 @@ Run searches sequentially.
 DO NOT actually provide the answer for the question.
 
 Tools and snippets to use:
-- OneTool Tools: brave.search, firecrawl.search, ground.docs, ground.search, context7
-- OneTool Snippets: $brv, $brv_research, $c7, $f, $g, $g_reddit
+- OneTool Tools: brave.search, ground.docs, ground.search, context7
+- OneTool Snippets: $brv, $brv_research, $c7, $g, $g_reddit
 - Claude: WebSearch
 
 For MCP questions, use library="/websites/modelcontextprotocol_io_specification_2025-11-25" with $c7

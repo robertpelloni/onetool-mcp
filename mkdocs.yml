@@ -166,7 +166,6 @@ nav:
           - Diagram: reference/tools/diagram.md
           - Excel: reference/tools/excel.md
           - File: reference/tools/file.md
-          - Firecrawl: reference/tools/firecrawl.md
           - Ground: reference/tools/ground.md
           - LLM: reference/tools/llm.md
           - OT (Meta): reference/tools/ot.md

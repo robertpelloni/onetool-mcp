@@ -120,7 +120,6 @@ Verify: `onetool init validate`
 | `diagram`   | `create`                                | Mermaid diagrams       |
 | `excel`     | `read`, `write`, `query`                | Excel files            |
 | `file`      | `read`, `write`, `list`, `search`       | File operations        |
-| `firecrawl` | `scrape`, `crawl`, `map`                | Web scraping           |
 | `ground`    | `search`                                | Google Grounding       |
 | `llm`       | `transform`, `transform_file`           | LLM-powered transforms |
 | `ot`        | `help`, `tools`, `stats`                | Introspection          |

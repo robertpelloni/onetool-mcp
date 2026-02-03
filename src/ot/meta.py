@@ -220,7 +220,7 @@ def _get_doc_url(pack: str) -> str:
     """Get documentation URL for a pack.
 
     Args:
-        pack: Pack name (e.g., "brave", "firecrawl")
+        pack: Pack name (e.g., "brave", "file")
 
     Returns:
         Documentation URL for the pack
@@ -1666,7 +1666,7 @@ def help(*, query: str = "", info: InfoLevel = "min") -> str:
     Example:
         ot.help()
         ot.help(query="brave.search")
-        ot.help(query="firecrawl")
+        ot.help(query="brave")
         ot.help(query="$b_q")
         ot.help(query="web fetch", info="list")
     """

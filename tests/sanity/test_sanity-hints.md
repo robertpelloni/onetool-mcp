@@ -38,6 +38,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
 🔹 **ripgrep.files**: Use `glob=` or `file_type=`, not `pattern=`
    - Example: `ripgrep.files(path=".", file_type="py")` or `ripgrep.files(path=".", glob="*.md")`
 
+🔹 **ripgrep.search**: Use `limit=` not `max_results=` to limit total results
+   - Example: `ripgrep.search(pattern="TODO", path=".", limit=5)`
+   - Note: The `$rg` snippet has a bug using `max_results` - see plan/issues/snippet-rg-param.md
+
 ## Expected behaviors (not bugs)
 
 - `brave.summarize` is no longer in the pack (removed)

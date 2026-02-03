@@ -101,9 +101,9 @@ class TestGetDocUrl:
         """Aligned packs use pack name as slug."""
         from ot.meta import _get_doc_url
 
-        result = _get_doc_url("firecrawl")
+        result = _get_doc_url("file")
 
-        assert result == "https://onetool.beycom.online/reference/tools/firecrawl/"
+        assert result == "https://onetool.beycom.online/reference/tools/file/"
 
     def test_misaligned_pack_uses_mapping(self) -> None:
         """Misaligned packs use DOC_SLUGS mapping."""
@@ -139,11 +139,11 @@ class TestFuzzyMatch:
         """Fuzzy matching finds close matches despite typos."""
         from ot.meta import _fuzzy_match
 
-        candidates = ["firecrawl", "scaffold", "brave"]
-        result = _fuzzy_match("frirecrawl", candidates)
+        candidates = ["scaffold", "diagram", "brave"]
+        result = _fuzzy_match("scafold", candidates)
 
-        # Should find firecrawl despite typo
-        assert "firecrawl" in result
+        # Should find scaffold despite typo
+        assert "scaffold" in result
 
     def test_no_match_returns_empty(self) -> None:
         """No matches returns empty list."""

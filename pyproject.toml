@@ -41,7 +41,6 @@ dependencies = [
     "sqlalchemy>=2.0.46",         # db tool
     # === Web ===
     "trafilatura>=2.0.0",         # web_fetch content extraction
-    "firecrawl>=4.13.4",          # firecrawl web scraping
     # === Documents ===
     "openpyxl>=3.1.5",            # excel, convert (Excel files)
     "pillow>=12.1.0",             # convert (PDF image handling)

@@ -161,27 +161,6 @@ snippets:
     body: |
       content = web.fetch(url="{{ u }}", output_format="markdown", fast=True)
       llm.transform(data=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
-  # ============================================================================
-  # FIRECRAWL (f_)
-  # ============================================================================
-
-  f:
-    description: Batch search using Firecrawl (pipe-separated queries)
-    params:
-      q: { description: "Pipe-separated search queries" }
-      count: { default: 10, description: "Results per query" }
-    body: |
-      results = {}
-      for query in [{% for item in q.split('|') %}"{{ item.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}]:
-          results[query] = firecrawl.search(query=query, limit={{ count }})
-      results
-
-  f_fetch:
-    description: Fetch a page using Firecrawl scrape
-    params:
-      u: { required: true, description: "URL to fetch" }
-    body: |
-      firecrawl.scrape(url="{{ u }}")
 
   # ============================================================================
   # GITHUB (gh_)

@@ -429,8 +429,8 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - List of tools (if connected)
 
 #### Scenario: Exact pack lookup
-- **GIVEN** a query matching a pack name exactly (e.g., `firecrawl`)
-- **WHEN** `ot.help(query="firecrawl")` is called
+- **GIVEN** a query matching a pack name exactly (e.g., `brave`)
+- **WHEN** `ot.help(query="brave")` is called
 - **THEN** it SHALL return pack help including:
   - Pack name as heading
   - Pack instructions (if configured)

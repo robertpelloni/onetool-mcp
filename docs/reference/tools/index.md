@@ -16,7 +16,6 @@ Complete reference of all built-in tool packs and functions.
 | [**diagram**](diagram.md) | Generate Mermaid, PlantUML, D2 diagrams. | 11 | [Kroki](https://kroki.io/) (MIT) | `batch_render`, `generate_source`, `get_diagram_instructions`, `get_diagram_policy`, `get_output_config`, `get_playground_url`, `get_render_status`, `get_template`, `list_providers`, `render_diagram`, `render_directory` |
 | [**excel**](excel.md) | Full Excel control. | 24 | [openpyxl](https://github.com/theorchard/openpyxl) (MIT) | `add_sheet`, `cell_range`, `cell_shift`, `copy_range`, `create`, `create_table`, `delete_cols`, `delete_rows`, `formula`, `formulas`, `hyperlinks`, `info`, `insert_cols`, `insert_rows`, `merged_cells`, `named_ranges`, `read`, `search`, `sheets`, `table_data`, `table_info`, `tables`, `used_range`, `write` |
 | [**file**](file.md) | Secure file operations with path boundary enforcement. | 10 | MIT | `copy`, `delete`, `edit`, `info`, `list`, `move`, `read`, `search`, `tree`, `write` |
-| [**firecrawl**](firecrawl.md) | Web scraping and crawling. | 8 | [firecrawl](https://github.com/mendableai/firecrawl) (AGPL-3.0) | `crawl`, `crawl_status`, `deep_research`, `extract`, `map_urls`, `scrape`, `scrape_batch`, `search` |
 | [**ground**](ground.md) | Grounded search with sources. | 5 | [Google Gemini](https://ai.google.dev/) (MIT) | `dev`, `docs`, `reddit`, `search`, `search_batch` |
 | [**llm**](llm.md) | AI-powered data transformation. | 2 | MIT | `transform`, `transform_file` |
 | [**ot**](ot.md) | Introspection and management tools. | 11 | MIT | `aliases`, `config`, `health`, `help`, `notify`, `packs`, `reload`, `servers`, `snippets`, `stats`, `tools` |
@@ -24,6 +23,6 @@ Complete reference of all built-in tool packs and functions.
 | [**ripgrep**](ripgrep.md) | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
 | [**scaffold**](scaffold.md) | Extension scaffolding. | 4 | MIT | `create`, `extensions`, `templates`, `validate` |
 | [**web**](web.md) | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
-| | **Total** | **105** | | |
+| | **Total** | **97** | | |
 
 
