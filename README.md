@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.beycom/onetool-mcp -->
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/beycom/onetool-mcp/main/docs/assets/logo.svg" alt="OneTool" width="80">
 </p>

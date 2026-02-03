@@ -1,23 +1,27 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.beycom/onetool",
+  "name": "io.github.beycom/onetool-mcp",
   "version": "1.0.0rc1",
   "title": "OneTool MCP",
   "description": "🧿One MCP, unlimited tools. Execute Python code with access to curated tool packs.",
   "repository": {
-    "url": "https://github.com/beycom/onetool",
-    "subfolder": ""
+    "url": "https://github.com/beycom/onetool-mcp",
+    "source": "github"
   },
   "websiteUrl": "https://onetool.beycom.online",
   "packages": [
     {
-      "registry_type": "pypi",
-      "name": "onetool-mcp",
+      "registryType": "pypi",
+      "identifier": "onetool-mcp",
       "version": "1.0.0rc1",
-      "transport": "stdio",
-      "runtime_hint": "uvx",
-      "arguments": ["onetool", "serve"],
-      "environment_variables": []
+      "transport": { "type": "stdio" },
+      "runtimeHint": "uvx",
+      "runtimeArguments": [
+        { "type": "positional", "value": "onetool" }
+      ],
+      "packageArguments": [
+        { "type": "positional", "value": "serve" }
+      ]
     }
   ]
 }

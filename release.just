@@ -128,3 +128,10 @@ tag version:
     git tag -a "v{{ version }}" -m "Release {{ version }}"
     git push origin main
     git push origin "v{{ version }}"
+
+# Delete a release (GitHub release + local/remote tags)
+delete-release version:
+    gh release delete "v{{ version }}" --yes || true
+    git push origin --delete "v{{ version }}" || true
+    git tag -d "v{{ version }}" || true
+    @echo "Deleted release v{{ version }}"
