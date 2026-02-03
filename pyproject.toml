@@ -1,6 +1,6 @@
 [project]
 name = "onetool-mcp"
-version = "1.0.0rc1"
+version = "1.0.0rc2"
 description = "🧿 One MCP, unlimited tools."
 mcpName = "io.github.beycom/onetool"
 readme = "README.md"
