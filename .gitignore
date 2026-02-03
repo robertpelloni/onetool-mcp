@@ -113,3 +113,7 @@ demo/tmp/
 .claude/commands/misc/
 .mcp.json
 .onetool-global/
+
+# Sanity test outputs (local state)
+tests/sanity/test_sanity_status.yaml
+tests/sanity/security-test-results.md

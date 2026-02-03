@@ -1,10 +1,19 @@
 # Release Tasks for OneTool
 # Usage: just release::<task>
+#
+# WORKFLOW:
+#   1. just release::prep VERSION    - Bump version, generate changelog draft
+#   2. Edit CHANGELOG.md             - Copy relevant parts from tmp/changelog-entry.md
+#   3. just release::check           - Run all quality checks
+#   4. just release::publish VERSION - Dry-run by default, --force to publish
+#
+# The publish step extracts release notes from CHANGELOG.md automatically.
 
 set dotenv-load := true
+set shell := ["zsh", "-c"]
 
 # ============================================================================
-# RELEASE WORKFLOW: prep → check → release
+# RELEASE WORKFLOW
 # ============================================================================
 
 # Show available commands
@@ -12,7 +21,7 @@ default:
     @just --list --unsorted
 
 # --------------------------------------------------------------------------
-# Step 1: Prepare (bump version, generate changelog, edit)
+# Step 1: Prepare - bump version and generate changelog draft
 # --------------------------------------------------------------------------
 prep version:
     @echo "=== Step 1: Prepare release {{ version }} ==="
@@ -25,13 +34,13 @@ prep version:
     @git cliff --unreleased --strip header 2>/dev/null >> tmp/changelog-entry.md || (echo "### Changes" >> tmp/changelog-entry.md && echo "" >> tmp/changelog-entry.md && git log $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~20")..HEAD --oneline --no-merges | sed 's/^/- /' >> tmp/changelog-entry.md)
     @echo "" >> tmp/changelog-entry.md
     @echo ""
-    @echo "Generated changelog entry:"
+    @echo "Generated changelog draft in tmp/changelog-entry.md"
     @echo "─────────────────────────────────────"
     @cat tmp/changelog-entry.md
     @echo "─────────────────────────────────────"
     @echo ""
-    @echo "Add this to CHANGELOG.md after line 4"
-    @echo "Opening CHANGELOG.md in editor..."
+    @echo "TODO: Copy relevant parts to CHANGELOG.md (after line 2)"
+    @echo "Opening both files in editor..."
     @${EDITOR:-code} CHANGELOG.md tmp/changelog-entry.md
     @echo ""
     @echo "Next: just release::check"
@@ -55,67 +64,19 @@ check:
     gitleaks detect --source . --verbose
     @echo ""
     @echo "Running sanity tests via Claude Code..."
-    claude -p "/sanity retest=all"
+    claude "/proj:sanity retest all"  
     @echo ""
     @echo "=== All checks passed ==="
     @echo ""
     @echo "Next: just release::publish VERSION"
 
 # --------------------------------------------------------------------------
-# Step 3: Publish (build, publish, tag, docs - confirms each step)
+# Step 3: Publish - build, PyPI, GitHub, MCP Registry, docs
+# Dry-run by default (safe). Use --force to actually publish.
+# Release notes are extracted from CHANGELOG.md automatically.
 # --------------------------------------------------------------------------
-publish version:
-    @echo "=== Step 3: Release {{ version }} ==="
-    @echo ""
-    @echo "This will:"
-    @echo "  1. Build package"
-    @echo "  2. Publish to PyPI"
-    @echo "  3. Commit, tag v{{ version }}, push to GitHub"
-    @echo "  4. Publish to MCP Registry"
-    @echo "  5. Create GitHub release"
-    @echo "  6. Deploy docs to GitHub Pages"
-    @echo ""
-    @read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Building package ==="
-    uv build
-    @echo ""
-    @read -p "Publish to PyPI? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Publishing to PyPI ==="
-    uv publish
-    @echo ""
-    @read -p "Commit, tag v{{ version }}, and push to GitHub? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Committing and tagging ==="
-    git add -A
-    git commit -m "Release {{ version }}" || true
-    git tag -a "v{{ version }}" -m "Release {{ version }}"
-    git push origin main
-    git push origin "v{{ version }}"
-    @echo ""
-    @read -p "Publish to MCP Registry? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Publishing to MCP Registry ==="
-    mcp-publisher publish
-    @echo ""
-    @read -p "Create GitHub release? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Creating GitHub release ==="
-    gh release create "v{{ version }}" --title "v{{ version }}" --notes-file tmp/release-notes.md || echo "Skipped (create tmp/release-notes.md or run: gh release create v{{ version }} manually)"
-    @echo ""
-    @read -p "Deploy docs to GitHub Pages? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-    @echo ""
-    @echo "=== Deploying docs ==="
-    uv run mkdocs gh-deploy --force
-    @echo ""
-    @echo "=== Release {{ version }} complete ==="
-    @echo ""
-    @echo "Verify at:"
-    @echo "  - https://pypi.org/project/onetool-mcp/"
-    @echo "  - https://registry.modelcontextprotocol.io"
-    @echo "  - https://github.com/beycom/onetool/releases"
-    @echo "  - https://onetool.beycom.online"
+publish version *args:
+    uv run scripts/release_publish.py {{ version }} {{ args }}
 
 # ============================================================================
 # HELPER TASKS
@@ -143,8 +104,9 @@ sanity:
 # INDIVIDUAL PUBLISH STEPS
 # ============================================================================
 
-# Build package only
+# Build package only (cleans first)
 build:
+    rm -rf dist/ build/ *.egg-info
     uv build
 
 # Publish to PyPI only
