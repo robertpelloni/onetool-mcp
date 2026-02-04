@@ -1,13 +1,12 @@
-"""Secrets loading for OneTool.
+"""Secrets loading for OneTool V2 (global-only).
 
 Loads secrets from secrets.yaml (gitignored) separate from committed configuration.
 Secrets are passed to workers via JSON-RPC, not exposed as environment variables.
 
 The secrets file path is resolved in order:
-1. Explicit path passed to get_secrets()
+1. Explicit path passed to load_secrets()
 2. OT_SECRETS_FILE environment variable
-3. Config's secrets_file setting (if config loaded and file exists)
-4. Default locations: project (.onetool/config/secrets.yaml) then global (~/.onetool/config/secrets.yaml)
+3. Global location: ~/.onetool/config/secrets.yaml
 
 Example secrets.yaml:
 
@@ -19,6 +18,7 @@ Example secrets.yaml:
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import yaml
@@ -86,33 +86,23 @@ def load_secrets(secrets_path: Path | str | None = None) -> dict[str, str]:
     return secrets
 
 
-def _load_from_default_locations() -> dict[str, str]:
-    """Load secrets from default project and global locations.
+def _load_from_default_location() -> dict[str, str]:
+    """Load secrets from global location only.
 
-    Searches in order (first found wins):
-    1. Project: {effective_cwd}/.onetool/config/secrets.yaml
-    2. Global: ~/.onetool/config/secrets.yaml
+    Location: ~/.onetool/config/secrets.yaml
 
     Returns:
         Dictionary of secret name -> value (empty if no secrets found)
     """
-    # Import here to avoid circular imports at module level
-    from ot.paths import CONFIG_SUBDIR, get_effective_cwd, get_global_dir
+    from ot.paths import CONFIG_SUBDIR, get_global_dir
 
-    # Try project secrets first, then global
-    paths_to_try = [
-        get_effective_cwd() / ".onetool" / CONFIG_SUBDIR / "secrets.yaml",
-        get_global_dir() / CONFIG_SUBDIR / "secrets.yaml",
-    ]
+    secrets_path = get_global_dir() / CONFIG_SUBDIR / "secrets.yaml"
 
-    for secrets_path in paths_to_try:
-        if secrets_path.exists():
-            try:
-                return load_secrets(secrets_path)
-            except ValueError as e:
-                # Silent during bootstrap - don't spam logs
-                logger.debug(f"Error loading secrets from {secrets_path}: {e}")
-                continue
+    if secrets_path.exists():
+        try:
+            return load_secrets(secrets_path)
+        except ValueError as e:
+            logger.debug(f"Error loading secrets from {secrets_path}: {e}")
 
     return {}
 
@@ -125,8 +115,7 @@ def get_secrets(
     Resolution order (first match wins):
     1. Explicit secrets_path argument
     2. OT_SECRETS_FILE environment variable
-    3. Config's secrets_file setting (if config loaded and file exists)
-    4. Default locations (.onetool/config/secrets.yaml)
+    3. Global location (~/.onetool/config/secrets.yaml)
 
     Args:
         secrets_path: Path to secrets file (only used on first load or reload).
@@ -138,34 +127,16 @@ def get_secrets(
     global _secrets
 
     if _secrets is None or reload:
-        # Resolution chain: explicit > env var > config (if loaded) > defaults
+        # Resolution chain: explicit > env var > global default
         if secrets_path is None:
             # Check OT_SECRETS_FILE env var first (highest priority after explicit path)
             env_path = os.getenv("OT_SECRETS_FILE")
             if env_path:
                 secrets_path = env_path
 
+        # Try global default location if still no path
         if secrets_path is None:
-            # WARNING: Do NOT call get_config() here!
-            # =========================================
-            # This function is called during config loading via:
-            #   get_config() → load_config() → expand_secrets() → get_early_secret() → get_secrets()
-            #
-            # If we call get_config() here, it triggers config loading again → infinite recursion.
-            # Instead, we check _config directly - if it's None, config is still loading.
-            try:
-                import ot.config.loader
-
-                if ot.config.loader._config is not None:
-                    config_path = ot.config.loader._config.get_secrets_file_path()
-                    if config_path.exists():
-                        secrets_path = config_path
-            except Exception:
-                pass  # Module not loaded yet, fall through
-
-        # Try default locations if still no path
-        if secrets_path is None:
-            loaded = _load_from_default_locations()
+            loaded = _load_from_default_location()
             if loaded:
                 _secrets = loaded
                 return _secrets
@@ -187,6 +158,60 @@ def get_secret(name: str) -> str | None:
     return get_secrets().get(name)
 
 
-# Alias for backward compatibility and semantic clarity during config loading
-# Both functions now use the same unified cache
-get_early_secret = get_secret
+def expand_secrets(value: str) -> str:
+    """Expand ${VAR} patterns using secrets.yaml ONLY.
+
+    Use this for configuration values that MUST be in secrets.yaml.
+    This enforces that sensitive values are stored in the gitignored secrets file,
+    not in environment variables that might leak into logs or process lists.
+
+    Supports ${VAR_NAME} and ${VAR_NAME:-default} syntax.
+
+    When to use:
+        - Config file values (URLs, API keys, database connections)
+        - Anywhere secrets should be explicit and fail loudly if missing
+        - Subprocess environment variables (after root env + server env merge)
+
+    Args:
+        value: String potentially containing ${VAR} patterns.
+
+    Returns:
+        String with variables expanded from secrets.
+
+    Raises:
+        ValueError: If variable not found in secrets and no default provided.
+    """
+    pattern = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
+    missing_vars: list[str] = []
+
+    def replace(match: re.Match[str]) -> str:
+        var_name = match.group(1)
+        default_value = match.group(2)
+        # Read from secrets only - no os.environ
+        secret_value = get_secret(var_name)
+        if secret_value is not None:
+            return secret_value
+        if default_value is not None:
+            return default_value
+        missing_vars.append(var_name)
+        return match.group(0)
+
+    result = pattern.sub(replace, value)
+
+    if missing_vars:
+        raise ValueError(
+            f"Missing variables in secrets.yaml: {', '.join(missing_vars)}. "
+            f"Add them to ~/.onetool/config/secrets.yaml or use ${{VAR:-default}} syntax."
+        )
+
+    return result
+
+
+def reset() -> None:
+    """Clear secrets cache for reload.
+
+    Use this as part of the config reload flow to force secrets to be
+    reloaded from disk on next access.
+    """
+    global _secrets
+    _secrets = None

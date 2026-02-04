@@ -11,10 +11,7 @@ security:
       # Types
       - [bool, bytes, dict, float, frozenset, int, list, set, str, tuple, type]
       # Functions
-      - [abs, all, any, ascii, callable, chr, delattr, dir, divmod, enumerate]
-      - [filter, format, getattr, hasattr, hash, id, isinstance, issubclass]
-      - [iter, len, map, max, min, next, ord, pow, print, range]
-      - [repr, reversed, round, setattr, slice, sorted, sum, vars, zip]
+      - [abs, all, any, ascii, callable, chr, delattr, dir, divmod, enumerate, filter, format, getattr, hasattr, hash, id, isinstance, issubclass, iter, len, map, max, min, next, ord, pow, print, range, repr, reversed, round, setattr, slice, sorted, sum, vars, zip]
       # Exceptions
       - ["*Error", "*Exception", StopIteration]
 

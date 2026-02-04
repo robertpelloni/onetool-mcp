@@ -18,12 +18,8 @@ if TYPE_CHECKING:
 @pytest.fixture
 def msg_config() -> OneToolConfig:
     """Create a config with msg topics for testing."""
-    from ot.config.loader import (
-        MsgConfig,
-        MsgTopicConfig,
-        OneToolConfig,
-        ToolsConfig,
-    )
+    from ot.config.loader import OneToolConfig
+    from ot.config.models import MsgConfig, MsgTopicConfig, ToolsConfig
 
     return OneToolConfig(
         tools=ToolsConfig(
@@ -41,7 +37,8 @@ def msg_config() -> OneToolConfig:
 @pytest.fixture
 def empty_msg_config() -> OneToolConfig:
     """Create a config with no msg topics."""
-    from ot.config.loader import MsgConfig, OneToolConfig, ToolsConfig
+    from ot.config.loader import OneToolConfig
+    from ot.config.models import MsgConfig, ToolsConfig
 
     return OneToolConfig(tools=ToolsConfig(msg=MsgConfig(topics=[])))
 

@@ -43,46 +43,42 @@ def test_load_config_from_yaml(write_config) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_secrets_expansion() -> None:
-    """${VAR} expands from secrets.yaml, not os.environ."""
+def test_compact_array_format() -> None:
+    """Nested arrays are flattened (compact array format)."""
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Create secrets.yaml with test variable in config/ subdirectory
-        onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
+        config_dir = Path(tmpdir) / ".onetool" / "config"
         config_dir.mkdir(parents=True)
-        secrets_path = config_dir / "secrets.yaml"
-        secrets_path.write_text(yaml.dump({"TEST_CONFIG_VAR": "/test/path"}))
 
-        # Create config file
-        config_path = config_dir / "test-config.yaml"
+        config_path = config_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
                     "version": 1,
-                    "secrets_file": "${TEST_CONFIG_VAR}/secrets.yaml",
+                    "security": {
+                        "builtins": {
+                            "allow": [
+                                ["bool", "bytes", "dict"],  # Nested array
+                                ["abs", "all", "any"],
+                                "str",  # Mixed with scalar
+                            ]
+                        }
+                    },
                 }
             )
         )
 
-        # Set OT_CWD so secrets are found, and clear OT_SECRETS_FILE so default
-        # locations are used (OT_SECRETS_FILE takes priority)
-        old_cwd = os.environ.get("OT_CWD")
-        old_secrets_file = os.environ.get("OT_SECRETS_FILE")
-        os.environ["OT_CWD"] = tmpdir
-        os.environ.pop("OT_SECRETS_FILE", None)
+        config = load_config(config_path)
 
-        try:
-            config = load_config(config_path)
-            assert config.secrets_file == "/test/path/secrets.yaml"
-        finally:
-            if old_cwd is not None:
-                os.environ["OT_CWD"] = old_cwd
-            else:
-                os.environ.pop("OT_CWD", None)
-            if old_secrets_file is not None:
-                os.environ["OT_SECRETS_FILE"] = old_secrets_file
+        # Nested arrays should be flattened
+        assert "bool" in config.security.builtins.allow
+        assert "bytes" in config.security.builtins.allow
+        assert "dict" in config.security.builtins.allow
+        assert "abs" in config.security.builtins.allow
+        assert "all" in config.security.builtins.allow
+        assert "any" in config.security.builtins.allow
+        assert "str" in config.security.builtins.allow
 
 
 @pytest.mark.unit
@@ -536,59 +532,6 @@ def test_include_missing_file_logs_warning() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_include_circular_detection() -> None:
-    """Circular includes are detected and skipped."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
-        onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
-
-        # Create file A in OT_DIR that includes file B
-        file_a = onetool_dir / "a.yaml"
-        file_a.write_text(
-            yaml.dump(
-                {
-                    "include": ["b.yaml"],
-                    "alias": {"from_a": "a.value"},
-                }
-            )
-        )
-
-        # Create file B in OT_DIR that includes file A (circular)
-        file_b = onetool_dir / "b.yaml"
-        file_b.write_text(
-            yaml.dump(
-                {
-                    "include": ["a.yaml"],
-                    "alias": {"from_b": "b.value"},
-                }
-            )
-        )
-
-        # Create main config
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "include": ["a.yaml"],
-                }
-            )
-        )
-
-        # Should not raise or loop forever
-        config = load_config(config_path)
-
-        # Both files should be processed (once each)
-        assert "from_a" in config.alias
-        assert "from_b" in config.alias
-
-
-@pytest.mark.unit
-@pytest.mark.core
 def test_include_with_prompts_section() -> None:
     """include: with prompts: section works (migration from prompts_file)."""
     from ot.config.loader import load_config
@@ -750,30 +693,6 @@ def test_resolve_include_path_config_dir_first() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_resolve_include_path_global_fallback(tmp_path: Path) -> None:
-    """_resolve_include_path falls back to global OT_DIR when not in ot_dir."""
-    from ot.config.loader import _resolve_include_path
-    from ot.paths import get_global_dir
-
-    # Create file in global OT_DIR (~/.onetool/) but not in local ot_dir
-    global_ot_dir = get_global_dir()
-    global_ot_dir.mkdir(parents=True, exist_ok=True)
-    global_file = global_ot_dir / "global-only.yaml"
-
-    try:
-        global_file.write_text("global: test")
-
-        # local ot_dir doesn't have the file
-        result = _resolve_include_path("global-only.yaml", tmp_path)
-
-        assert result == global_file
-    finally:
-        if global_file.exists():
-            global_file.unlink()
-
-
-@pytest.mark.unit
-@pytest.mark.core
 def test_resolve_include_path_absolute_used_as_is(tmp_path: Path) -> None:
     """_resolve_include_path uses absolute paths directly."""
     from ot.config.loader import _resolve_include_path
@@ -803,63 +722,6 @@ def test_resolve_include_path_not_found() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.core
-def test_inherit_none_no_merging() -> None:
-    """inherit: none prevents any inheritance."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config_dir = Path(tmpdir) / ".onetool"
-        config_dir.mkdir()
-
-        # Create project config with inherit: none
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "inherit": "none",
-                    "log_level": "ERROR",
-                }
-            )
-        )
-
-        config = load_config(config_path)
-
-        # Should use values from config only (defaults from model, not from global)
-        assert config.inherit == "none"
-        assert config.log_level == "ERROR"
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_inherit_global_is_default() -> None:
-    """inherit defaults to 'global' when not specified."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config_dir = Path(tmpdir) / ".onetool"
-        config_dir.mkdir()
-
-        # Create project config without inherit field
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "log_level": "DEBUG",
-                }
-            )
-        )
-
-        config = load_config(config_path)
-
-        # Default should be 'global'
-        assert config.inherit == "global"
-        # Our override should apply
-        assert config.log_level == "DEBUG"
-
-
 @pytest.mark.unit
 @pytest.mark.core
 def test_inherit_deep_merges_tools() -> None:
@@ -890,41 +752,3 @@ def test_inherit_deep_merges_tools() -> None:
         assert config.tools.model_extra.get("brave", {}).get("timeout") == 120.0
 
 
-@pytest.mark.unit
-@pytest.mark.core
-def test_include_two_tier_fallback() -> None:
-    """include: uses two-tier fallback resolution (ot_dir -> global).
-
-    Include paths resolve from OT_DIR (.onetool/), not config_dir (.onetool/config/).
-    The loader computes ot_dir = config_dir.parent.
-    """
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard directory structure: .onetool/config/onetool.yaml
-        ot_dir = Path(tmpdir) / ".onetool"
-        config_dir = ot_dir / "config"
-        config_dir.mkdir(parents=True)
-
-        # Create prompts.yaml in OT_DIR (where includes resolve from)
-        (ot_dir / "prompts.yaml").write_text(
-            "prompts:\n  instructions: 'test instructions'"
-        )
-
-        # Create project config that includes prompts.yaml
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "inherit": "none",
-                    "include": ["prompts.yaml"],
-                }
-            )
-        )
-
-        config = load_config(config_path)
-
-        # Should have loaded prompts from OT_DIR
-        assert config.prompts is not None
-        assert config.prompts.get("instructions") == "test instructions"

@@ -12,22 +12,14 @@ The system SHALL load configuration from a YAML file using a standard resolution
 - **GIVEN** no explicit config path provided
 - **AND** no `ONETOOL_CONFIG` environment variable
 - **WHEN** the server starts
-- **THEN** it SHALL look for `cwd/.onetool/config/onetool.yaml` first
-- **AND** fall back to `~/.onetool/config/onetool.yaml` if not found
-- **AND** require initialization if neither exists
+- **THEN** it SHALL look for `~/.onetool/config/onetool.yaml`
+- **AND** require initialisation if not found
 
 #### Scenario: Environment variable override
 - **GIVEN** `ONETOOL_CONFIG=/path/to/config.yaml` environment variable
 - **WHEN** the server starts
 - **THEN** it SHALL load from the specified path
 - **AND** skip the standard resolution order
-
-#### Scenario: OT_CWD affects config resolution
-- **GIVEN** `OT_CWD=myproject` environment variable
-- **AND** no explicit config path
-- **WHEN** the server starts
-- **THEN** it SHALL look for `myproject/.onetool/config/onetool.yaml`
-- **AND** fall back to `~/.onetool/config/onetool.yaml`
 
 #### Scenario: Custom configuration file
 - **GIVEN** `--config /path/to/config.yaml` argument
@@ -37,7 +29,7 @@ The system SHALL load configuration from a YAML file using a standard resolution
 #### Scenario: Missing configuration file
 - **GIVEN** no configuration file exists at any resolution location
 - **WHEN** the server starts
-- **THEN** it SHALL prompt user to initialize (interactive mode)
+- **THEN** it SHALL prompt user to initialise (interactive mode)
 - **OR** exit with error message (non-interactive mode)
 
 ### Requirement: First-Run Initialization
@@ -83,14 +75,7 @@ The system SHALL require explicit initialization before first use.
 
 ### Requirement: Config Version Migration Detection
 
-The system SHALL detect outdated and incompatible config versions.
-
-#### Scenario: Outdated config version
-- **GIVEN** a config file with `version: N` where N < CURRENT_CONFIG_VERSION
-- **WHEN** configuration is loaded
-- **THEN** a warning SHALL be logged
-- **AND** the warning SHALL include: "Run 'onetool init reset' to update config templates"
-- **AND** the server SHALL continue normally
+The system SHALL detect incompatible config versions.
 
 #### Scenario: Future config version
 - **GIVEN** a config file with `version: N` where N > CURRENT_CONFIG_VERSION
@@ -103,7 +88,6 @@ The system SHALL detect outdated and incompatible config versions.
 - **GIVEN** a config file without `version` field
 - **WHEN** configuration is loaded
 - **THEN** version 1 SHALL be assumed
-- **AND** a warning SHALL be logged suggesting adding `version: 1`
 
 ### Requirement: Execution Settings
 
@@ -386,50 +370,6 @@ The MCP server CLI SHALL follow the `ot-<purpose>` naming convention.
 - **GIVEN** the user runs `onetool --version`
 - **WHEN** version is displayed
 - **THEN** it SHALL show the package version
-
-### Requirement: Projects Configuration
-
-The system SHALL support rich project configuration with paths and attributes.
-
-#### Scenario: Project with attributes
-- **GIVEN** configuration with:
-  ```yaml
-  projects:
-    myproject:
-      path: ~/projects/myproject
-      attrs:
-        db_url: sqlite:///data/app.db
-        api_key: ${MY_API_KEY}
-  ```
-- **WHEN** configuration is loaded
-- **THEN** project path and attributes SHALL be available
-
-#### Scenario: Path expansion
-- **GIVEN** a project path containing `~`
-- **WHEN** configuration is loaded
-- **THEN** the path SHALL be expanded using home directory only
-- **AND** `${VAR}` patterns are NOT expanded in paths
-
-#### Scenario: Attribute expansion
-- **GIVEN** an attribute value containing `${VAR}`
-- **WHEN** configuration is loaded
-- **THEN** the attribute value SHALL be expanded using secrets.yaml only
-- **AND** error if variable not found
-
-#### Scenario: No attrs section
-- **GIVEN** a project with path but no attrs
-- **WHEN** configuration is loaded
-- **THEN** an empty attrs mapping SHALL be used
-
-#### Scenario: Invalid project format
-- **GIVEN** a project configured as simple string (old format)
-- **WHEN** configuration is loaded
-- **THEN** it SHALL fail with validation error
-
-#### Scenario: No projects section
-- **GIVEN** configuration without a `projects` section
-- **WHEN** configuration is loaded
-- **THEN** an empty projects mapping SHALL be used
 
 ### Requirement: Config Schema Version
 
@@ -862,58 +802,40 @@ The system SHALL support a top-level `include:` key for merging external config 
 - **WHEN** merged
 - **THEN** result SHALL be `log_level: INFO`
 
-#### Scenario: Missing include file with fallback
-- **GIVEN** `include:` references `snippets.yaml`
-- **AND** the file does NOT exist in config directory
-- **WHEN** the config is loaded
-- **THEN** fallback resolution SHALL search global config
-- **AND** if found, the global file SHALL be loaded
-
-#### Scenario: Path resolution with two-tier fallback
+#### Scenario: Include path resolution
 - **GIVEN** a relative path in `include:`
 - **WHEN** the file is loaded
-- **THEN** the path SHALL be resolved in order:
-  1. Relative to the config file directory (OT_DIR)
-  2. In `~/.onetool/`
+- **THEN** the path SHALL be resolved relative to the config file directory
 - **AND** `~` SHALL expand to user home directory
 
-#### Scenario: Nested includes
+#### Scenario: Nested includes with depth limit
 - **GIVEN** `base.yaml` contains its own `include:` key
 - **WHEN** the config is loaded
 - **THEN** nested includes SHALL be processed recursively
 - **AND** merge order SHALL be depth-first
+- **AND** include depth SHALL be limited to 5 levels
 
-#### Scenario: Circular include detection
-- **GIVEN** `a.yaml` includes `b.yaml` which includes `a.yaml`
+#### Scenario: Include depth exceeded
+- **GIVEN** includes nested more than 5 levels deep
 - **WHEN** the config is loaded
-- **THEN** circular includes SHALL be detected and skipped
-- **AND** loading SHALL continue without error
+- **THEN** an error SHALL be raised indicating depth exceeded
+
+#### Scenario: Missing include file
+- **GIVEN** `include:` references a file that does not exist
+- **WHEN** the config is loaded
+- **THEN** a warning SHALL be logged
+- **AND** loading SHALL continue without that include
 
 #### Scenario: No include key
 - **GIVEN** configuration without `include:` key
 - **WHEN** the config is loaded
 - **THEN** loading SHALL proceed normally with no external files
 
-#### Scenario: Snippet file format with include
-- **GIVEN** an external snippet file loaded via `include:`
-- **WHEN** parsed
-- **THEN** it SHALL contain the `snippets:` key:
-
-  ```yaml
-  snippets:
-    snippet_name:
-      description: "What it does"
-      params:
-        param1: {default: "value", description: "Param description"}
-      body: |
-        code_template()
-  ```
-
 ### Requirement: Security Configuration
 
 The system SHALL support allowlist-based security configuration via security.yaml.
 
-**IMPORTANT:** The security model provides defense-in-depth but is NOT a sandbox. Never run code you do not trust.
+**IMPORTANT:** The security model provides defence-in-depth but is NOT a sandbox. Never run code you do not trust.
 
 #### Scenario: Security section structure
 - **GIVEN** configuration with:
@@ -942,124 +864,17 @@ The system SHALL support allowlist-based security configuration via security.yam
 - **WHEN** code is validated
 - **THEN** security pattern checks SHALL be skipped
 
-#### Scenario: Fallback defaults
-- **GIVEN** no security.yaml loaded
+#### Scenario: Default security configuration
+- **GIVEN** no security section in config
 - **WHEN** code is validated
-- **THEN** minimal fallback defaults SHALL be used (FALLBACK_ALLOWED_BUILTINS, FALLBACK_ALLOWED_IMPORTS)
+- **THEN** defaults embedded in Pydantic models SHALL be used
+- **AND** defaults SHALL include safe builtins and standard library imports
 
 #### Scenario: Wildcard patterns in security config
 - **GIVEN** security patterns containing wildcards (*, ?, [seq])
 - **WHEN** patterns are loaded
 - **THEN** they SHALL be matched using fnmatch semantics
 - **EXAMPLE** `pickle.*` matches `pickle.load`, `pickle.loads`, etc.
-
-#### Scenario: Compact array format
-- **GIVEN** configuration with nested arrays:
-
-  ```yaml
-  builtins:
-    allow:
-      - [str, int, float]
-      - print
-  ```
-
-- **WHEN** configuration is loaded
-- **THEN** nested arrays SHALL be flattened to single list
-
-### Requirement: Config Inheritance Directive
-
-The system SHALL support an `inherit` directive to control config merging behaviour.
-
-#### Scenario: Implicit global inheritance
-- **GIVEN** a project config without `inherit` field
-- **WHEN** the config is loaded
-- **THEN** it SHALL behave as if `inherit: global` was specified
-- **AND** the project config SHALL be merged on top of global config
-
-#### Scenario: Explicit global inheritance
-- **GIVEN** a project config with `inherit: global`
-- **WHEN** the config is loaded
-- **THEN** it SHALL load `~/.onetool/onetool.yaml` first
-- **AND** process its includes
-- **AND** deep merge the project config on top
-- **AND** if global config does NOT exist, no base config SHALL be used
-
-#### Scenario: No inheritance
-- **GIVEN** a project config with `inherit: none`
-- **WHEN** the config is loaded
-- **THEN** it SHALL NOT merge with any other config
-- **AND** only the project config SHALL be used
-
-### Requirement: Two-Tier Include Resolution
-
-The system SHALL resolve `include:` paths with two-tier fallback (project → global).
-
-#### Scenario: Include found in project
-- **GIVEN** project config includes `prompts.yaml`
-- **AND** `cwd/.onetool/config/prompts.yaml` exists
-- **WHEN** the include is resolved
-- **THEN** the project file SHALL be used
-
-#### Scenario: Include falls back to global
-- **GIVEN** project config includes `prompts.yaml`
-- **AND** `cwd/.onetool/config/prompts.yaml` does NOT exist
-- **AND** `~/.onetool/config/prompts.yaml` exists
-- **WHEN** the include is resolved
-- **THEN** the global file SHALL be used
-
-#### Scenario: Include not found anywhere
-- **GIVEN** project config includes `custom.yaml`
-- **AND** the file does NOT exist in project or global
-- **WHEN** the include is resolved
-- **THEN** a warning SHALL be logged
-- **AND** loading SHALL continue without that include
-
-#### Scenario: Absolute include path
-- **GIVEN** config includes `/etc/onetool/prompts.yaml`
-- **WHEN** the include is resolved
-- **THEN** the absolute path SHALL be used directly
-- **AND** no fallback SHALL occur
-
-#### Scenario: Include with tilde expansion
-- **GIVEN** config includes `~/shared/prompts.yaml`
-- **WHEN** the include is resolved
-- **THEN** `~` SHALL expand to home directory
-- **AND** no fallback SHALL occur
-
-### Requirement: Deep Merge Behaviour
-
-The system SHALL deep merge inherited configs with specific semantics.
-
-#### Scenario: Dict fields are merged
-- **GIVEN** global config with `tools: {brave: {timeout: 60}}`
-- **AND** project config with `tools: {brave: {retries: 3}}`
-- **WHEN** configs are merged
-- **THEN** result SHALL be `tools: {brave: {timeout: 60, retries: 3}}`
-
-#### Scenario: Scalar fields are replaced
-- **GIVEN** global config with `log_level: DEBUG`
-- **AND** project config with `log_level: INFO`
-- **WHEN** configs are merged
-- **THEN** result SHALL be `log_level: INFO`
-
-#### Scenario: List fields are replaced
-- **GIVEN** global config with `tools_dir: [src/ot_tools/*.py]`
-- **AND** project config with `tools_dir: [./tools/*.py]`
-- **WHEN** configs are merged
-- **THEN** result SHALL be `tools_dir: [./tools/*.py]`
-- **AND** global list SHALL NOT be appended
-
-#### Scenario: Nested dict override
-- **GIVEN** global config with `servers: {github: {timeout: 60}}`
-- **AND** project config with `servers: {github: {timeout: 120}}`
-- **WHEN** configs are merged
-- **THEN** result SHALL be `servers: {github: {timeout: 120}}`
-
-#### Scenario: Additional dict keys preserved
-- **GIVEN** global config with `servers: {github: {...}}`
-- **AND** project config with `servers: {local: {...}}`
-- **WHEN** configs are merged
-- **THEN** result SHALL contain both `github` and `local`
 
 ### Requirement: Tool-Local Configuration Schema
 
@@ -1131,15 +946,16 @@ Tools SHALL access their configuration via `get_tool_config()` at runtime.
 - **THEN** it SHALL return a dict with raw config values
 - **OR** empty dict if no config exists
 
-#### Scenario: Config access before server init
-- **GIVEN** `get_tool_config()` is called before server initialisation
-- **WHEN** config is not yet loaded
-- **THEN** it SHALL return default values from the schema
-- **OR** raise an error if no schema provided
+#### Scenario: Unknown tool in config
+- **GIVEN** a `tools.unknown_pack:` section in onetool.yaml
+- **AND** no tool with pack "unknown_pack" exists
+- **WHEN** configuration is loaded
+- **THEN** the section SHALL be preserved (extra="allow")
+- **AND** no error SHALL occur
 
 ### Requirement: Stats Configuration Location
 
-Statistics configuration SHALL be at the root level, not under `tools`.
+Statistics configuration SHALL be at the root level.
 
 #### Scenario: Stats config at root level
 - **GIVEN** configuration with:
@@ -1151,22 +967,10 @@ Statistics configuration SHALL be at the root level, not under `tools`.
 - **WHEN** the server starts
 - **THEN** it SHALL use the root-level `stats` configuration
 
-#### Scenario: Legacy tools.stats path (deprecated)
-- **GIVEN** configuration with:
-  ```yaml
-  tools:
-    stats:
-      enabled: true
-  ```
-- **WHEN** the server starts
-- **THEN** it SHALL use the legacy path
-- **AND** log a deprecation warning
-- **AND** the root-level `stats` SHALL take precedence if both exist
-
 #### Scenario: Default stats location
 - **GIVEN** no stats configuration specified
 - **WHEN** the server starts
-- **THEN** stats SHALL use defaults from root-level schema
+- **THEN** stats SHALL use defaults from Pydantic model
 - **DEFAULT** enabled: true, flush_interval_seconds: 30, persist_dir: stats
 
 ### Requirement: Stats Directory Configuration
@@ -1266,4 +1070,45 @@ The system SHALL support configuration for large output handling in the `output`
 - **WHEN** configuration is loaded
 - **THEN** large output handling SHALL be disabled
 - **AND** all outputs SHALL be returned inline
+
+### Requirement: Root-Level Environment Configuration
+
+The system SHALL support a root-level `env:` section for shared subprocess environment variables.
+
+#### Scenario: Root env section
+- **GIVEN** configuration with:
+  ```yaml
+  env:
+    HOME: /home/user
+    LANG: en_US.UTF-8
+  ```
+- **WHEN** a stdio MCP server is spawned
+- **THEN** the subprocess SHALL inherit these environment variables
+
+#### Scenario: Server env overrides root env
+- **GIVEN** root `env:` with `LANG: en_US.UTF-8`
+- **AND** server `env:` with `LANG: C.UTF-8`
+- **WHEN** the server subprocess is spawned
+- **THEN** `LANG` SHALL be `C.UTF-8` (server overrides root)
+
+#### Scenario: Subprocess env build order
+- **GIVEN** a stdio server configuration
+- **WHEN** the subprocess environment is built
+- **THEN** it SHALL be constructed in order:
+  1. `PATH` from host os.environ (always included)
+  2. Root `env:` section values
+  3. Server-specific `env:` section values (overrides root)
+  4. `${VAR}` expansion from secrets.yaml only
+
+#### Scenario: Variable expansion in env values
+- **GIVEN** env value containing `${API_KEY}`
+- **AND** `API_KEY` defined in secrets.yaml
+- **WHEN** the subprocess is spawned
+- **THEN** the value SHALL be expanded from secrets.yaml
+- **AND** os.environ SHALL NOT be consulted
+
+#### Scenario: No root env section
+- **GIVEN** configuration without `env:` section
+- **WHEN** a stdio server is spawned
+- **THEN** subprocess SHALL receive only `PATH` plus server-specific env
 

@@ -320,7 +320,7 @@ def test_html_report_generation() -> None:
 @pytest.mark.core
 def test_stats_config_defaults() -> None:
     """StatsConfig has correct default values."""
-    from ot.config.loader import StatsConfig
+    from ot.config.models import StatsConfig
 
     config = StatsConfig()
 

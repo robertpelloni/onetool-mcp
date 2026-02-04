@@ -1295,25 +1295,25 @@ def reload() -> str:
     import sys
 
     with log(span="ot.reload") as s:
-        import ot.config.loader
-        import ot.config.secrets
+        # Import modules
+        import ot.config
         import ot.executor.param_resolver
         import ot.executor.tool_loader
+        import ot.executor.validator
         import ot.prompts
         import ot.proxy
         import ot.registry
 
-        # Clear config cache (must be first - other caches depend on it)
-        ot.config.loader._config = None
+        # Clear in dependency order (config first, others depend on it)
+        ot.config.reset()  # Clears both config and secrets
+        ot.prompts.reset()
+        ot.registry.reset()
+        ot.executor.tool_loader.reset()
+        ot.executor.validator.reset()
 
-        # Clear secrets cache
-        ot.config.secrets._secrets = None
-
-        # Clear prompts cache
-        ot.prompts._prompts = None
-
-        # Clear tool loader module cache
-        ot.executor.tool_loader._module_cache.clear()
+        # Clear param resolver cache
+        ot.executor.param_resolver.get_tool_param_names.cache_clear()
+        ot.executor.param_resolver._mcp_param_cache.clear()
 
         # Clean up dynamically loaded tool modules from sys.modules
         # Tool loader uses "tools.{stem}" naming pattern
@@ -1321,18 +1321,6 @@ def reload() -> str:
         for mod_name in tool_modules:
             del sys.modules[mod_name]
         s.add("toolModulesCleared", len(tool_modules))
-
-        # Clear tool registry cache (will rescan on next access)
-        ot.registry._registry = None
-
-        # Clear param resolver cache (depends on registry)
-        ot.executor.param_resolver.get_tool_param_names.cache_clear()
-        ot.executor.param_resolver._mcp_param_cache.clear()
-
-        # Clear security validator caches (depends on config and registry)
-        import ot.executor.validator
-        ot.executor.validator._get_tool_namespaces.cache_clear()
-        ot.executor.validator._get_security_config.cache_clear()
 
         # Reload config to validate and report stats
         cfg = get_config()

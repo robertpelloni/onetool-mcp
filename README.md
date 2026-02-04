@@ -103,7 +103,7 @@ Verify: `onetool init validate`
 | **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
 | **Scaffold Tools**      | Build new tools as part of the conversation            |
 | **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
-| **Single YAML Config**  | Global and project scopes, per-pack settings           |
+| **Single YAML Config**  | Global configuration, per-pack settings, includes      |
 | **Security Layers**     | AST validation, path boundaries, output sanitisation   |
 
 ---

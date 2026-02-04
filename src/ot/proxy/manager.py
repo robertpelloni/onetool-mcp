@@ -10,15 +10,18 @@ import asyncio
 import contextlib
 import os
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastmcp import Client
 from fastmcp.client.transports import StdioTransport, StreamableHttpTransport
 from loguru import logger
 from mcp import types
 
-from ot.config.mcp import McpServerConfig, expand_secrets, expand_subprocess_env
+from ot.config import expand_secrets
 from ot.logging import LogSpan
+
+if TYPE_CHECKING:
+    from ot.config.models import McpServerConfig
 
 
 @dataclass
@@ -293,10 +296,28 @@ class ProxyManager:
         if not config.command:
             raise RuntimeError(f"Server {name}: stdio server requires command")
 
-        # Build environment: PATH only + explicit config.env
+        # Build environment variables for subprocess
+        # Order: PATH (from host) -> root env -> server-specific env -> expand secrets
         env = {"PATH": os.environ.get("PATH", "")}
+
+        # Get root-level env from config (if available)
+        try:
+            from ot.config import get_config
+            root_config = get_config()
+            root_env = root_config.env
+        except Exception:
+            root_env = {}
+
+        # Merge: root env first, then server-specific env (overrides root)
+        for key, value in root_env.items():
+            env[key] = value
         for key, value in config.env.items():
-            env[key] = expand_subprocess_env(value)
+            env[key] = value
+
+        # Expand ${VAR} patterns from secrets.yaml in all env values
+        for key, value in env.items():
+            if "${" in value:
+                env[key] = expand_secrets(value)
 
         transport = StdioTransport(
             command=config.command,
