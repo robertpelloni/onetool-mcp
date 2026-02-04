@@ -47,8 +47,4 @@ ripgrep.count(pattern="import", path="src/", file_type="py")
 
 ## Tools - Web Search
 
-Use OneTool web search:
-
-```text
-__ot $g q=query one|query two|query three
-```
+Use OneTool web search: $g q=query one|query two|query three
