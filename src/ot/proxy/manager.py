@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastmcp import Client
-from fastmcp.client.transports import StdioTransport
+from fastmcp.client.transports import StdioTransport, StreamableHttpTransport
 from loguru import logger
 from mcp import types
 
@@ -263,7 +263,11 @@ class ProxyManager:
             raise ValueError(f"Unknown server type: {config.type}")
 
     def _create_http_client(self, name: str, config: McpServerConfig) -> Client:  # type: ignore[type-arg]
-        """Create an HTTP/SSE client."""
+        """Create an HTTP client using Streamable HTTP transport.
+
+        Streamable HTTP is the recommended MCP transport for web-based servers,
+        supporting both batch responses and streaming via SSE.
+        """
         if not config.url:
             raise RuntimeError(f"Server {name}: HTTP server requires url")
 
@@ -281,7 +285,8 @@ class ProxyManager:
             else:
                 headers[key] = value
 
-        return Client(url, headers=headers, timeout=float(config.timeout))
+        transport = StreamableHttpTransport(url=url, headers=headers if headers else None)
+        return Client(transport, timeout=float(config.timeout))
 
     def _create_stdio_client(self, name: str, config: McpServerConfig) -> Client:  # type: ignore[type-arg]
         """Create a stdio client."""
