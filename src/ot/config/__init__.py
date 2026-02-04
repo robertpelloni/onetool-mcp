@@ -6,7 +6,7 @@ via YAML configuration for tool discovery and settings.
 Key changes from V1:
 - Global-only configuration (no project configs or inheritance)
 - Root-level env: section for subprocess environment variables
-- No expand_subprocess_env() - use expand_secrets() instead
+- Runtime variable expansion (happens in get_tool_config(), not load_config())
 - Defaults embedded in Pydantic models (no template files)
 - Depth-limited includes (no circular detection)
 
@@ -25,10 +25,10 @@ Usage:
 
     config = get_tool_config("brave", Config)
 
-    # For secrets expansion:
-    from ot.config import expand_secrets
+    # For variable expansion (secrets.yaml → env: section):
+    from ot.config import expand_vars
 
-    api_url = expand_secrets("https://api.example.com?key=${API_KEY}")
+    api_url = expand_vars("https://api.example.com?key=${API_KEY}")
 """
 
 from ot.config.loader import (
@@ -50,6 +50,7 @@ from ot.config.models import (
 )
 from ot.config.secrets import (
     expand_secrets,
+    expand_vars,
     get_secret,
     get_secrets,
     load_secrets,
@@ -77,6 +78,7 @@ __all__ = [
     "SnippetDef",
     "SnippetParam",
     "expand_secrets",
+    "expand_vars",
     "get_config",
     "get_secret",
     "get_secrets",

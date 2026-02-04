@@ -33,7 +33,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from ot.config.models import OneToolConfig
-from ot.config.secrets import expand_secrets
+from ot.config.secrets import expand_vars, get_secrets
 
 # Current config schema version
 CURRENT_CONFIG_VERSION = 1
@@ -111,21 +111,21 @@ def _load_yaml_file(config_path: Path) -> dict[str, Any]:
     return raw_data if raw_data is not None else {}
 
 
-def _expand_secrets_recursive(data: Any) -> Any:
-    """Recursively expand ${VAR} from secrets.yaml in config data.
+def _expand_vars_recursive(data: Any) -> Any:
+    """Recursively expand ${VAR} from secrets and env: in config data.
 
     Args:
         data: Config data (dict, list, or scalar).
 
     Returns:
-        Data with secrets expanded.
+        Data with variables expanded.
     """
     if isinstance(data, dict):
-        return {k: _expand_secrets_recursive(v) for k, v in data.items()}
+        return {k: _expand_vars_recursive(v) for k, v in data.items()}
     elif isinstance(data, list):
-        return [_expand_secrets_recursive(v) for v in data]
-    elif isinstance(data, str):
-        return expand_secrets(data)
+        return [_expand_vars_recursive(v) for v in data]
+    elif isinstance(data, str) and "${" in data:
+        return expand_vars(data)
     return data
 
 
@@ -367,13 +367,12 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
     logger.debug(f"Loading config from {resolved_path}")
 
     raw_data = _load_yaml_file(resolved_path)
-    expanded_data = _expand_secrets_recursive(raw_data)
 
     # Process includes before validation (merges external files)
     # Resolve includes from OT_DIR (.onetool/), not config_dir (.onetool/config/)
     config_dir = resolved_path.parent.resolve()
     ot_dir = config_dir.parent  # Go up from config/ to .onetool/
-    merged_data = _process_includes(expanded_data, ot_dir)
+    merged_data = _process_includes(raw_data, ot_dir)
 
     # Flatten nested arrays (compact array format support)
     flattened_data = _flatten_arrays_recursive(merged_data)
@@ -386,6 +385,11 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
         raise ValueError(f"Invalid configuration in {resolved_path}: {e}") from e
 
     config._config_dir = config_dir
+
+    # Load secrets AFTER config is loaded (secrets_file path now available)
+    # This fixes the chicken-and-egg problem where secrets_file couldn't be expanded
+    secrets_path = config.get_secrets_file_path()
+    get_secrets(secrets_path, reload=True)
 
     logger.info(f"Config loaded: version {config.version}")
 
@@ -406,7 +410,7 @@ def get_config(
     Returns a cached config instance. On first call, loads config from disk.
     Subsequent calls return the cached instance unless reload=True.
 
-    Thread-safety: Protected by lock for safe concurrent access.
+    Thread-safety: Uses double-checked locking for efficient concurrent access.
 
     Args:
         config_path: Path to config file (only used on first load or reload).
@@ -419,7 +423,13 @@ def get_config(
     """
     global _config
 
+    # Fast path: return cached config without acquiring lock
+    if _config is not None and not reload:
+        return _config
+
+    # Slow path: acquire lock and load/reload config
     with _config_lock:
+        # Double-check after acquiring lock (another thread may have loaded it)
         if _config is None or reload:
             _config = load_config(config_path)
         return _config
@@ -479,12 +489,15 @@ def get_tool_config(pack: str, schema: type[T] | None = None) -> T | dict[str, A
     # Get raw config values for this pack
     raw_config = _get_raw_config(pack)
 
+    # Expand ${VAR} patterns at point of use (runtime expansion)
+    expanded_config: dict[str, Any] = _expand_vars_recursive(raw_config)
+
     if schema is None:
-        return raw_config
+        return expanded_config
 
     # Validate and return typed config instance
     try:
-        return schema.model_validate(raw_config)
+        return schema.model_validate(expanded_config)
     except Exception:
         # If validation fails, return defaults from schema
         return schema()

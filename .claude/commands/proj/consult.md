@@ -23,7 +23,7 @@ tags: [consultation, research, qa, findings]
 - **Writing Findings (on explicit request only)**:
   - When the user explicitly asks to save, write, or document findings (e.g., "save these findings", "write this up", "document what we found"):
     - Suggest a descriptive filename based on the topic discussed
-    - Write findings to `plan/consult/<name>.md` (create directory if needed)
+    - Write findings to `wip/consult/<name>.md`
     - Unless user specifies a different location
     - Use a clear heading with date/time and topic
     - Include key discoveries, code references, and conclusions
@@ -46,8 +46,7 @@ tags: [consultation, research, qa, findings]
    - Suggest areas that might be worth exploring.
 4. Save findings (on explicit request):
    - When user asks to save/document findings:
-     - Suggest a filename: "I'll save this as `plan/consult/<topic>.md` - sound good?"
-     - Create `plan/consult/` directory if it doesn't exist
+     - Suggest a filename: "I'll save this as `wip/consult/<topic>.md` - sound good?"
      - Write with dated heading and key discoveries
      - Confirm what was written
 5. End the session:

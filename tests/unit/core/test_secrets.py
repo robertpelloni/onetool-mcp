@@ -9,7 +9,7 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from ot.config.secrets import get_secret, get_secrets, load_secrets
+from ot.config.secrets import expand_vars, get_secret, get_secrets, load_secrets
 
 
 @pytest.mark.unit
@@ -229,6 +229,156 @@ class TestGetSecret:
 
         result = get_secret("NONEXISTENT")
         assert result is None
+
+        # Cleanup
+        secrets_module._secrets = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestExpandVars:
+    """Tests for expand_vars function (secrets + env expansion)."""
+
+    def test_expands_from_secrets_first(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should expand ${VAR} from secrets.yaml first."""
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text('API_KEY: "secret-key-123"')
+
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = None
+        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+
+        result = expand_vars("${API_KEY}")
+        assert result == "secret-key-123"
+
+        # Cleanup
+        secrets_module._secrets = None
+
+    def test_expands_from_config_env_second(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should expand ${VAR} from config env: section if not in secrets."""
+        import ot.config.loader as loader_module
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = {}  # Empty secrets - won't find DATA_DIR here
+        loader_module._config = None
+
+        # Prevent loading from default locations
+        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
+
+        # Create a config with env section
+        config_dir = tmp_path / ".onetool" / "config"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "onetool.yaml"
+        config_path.write_text(
+            """
+version: 1
+env:
+  DATA_DIR: /data/onetool
+  CACHE_DIR: /tmp/cache
+"""
+        )
+
+        # Load and cache config using get_config()
+        from ot.config.loader import get_config
+
+        get_config(config_path)
+
+        # Now expand_vars should use config env
+        result = expand_vars("${DATA_DIR}/files")
+        assert result == "/data/onetool/files"
+
+        # Cleanup
+        secrets_module._secrets = None
+        loader_module._config = None
+
+    def test_secrets_take_precedence_over_env(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should use secrets.yaml value when variable exists in both."""
+        import ot.config.loader as loader_module
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = None
+        loader_module._config = None
+
+        # Create config directory and secrets file
+        config_dir = tmp_path / ".onetool" / "config"
+        config_dir.mkdir(parents=True)
+
+        # Create secrets with API_KEY in the expected location
+        secrets_file = config_dir / "secrets.yaml"
+        secrets_file.write_text('API_KEY: "from-secrets"')
+
+        # Create config with same variable in env
+        config_path = config_dir / "onetool.yaml"
+        config_path.write_text(
+            """
+version: 1
+env:
+  API_KEY: from-env
+"""
+        )
+
+        from ot.config.loader import get_config
+
+        get_config(config_path)
+
+        # Should use secrets value (higher precedence)
+        result = expand_vars("${API_KEY}")
+        assert result == "from-secrets"
+
+        # Cleanup
+        secrets_module._secrets = None
+        loader_module._config = None
+
+    def test_uses_default_when_not_found(self) -> None:
+        """Should use default value when variable not in secrets or env."""
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = {}
+
+        result = expand_vars("${UNKNOWN:-default-value}")
+        assert result == "default-value"
+
+        # Cleanup
+        secrets_module._secrets = None
+
+    def test_raises_when_not_found_and_no_default(self) -> None:
+        """Should raise error when variable not found and no default."""
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = {}
+
+        with pytest.raises(ValueError, match="Missing variables: UNKNOWN"):
+            expand_vars("${UNKNOWN}")
+
+        # Cleanup
+        secrets_module._secrets = None
+
+    def test_expands_multiple_vars(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should expand multiple ${VAR} patterns in one string."""
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(
+            """
+API_KEY: "key123"
+API_SECRET: "secret456"
+"""
+        )
+
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = None
+        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+
+        result = expand_vars("key=${API_KEY}&secret=${API_SECRET}")
+        assert result == "key=key123&secret=secret456"
 
         # Cleanup
         secrets_module._secrets = None

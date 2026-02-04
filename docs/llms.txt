@@ -34,7 +34,7 @@ __ot brave.search(query="AI news")
 - file: read, write, edit, info, list, tree, search, copy, move, delete
 - diagram: generate_source, render_diagram, list_providers (+8 more)
 - scaffold: create, list_extensions, templates
-- ot: tools, packs, aliases, snippets, config, health, help, stats, notify, reload
+- ot: tools, packs, aliases, snippets, config, debug, health, help, stats, notify, reload
 
 ## Documentation
 

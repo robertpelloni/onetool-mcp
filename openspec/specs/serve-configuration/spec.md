@@ -319,11 +319,11 @@ The system SHALL support configuration for proxying external MCP servers.
 - **WHEN** the server starts
 - **THEN** it SHALL start normally without proxy functionality
 
-#### Scenario: Variable expansion in config
+#### Scenario: Variable expansion in server config
 - **GIVEN** servers config with `${VAR_NAME}` in urls, headers, args, or command
-- **WHEN** configuration is loaded
-- **THEN** it SHALL expand from secrets.yaml only
-- **AND** error if variable not found (no os.environ fallback)
+- **WHEN** the server is initialized at runtime
+- **THEN** it SHALL expand from secrets.yaml first, then env: section
+- **AND** error if variable not found and no default provided
 
 #### Scenario: Connection timeout
 - **GIVEN** servers config with `timeout: 30`
@@ -624,9 +624,9 @@ The system SHALL support a `secrets_file` field for loading secrets relative to 
 The system SHALL track the directory containing the loaded configuration file.
 
 #### Scenario: Config loaded from file
-- **GIVEN** configuration loaded from `/project/.onetool/config/onetool.yaml`
+- **GIVEN** configuration loaded from `~/.onetool/config/onetool.yaml`
 - **WHEN** relative paths are resolved
-- **THEN** they SHALL resolve relative to `/project/.onetool/config/`
+- **THEN** they SHALL resolve relative to `~/.onetool/config/`
 
 #### Scenario: Config loaded from defaults
 - **GIVEN** no configuration file exists
@@ -638,33 +638,47 @@ The system SHALL track the directory containing the loaded configuration file.
 - **WHEN** code needs the config directory
 - **THEN** it SHALL be available via a method on the config object
 
-### Requirement: Secrets-Only Variable Expansion
+### Requirement: Runtime Variable Expansion
 
-The system SHALL expand `${VAR}` patterns using secrets.yaml as the only source.
+The system SHALL expand `${VAR}` patterns at runtime when values are used, not during config load.
 
-#### Scenario: Variable found in secrets
-- **GIVEN** `${API_KEY}` in a config value
+#### Scenario: Variable expansion in tool config
+- **GIVEN** `${API_KEY}` in a tool configuration value
 - **AND** `API_KEY: "secret123"` in secrets.yaml
-- **WHEN** configuration is loaded
-- **THEN** the value SHALL be expanded to "secret123"
+- **WHEN** `get_tool_config()` is called
+- **THEN** the value SHALL be expanded to "secret123" at runtime
 
-#### Scenario: Variable not found
-- **GIVEN** `${UNKNOWN_VAR}` in a config value
-- **AND** UNKNOWN_VAR not in secrets.yaml
-- **WHEN** configuration is loaded
-- **THEN** it SHALL raise an error with message indicating the missing variable
-- **AND** suggest adding it to secrets.yaml
+#### Scenario: Variable sources and precedence
+- **GIVEN** `${VAR}` in a tool configuration value
+- **WHEN** expansion occurs
+- **THEN** sources SHALL be checked in order:
+  1. secrets.yaml (sensitive, user-specific)
+  2. config env: section (non-sensitive, shared)
+  3. Default value if ${VAR:-default} syntax used
+  4. ValueError if not found
+
+#### Scenario: No expansion during load_config
+- **GIVEN** `${API_KEY}` in a config value
+- **WHEN** `load_config()` is called
+- **THEN** the raw value with `${API_KEY}` SHALL be stored
+- **AND** no expansion SHALL occur
+
+#### Scenario: Expansion at point of use
+- **GIVEN** tool config with `api_url: "https://api.example.com/${API_VERSION}"`
+- **AND** `API_VERSION: "v2"` in secrets.yaml
+- **WHEN** `get_tool_config("mytool")` is called
+- **THEN** returned config SHALL have `api_url: "https://api.example.com/v2"`
 
 #### Scenario: Default value syntax
-- **GIVEN** `${VAR:-default}` in a config value
-- **AND** VAR not in secrets.yaml
-- **WHEN** configuration is loaded
+- **GIVEN** `${VAR:-default}` in a tool config value
+- **AND** VAR not in secrets.yaml or env: section
+- **WHEN** `get_tool_config()` is called
 - **THEN** the value SHALL be expanded to "default"
 
 #### Scenario: No os.environ reading
-- **GIVEN** `${MY_VAR}` in a config value
-- **AND** MY_VAR set in os.environ but NOT in secrets.yaml
-- **WHEN** configuration is loaded
+- **GIVEN** `${MY_VAR}` in a tool config value
+- **AND** MY_VAR set in os.environ but NOT in secrets.yaml or env: section
+- **WHEN** `get_tool_config()` is called
 - **THEN** MY_VAR from os.environ SHALL NOT be used
 - **AND** error or default SHALL apply
 

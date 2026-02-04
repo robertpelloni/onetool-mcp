@@ -14,7 +14,7 @@ import yaml
 @pytest.mark.core
 def test_load_config_defaults() -> None:
     """Config loads with defaults when file missing."""
-    from ot.config.loader import OneToolConfig
+    from ot.config import OneToolConfig
 
     config = OneToolConfig()
 
@@ -81,46 +81,9 @@ def test_compact_array_format() -> None:
         assert "str" in config.security.builtins.allow
 
 
-@pytest.mark.unit
-@pytest.mark.core
-def test_secrets_expansion_default_value() -> None:
-    """${VAR:-default} uses default when variable not in secrets."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = Path(tmpdir) / "test-config.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "secrets_file": "${NONEXISTENT_VAR:-/default/path}/secrets.yaml",
-                }
-            )
-        )
-
-        config = load_config(config_path)
-        assert config.secrets_file == "/default/path/secrets.yaml"
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_secrets_expansion_error_on_missing() -> None:
-    """${VAR} without default raises error when not in secrets."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        config_path = Path(tmpdir) / "test-config.yaml"
-        config_path.write_text(
-            yaml.dump(
-                {
-                    "version": 1,
-                    "secrets_file": "${MISSING_VAR}/secrets.yaml",
-                }
-            )
-        )
-
-        with pytest.raises(ValueError, match=r"Missing variables in secrets\.yaml"):
-            load_config(config_path)
+# NOTE: Variable expansion tests removed - expansion now happens at runtime
+# in get_tool_config(), not during load_config(). This fixes the chicken-and-egg
+# problem where secrets_file couldn't be expanded because secrets weren't loaded yet.
 
 
 @pytest.mark.unit
@@ -750,5 +713,65 @@ def test_inherit_deep_merges_tools() -> None:
 
         # Override should apply (tool configs stored as extra dicts)
         assert config.tools.model_extra.get("brave", {}).get("timeout") == 120.0
+
+
+# ==================== Runtime Variable Expansion Tests ====================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_tool_config_expands_vars_at_runtime() -> None:
+    """get_tool_config() expands ${VAR} at runtime, not during load_config()."""
+    import ot.config.loader as loader_module
+    import ot.config.secrets as secrets_module
+    from ot.config.loader import get_config, get_tool_config
+
+    # Clean slate
+    secrets_module._secrets = None
+    loader_module._config = None
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create config with ${VAR} in tool config
+        config_dir = Path(tmpdir) / ".onetool" / "config"
+        config_dir.mkdir(parents=True)
+        config_path = config_dir / "onetool.yaml"
+        config_path.write_text(
+            yaml.dump(
+                {
+                    "version": 1,
+                    "tools": {
+                        "mypack": {
+                            "api_url": "https://api.example.com/${API_VERSION}",
+                            "cache_dir": "${CACHE_DIR}/mypack",
+                        }
+                    },
+                    "env": {
+                        "CACHE_DIR": "/tmp/cache",
+                    },
+                }
+            )
+        )
+
+        # Create secrets file
+        secrets_path = config_dir / "secrets.yaml"
+        secrets_path.write_text('API_VERSION: "v2"')
+
+        # Load and cache config - ${VAR} should NOT be expanded yet
+        config = get_config(config_path)
+
+        # Raw config should still have ${VAR} patterns
+        raw_url = config.tools.model_extra.get("mypack", {}).get("api_url")
+        assert "${API_VERSION}" in raw_url
+
+        # Now get_tool_config() should expand at runtime
+        tool_cfg = get_tool_config("mypack")
+
+        # Variables should be expanded
+        assert tool_cfg["api_url"] == "https://api.example.com/v2"
+        assert tool_cfg["cache_dir"] == "/tmp/cache/mypack"
+
+        # Cleanup
+        secrets_module._secrets = None
+        loader_module._config = None
 
 

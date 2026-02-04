@@ -20,6 +20,14 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 Read agents/rules.md for this project.
 Read agents/prime.md for a project overview.
 
+## MCP Servers
+
+Two OneTool versions are configured:
+
+- **otd**: Local dev version. Use `mcp__onetool-dev__run` only when explicitly requested
+- **ot**: Stable version . Use `__ot` for all normal operations (default)
+Use stable version unless "dev" is explicitly mentioned.
+
 ## Commands
 
 Use `just` (not `make`) for project commands:
@@ -30,21 +38,15 @@ just test     # Run tests
 just lint     # Run linters
 ```
 
-## Tools - File Search
+## Tools
 
+### File Search
 Use OneTool ripgrep (50x faster than find+grep, with line numbers):
+- Search for pattern in files: `ot.ripgrep.search(pattern="onetool", path="src/", glob="*.py")`
+- List files only: `ripgrep.search(pattern="TODO", path=".", glob="*.{py,yaml}")`
+- Count matches: `ripgrep.count(pattern="import", path="src/", file_type="py")`
 
-```python
-# Search for pattern in files
-ripgrep.search(pattern="onetool", path="src/", glob="*.py")
+### Tools - Web Search
+- Web search: `$g q=query one|query two|query three`
 
-# List files only
-ripgrep.search(pattern="TODO", path=".", glob="*.{py,yaml}")
 
-# Count matches
-ripgrep.count(pattern="import", path="src/", file_type="py")
-```
-
-## Tools - Web Search
-
-Use OneTool web search: $g q=query one|query two|query three

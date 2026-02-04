@@ -34,7 +34,7 @@ Based on the `retest` argument:
 
 When errors are encountered, check if they are caused by:
 - **Your mistake**: Add a hint to `tests/sanity/test_sanity-hints.md` to avoid in future
-- **OneTool defect**: Create `./plan/issues/{issue-name}.md` with issue details
+- **OneTool defect**: Create `wip/issues/{issue-name}.md` with issue details
 
 ## Status Update
 
@@ -61,5 +61,6 @@ brave:
 - Mark hints added as 🔹
 - Keep a list of issues and hints, grouped by component
 - Show summary table at end with pass/partial/fail counts
+- Write detailed test results to `wip/test-results/<area>-<date>.md`
 
-**DO NOT MAKE CODE CHANGES** - only create issue files, hint entries, and status updates.
+**DO NOT MAKE CODE CHANGES** - only create issue files, hint entries, status updates, and test result reports.

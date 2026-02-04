@@ -233,6 +233,15 @@ class SecurityConfig(BaseModel):
     - '[seq]' matches any character in seq
     """
 
+    # Cached frozensets (computed lazily on first access)
+    _allowed_builtins: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_imports: frozenset[str] | None = PrivateAttr(default=None)
+    _warned_imports: frozenset[str] | None = PrivateAttr(default=None)
+    _blocked_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _warned_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_dunders: frozenset[str] | None = PrivateAttr(default=None)
+
     validate_code: bool = Field(
         default=True,
         description="Enable AST-based code validation before execution",
@@ -269,32 +278,46 @@ class SecurityConfig(BaseModel):
     )
 
     def get_allowed_builtins(self) -> frozenset[str]:
-        """Get the set of allowed builtins."""
-        return frozenset(self.builtins.allow)
+        """Get the set of allowed builtins (cached)."""
+        if self._allowed_builtins is None:
+            self._allowed_builtins = frozenset(self.builtins.allow)
+        return self._allowed_builtins
 
     def get_allowed_imports(self) -> frozenset[str]:
-        """Get the set of allowed imports."""
-        return frozenset(self.imports.allow)
+        """Get the set of allowed imports (cached)."""
+        if self._allowed_imports is None:
+            self._allowed_imports = frozenset(self.imports.allow)
+        return self._allowed_imports
 
     def get_warned_imports(self) -> frozenset[str]:
-        """Get the set of imports that trigger warnings."""
-        return frozenset(self.imports.warn)
+        """Get the set of imports that trigger warnings (cached)."""
+        if self._warned_imports is None:
+            self._warned_imports = frozenset(self.imports.warn)
+        return self._warned_imports
 
     def get_blocked_calls(self) -> frozenset[str]:
-        """Get the set of blocked qualified calls."""
-        return frozenset(self.calls.block)
+        """Get the set of blocked qualified calls (cached)."""
+        if self._blocked_calls is None:
+            self._blocked_calls = frozenset(self.calls.block)
+        return self._blocked_calls
 
     def get_warned_calls(self) -> frozenset[str]:
-        """Get the set of qualified calls that trigger warnings."""
-        return frozenset(self.calls.warn)
+        """Get the set of qualified calls that trigger warnings (cached)."""
+        if self._warned_calls is None:
+            self._warned_calls = frozenset(self.calls.warn)
+        return self._warned_calls
 
     def get_allowed_calls(self) -> frozenset[str]:
-        """Get the set of explicitly allowed qualified calls."""
-        return frozenset(self.calls.allow)
+        """Get the set of explicitly allowed qualified calls (cached)."""
+        if self._allowed_calls is None:
+            self._allowed_calls = frozenset(self.calls.allow)
+        return self._allowed_calls
 
     def get_allowed_dunders(self) -> frozenset[str]:
-        """Get the set of allowed magic variables."""
-        return frozenset(self.dunders.allow)
+        """Get the set of allowed magic variables (cached)."""
+        if self._allowed_dunders is None:
+            self._allowed_dunders = frozenset(self.dunders.allow)
+        return self._allowed_dunders
 
 
 # ==================== Output Configuration ====================

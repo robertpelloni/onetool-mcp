@@ -27,6 +27,9 @@ from loguru import logger
 # Single global secrets cache
 _secrets: dict[str, str] | None = None
 
+# Pre-compiled regex for variable expansion (avoids recompilation on each call)
+_VAR_PATTERN = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
+
 
 def load_secrets(secrets_path: Path | str | None = None) -> dict[str, str]:
     """Load secrets from YAML file.
@@ -86,25 +89,35 @@ def load_secrets(secrets_path: Path | str | None = None) -> dict[str, str]:
     return secrets
 
 
-def _load_from_default_location() -> dict[str, str]:
-    """Load secrets from global location only.
+def _resolve_secrets_path(secrets_path: Path | str | None) -> Path | str | None:
+    """Resolve secrets path from explicit path, env var, or global location.
 
-    Location: ~/.onetool/config/secrets.yaml
+    Resolution order (first match wins):
+    1. Explicit secrets_path argument
+    2. OT_SECRETS_FILE environment variable
+    3. Global location (~/.onetool/config/secrets.yaml)
+
+    Args:
+        secrets_path: Explicit path to secrets file (may be None).
 
     Returns:
-        Dictionary of secret name -> value (empty if no secrets found)
+        Resolved path or None if no secrets file found.
     """
+    if secrets_path is not None:
+        return secrets_path
+
+    env_path = os.getenv("OT_SECRETS_FILE")
+    if env_path:
+        return env_path
+
+    # Check global default location
     from ot.paths import CONFIG_SUBDIR, get_global_dir
 
-    secrets_path = get_global_dir() / CONFIG_SUBDIR / "secrets.yaml"
+    global_path = get_global_dir() / CONFIG_SUBDIR / "secrets.yaml"
+    if global_path.exists():
+        return global_path
 
-    if secrets_path.exists():
-        try:
-            return load_secrets(secrets_path)
-        except ValueError as e:
-            logger.debug(f"Error loading secrets from {secrets_path}: {e}")
-
-    return {}
+    return None
 
 
 def get_secrets(
@@ -126,23 +139,11 @@ def get_secrets(
     """
     global _secrets
 
-    if _secrets is None or reload:
-        # Resolution chain: explicit > env var > global default
-        if secrets_path is None:
-            # Check OT_SECRETS_FILE env var first (highest priority after explicit path)
-            env_path = os.getenv("OT_SECRETS_FILE")
-            if env_path:
-                secrets_path = env_path
+    if _secrets is not None and not reload:
+        return _secrets
 
-        # Try global default location if still no path
-        if secrets_path is None:
-            loaded = _load_from_default_location()
-            if loaded:
-                _secrets = loaded
-                return _secrets
-
-        _secrets = load_secrets(secrets_path)
-
+    resolved_path = _resolve_secrets_path(secrets_path)
+    _secrets = load_secrets(resolved_path)
     return _secrets
 
 
@@ -158,53 +159,78 @@ def get_secret(name: str) -> str | None:
     return get_secrets().get(name)
 
 
-def expand_secrets(value: str) -> str:
-    """Expand ${VAR} patterns using secrets.yaml ONLY.
+def expand_vars(value: str) -> str:
+    """Expand ${VAR} patterns from secrets.yaml first, then config env: section.
 
-    Use this for configuration values that MUST be in secrets.yaml.
-    This enforces that sensitive values are stored in the gitignored secrets file,
-    not in environment variables that might leak into logs or process lists.
+    Variable resolution order (first match wins):
+    1. secrets.yaml (sensitive, user-specific values)
+    2. config env: section (non-sensitive, shared values)
+    3. Default value if provided via ${VAR:-default} syntax
+    4. ValueError if no match found
 
     Supports ${VAR_NAME} and ${VAR_NAME:-default} syntax.
+    No os.environ - all values must be explicit in config.
 
     When to use:
-        - Config file values (URLs, API keys, database connections)
-        - Anywhere secrets should be explicit and fail loudly if missing
+        - Tool configuration values that may reference secrets or env vars
         - Subprocess environment variables (after root env + server env merge)
+        - Any config value that needs runtime expansion
 
     Args:
         value: String potentially containing ${VAR} patterns.
 
     Returns:
-        String with variables expanded from secrets.
+        String with variables expanded.
 
     Raises:
-        ValueError: If variable not found in secrets and no default provided.
+        ValueError: If variable not found and no default provided.
     """
-    pattern = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
     missing_vars: list[str] = []
 
     def replace(match: re.Match[str]) -> str:
         var_name = match.group(1)
         default_value = match.group(2)
-        # Read from secrets only - no os.environ
+
+        # 1. Check secrets first (sensitive, user-specific)
         secret_value = get_secret(var_name)
         if secret_value is not None:
             return secret_value
+
+        # 2. Check config env: section (non-sensitive, shared)
+        try:
+            # Import here to avoid circular dependency
+            from ot.config.loader import get_config
+
+            config = get_config()
+            env_value = config.env.get(var_name)
+            if env_value is not None:
+                return env_value
+        except Exception:
+            # Config not loaded yet or no env section
+            pass
+
+        # 3. Use default if provided
         if default_value is not None:
             return default_value
+
+        # 4. Error - variable not found
         missing_vars.append(var_name)
         return match.group(0)
 
-    result = pattern.sub(replace, value)
+    result = _VAR_PATTERN.sub(replace, value)
 
     if missing_vars:
         raise ValueError(
-            f"Missing variables in secrets.yaml: {', '.join(missing_vars)}. "
-            f"Add them to ~/.onetool/config/secrets.yaml or use ${{VAR:-default}} syntax."
+            f"Missing variables: {', '.join(missing_vars)}. "
+            f"Add them to secrets.yaml or env: section in config, "
+            f"or use ${{VAR:-default}} syntax."
         )
 
     return result
+
+
+# Alias for backward compatibility with external code
+expand_secrets = expand_vars
 
 
 def reset() -> None:

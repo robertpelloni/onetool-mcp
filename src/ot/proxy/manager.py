@@ -17,7 +17,7 @@ from fastmcp.client.transports import StdioTransport, StreamableHttpTransport
 from loguru import logger
 from mcp import types
 
-from ot.config import expand_secrets
+from ot.config import expand_vars
 from ot.logging import LogSpan
 
 if TYPE_CHECKING:
@@ -284,7 +284,7 @@ class ProxyManager:
         headers = {}
         for key, value in config.headers.items():
             if "${" in value:
-                headers[key] = expand_secrets(value)
+                headers[key] = expand_vars(value)
             else:
                 headers[key] = value
 
@@ -314,10 +314,10 @@ class ProxyManager:
         for key, value in config.env.items():
             env[key] = value
 
-        # Expand ${VAR} patterns from secrets.yaml in all env values
+        # Expand ${VAR} patterns from secrets and env: in all env values
         for key, value in env.items():
             if "${" in value:
-                env[key] = expand_secrets(value)
+                env[key] = expand_vars(value)
 
         transport = StdioTransport(
             command=config.command,
