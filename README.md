@@ -197,12 +197,6 @@ __ot wiki.summary(title="Python_(programming_language)")
 
 ---
 
-## Contributing
-
-[Contribution guidelines](https://github.com/beycom/onetool-mcp/blob/main/CONTRIBUTING.md)
-
----
-
 ## License
 
 **GPLv3** - Will transition to **MIT** at v2.0.
