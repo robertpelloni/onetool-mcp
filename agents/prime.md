@@ -14,6 +14,8 @@ MCP server with single `run` tool for LLM Python code execution.
 - `pyproject.toml` - deps, scripts, tools
 - `justfile` - dev tasks (`just check`, `just demo::*`)
 - `agents/rules.md` - coding/testing rules
+- `agents/repo.md` - git tags, branches, merge strategy
+- `agents/commits.md` - conventional commit scopes
 
 ## Work in Progress
 

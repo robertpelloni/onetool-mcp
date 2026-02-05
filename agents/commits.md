@@ -11,6 +11,7 @@ Ref: #123
 **Notes:**
 - Description: 50-72 chars ideal, can be longer if needed
 - Second line for issue reference only (optional)
+- NO message body
 
 ## Core Systems
 

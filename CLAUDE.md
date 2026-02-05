@@ -17,8 +17,8 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
-Read agents/rules.md for this project.
-Read agents/prime.md for a project overview.
+Read agents/prime.md for project overview, structure, and config files.
+Read agents/rules.md for coding/testing rules.
 
 ## MCP Servers
 
