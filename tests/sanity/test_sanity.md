@@ -2,7 +2,7 @@
 
 ## Test Tools
 
-```
+```markdown 
 Title: Test Tools
 
 Explain each step so it is easy to follow what you did and why. Use 💭 to highlight these explanations.
@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Find do sanity testing and find issues. 
 
 Test out the following packs:
-Packs: brave, code, context7, convert, db, diagram, excel, file, github, ground, llm, package, ripgrep, scaffold, web, wiki                                                                                                
+Packs: brave, code, context7, convert, db, devtools, diagram, excel, file, github, ground, llm, ot, package, ripgrep, scaffold, web
 
 When testing
 - code with db at demo/.chunkhound
@@ -20,7 +20,7 @@ When testing
 
 ```
 
-```
+```markdown
 Title: Snippets
 
 Explain each step so it is easy to follow what you did and why. Use 💭 to highlight these explanations.
@@ -32,7 +32,7 @@ Test the existing snippets.
 
 ```
 
-```
+```markdown
 Title: Features
 
 Explain each step so it is easy to follow what you did and why. Use 💭 to highlight these explanations.
@@ -100,7 +100,7 @@ Configuration
 
 ## Tear-Down
 
-```
+```markdown
 Title: Tear-Down
 
 Provide a summary of the issues found, grouped by component.

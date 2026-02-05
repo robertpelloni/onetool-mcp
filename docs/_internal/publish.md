@@ -40,14 +40,15 @@ just release::check
 
 - Runs lint, typecheck, and all tests
 - Scans for secrets with gitleaks
-- Runs `/sanity retest=all` via `claude -p` CLI
+- Runs `/proj:sanity retest all` via `claude` CLI
 
 ---
 
 ## Step 3: Publish
 
 ```bash
-just release::publish 1.0.0b2
+just release::publish 1.0.0b2       # Dry-run (safe, shows what will happen)
+just release::publish 1.0.0b2 --force  # Actually publish
 ```
 
 Prompts before each step:
