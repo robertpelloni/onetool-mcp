@@ -1444,7 +1444,7 @@ wheels = [
 
 [[package]]
 name = "onetool-mcp"
-version = "1.0.0rc3.dev0"
+version = "1.0.0rc3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
