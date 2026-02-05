@@ -1,11 +1,10 @@
-<!-- mcp-name: io.github.beycom/onetool-mcp -->
-
 <p align="center">
+  <!-- mcp-name: io.github.beycom/onetool-mcp -->
   <img src="https://raw.githubusercontent.com/beycom/onetool-mcp/main/docs/assets/logo.svg" alt="OneTool" width="80">
 </p>
 
 <p align="center">
-  <strong>🧿 One MCP, unlimited tools</strong>
+  <strong>🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.</strong>
 </p>
 
 <p align="center">
@@ -16,7 +15,7 @@
 </p>
 
 <p align="center">
-  Works with Claude Code · Cursor · Windsurf · Any MCP client
+  Works with Claude Code or any MCP client
 </p>
 
 ---
@@ -51,9 +50,9 @@ Configure one MCP server. Use unlimited tools.
 
 ## See It In Action
 
-| Demo | Description |
-| ---- | ----------- |
-| [Compare the Search](https://youtu.be/Dv-_dtHVU_A) | Side-by-side token comparison |
+| Demo                                                   | Description                     |
+| ------------------------------------------------------ | ------------------------------- |
+| [Compare the Search](https://youtu.be/Dv-_dtHVU_A)     | Side-by-side token comparison   |
 | [Build a Wikipedia Tool](https://youtu.be/AZz03Yw0s1E) | Create a custom tool in seconds |
 
 ---
@@ -103,7 +102,7 @@ Verify: `onetool init validate`
 | **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
 | **Scaffold Tools**      | Build new tools as part of the conversation            |
 | **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
-| **Single YAML Config**  | Global and project scopes, per-pack settings           |
+| **Single YAML Config**  | Global configuration, per-pack settings, includes      |
 | **Security Layers**     | AST validation, path boundaries, output sanitisation   |
 
 ---
@@ -112,23 +111,23 @@ Verify: `onetool init validate`
 
 15 packs, 100+ tools ready to use:
 
-| Pack        | Tools                                   | Description            |
-| ----------- | --------------------------------------- | ---------------------- |
-| `brave`     | `search`, `news`                        | Web and news search    |
-| `code`      | `search`, `search_batch`, `status`      | Semantic code search   |
-| `context7`  | `resolve`, `get_docs`                   | Library documentation  |
-| `convert`   | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
-| `db`        | `query`, `schema`, `tables`             | Database operations    |
-| `diagram`   | `create`                                | Mermaid diagrams       |
-| `excel`     | `read`, `write`, `query`                | Excel files            |
-| `file`      | `read`, `write`, `list`, `search`       | File operations        |
-| `ground`    | `search`                                | Google Grounding       |
-| `llm`       | `transform`, `transform_file`           | LLM-powered transforms |
-| `ot`        | `help`, `tools`, `stats`                | Introspection          |
-| `package`   | `npm`, `pypi`, `cargo`                  | Package versions       |
-| `ripgrep`   | `search`, `count`                       | Fast code search       |
-| `scaffold`  | `tool`                                  | Generate new tools     |
-| `web`       | `fetch`, `fetch_batch`                  | Web fetching           |
+| Pack       | Tools                                   | Description            |
+| ---------- | --------------------------------------- | ---------------------- |
+| `brave`    | `search`, `news`                        | Web and news search    |
+| `code`     | `search`, `search_batch`, `status`      | Semantic code search   |
+| `context7` | `resolve`, `get_docs`                   | Library documentation  |
+| `convert`  | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
+| `db`       | `query`, `schema`, `tables`             | Database operations    |
+| `diagram`  | `create`                                | Mermaid diagrams       |
+| `excel`    | `read`, `write`, `query`                | Excel files            |
+| `file`     | `read`, `write`, `list`, `search`       | File operations        |
+| `ground`   | `search`                                | Google Grounding       |
+| `llm`      | `transform`, `transform_file`           | LLM-powered transforms |
+| `ot`       | `help`, `tools`, `stats`                | Introspection          |
+| `package`  | `npm`, `pypi`, `cargo`                  | Package versions       |
+| `ripgrep`  | `search`, `count`                       | Fast code search       |
+| `scaffold` | `tool`                                  | Generate new tools     |
+| `web`      | `fetch`, `fetch_batch`                  | Web fetching           |
 
 [📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
 

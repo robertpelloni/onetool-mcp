@@ -24,14 +24,12 @@ Python 3.11+, FastMCP, OpenAI SDK (OpenRouter), Typer, Pydantic, YAML config
 
 ## Configuration
 
-**Resolution order**: `OT_<CLI>_CONFIG` env var → `cwd/.onetool/config/<cli>.yaml` → `~/.onetool/config/<cli>.yaml` → defaults
-
-**Working directory**: Set `OT_CWD` to override the effective working directory (e.g., `OT_CWD=demo onetool`).
+**Resolution order (global-only)**: `ONETOOL_CONFIG` env var → `~/.onetool/config/onetool.yaml` → error (requires `onetool init`)
 
 **Directory structure**: `.onetool/` uses subdirectories to organise files by purpose:
 
 ```text
-.onetool/
+~/.onetool/
 ├── config/     # YAML configuration files (onetool.yaml, secrets.yaml, etc.)
 ├── logs/       # Application log files
 ├── stats/      # Statistics data (stats.jsonl)
@@ -39,16 +37,21 @@ Python 3.11+, FastMCP, OpenAI SDK (OpenRouter), Typer, Pydantic, YAML config
 ```
 
 **Locations**:
-- Project configs: `<project>/.onetool/config/*.yaml`
-- Global configs: `~/.onetool/config/*.yaml`
-- Bundled defaults: `src/ot/config/defaults/` (packaged with wheel)
-- Secrets: `secrets.yaml` (onetool) and `bench-secrets.yaml` (bench) in `.onetool/config/`
+- Global config: `~/.onetool/config/onetool.yaml`
+- Global secrets: `~/.onetool/config/secrets.yaml`
+- Embedded defaults: Pydantic models in `src/ot/config/models.py`
 
 **Variable expansion**: `${VAR}` in config files reads from `secrets.yaml` only (not environment variables). Use `${VAR:-default}` for defaults. Paths support `~` expansion only.
 
-**Subprocess environment**: stdio MCP servers inherit only `PATH` plus explicit `env:` values from config. Use `${VAR}` in env section for pass-through (secrets first, then os.environ).
+**Subprocess environment**: stdio MCP servers receive environment in this order:
+1. `PATH` from host os.environ
+2. Root-level `env:` section (shared across all servers)
+3. Server-specific `env:` section (overrides root)
+4. `${VAR}` expansion from secrets.yaml only
 
-Config includes `version` field for migrations.
+**Includes**: Config supports `include:` directive. Files resolve relative to `.onetool/` directory. Maximum depth: 5 levels.
+
+Config includes `version` field for migrations. Current version: 1.
 
 ## Tool Development
 

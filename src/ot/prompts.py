@@ -216,3 +216,13 @@ def get_prompts(
             _prompts = load_prompts(prompts_path)
 
     return _prompts
+
+
+def reset() -> None:
+    """Clear prompts cache for reload.
+
+    Use this as part of the config reload flow to force prompts to be
+    reloaded from disk on next access.
+    """
+    global _prompts
+    _prompts = None

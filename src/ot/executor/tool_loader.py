@@ -40,7 +40,7 @@ def _get_bundled_tools_dir() -> Path | None:
 
 
 if TYPE_CHECKING:
-    from ot.config.loader import OneToolConfig
+    from ot.config import OneToolConfig
 
 
 @dataclass
@@ -394,3 +394,12 @@ def load_tool_functions(tools_dir: Path | None = None) -> dict[str, Any]:
         Dictionary mapping function names to callable functions.
     """
     return load_tool_registry(tools_dir).functions
+
+
+def reset() -> None:
+    """Clear tool loader module cache for reload.
+
+    Use this as part of the config reload flow to force tools to be
+    reloaded from disk on next access.
+    """
+    _module_cache.clear()

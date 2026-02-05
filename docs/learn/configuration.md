@@ -1,6 +1,6 @@
 # Configuration
 
-OneTool uses YAML configuration files with a two-tier system: global (`~/.onetool/config/`) → project (`.onetool/config/`).
+OneTool uses YAML configuration files stored in the global directory (`~/.onetool/config/`).
 
 ## Quick Start
 
@@ -25,11 +25,11 @@ onetool init validate
 OneTool uses an allowlist-based security model. Everything is blocked by
 default; you must explicitly allow what's safe.
 
-Include `security.yaml` in your config:
+Include `security.yaml` in your config (paths resolve from `.onetool/` directory):
 
 ```yaml
 include:
-  - config/security.yaml
+  - config/security.yaml  # Resolves to ~/.onetool/config/security.yaml
 ```
 
 Or define inline:

@@ -1,0 +1,735 @@
+"""Pydantic models for OneTool configuration with embedded defaults.
+
+All default values are embedded directly in model definitions (single source of truth).
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
+
+# ==================== Snippet Models ====================
+
+
+class SnippetParam(BaseModel):
+    """Parameter definition for a snippet."""
+
+    required: bool = Field(
+        default=True, description="Whether this parameter is required"
+    )
+    default: Any = Field(default=None, description="Default value if not provided")
+    description: str = Field(default="", description="Description of the parameter")
+
+
+class SnippetDef(BaseModel):
+    """Definition of a reusable snippet template."""
+
+    description: str = Field(
+        default="", description="Description of what this snippet does"
+    )
+    params: dict[str, SnippetParam] = Field(
+        default_factory=dict, description="Parameter definitions"
+    )
+    body: str = Field(
+        ..., description="Jinja2 template body that expands to Python code"
+    )
+
+
+# ==================== Transform Configuration ====================
+
+
+class TransformConfig(BaseModel):
+    """Configuration for the transform() tool."""
+
+    model: str = Field(default="", description="Model for code generation")
+    base_url: str = Field(default="", description="Base URL for OpenAI-compatible API")
+    max_tokens: int = Field(default=4096, description="Max output tokens")
+
+
+# ==================== Security Configuration ====================
+
+
+class BuiltinsConfig(BaseModel):
+    """Builtins allowlist configuration."""
+
+    allow: list[str] = Field(
+        default_factory=lambda: [
+            # Types
+            "bool",
+            "bytes",
+            "dict",
+            "float",
+            "frozenset",
+            "int",
+            "list",
+            "set",
+            "str",
+            "tuple",
+            "type",
+            # Functions
+            "abs",
+            "all",
+            "any",
+            "ascii",
+            "callable",
+            "chr",
+            "delattr",
+            "dir",
+            "divmod",
+            "enumerate",
+            "filter",
+            "format",
+            "getattr",
+            "hasattr",
+            "hash",
+            "id",
+            "isinstance",
+            "issubclass",
+            "iter",
+            "len",
+            "map",
+            "max",
+            "min",
+            "next",
+            "ord",
+            "pow",
+            "print",
+            "range",
+            "repr",
+            "reversed",
+            "round",
+            "setattr",
+            "slice",
+            "sorted",
+            "sum",
+            "vars",
+            "zip",
+            # Exceptions
+            "*Error",
+            "*Exception",
+            "StopIteration",
+        ],
+        description="Allowed builtin functions and types",
+    )
+
+
+class ImportsConfig(BaseModel):
+    """Imports allowlist configuration."""
+
+    allow: list[str] = Field(
+        default_factory=lambda: [
+            # Note: pathlib intentionally excluded - use file.* tools instead for sandboxed filesystem access
+            "abc",
+            "array",
+            "base64",
+            "bisect",
+            "calendar",
+            "collections",
+            "copy",
+            "csv",
+            "dataclasses",
+            "datetime",
+            "decimal",
+            "difflib",
+            "enum",
+            "fractions",
+            "functools",
+            "hashlib",
+            "heapq",
+            "html",
+            "html.parser",
+            "itertools",
+            "json",
+            "math",
+            "operator",
+            "random",
+            "re",
+            "statistics",
+            "string",
+            "textwrap",
+            "time",
+            "types",
+            "typing",
+            "urllib.parse",
+            "uuid",
+            "zoneinfo",
+        ],
+        description="Allowed import modules",
+    )
+    warn: list[str] = Field(
+        default_factory=lambda: ["yaml"],
+        description="Imports that trigger warnings but are allowed",
+    )
+
+
+class CallsConfig(BaseModel):
+    """Qualified calls configuration."""
+
+    allow: list[str] = Field(
+        default_factory=list,
+        description="Allowed qualified function calls (e.g., 'json.loads')",
+    )
+    block: list[str] = Field(
+        default_factory=list,
+        description="Blocked qualified function calls (e.g., 'pickle.*')",
+    )
+    warn: list[str] = Field(
+        default_factory=list,
+        description="Qualified calls that trigger warnings",
+    )
+
+
+class DundersConfig(BaseModel):
+    """Magic variable (dunder) configuration."""
+
+    allow: list[str] = Field(
+        default_factory=lambda: ["__format__", "__sanitize__"],
+        description="Allowed magic variables (e.g., '__format__')",
+    )
+
+
+class OutputSanitizationConfig(BaseModel):
+    """Output sanitization configuration for prompt injection protection.
+
+    Protects against indirect prompt injection by sanitizing tool outputs
+    that may contain malicious payloads from external content.
+
+    Three-layer defense:
+    1. Trigger sanitization: Replace __ot, mcp__onetool patterns
+    2. Tag sanitization: Remove <external-content-*> patterns
+    3. GUID-tagged boundaries: Wrap content in unpredictable tags
+    """
+
+    enabled: bool = Field(
+        default=True,
+        description="Global toggle for output sanitization",
+    )
+
+
+class SecurityConfig(BaseModel):
+    """Code validation security configuration.
+
+    Allowlist-based security model: block everything by default, explicitly
+    allow what's safe. Tool namespaces (ot.*, brave.*, etc.) are auto-allowed.
+
+    Configuration structure:
+        security:
+          builtins:
+            allow: [str, int, list, ...]
+          imports:
+            allow: [json, re, math, ...]
+            warn: [yaml]
+          calls:
+            block: [pickle.*, yaml.load]
+            warn: [random.seed]
+          dunders:
+            allow: [__format__, __sanitize__]
+
+    Patterns support fnmatch wildcards:
+    - '*' matches any characters (e.g., 'subprocess.*' matches 'subprocess.run')
+    - '?' matches a single character
+    - '[seq]' matches any character in seq
+    """
+
+    # Cached frozensets (computed lazily on first access)
+    _allowed_builtins: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_imports: frozenset[str] | None = PrivateAttr(default=None)
+    _warned_imports: frozenset[str] | None = PrivateAttr(default=None)
+    _blocked_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _warned_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_calls: frozenset[str] | None = PrivateAttr(default=None)
+    _allowed_dunders: frozenset[str] | None = PrivateAttr(default=None)
+
+    validate_code: bool = Field(
+        default=True,
+        description="Enable AST-based code validation before execution",
+    )
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable security pattern checking (requires validate_code)",
+    )
+
+    builtins: BuiltinsConfig = Field(
+        default_factory=BuiltinsConfig,
+        description="Builtins allowlist configuration",
+    )
+
+    imports: ImportsConfig = Field(
+        default_factory=ImportsConfig,
+        description="Imports allowlist configuration",
+    )
+
+    calls: CallsConfig = Field(
+        default_factory=CallsConfig,
+        description="Qualified calls configuration",
+    )
+
+    dunders: DundersConfig = Field(
+        default_factory=DundersConfig,
+        description="Magic variable (dunder) configuration",
+    )
+
+    sanitize: OutputSanitizationConfig = Field(
+        default_factory=OutputSanitizationConfig,
+        description="Output sanitization for prompt injection protection",
+    )
+
+    def get_allowed_builtins(self) -> frozenset[str]:
+        """Get the set of allowed builtins (cached)."""
+        if self._allowed_builtins is None:
+            self._allowed_builtins = frozenset(self.builtins.allow)
+        return self._allowed_builtins
+
+    def get_allowed_imports(self) -> frozenset[str]:
+        """Get the set of allowed imports (cached)."""
+        if self._allowed_imports is None:
+            self._allowed_imports = frozenset(self.imports.allow)
+        return self._allowed_imports
+
+    def get_warned_imports(self) -> frozenset[str]:
+        """Get the set of imports that trigger warnings (cached)."""
+        if self._warned_imports is None:
+            self._warned_imports = frozenset(self.imports.warn)
+        return self._warned_imports
+
+    def get_blocked_calls(self) -> frozenset[str]:
+        """Get the set of blocked qualified calls (cached)."""
+        if self._blocked_calls is None:
+            self._blocked_calls = frozenset(self.calls.block)
+        return self._blocked_calls
+
+    def get_warned_calls(self) -> frozenset[str]:
+        """Get the set of qualified calls that trigger warnings (cached)."""
+        if self._warned_calls is None:
+            self._warned_calls = frozenset(self.calls.warn)
+        return self._warned_calls
+
+    def get_allowed_calls(self) -> frozenset[str]:
+        """Get the set of explicitly allowed qualified calls (cached)."""
+        if self._allowed_calls is None:
+            self._allowed_calls = frozenset(self.calls.allow)
+        return self._allowed_calls
+
+    def get_allowed_dunders(self) -> frozenset[str]:
+        """Get the set of allowed magic variables (cached)."""
+        if self._allowed_dunders is None:
+            self._allowed_dunders = frozenset(self.dunders.allow)
+        return self._allowed_dunders
+
+
+# ==================== Output Configuration ====================
+
+
+class OutputConfig(BaseModel):
+    """Large output handling configuration.
+
+    When tool outputs exceed max_inline_size, they are stored to disk
+    and a summary with a query handle is returned instead.
+    """
+
+    max_inline_size: int = Field(
+        default=50000,
+        ge=0,
+        description="Max output size in bytes before storing to disk. Set to 0 to disable.",
+    )
+    result_store_dir: str = Field(
+        default="tmp",
+        description="Directory for result files (relative to .onetool/)",
+    )
+    result_ttl: int = Field(
+        default=3600,
+        ge=0,
+        description="Time-to-live in seconds for stored results (0 = no expiry)",
+    )
+    preview_lines: int = Field(
+        default=10,
+        ge=0,
+        description="Number of preview lines to include in summary",
+    )
+
+
+# ==================== Stats Configuration ====================
+
+
+class StatsConfig(BaseModel):
+    """Runtime statistics collection configuration."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable statistics collection",
+    )
+    persist_dir: str = Field(
+        default="stats",
+        description="Directory for stats files (relative to .onetool/)",
+    )
+    persist_path: str = Field(
+        default="stats.jsonl",
+        description="Filename for stats persistence (within persist_dir)",
+    )
+    flush_interval_seconds: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        description="Interval in seconds between flushing stats to disk",
+    )
+    context_per_call: int = Field(
+        default=30000,
+        ge=0,
+        description="Estimated context tokens saved per consolidated tool call",
+    )
+    time_overhead_per_call_ms: int = Field(
+        default=4000,
+        ge=0,
+        description="Estimated time overhead in ms saved per consolidated tool call",
+    )
+    model: str = Field(
+        default="anthropic/claude-opus-4.5",
+        description="Model for cost estimation (e.g., anthropic/claude-opus-4.5)",
+    )
+    cost_per_million_input_tokens: float = Field(
+        default=15.0,
+        ge=0,
+        description="Cost in USD per million input tokens",
+    )
+    cost_per_million_output_tokens: float = Field(
+        default=75.0,
+        ge=0,
+        description="Cost in USD per million output tokens",
+    )
+    chars_per_token: float = Field(
+        default=4.0,
+        ge=1.0,
+        description="Average characters per token for estimation",
+    )
+
+
+# ==================== Message Configuration ====================
+
+
+class MsgTopicConfig(BaseModel):
+    """Topic-to-file mapping for message routing."""
+
+    pattern: str = Field(
+        ...,
+        description="Glob-style topic pattern (e.g., 'status:*', 'doc:*')",
+    )
+    file: str = Field(
+        ...,
+        description="File path for messages matching this pattern (supports ~ and ${VAR})",
+    )
+
+
+class MsgConfig(BaseModel):
+    """Message tool configuration."""
+
+    topics: list[MsgTopicConfig] = Field(
+        default_factory=list,
+        description="Topic patterns mapped to output files (first match wins)",
+    )
+
+
+# ==================== MCP Server Configuration ====================
+
+
+class AuthConfig(BaseModel):
+    """Authentication configuration for MCP servers."""
+
+    type: Literal["oauth", "bearer"] = Field(
+        description="Authentication type",
+    )
+    scopes: list[str] = Field(
+        default_factory=list,
+        description="OAuth scopes (for type=oauth)",
+    )
+    token: str | None = Field(
+        default=None,
+        description="Bearer token (for type=bearer, supports ${VAR} expansion)",
+    )
+
+
+class McpServerConfig(BaseModel):
+    """Configuration for an MCP server connection.
+
+    Compatible with bench ServerConfig format, with additional
+    `enabled` field for toggling servers without removing config.
+    """
+
+    type: Literal["http", "stdio"] = Field(description="Server connection type")
+    enabled: bool = Field(default=True, description="Whether this server is enabled")
+    url: str | None = Field(default=None, description="URL for HTTP servers")
+    headers: dict[str, str] = Field(
+        default_factory=dict, description="Headers for HTTP servers"
+    )
+    command: str | None = Field(default=None, description="Command for stdio servers")
+    args: list[str] = Field(
+        default_factory=list, description="Arguments for stdio command"
+    )
+    env: dict[str, str] = Field(
+        default_factory=dict, description="Environment variables for stdio servers"
+    )
+    timeout: int = Field(default=30, description="Connection timeout in seconds")
+    auth: AuthConfig | None = Field(
+        default=None,
+        description="Authentication configuration for HTTP servers",
+    )
+    instructions: str | None = Field(
+        default=None,
+        description="Agent instructions for using this server's tools (surfaced in MCP instructions)",
+    )
+
+
+# ==================== Tools Configuration ====================
+
+
+class ToolsConfig(BaseModel):
+    """Aggregated tool configurations.
+
+    Core configs (msg, stats) are typed fields. Tool-specific configs
+    (brave, ground, etc.) are allowed as extra fields and accessed via
+    get_tool_config() with schemas defined in tool files.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    # Core configs - always available
+    msg: MsgConfig = Field(default_factory=MsgConfig)
+    stats: StatsConfig = Field(default_factory=StatsConfig)
+
+
+# ==================== Root Configuration ====================
+
+
+class OneToolConfig(BaseModel):
+    """Root configuration for OneTool (global-only, V2)."""
+
+    # Private attribute to track config file location (not serialized)
+    _config_dir: Path | None = PrivateAttr(default=None)
+
+    version: int = Field(
+        default=1,
+        description="Config schema version for migration support",
+    )
+
+    include: list[str] = Field(
+        default_factory=list,
+        description="Files to deep-merge into config (processed before validation)",
+    )
+
+    # Root-level environment variables for subprocesses
+    env: dict[str, str] = Field(
+        default_factory=dict,
+        description="Shared environment variables for all MCP servers",
+    )
+
+    transform: TransformConfig = Field(
+        default_factory=TransformConfig, description="transform() tool configuration"
+    )
+
+    alias: dict[str, str] = Field(
+        default_factory=dict,
+        description="Short alias names mapping to full function names (e.g., ws -> brave.web_search)",
+    )
+
+    snippets: dict[str, SnippetDef] = Field(
+        default_factory=dict,
+        description="Reusable snippet templates with Jinja2 variable substitution",
+    )
+
+    servers: dict[str, McpServerConfig] = Field(
+        default_factory=dict,
+        description="External MCP servers to proxy through OneTool",
+    )
+
+    tools: ToolsConfig = Field(
+        default_factory=ToolsConfig,
+        description="Tool-specific configuration (timeouts, limits, etc.)",
+    )
+
+    security: SecurityConfig = Field(
+        default_factory=SecurityConfig,
+        description="Code validation and security pattern configuration",
+    )
+
+    stats: StatsConfig = Field(
+        default_factory=StatsConfig,
+        description="Runtime statistics collection configuration",
+    )
+
+    output: OutputConfig = Field(
+        default_factory=OutputConfig,
+        description="Large output handling configuration",
+    )
+
+    tools_dir: list[str] = Field(
+        default_factory=lambda: ["tools/*.py"],
+        description="Glob patterns for tool discovery (relative to .onetool/, or absolute)",
+    )
+    secrets_file: str = Field(
+        default="config/secrets.yaml",
+        description="Path to secrets file (relative to .onetool/, or absolute)",
+    )
+    prompts: dict[str, Any] | None = Field(
+        default=None,
+        description="Inline prompts config (can also be loaded via include:)",
+    )
+
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO", description="Logging level"
+    )
+    log_dir: str = Field(
+        default="logs",
+        description="Directory for log files (relative to .onetool/)",
+    )
+    compact_max_length: int = Field(
+        default=120, description="Max value length in compact console output"
+    )
+    log_verbose: bool = Field(
+        default=False,
+        description="Disable log truncation for debugging (full values in output)",
+    )
+    debug_tracebacks: bool = Field(
+        default=False,
+        description="Show verbose tracebacks with local variables on errors",
+    )
+
+    @field_validator("snippets", "servers", "alias", mode="before")
+    @classmethod
+    def empty_dict_if_none(cls, v: Any) -> Any:
+        """Convert None to empty dict for dict-type fields.
+
+        This handles YAML files where the key exists but all values are commented out,
+        which YAML parses as None instead of an empty dict.
+        """
+        return {} if v is None else v
+
+    def get_tool_files(self) -> list[Path]:
+        """Get list of tool files matching configured glob patterns.
+
+        Pattern resolution (all relative to OT_DIR .onetool/):
+        - Absolute paths: used as-is
+        - ~ paths: expanded to home directory
+        - Relative patterns: resolved relative to OT_DIR (.onetool/)
+
+        Returns:
+            List of Path objects for tool files
+        """
+        import glob
+
+        from ot.paths import get_global_dir
+
+        tool_files: list[Path] = []
+
+        # Determine OT_DIR for resolving patterns
+        if self._config_dir is not None:
+            # _config_dir is the config/ subdirectory, go up to .onetool/
+            ot_dir = self._config_dir.parent
+        else:
+            # Fallback: global .onetool
+            ot_dir = get_global_dir()
+
+        for pattern in self.tools_dir:
+            # Expand ~ first
+            expanded = Path(pattern).expanduser()
+
+            # Determine resolved pattern for globbing
+            if expanded.is_absolute():
+                # Absolute pattern - use as-is
+                resolved_pattern = str(expanded)
+            else:
+                # All relative patterns resolve against OT_DIR
+                resolved_pattern = str(ot_dir / pattern)
+
+            # Use glob.glob() for cross-platform compatibility
+            for match in glob.glob(resolved_pattern, recursive=True):  # noqa: PTH207
+                path = Path(match)
+                if path.is_file() and path.suffix == ".py":
+                    tool_files.append(path)
+
+        return sorted(set(tool_files))
+
+    def _resolve_onetool_relative_path(self, path_str: str) -> Path:
+        """Resolve a path relative to the .onetool directory.
+
+        Handles:
+        - Absolute paths: returned as-is
+        - ~ expansion: expanded to home directory
+        - Relative paths: resolved relative to .onetool/ directory (parent of config/)
+
+        Note: Does NOT expand ${VAR} - use ~/path instead of ${HOME}/path.
+
+        Args:
+            path_str: Path string to resolve
+
+        Returns:
+            Resolved absolute Path
+        """
+        from ot.paths import get_global_dir
+
+        # Only expand ~ (no ${VAR} expansion)
+        path = Path(path_str).expanduser()
+
+        # If absolute after expansion, use as-is
+        if path.is_absolute():
+            return path
+
+        # Resolve relative to .onetool/ directory (parent of config/)
+        if self._config_dir is not None:
+            # _config_dir is the config/ subdirectory, go up to .onetool/
+            onetool_dir = self._config_dir.parent
+            return (onetool_dir / path).resolve()
+
+        # Fallback: resolve relative to global .onetool/
+        return (get_global_dir() / path).resolve()
+
+    def get_secrets_file_path(self) -> Path:
+        """Get the resolved path to the secrets configuration file.
+
+        Path is resolved relative to .onetool/ directory.
+
+        Returns:
+            Absolute Path to secrets file
+        """
+        return self._resolve_onetool_relative_path(self.secrets_file)
+
+    def get_log_dir_path(self) -> Path:
+        """Get the resolved path to the log directory.
+
+        Path is resolved relative to the .onetool/ directory.
+
+        Returns:
+            Absolute Path to log directory
+        """
+        return self._resolve_onetool_relative_path(self.log_dir)
+
+    def get_stats_dir_path(self) -> Path:
+        """Get the resolved path to the stats directory.
+
+        Path is resolved relative to the .onetool/ directory.
+
+        Returns:
+            Absolute Path to stats directory
+        """
+        return self._resolve_onetool_relative_path(self.stats.persist_dir)
+
+    def get_stats_file_path(self) -> Path:
+        """Get the resolved path to the stats JSONL file.
+
+        Stats file is stored in the stats directory.
+
+        Returns:
+            Absolute Path to stats file
+        """
+        return self.get_stats_dir_path() / self.stats.persist_path
+
+    def get_result_store_path(self) -> Path:
+        """Get the resolved path to the result store directory.
+
+        Path is resolved relative to the .onetool/ directory.
+
+        Returns:
+            Absolute Path to result store directory
+        """
+        return self._resolve_onetool_relative_path(self.output.result_store_dir)

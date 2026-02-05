@@ -150,6 +150,11 @@ Keep the king. Stop the tax.
 
 Download and install it, and give your agentic engineering the boost it needs.
 
+🧿 One MCP for developers - No tool tax, no context rot. 
+100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.
+
+--- 
+
 <a href="/learn/" class="btn btn--primary">Get Started with OneTool</a>
 
 <a href="https://github.com/beycom/onetool-mcp" class="btn btn--secondary">OneTool on GitHub</a>
@@ -182,18 +187,3 @@ Download and install it, and give your agentic engineering the boost it needs.
 - [chrome-devtools-mcp](https://github.com/chromedevtools/chrome-devtools-mcp)
 - [context7](https://github.com/upstash/context7)
 - [github-mcp-server](https://github.com/github/github-mcp-server)
-
-### OneTool documentation (internal)
-
-- [Comparison](../learn/comparison.md)
-- [Tools index](../reference/tools/index.md)
-- [LLM-powered transformation (Smart Tools)](../reference/tools/llm.md)
-- [Configuration](../learn/configuration.md)
-- [Extension tools (logging with logspan)](../learn/extending/extension-tools.md#logging-with-logspan)
-- [Runtime statistics (ot.stats)](../reference/tools/ot.md#otstats)
-- [Secrets configuration](../reference/cli/onetool-config.md#secrets-configuration)
-- [Security](../learn/security.md)
-- [Path boundary enforcement](../learn/security.md#6-path-boundary-enforcement)
-- [Output sanitisation / prompt injection protection](../learn/security.md#9-output-sanitization-prompt-injection-protection)
-- [External MCP servers](../reference/cli/onetool-config.md#external-mcp-servers)
-- [Testing and benchmarking](../reference/cli/bench.md)

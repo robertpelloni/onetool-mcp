@@ -200,7 +200,8 @@ class TestSanitizeMagicVariable:
         from pathlib import Path
         from unittest.mock import patch
 
-        from ot.config.loader import OneToolConfig, OutputSanitizationConfig, SecurityConfig
+        from ot.config.loader import OneToolConfig
+        from ot.config.models import OutputSanitizationConfig, SecurityConfig
         from ot.executor.runner import execute_python_code
         from ot.executor.tool_loader import load_tool_functions
 

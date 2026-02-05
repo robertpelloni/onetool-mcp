@@ -31,3 +31,48 @@ def test_get_config_cached() -> None:
 
     # Should be the same cached instance
     assert config1 is config2
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_auth_config_oauth() -> None:
+    """Verify AuthConfig with OAuth settings."""
+    from ot.config.models import AuthConfig
+
+    config = AuthConfig(type="oauth", scopes=["tools:read", "tools:write"])
+    assert config.type == "oauth"
+    assert config.scopes == ["tools:read", "tools:write"]
+    assert config.token is None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_auth_config_bearer() -> None:
+    """Verify AuthConfig with bearer token."""
+    from ot.config.models import AuthConfig
+
+    config = AuthConfig(type="bearer", token="test-token-123")
+    assert config.type == "bearer"
+    assert config.token == "test-token-123"
+    assert config.scopes == []
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_mcp_server_config_with_auth() -> None:
+    """Verify McpServerConfig includes auth field."""
+    from ot.config.models import AuthConfig, McpServerConfig
+
+    # Server config with OAuth auth
+    config = McpServerConfig(
+        type="http",
+        url="https://api.example.com/mcp",
+        auth=AuthConfig(type="oauth", scopes=["tools:read"]),
+    )
+    assert config.auth is not None
+    assert config.auth.type == "oauth"
+    assert config.auth.scopes == ["tools:read"]
+
+    # Server config with no auth (default)
+    config_no_auth = McpServerConfig(type="http", url="https://api.example.com/mcp")
+    assert config_no_auth.auth is None

@@ -3,6 +3,9 @@
 
 set dotenv-load := true
 
+# Project-local global config base (all versions stored here)
+global_base := justfile_directory() + "/.onetool-global"
+
 # Default: show available commands
 default:
     @just --list --unsorted
@@ -18,9 +21,9 @@ install:
 # Run all quality checks (lint, typecheck, test)
 check: lint typecheck test
 
-# Run the MCP server in development mode
+# Run the MCP server in development mode (uses dev global dir)
 dev *args:
-    uv run onetool {{ args }}
+    OT_GLOBAL_DIR={{ global_base }}/dev uv run onetool {{ args }}
 
 # ============================================================================
 # TESTING
@@ -170,23 +173,29 @@ ot-inspector:
     npx @mcpjam/inspector@latest
 
 # ============================================================================
-# GLOBAL TOOL MANAGEMENT
+# ONETOOL
 # ============================================================================
 
-# Install onetool globally via uv
+# Run onetool (local dev by default)
+#   --v VERSION   use published version (e.g., 1.0.0rc2)
+#   --dir PATH    use custom global directory
+# Example: just ot --v 1.0.0rc2 init validate
+[arg("v", long)]
+[arg("dir", long)]
+ot v="" dir="" *args:
+    OT_GLOBAL_DIR={{ if dir == "" { global_base + "/.onetool" } else { dir } }} \
+        {{ if v == "" { "uv run onetool" } else { "uvx --from onetool-mcp==" + v + " onetool" } }} \
+        {{ args }}
+
+# Install as global uv tool
 ot-install:
     uv tool install . -v
 
-# Install onetool globally via uv
-ot-install-dev:
-    uv tool install . -e -v
-
-
-# Uninstall global onetool
+# Uninstall global uv tool
 ot-uninstall:
     uv tool uninstall onetool-mcp || true
 
-# List installed uv tools
+# List global uv tools
 ot-list:
     uv tool list
 

@@ -115,11 +115,13 @@ class TestConfigVariableExpansion:
     """Test variable expansion in config values."""
 
     def test_variable_with_default(self) -> None:
-        """${VAR:-default} uses default when variable not set."""
+        """${VAR:-default} not expanded during load - happens at runtime."""
         from ot.config.loader import load_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "test-config.yaml"
+            config_dir = Path(tmpdir) / ".onetool" / "config"
+            config_dir.mkdir(parents=True)
+            config_path = config_dir / "onetool.yaml"
             config_path.write_text(
                 yaml.dump(
                     {
@@ -129,15 +131,19 @@ class TestConfigVariableExpansion:
                 )
             )
 
+            # Config loads successfully - no expansion during load
             config = load_config(config_path)
-            assert config.secrets_file == "/default/secrets.yaml"
+            # Raw value still has ${VAR}
+            assert "${NONEXISTENT_VAR" in config.secrets_file
 
     def test_missing_variable_error(self) -> None:
-        """${VAR} without default raises error when not defined."""
+        """${VAR} without default is stored as-is during load."""
         from ot.config.loader import load_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = Path(tmpdir) / "test-config.yaml"
+            config_dir = Path(tmpdir) / ".onetool" / "config"
+            config_dir.mkdir(parents=True)
+            config_path = config_dir / "onetool.yaml"
             config_path.write_text(
                 yaml.dump(
                     {
@@ -147,5 +153,7 @@ class TestConfigVariableExpansion:
                 )
             )
 
-            with pytest.raises(ValueError, match=r"Missing variables"):
-                load_config(config_path)
+            # Config loads successfully - expansion happens at runtime, not load time
+            config = load_config(config_path)
+            # Raw value still has ${VAR}
+            assert "${MISSING_VAR}" in config.secrets_file

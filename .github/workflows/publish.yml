@@ -10,6 +10,7 @@ on:
 
 jobs:
   build:
+    if: false  # Temporarily disabled - using manual release workflow
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.1

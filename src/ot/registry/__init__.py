@@ -166,6 +166,16 @@ def get_registry(tools_path: Path | None = None, rescan: bool = False) -> ToolRe
     return _registry
 
 
+def reset() -> None:
+    """Clear registry cache for reload.
+
+    Use this as part of the config reload flow to force registry to be
+    rescanned on next access.
+    """
+    global _registry
+    _registry = None
+
+
 def list_tools() -> str:
     """List all registered tools.
 

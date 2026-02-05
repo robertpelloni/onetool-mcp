@@ -126,4 +126,7 @@ __ot $pkg
 
 ```
 
-That's it. 🧿 One MCP, unlimited tools.
+That's it. 
+
+🧿 One MCP for developers - No tool tax, no context rot. 
+100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.

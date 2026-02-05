@@ -48,7 +48,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ot.config.loader import SecurityConfig
+    from ot.config.models import SecurityConfig
 
 
 @dataclass
@@ -835,3 +835,13 @@ def get_security_summary() -> dict[str, Any]:
         },
         "tool_namespaces": sorted(tool_namespaces),
     }
+
+
+def reset() -> None:
+    """Clear validator caches for reload.
+
+    Use this as part of the config reload flow to force security config
+    and tool namespaces to be reloaded on next access.
+    """
+    _get_security_config.cache_clear()
+    _get_tool_namespaces.cache_clear()

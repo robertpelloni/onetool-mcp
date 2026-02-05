@@ -290,8 +290,26 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
   - Connection status
   - Enabled state
   - URL or command (depending on type)
+  - Resource count (if connected)
+  - Prompt count (if connected)
   - Instructions (if configured)
   - List of tools (if connected)
+
+#### Scenario: Info level resources
+- **GIVEN** `info="resources"` parameter
+- **WHEN** `ot.servers(info="resources")` is called
+- **THEN** each entry SHALL include: `{server, status, resource_count, resources}`
+- **AND** status SHALL be "connected", "disconnected", or "error"
+- **AND** resources SHALL be a list of `{uri, name, description}` dicts if connected
+- **AND** resources SHALL be an empty list if disconnected
+
+#### Scenario: Info level prompts
+- **GIVEN** `info="prompts"` parameter
+- **WHEN** `ot.servers(info="prompts")` is called
+- **THEN** each entry SHALL include: `{server, status, prompt_count, prompts}`
+- **AND** status SHALL be "connected", "disconnected", or "error"
+- **AND** prompts SHALL be a list of `{name, description}` dicts if connected
+- **AND** prompts SHALL be an empty list if disconnected
 
 #### Scenario: Server with instructions
 - **GIVEN** a server has `instructions` configured in servers.yaml
@@ -629,4 +647,81 @@ The `ot.version()` function SHALL return the OneTool version string.
 #### Scenario: Get version
 - **WHEN** `ot.version()` is called
 - **THEN** it SHALL return the version string (e.g., "1.0.0")
+
+---
+
+### Requirement: Debug Information
+
+The `ot.debug()` function SHALL provide comprehensive debug information about the OneTool installation.
+
+#### Scenario: Basic debug information
+- **GIVEN** OneTool is running
+- **WHEN** `ot.debug()` is called
+- **THEN** it SHALL return a dict with sections:
+  - `version`: Package version info
+  - `paths`: Relevant file paths (install, global_dir, cwd, python, config_file, log_dir, stats_file, result_store)
+  - `config`: Configuration summary (version, servers, packs_loaded, aliases, snippets)
+  - `python`: Python environment (version, implementation, platform, executable)
+  - `system`: OS/platform info (platform, machine, user, pid, memory if available)
+  - `runtime`: Runtime state (packs_loaded, tools_local, tools_proxied, servers_configured, servers_connected, servers_disconnected, start_time, uptime_seconds)
+
+#### Scenario: Verbose configuration
+- **GIVEN** `verbose=True` parameter
+- **WHEN** `ot.debug(verbose=True)` is called
+- **THEN** config section SHALL include additional fields:
+  - `includes`: List of included config files
+  - `tools_dir`: Tool directory paths
+  - `stats_enabled`: Statistics collection status
+  - `log_verbose`: Verbose logging status
+
+#### Scenario: Environment variables
+- **GIVEN** `env_vars=True` parameter
+- **WHEN** `ot.debug(env_vars=True)` is called
+- **THEN** it SHALL include an `env` section with:
+  - `OT_GLOBAL_DIR`: Global directory override
+  - `ONETOOL_CONFIG`: Config file override
+  - `OT_CWD`: Working directory override
+
+#### Scenario: Dependency versions
+- **GIVEN** `dependencies=True` parameter
+- **WHEN** `ot.debug(dependencies=True)` is called
+- **THEN** it SHALL include a `dependencies` section with version strings for:
+  - fastmcp
+  - pydantic
+  - pyyaml
+  - loguru
+  - requests
+  - openai
+- **AND** missing packages SHALL show "not installed"
+
+#### Scenario: Module load time tracking
+- **GIVEN** OneTool has been running
+- **WHEN** `ot.debug()` is called
+- **THEN** runtime section SHALL include:
+  - `start_time`: ISO 8601 timestamp of when the module was loaded
+  - `uptime_seconds`: Time since module load in seconds (rounded to 2 decimals)
+
+#### Scenario: Memory usage (optional)
+- **GIVEN** psutil is available
+- **WHEN** `ot.debug()` is called
+- **THEN** system section SHALL include a `memory` subsection with:
+  - `rss_mb`: Resident set size in MB (rounded to 2 decimals)
+  - `vms_mb`: Virtual memory size in MB (rounded to 2 decimals)
+  - `percent`: Memory usage percentage (rounded to 2 decimals)
+
+#### Scenario: Multi-version identification
+- **GIVEN** multiple OneTool versions may be running
+- **WHEN** `ot.debug()` is called
+- **THEN** the output SHALL uniquely identify the version by:
+  - Package version number
+  - Global directory path
+  - Install path
+  - Start time (module load time)
+  - Uptime
+
+#### Scenario: Logging
+- **GIVEN** `ot.debug()` is called
+- **WHEN** LogSpan is created
+- **THEN** span name SHALL be `ot.debug`
+- **AND** span SHALL include `version` attribute from result
 

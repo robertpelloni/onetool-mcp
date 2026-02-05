@@ -246,6 +246,7 @@ def init_validate() -> None:
     """
     from loguru import logger
 
+    from ot import __version__
     from ot.config.loader import get_config, load_config
     from ot.config.secrets import load_secrets
     from ot.executor.tool_loader import load_tool_registry
@@ -280,6 +281,7 @@ def init_validate() -> None:
 
     # Report validation results
     console.print("Configuration\n")
+    console.print(f"Version: [cyan]{__version__}[/cyan]\n")
 
     console.print("Directories:")
     global_exists = global_dir.exists()

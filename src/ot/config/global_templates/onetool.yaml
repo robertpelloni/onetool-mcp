@@ -12,6 +12,8 @@ include:
   - config/security.yaml   # Security allowlists (builtins, imports, calls)
   - config/diagram.yaml    # Diagram tool settings and templates
 
+# Glob patterns for custom tool discovery (relative to ~/.onetool/, or absolute)
+# Example: ["tools/*.py"] loads all Python files in ~/.onetool/tools/
 tools_dir: []
 
 # log_level: INFO

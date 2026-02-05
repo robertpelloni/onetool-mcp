@@ -21,9 +21,12 @@ from __future__ import annotations
 
 import asyncio
 import fnmatch
+import getpass
 import inspect
+import os
+import platform
 import sys
-import time as _time
+import time
 from collections.abc import (
     Callable as _Callable,  # noqa: TC003 - used at runtime in timed()
 )
@@ -42,6 +45,9 @@ from ot.paths import get_global_dir, get_project_dir, resolve_cwd_path
 from ot.proxy import get_proxy_manager
 
 _T = _TypeVar("_T")
+
+# Track when module was first loaded (OneTool start time)
+_MODULE_LOAD_TIME = time.time()
 
 # Alias for cleaner logging calls in this module
 log = LogSpan
@@ -75,6 +81,7 @@ def resolve_ot_path(path: str) -> Path:
 
 # Info level type for discovery functions
 InfoLevel = Literal["list", "min", "full"]
+ServerInfoLevel = Literal["list", "min", "full", "resources", "prompts"]
 
 # Pack name for dot notation: ot.tools(), ot.packs(), etc.
 PACK_NAME = "ot"
@@ -95,6 +102,7 @@ __all__ = [
     "PACK_NAME",
     "aliases",
     "config",
+    "debug",
     "get_ot_pack_functions",
     "health",
     "help",
@@ -121,6 +129,203 @@ def version() -> str:
         ot.version()
     """
     return __version__
+
+
+def _get_version_info() -> dict[str, Any]:
+    """Get version information from package metadata."""
+    return {"version": __version__}
+
+
+def _get_paths_info() -> dict[str, Any]:
+    """Get all relevant path information."""
+    install_path = Path(__file__).parent.parent.resolve()
+    global_dir = get_global_dir()
+    cfg = get_config()
+
+    paths: dict[str, Any] = {
+        "install": str(install_path),
+        "global_dir": str(global_dir),
+        "cwd": str(resolve_cwd_path(".")),
+        "python": sys.executable,
+    }
+
+    if cfg._config_dir:
+        paths["config_file"] = str(cfg._config_dir / "onetool.yaml")
+        paths["config_dir"] = str(cfg._config_dir)
+
+    paths["log_dir"] = str(cfg.get_log_dir_path())
+
+    if cfg.stats.enabled:
+        paths["stats_file"] = str(cfg.get_stats_file_path())
+
+    paths["result_store"] = str(cfg.get_result_store_path())
+
+    return paths
+
+
+def _get_config_info(verbose: bool = False) -> dict[str, Any]:
+    """Get configuration summary."""
+    from ot.executor.tool_loader import load_tool_registry
+
+    cfg = get_config()
+    registry = load_tool_registry()
+
+    info: dict[str, Any] = {
+        "version": cfg.version,
+        "servers": list(cfg.servers.keys()),
+        "packs_loaded": len(registry.packs),
+        "aliases": len(cfg.alias) if cfg.alias else 0,
+        "snippets": len(cfg.snippets) if cfg.snippets else 0,
+    }
+
+    if verbose:
+        info["includes"] = cfg.include
+        info["tools_dir"] = cfg.tools_dir
+        info["stats_enabled"] = cfg.stats.enabled
+        info["log_verbose"] = cfg.log_verbose
+
+    return info
+
+
+def _get_python_info() -> dict[str, Any]:
+    """Get Python environment information."""
+    return {
+        "version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+        "implementation": sys.implementation.name,
+        "platform": sys.platform,
+        "executable": sys.executable,
+    }
+
+
+def _get_system_info() -> dict[str, Any]:
+    """Get OS/system information."""
+    info = {
+        "platform": platform.system(),
+        "machine": platform.machine(),
+        "user": getpass.getuser(),
+        "pid": os.getpid(),
+    }
+
+    # Add memory usage if psutil available
+    try:
+        import psutil  # type: ignore[import-untyped]
+
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        info["memory"] = {
+            "rss_mb": round(mem_info.rss / 1024 / 1024, 2),
+            "vms_mb": round(mem_info.vms / 1024 / 1024, 2),
+            "percent": round(process.memory_percent(), 2),
+        }
+    except ImportError:
+        pass
+
+    return info
+
+
+def _get_runtime_info() -> dict[str, Any]:
+    """Get current runtime state."""
+    from ot.executor.tool_loader import load_tool_registry
+    from ot.executor.worker_proxy import WorkerPackProxy
+    from ot.proxy import get_proxy_manager
+
+    registry = load_tool_registry()
+    proxy = get_proxy_manager()
+    cfg = get_config()
+
+    # Count local tools
+    tool_count = 0
+    for funcs in registry.packs.values():
+        if isinstance(funcs, WorkerPackProxy):
+            tool_count += len(funcs.functions)
+        else:
+            tool_count += len(funcs)
+
+    # Count proxy connections
+    connected = sum(1 for name in cfg.servers if proxy.get_connection(name))
+    disconnected = len(cfg.servers) - connected
+
+    # Timing information
+    current_time = time.time()
+    uptime_seconds = current_time - _MODULE_LOAD_TIME
+    start_time = datetime.fromtimestamp(_MODULE_LOAD_TIME, tz=UTC)
+
+    return {
+        "packs_loaded": len(registry.packs),
+        "tools_local": tool_count,
+        "tools_proxied": proxy.tool_count,
+        "servers_configured": len(cfg.servers),
+        "servers_connected": connected,
+        "servers_disconnected": disconnected,
+        "start_time": start_time.isoformat(),
+        "uptime_seconds": round(uptime_seconds, 2),
+    }
+
+
+def debug(
+    *,
+    verbose: bool = False,
+    env_vars: bool = False,
+    dependencies: bool = False,
+) -> dict[str, Any]:
+    """Get comprehensive debug information about this OneTool installation.
+
+    Essential for multi-version development - clearly identifies which
+    version is running and where it's configured.
+
+    Args:
+        verbose: Include detailed configuration information
+        env_vars: Include relevant environment variables
+        dependencies: Include dependency versions
+
+    Returns:
+        Structured debug information with sections:
+        - version: Package version
+        - paths: All relevant file paths
+        - config: Configuration summary
+        - python: Python environment details
+        - system: OS/platform information
+        - runtime: Current runtime state (packs, servers, tools, timing)
+
+    Example:
+        ot.debug()
+        ot.debug(verbose=True, env_vars=True)
+    """
+    with log(span="ot.debug", verbose=verbose) as s:
+        result: dict[str, Any] = {
+            "version": _get_version_info(),
+            "paths": _get_paths_info(),
+            "config": _get_config_info(verbose=verbose),
+            "python": _get_python_info(),
+            "system": _get_system_info(),
+            "runtime": _get_runtime_info(),
+        }
+
+        if env_vars:
+            # Include relevant environment variables
+            result["env"] = {
+                "OT_GLOBAL_DIR": os.getenv("OT_GLOBAL_DIR"),
+                "ONETOOL_CONFIG": os.getenv("ONETOOL_CONFIG"),
+                "OT_CWD": os.getenv("OT_CWD"),
+            }
+
+        if dependencies:
+            # Include dependency versions
+            from importlib.metadata import PackageNotFoundError
+            from importlib.metadata import version as get_version
+
+            deps = {}
+            for pkg in ["fastmcp", "pydantic", "pyyaml", "loguru", "requests", "openai"]:
+                try:
+                    deps[pkg] = get_version(pkg)
+                except PackageNotFoundError:
+                    deps[pkg] = "not installed"
+            result["dependencies"] = deps
+
+        version_str = result["version"].get("version", "unknown")
+        s.add("version", version_str)
+
+        return result
 
 
 def security(*, check: str = "") -> dict[str, Any]:
@@ -176,9 +381,9 @@ def timed(func: _Callable[..., _T], **kwargs: Any) -> dict[str, Any]:
         ot.timed(brave.search, query="AI news")
         # Returns: {"ms": 234, "result": {...}}
     """
-    start = _time.perf_counter()
+    start = time.perf_counter()
     result = func(**kwargs)
-    elapsed = _time.perf_counter() - start
+    elapsed = time.perf_counter() - start
 
     return {
         "ms": round(elapsed * 1000),
@@ -199,6 +404,7 @@ def get_ot_pack_functions() -> dict[str, Any]:
         "aliases": aliases,
         "snippets": snippets,
         "config": config,
+        "debug": debug,
         "health": health,
         "help": help,
         "result": result,
@@ -472,7 +678,8 @@ def _format_search_results(
         for snippet in snippets_results:
             if isinstance(snippet, str):
                 # For info="min", format is "name: description"
-                lines.append(f"- ${snippet.split(':')[0]}" if ":" not in snippet else f"- ${snippet}")
+                snippet_name = snippet.split(":")[0] if ":" in snippet else snippet
+                lines.append(f"- ${snippet_name}")
             else:
                 lines.append(f"- ${snippet}")
         lines.append("")
@@ -933,7 +1140,7 @@ def packs(
 def servers(
     *,
     pattern: str = "",
-    info: InfoLevel = "min",
+    info: ServerInfoLevel = "min",
 ) -> list[dict[str, Any] | str]:
     """List configured MCP proxy servers with optional filtering.
 
@@ -942,17 +1149,22 @@ def servers(
 
     Args:
         pattern: Filter servers by name pattern (case-insensitive substring)
-        info: Output verbosity level - "list" (names only), "min" (name + status + tool_count),
-              or "full" (detailed info with instructions and tools)
+        info: Output verbosity level:
+            - "list": names only
+            - "min": name + status + tool_count (default)
+            - "full": detailed info with instructions and tools
+            - "resources": list resources per server
+            - "prompts": list prompts per server
 
     Returns:
-        List of server names (info="list") or server dicts/strings (info="min"/"full")
+        List of server names (info="list") or server dicts/strings (info="min"/"full"/"resources"/"prompts")
 
     Example:
         ot.servers()
         ot.servers(pattern="github")
         ot.servers(info="full")
-        ot.servers(pattern="devtools", info="full")
+        ot.servers(info="resources")
+        ot.servers(pattern="devtools", info="prompts")
     """
     proxy = get_proxy_manager()
     cfg = get_config()
@@ -991,6 +1203,25 @@ def servers(
                 elif server_cfg.type == "stdio" and server_cfg.command:
                     cmd = f"{server_cfg.command} {' '.join(server_cfg.args)}"
                     lines.append(f"**Command:** {cmd}")
+
+                # Add resource and prompt counts if connected
+                if conn:
+                    try:
+                        if proxy._loop and proxy._loop.is_running():
+                            future_res = asyncio.run_coroutine_threadsafe(
+                                proxy.list_resources(server_name), proxy._loop
+                            )
+                            future_pmt = asyncio.run_coroutine_threadsafe(
+                                proxy.list_prompts(server_name), proxy._loop
+                            )
+                            resource_count = len(future_res.result(timeout=5))
+                            prompt_count = len(future_pmt.result(timeout=5))
+                            lines.append(f"**Resources:** {resource_count}")
+                            lines.append(f"**Prompts:** {prompt_count}")
+                    except Exception:
+                        # Silently skip if resources/prompts not supported
+                        pass
+
                 lines.append("")
 
                 # Show instructions if configured
@@ -1023,6 +1254,92 @@ def servers(
 
             s.add("count", len(results))
             return results
+
+        # info="resources" - list resources per server
+        if info == "resources":
+            results_resources: list[dict[str, Any] | str] = []
+
+            for server_name in all_server_names:
+                conn = proxy.get_connection(server_name)
+                if not conn:
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "disconnected",
+                        "resources": [],
+                    })
+                    continue
+
+                try:
+                    # Run async list_resources using ProxyManager's event loop
+                    if proxy._loop and proxy._loop.is_running():
+                        future = asyncio.run_coroutine_threadsafe(
+                            proxy.list_resources(server_name),
+                            proxy._loop,
+                        )
+                        resources = future.result(timeout=10)
+                    else:
+                        # No event loop available - server not initialized
+                        resources = []
+
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "connected",
+                        "resource_count": len(resources),
+                        "resources": resources,
+                    })
+                except Exception as e:
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "error",
+                        "error": str(e),
+                        "resources": [],
+                    })
+
+            s.add("count", len(results_resources))
+            return results_resources
+
+        # info="prompts" - list prompts per server
+        if info == "prompts":
+            results_prompts: list[dict[str, Any] | str] = []
+
+            for server_name in all_server_names:
+                conn = proxy.get_connection(server_name)
+                if not conn:
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "disconnected",
+                        "prompts": [],
+                    })
+                    continue
+
+                try:
+                    # Run async list_prompts using ProxyManager's event loop
+                    if proxy._loop and proxy._loop.is_running():
+                        future = asyncio.run_coroutine_threadsafe(
+                            proxy.list_prompts(server_name),
+                            proxy._loop,
+                        )
+                        prompts = future.result(timeout=10)
+                    else:
+                        # No event loop available - server not initialized
+                        prompts = []
+
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "connected",
+                        "prompt_count": len(prompts),
+                        "prompts": prompts,
+                    })
+                except Exception as e:
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "error",
+                        "error": str(e),
+                        "prompts": [],
+                    })
+
+            s.add("count", len(results_prompts))
+            return results_prompts
 
         # info="min" (default) - summary for each server
         servers_list: list[dict[str, Any] | str] = []
@@ -1295,25 +1612,25 @@ def reload() -> str:
     import sys
 
     with log(span="ot.reload") as s:
-        import ot.config.loader
-        import ot.config.secrets
+        # Import modules
+        import ot.config
         import ot.executor.param_resolver
         import ot.executor.tool_loader
+        import ot.executor.validator
         import ot.prompts
         import ot.proxy
         import ot.registry
 
-        # Clear config cache (must be first - other caches depend on it)
-        ot.config.loader._config = None
+        # Clear in dependency order (config first, others depend on it)
+        ot.config.reset()  # Clears both config and secrets
+        ot.prompts.reset()
+        ot.registry.reset()
+        ot.executor.tool_loader.reset()
+        ot.executor.validator.reset()
 
-        # Clear secrets cache
-        ot.config.secrets._secrets = None
-
-        # Clear prompts cache
-        ot.prompts._prompts = None
-
-        # Clear tool loader module cache
-        ot.executor.tool_loader._module_cache.clear()
+        # Clear param resolver cache
+        ot.executor.param_resolver.get_tool_param_names.cache_clear()
+        ot.executor.param_resolver._mcp_param_cache.clear()
 
         # Clean up dynamically loaded tool modules from sys.modules
         # Tool loader uses "tools.{stem}" naming pattern
@@ -1321,18 +1638,6 @@ def reload() -> str:
         for mod_name in tool_modules:
             del sys.modules[mod_name]
         s.add("toolModulesCleared", len(tool_modules))
-
-        # Clear tool registry cache (will rescan on next access)
-        ot.registry._registry = None
-
-        # Clear param resolver cache (depends on registry)
-        ot.executor.param_resolver.get_tool_param_names.cache_clear()
-        ot.executor.param_resolver._mcp_param_cache.clear()
-
-        # Clear security validator caches (depends on config and registry)
-        import ot.executor.validator
-        ot.executor.validator._get_tool_namespaces.cache_clear()
-        ot.executor.validator._get_security_config.cache_clear()
 
         # Reload config to validate and report stats
         cfg = get_config()

@@ -229,7 +229,11 @@ if not api_key:
 
 ## External MCP Servers
 
-Proxy external MCP servers through OneTool:
+Proxy external MCP servers through OneTool. Supports both stdio (local process) and HTTP (remote server) transports.
+
+### Stdio Servers
+
+Local MCP servers running as subprocesses:
 
 ```yaml
 servers:
@@ -244,6 +248,45 @@ servers:
     command: npx
     args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]
 ```
+
+### HTTP Servers
+
+Remote MCP servers accessed via HTTP/HTTPS:
+
+```yaml
+servers:
+  # HTTP server without authentication
+  local_dev:
+    type: http
+    url: https://localhost:3000/mcp
+    timeout: 30
+
+  # HTTP server with Bearer token authentication
+  github:
+    type: http
+    url: https://api.githubcopilot.com/mcp/
+    auth:
+      type: bearer
+      token: ${GITHUB_TOKEN}  # Expands from secrets.yaml
+    headers:
+      Accept: "application/json, text/event-stream"
+    timeout: 120
+
+  # HTTP server with OAuth 2.1 + PKCE
+  context7:
+    type: http
+    url: https://mcp.context7.com/mcp
+    auth:
+      type: oauth
+      scopes: [tools:read, tools:write]
+    timeout: 60
+```
+
+**Authentication Types:**
+
+- **None (default)**: No authentication required
+- **bearer**: Static token authentication (use `${VAR}` for secrets)
+- **oauth**: OAuth 2.1 with PKCE flow (browser-based authorization)
 
 ## Aliases
 

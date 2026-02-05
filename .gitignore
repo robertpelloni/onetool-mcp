@@ -98,6 +98,7 @@ scratch/
 diagrams/
 msg/
 plan/
+wip/
 
 # Demo: downloadable assets (see demo/README.md)
 demo/db/northwind.db
