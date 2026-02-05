@@ -3,7 +3,7 @@
   "name": "io.github.beycom/onetool-mcp",
   "version": "dev",
   "title": "OneTool MCP",
-  "description": "🧿One MCP, unlimited tools. Execute Python code with access to curated tool packs.",
+  "description": "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.",
   "repository": {
     "url": "https://github.com/beycom/onetool-mcp",
     "source": "github"
