@@ -81,6 +81,7 @@ def resolve_ot_path(path: str) -> Path:
 
 # Info level type for discovery functions
 InfoLevel = Literal["list", "min", "full"]
+ServerInfoLevel = Literal["list", "min", "full", "resources", "prompts"]
 
 # Pack name for dot notation: ot.tools(), ot.packs(), etc.
 PACK_NAME = "ot"
@@ -1139,7 +1140,7 @@ def packs(
 def servers(
     *,
     pattern: str = "",
-    info: InfoLevel = "min",
+    info: ServerInfoLevel = "min",
 ) -> list[dict[str, Any] | str]:
     """List configured MCP proxy servers with optional filtering.
 
@@ -1148,17 +1149,22 @@ def servers(
 
     Args:
         pattern: Filter servers by name pattern (case-insensitive substring)
-        info: Output verbosity level - "list" (names only), "min" (name + status + tool_count),
-              or "full" (detailed info with instructions and tools)
+        info: Output verbosity level:
+            - "list": names only
+            - "min": name + status + tool_count (default)
+            - "full": detailed info with instructions and tools
+            - "resources": list resources per server
+            - "prompts": list prompts per server
 
     Returns:
-        List of server names (info="list") or server dicts/strings (info="min"/"full")
+        List of server names (info="list") or server dicts/strings (info="min"/"full"/"resources"/"prompts")
 
     Example:
         ot.servers()
         ot.servers(pattern="github")
         ot.servers(info="full")
-        ot.servers(pattern="devtools", info="full")
+        ot.servers(info="resources")
+        ot.servers(pattern="devtools", info="prompts")
     """
     proxy = get_proxy_manager()
     cfg = get_config()
@@ -1197,6 +1203,25 @@ def servers(
                 elif server_cfg.type == "stdio" and server_cfg.command:
                     cmd = f"{server_cfg.command} {' '.join(server_cfg.args)}"
                     lines.append(f"**Command:** {cmd}")
+
+                # Add resource and prompt counts if connected
+                if conn:
+                    try:
+                        if proxy._loop and proxy._loop.is_running():
+                            future_res = asyncio.run_coroutine_threadsafe(
+                                proxy.list_resources(server_name), proxy._loop
+                            )
+                            future_pmt = asyncio.run_coroutine_threadsafe(
+                                proxy.list_prompts(server_name), proxy._loop
+                            )
+                            resource_count = len(future_res.result(timeout=5))
+                            prompt_count = len(future_pmt.result(timeout=5))
+                            lines.append(f"**Resources:** {resource_count}")
+                            lines.append(f"**Prompts:** {prompt_count}")
+                    except Exception:
+                        # Silently skip if resources/prompts not supported
+                        pass
+
                 lines.append("")
 
                 # Show instructions if configured
@@ -1229,6 +1254,92 @@ def servers(
 
             s.add("count", len(results))
             return results
+
+        # info="resources" - list resources per server
+        if info == "resources":
+            results_resources: list[dict[str, Any] | str] = []
+
+            for server_name in all_server_names:
+                conn = proxy.get_connection(server_name)
+                if not conn:
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "disconnected",
+                        "resources": [],
+                    })
+                    continue
+
+                try:
+                    # Run async list_resources using ProxyManager's event loop
+                    if proxy._loop and proxy._loop.is_running():
+                        future = asyncio.run_coroutine_threadsafe(
+                            proxy.list_resources(server_name),
+                            proxy._loop,
+                        )
+                        resources = future.result(timeout=10)
+                    else:
+                        # No event loop available - server not initialized
+                        resources = []
+
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "connected",
+                        "resource_count": len(resources),
+                        "resources": resources,
+                    })
+                except Exception as e:
+                    results_resources.append({
+                        "server": server_name,
+                        "status": "error",
+                        "error": str(e),
+                        "resources": [],
+                    })
+
+            s.add("count", len(results_resources))
+            return results_resources
+
+        # info="prompts" - list prompts per server
+        if info == "prompts":
+            results_prompts: list[dict[str, Any] | str] = []
+
+            for server_name in all_server_names:
+                conn = proxy.get_connection(server_name)
+                if not conn:
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "disconnected",
+                        "prompts": [],
+                    })
+                    continue
+
+                try:
+                    # Run async list_prompts using ProxyManager's event loop
+                    if proxy._loop and proxy._loop.is_running():
+                        future = asyncio.run_coroutine_threadsafe(
+                            proxy.list_prompts(server_name),
+                            proxy._loop,
+                        )
+                        prompts = future.result(timeout=10)
+                    else:
+                        # No event loop available - server not initialized
+                        prompts = []
+
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "connected",
+                        "prompt_count": len(prompts),
+                        "prompts": prompts,
+                    })
+                except Exception as e:
+                    results_prompts.append({
+                        "server": server_name,
+                        "status": "error",
+                        "error": str(e),
+                        "prompts": [],
+                    })
+
+            s.add("count", len(results_prompts))
+            return results_prompts
 
         # info="min" (default) - summary for each server
         servers_list: list[dict[str, Any] | str] = []

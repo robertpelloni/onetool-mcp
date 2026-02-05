@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from fastmcp import Client
+from fastmcp.client.auth import BearerAuth, OAuth
 from fastmcp.client.transports import StdioTransport, StreamableHttpTransport
 from loguru import logger
 from mcp import types
@@ -193,6 +194,124 @@ class ProxyManager:
         )
         return future.result(timeout=timeout + 5)
 
+    async def list_resources(self, server: str) -> list[dict[str, Any]]:
+        """List resources from a proxied MCP server.
+
+        Args:
+            server: Name of the server.
+
+        Returns:
+            List of resource metadata dicts. Empty list if server doesn't support resources.
+
+        Raises:
+            ValueError: If server is not connected.
+        """
+        client = self._clients.get(server)
+        if not client:
+            raise ValueError(f"Server '{server}' not connected")
+
+        try:
+            resources = await client.list_resources()
+            return [{"uri": r.uri, "name": r.name, "description": r.description or ""} for r in resources]
+        except (AttributeError, NotImplementedError):
+            # Server doesn't support resources
+            return []
+        except Exception as e:
+            # Check if error indicates unsupported feature
+            error_msg = str(e).lower()
+            if any(x in error_msg for x in ["not found", "not supported", "not implemented"]):
+                return []
+            raise
+
+    async def read_resource(self, server: str, uri: str) -> str:
+        """Read a resource from a proxied MCP server.
+
+        Args:
+            server: Name of the server.
+            uri: Resource URI to read.
+
+        Returns:
+            Resource content as text.
+
+        Raises:
+            ValueError: If server is not connected.
+        """
+        client = self._clients.get(server)
+        if not client:
+            raise ValueError(f"Server '{server}' not connected")
+
+        result = await client.read_resource(uri)
+        # Extract text from resource contents (ReadResourceResult.contents)
+        text_parts = []
+        for content in result.contents:  # type: ignore[attr-defined]
+            if hasattr(content, "text"):
+                text_parts.append(content.text)
+        return "\n".join(text_parts) if text_parts else ""
+
+    async def list_prompts(self, server: str) -> list[dict[str, Any]]:
+        """List prompts from a proxied MCP server.
+
+        Args:
+            server: Name of the server.
+
+        Returns:
+            List of prompt metadata dicts. Empty list if server doesn't support prompts.
+
+        Raises:
+            ValueError: If server is not connected.
+        """
+        client = self._clients.get(server)
+        if not client:
+            raise ValueError(f"Server '{server}' not connected")
+
+        try:
+            prompts = await client.list_prompts()
+            return [{"name": p.name, "description": p.description or ""} for p in prompts]
+        except (AttributeError, NotImplementedError):
+            # Server doesn't support prompts
+            return []
+        except Exception as e:
+            # Check if error indicates unsupported feature
+            error_msg = str(e).lower()
+            if any(x in error_msg for x in ["not found", "not supported", "not implemented"]):
+                return []
+            raise
+
+    async def get_prompt(self, server: str, name: str, arguments: dict[str, Any] | None = None) -> str:
+        """Get a rendered prompt from a proxied MCP server.
+
+        Args:
+            server: Name of the server.
+            name: Prompt name.
+            arguments: Optional arguments for the prompt.
+
+        Returns:
+            Rendered prompt content as text.
+
+        Raises:
+            ValueError: If server is not connected.
+        """
+        client = self._clients.get(server)
+        if not client:
+            raise ValueError(f"Server '{server}' not connected")
+
+        result = await client.get_prompt(name, arguments or {})
+        # Extract text from prompt messages
+        text_parts = []
+        for message in result.messages:
+            if hasattr(message, "content"):
+                content = message.content
+                if isinstance(content, str):
+                    text_parts.append(content)
+                elif isinstance(content, list):
+                    # Content is a list of content parts
+                    for part in content:
+                        if hasattr(part, "text"):
+                            text_parts.append(part.text)
+                elif hasattr(content, "text"):
+                    text_parts.append(content.text)
+        return "\n".join(text_parts) if text_parts else ""
+
     async def connect(self, configs: dict[str, McpServerConfig]) -> None:
         """Connect to all enabled MCP servers.
 
@@ -288,7 +407,22 @@ class ProxyManager:
             else:
                 headers[key] = value
 
-        transport = StreamableHttpTransport(url=url, headers=headers if headers else None)
+        # Configure authentication
+        auth: OAuth | BearerAuth | None = None
+        if config.auth:
+            if config.auth.type == "oauth":
+                auth = OAuth(
+                    mcp_url=url,
+                    scopes=config.auth.scopes or [],
+                    client_name="OneTool",
+                )
+                logger.debug(f"Configured OAuth for {name} with scopes: {config.auth.scopes}")
+            else:  # bearer
+                token = expand_vars(config.auth.token) if config.auth.token else ""
+                auth = BearerAuth(token)
+                logger.debug(f"Configured bearer auth for {name}")
+
+        transport = StreamableHttpTransport(url=url, headers=headers if headers else None, auth=auth)
         return Client(transport, timeout=float(config.timeout))
 
     def _create_stdio_client(self, name: str, config: McpServerConfig) -> Client:  # type: ignore[type-arg]

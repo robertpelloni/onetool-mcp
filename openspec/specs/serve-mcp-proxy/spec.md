@@ -209,3 +209,74 @@ The system SHALL support per-server instructions for guiding agent usage.
 - **WHEN** the server is enabled
 - **THEN** it SHALL function normally without instructions
 - **AND** no placeholder instructions SHALL be generated
+
+### Requirement: Resources Proxying
+
+The system SHALL support listing and reading resources from proxied MCP servers.
+
+#### Scenario: List resources from server
+- **GIVEN** code `proxy.list_resources(server="context7")`
+- **WHEN** run() executes it
+- **THEN** it SHALL return a list of resource metadata dicts with:
+  - `uri`: Resource URI
+  - `name`: Resource name
+  - `description`: Resource description
+
+#### Scenario: Read resource content
+- **GIVEN** code `proxy.read_resource(server="context7", uri="file:///docs/api.md")`
+- **WHEN** run() executes it
+- **THEN** it SHALL return the resource content as text
+
+#### Scenario: List resources for disconnected server
+- **GIVEN** server is not connected
+- **WHEN** `proxy.list_resources(server="disconnected")` is called
+- **THEN** it SHALL raise ValueError with message "Server 'disconnected' not connected"
+
+#### Scenario: Resources in ot.servers() output
+- **GIVEN** code `ot.servers(info="resources")`
+- **WHEN** run() executes it
+- **THEN** it SHALL return a list with:
+  - `server`: Server name
+  - `status`: "connected", "disconnected", or "error"
+  - `resource_count`: Number of resources (if connected)
+  - `resources`: List of resource metadata (if connected)
+
+#### Scenario: Resource count in full server info
+- **GIVEN** code `ot.servers(info="full")`
+- **WHEN** run() executes it for a connected server
+- **THEN** it SHALL include `Resources: N` in the output
+
+### Requirement: Prompts Proxying
+
+The system SHALL support listing and getting prompts from proxied MCP servers.
+
+#### Scenario: List prompts from server
+- **GIVEN** code `proxy.list_prompts(server="github")`
+- **WHEN** run() executes it
+- **THEN** it SHALL return a list of prompt metadata dicts with:
+  - `name`: Prompt name
+  - `description`: Prompt description
+
+#### Scenario: Get rendered prompt
+- **GIVEN** code `proxy.get_prompt(server="github", name="summarize", arguments={"text": "..."})`
+- **WHEN** run() executes it
+- **THEN** it SHALL return the rendered prompt content as text
+
+#### Scenario: List prompts for disconnected server
+- **GIVEN** server is not connected
+- **WHEN** `proxy.list_prompts(server="disconnected")` is called
+- **THEN** it SHALL raise ValueError with message "Server 'disconnected' not connected"
+
+#### Scenario: Prompts in ot.servers() output
+- **GIVEN** code `ot.servers(info="prompts")`
+- **WHEN** run() executes it
+- **THEN** it SHALL return a list with:
+  - `server`: Server name
+  - `status`: "connected", "disconnected", or "error"
+  - `prompt_count`: Number of prompts (if connected)
+  - `prompts`: List of prompt metadata (if connected)
+
+#### Scenario: Prompt count in full server info
+- **GIVEN** code `ot.servers(info="full")`
+- **WHEN** run() executes it for a connected server
+- **THEN** it SHALL include `Prompts: N` in the output

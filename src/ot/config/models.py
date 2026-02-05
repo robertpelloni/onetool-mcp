@@ -434,6 +434,22 @@ class MsgConfig(BaseModel):
 # ==================== MCP Server Configuration ====================
 
 
+class AuthConfig(BaseModel):
+    """Authentication configuration for MCP servers."""
+
+    type: Literal["oauth", "bearer"] = Field(
+        description="Authentication type",
+    )
+    scopes: list[str] = Field(
+        default_factory=list,
+        description="OAuth scopes (for type=oauth)",
+    )
+    token: str | None = Field(
+        default=None,
+        description="Bearer token (for type=bearer, supports ${VAR} expansion)",
+    )
+
+
 class McpServerConfig(BaseModel):
     """Configuration for an MCP server connection.
 
@@ -455,6 +471,10 @@ class McpServerConfig(BaseModel):
         default_factory=dict, description="Environment variables for stdio servers"
     )
     timeout: int = Field(default=30, description="Connection timeout in seconds")
+    auth: AuthConfig | None = Field(
+        default=None,
+        description="Authentication configuration for HTTP servers",
+    )
     instructions: str | None = Field(
         default=None,
         description="Agent instructions for using this server's tools (surfaced in MCP instructions)",

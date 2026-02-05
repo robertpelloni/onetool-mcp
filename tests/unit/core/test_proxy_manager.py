@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -179,3 +179,246 @@ class TestGlobalProxyManager:
         manager2 = get_proxy_manager()
 
         assert manager1 is not manager2
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestProxyManagerAuth:
+    """Tests for HTTP client authentication."""
+
+    @patch("ot.proxy.manager.StreamableHttpTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_http_client_no_auth(
+        self, mock_client: MagicMock, mock_transport: MagicMock
+    ) -> None:
+        """Should create HTTP client without auth when not configured."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="http",
+            url="https://api.example.com/mcp",
+        )
+
+        manager._create_http_client("test", config)
+
+        # Verify transport created with no auth
+        mock_transport.assert_called_once()
+        call_kwargs = mock_transport.call_args[1]
+        assert call_kwargs["auth"] is None
+
+    @patch("ot.proxy.manager.OAuth")
+    @patch("ot.proxy.manager.StreamableHttpTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_http_client_oauth(
+        self,
+        mock_client: MagicMock,
+        mock_transport: MagicMock,
+        mock_oauth: MagicMock,
+    ) -> None:
+        """Should create HTTP client with OAuth when configured."""
+        from ot.config.models import AuthConfig, McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="http",
+            url="https://api.example.com/mcp",
+            auth=AuthConfig(type="oauth", scopes=["tools:read", "tools:write"]),
+        )
+
+        manager._create_http_client("test", config)
+
+        # Verify OAuth created with correct params
+        mock_oauth.assert_called_once_with(
+            mcp_url="https://api.example.com/mcp",
+            scopes=["tools:read", "tools:write"],
+            client_name="OneTool",
+        )
+
+        # Verify transport created with OAuth
+        mock_transport.assert_called_once()
+        call_kwargs = mock_transport.call_args[1]
+        assert call_kwargs["auth"] == mock_oauth.return_value
+
+    @patch("ot.proxy.manager.BearerAuth")
+    @patch("ot.proxy.manager.StreamableHttpTransport")
+    @patch("ot.proxy.manager.Client")
+    @patch("ot.proxy.manager.expand_vars")
+    def test_http_client_bearer(
+        self,
+        mock_expand: MagicMock,
+        mock_client: MagicMock,
+        mock_transport: MagicMock,
+        mock_bearer: MagicMock,
+    ) -> None:
+        """Should create HTTP client with Bearer auth when configured."""
+        from ot.config.models import AuthConfig, McpServerConfig
+
+        mock_expand.return_value = "expanded-token-123"
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="http",
+            url="https://api.example.com/mcp",
+            auth=AuthConfig(type="bearer", token="${GITHUB_TOKEN}"),
+        )
+
+        manager._create_http_client("test", config)
+
+        # Verify token expansion
+        mock_expand.assert_called_once_with("${GITHUB_TOKEN}")
+
+        # Verify BearerAuth created with expanded token
+        mock_bearer.assert_called_once_with("expanded-token-123")
+
+        # Verify transport created with BearerAuth
+        mock_transport.assert_called_once()
+        call_kwargs = mock_transport.call_args[1]
+        assert call_kwargs["auth"] == mock_bearer.return_value
+
+    @patch("ot.proxy.manager.StreamableHttpTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_http_url_upgrade_to_https(
+        self, mock_client: MagicMock, mock_transport: MagicMock
+    ) -> None:
+        """Should upgrade http:// to https:// automatically."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="http",
+            url="http://api.example.com/mcp",
+        )
+
+        manager._create_http_client("test", config)
+
+        # Verify URL was upgraded to HTTPS
+        mock_transport.assert_called_once()
+        call_kwargs = mock_transport.call_args[1]
+        assert call_kwargs["url"] == "https://api.example.com/mcp"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestProxyManagerResources:
+    """Tests for resource methods."""
+
+    @pytest.mark.asyncio
+    async def test_list_resources_no_connection(self) -> None:
+        """Should raise ValueError when server not connected."""
+        manager = ProxyManager()
+
+        with pytest.raises(ValueError, match="not connected"):
+            await manager.list_resources("unknown")
+
+    @pytest.mark.asyncio
+    async def test_list_resources_success(self) -> None:
+        """Should list resources from connected server."""
+        manager = ProxyManager()
+
+        # Mock client with list_resources method
+        mock_client = MagicMock()
+        mock_resource = MagicMock()
+        mock_resource.uri = "file:///test.txt"
+        mock_resource.name = "Test File"
+        mock_resource.description = "A test file"
+        mock_client.list_resources = AsyncMock(return_value=[mock_resource])
+
+        manager._clients = {"test_server": mock_client}
+
+        resources = await manager.list_resources("test_server")
+
+        assert len(resources) == 1
+        assert resources[0]["uri"] == "file:///test.txt"
+        assert resources[0]["name"] == "Test File"
+        assert resources[0]["description"] == "A test file"
+
+    @pytest.mark.asyncio
+    async def test_read_resource_no_connection(self) -> None:
+        """Should raise ValueError when server not connected."""
+        manager = ProxyManager()
+
+        with pytest.raises(ValueError, match="not connected"):
+            await manager.read_resource("unknown", "file:///test.txt")
+
+    @pytest.mark.asyncio
+    async def test_read_resource_success(self) -> None:
+        """Should read resource content from connected server."""
+        manager = ProxyManager()
+
+        # Mock client with read_resource method
+        mock_client = MagicMock()
+        mock_content = MagicMock()
+        mock_content.text = "Resource content"
+
+        # Mock ReadResourceResult with contents attribute
+        mock_result = MagicMock()
+        mock_result.contents = [mock_content]
+        mock_client.read_resource = AsyncMock(return_value=mock_result)
+
+        manager._clients = {"test_server": mock_client}
+
+        content = await manager.read_resource("test_server", "file:///test.txt")
+
+        assert content == "Resource content"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestProxyManagerPrompts:
+    """Tests for prompt methods."""
+
+    @pytest.mark.asyncio
+    async def test_list_prompts_no_connection(self) -> None:
+        """Should raise ValueError when server not connected."""
+        manager = ProxyManager()
+
+        with pytest.raises(ValueError, match="not connected"):
+            await manager.list_prompts("unknown")
+
+    @pytest.mark.asyncio
+    async def test_list_prompts_success(self) -> None:
+        """Should list prompts from connected server."""
+        manager = ProxyManager()
+
+        # Mock client with list_prompts method
+        mock_client = MagicMock()
+        mock_prompt = MagicMock()
+        mock_prompt.name = "summarize"
+        mock_prompt.description = "Summarize text"
+        mock_client.list_prompts = AsyncMock(return_value=[mock_prompt])
+
+        manager._clients = {"test_server": mock_client}
+
+        prompts = await manager.list_prompts("test_server")
+
+        assert len(prompts) == 1
+        assert prompts[0]["name"] == "summarize"
+        assert prompts[0]["description"] == "Summarize text"
+
+    @pytest.mark.asyncio
+    async def test_get_prompt_no_connection(self) -> None:
+        """Should raise ValueError when server not connected."""
+        manager = ProxyManager()
+
+        with pytest.raises(ValueError, match="not connected"):
+            await manager.get_prompt("unknown", "summarize")
+
+    @pytest.mark.asyncio
+    async def test_get_prompt_success(self) -> None:
+        """Should get rendered prompt from connected server."""
+        manager = ProxyManager()
+
+        # Mock client with get_prompt method
+        mock_client = MagicMock()
+        mock_message = MagicMock()
+        mock_message.content = "Summarize this text"
+        mock_result = MagicMock()
+        mock_result.messages = [mock_message]
+        mock_client.get_prompt = AsyncMock(return_value=mock_result)
+
+        manager._clients = {"test_server": mock_client}
+
+        content = await manager.get_prompt("test_server", "summarize", {"text": "test"})
+
+        assert content == "Summarize this text"

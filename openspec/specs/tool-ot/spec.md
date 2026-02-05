@@ -290,8 +290,26 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
   - Connection status
   - Enabled state
   - URL or command (depending on type)
+  - Resource count (if connected)
+  - Prompt count (if connected)
   - Instructions (if configured)
   - List of tools (if connected)
+
+#### Scenario: Info level resources
+- **GIVEN** `info="resources"` parameter
+- **WHEN** `ot.servers(info="resources")` is called
+- **THEN** each entry SHALL include: `{server, status, resource_count, resources}`
+- **AND** status SHALL be "connected", "disconnected", or "error"
+- **AND** resources SHALL be a list of `{uri, name, description}` dicts if connected
+- **AND** resources SHALL be an empty list if disconnected
+
+#### Scenario: Info level prompts
+- **GIVEN** `info="prompts"` parameter
+- **WHEN** `ot.servers(info="prompts")` is called
+- **THEN** each entry SHALL include: `{server, status, prompt_count, prompts}`
+- **AND** status SHALL be "connected", "disconnected", or "error"
+- **AND** prompts SHALL be a list of `{name, description}` dicts if connected
+- **AND** prompts SHALL be an empty list if disconnected
 
 #### Scenario: Server with instructions
 - **GIVEN** a server has `instructions` configured in servers.yaml

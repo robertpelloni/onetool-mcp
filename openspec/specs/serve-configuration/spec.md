@@ -287,6 +287,50 @@ The system SHALL support configuration for proxying external MCP servers.
 - **THEN** it SHALL expand `${VAR}` in headers using secrets.yaml values
 - **AND** error if variable not found in secrets
 
+#### Scenario: OAuth authentication for HTTP server
+- **GIVEN** configuration with:
+  ```yaml
+  servers:
+    context7:
+      type: http
+      url: https://mcp.context7.com/mcp
+      auth:
+        type: oauth
+        scopes: [tools:read, tools:write]
+  ```
+- **WHEN** the server starts
+- **THEN** it SHALL initiate OAuth 2.1 + PKCE flow with browser authorization
+- **AND** automatically refresh tokens when expired
+- **AND** store tokens in-memory by default
+
+#### Scenario: Bearer token authentication for HTTP server
+- **GIVEN** configuration with:
+  ```yaml
+  servers:
+    github:
+      type: http
+      url: https://api.githubcopilot.com/mcp/
+      auth:
+        type: bearer
+        token: ${GITHUB_TOKEN}
+  ```
+- **WHEN** the server starts
+- **THEN** it SHALL expand `${VAR}` in token using secrets.yaml values
+- **AND** use the token for Bearer authentication
+- **AND** error if variable not found in secrets
+
+#### Scenario: No authentication (default)
+- **GIVEN** configuration without auth field:
+  ```yaml
+  servers:
+    local:
+      type: http
+      url: https://localhost:3000/mcp
+  ```
+- **WHEN** the server starts
+- **THEN** it SHALL connect without authentication
+- **AND** auth SHALL be None
+
 #### Scenario: Stdio MCP server
 - **GIVEN** configuration with:
   ```yaml
