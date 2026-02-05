@@ -3,7 +3,7 @@
   "name": "io.github.beycom/onetool-mcp",
   "version": "1.0.0rc3",
   "title": "OneTool MCP",
-  "description": "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.",
+  "description": "🧿 One MCP for developers. 100+ tools. Brave, Gemini, Excel, Files, DB, Version Check & DevTools.",
   "repository": {
     "url": "https://github.com/beycom/onetool-mcp",
     "source": "github"

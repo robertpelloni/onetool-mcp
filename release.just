@@ -113,9 +113,13 @@ build:
 pypi:
     uv publish
 
-# Publish to MCP Registry only
+# Publish to MCP Registry only (always authenticates first)
 mcp:
-    mcp-publisher publish
+    @echo "Authenticating with MCP Registry (GitHub device flow)..."
+    @mcp-publisher login github
+    @echo ""
+    @echo "Publishing to MCP Registry..."
+    @mcp-publisher publish
 
 # Deploy docs only
 docs:
