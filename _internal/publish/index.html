@@ -1838,11 +1838,12 @@
 <ul>
 <li>Runs lint, typecheck, and all tests</li>
 <li>Scans for secrets with gitleaks</li>
-<li>Runs <code>/sanity retest=all</code> via <code>claude -p</code> CLI</li>
+<li>Runs <code>/proj:sanity retest all</code> via <code>claude</code> CLI</li>
 </ul>
 <hr />
 <h2 id="step-3-publish">Step 3: Publish<a class="headerlink" href="#step-3-publish" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>just<span class="w"> </span>release::publish<span class="w"> </span><span class="m">1</span>.0.0b2
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>just<span class="w"> </span>release::publish<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w">       </span><span class="c1"># Dry-run (safe, shows what will happen)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>just<span class="w"> </span>release::publish<span class="w"> </span><span class="m">1</span>.0.0b2<span class="w"> </span>--force<span class="w">  </span><span class="c1"># Actually publish</span>
 </span></code></pre></div>
 <p>Prompts before each step:
 1. Build package (<code>uv build</code>)
