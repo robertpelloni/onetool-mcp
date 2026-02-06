@@ -7,6 +7,7 @@ Provides shared utilities for internal tools:
 - HTTP utilities: safe_request, api_headers, check_api_key
 - Dependencies: check_cli, check_lib, ensure_cli, ensure_lib
 - Factory: lazy_client, LazyClient
+- Path security: validate_path, is_path_excluded
 
 Extension tools (user-created in .onetool/tools/) can import directly from
 ot.* modules for logging, config, and inter-tool calling.
@@ -30,6 +31,7 @@ from ot.utils.exceptions import flatten_exception_group
 from ot.utils.factory import LazyClient, lazy_client
 from ot.utils.format import serialize_result
 from ot.utils.http import api_headers, check_api_key, safe_request
+from ot.utils.pathsec import DEFAULT_EXCLUDE_PATTERNS, is_path_excluded, validate_path
 from ot.utils.platform import get_install_hint
 from ot.utils.sanitize import (
     sanitize_output,
@@ -40,16 +42,12 @@ from ot.utils.sanitize import (
 from ot.utils.truncate import format_error, run_command, truncate
 
 __all__ = [
-    # Cache
+    "DEFAULT_EXCLUDE_PATTERNS",
     "CacheNamespace",
     "Dependency",
-    # Dependencies
     "DepsCheckResult",
-    # Factory
     "LazyClient",
-    # HTTP
     "api_headers",
-    # Batch processing
     "batch_execute",
     "cache",
     "check_api_key",
@@ -59,23 +57,22 @@ __all__ = [
     "check_secret",
     "ensure_cli",
     "ensure_lib",
-    # Existing utilities
     "flatten_exception_group",
     "format_batch_results",
-    # Truncate
     "format_error",
     "get_install_hint",
+    "is_path_excluded",
     "lazy_client",
     "normalize_items",
     "requires_cli",
     "requires_lib",
     "run_command",
     "safe_request",
-    # Sanitization
     "sanitize_output",
     "sanitize_tag_closes",
     "sanitize_triggers",
     "serialize_result",
     "truncate",
+    "validate_path",
     "wrap_external_content",
 ]

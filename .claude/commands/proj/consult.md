@@ -10,21 +10,20 @@ tags: [consultation, research, qa, findings]
 - Language agnostic
 
 **Output Structure**
-Findings are organized into two parts:
+Findings are organized into two parts, in this order:
 
-**Part 1: Recommendations**
-- Detailed changes that will be implemented
-- Starts EMPTY at the beginning of consultation
-- Only filled in once the way forward is clear
-- Written in enough detail to be used in an openspec proposal
-- Should include specific file paths, function signatures, and implementation details
-
-**Part 2: Analysis and Options**
+**Part 1: Analysis and Options** (filled during consultation)
 - Research findings, discoveries, and explorations
-- Filled during the consultation as you explore the codebase
+- All work goes here first — this is the working area
 - Include code references, patterns found, and architectural insights
 - Present multiple options or approaches when applicable
 - Note trade-offs, risks, and considerations
+
+**Part 2: Recommendations** (filled last, by the user)
+- Starts EMPTY — do NOT write recommendations unless the user explicitly asks
+- The user decides what moves from Analysis into Recommendations
+- Once populated, should be detailed enough for an openspec proposal
+- Should include specific file paths, function signatures, and implementation details
 
 **Guardrails**
 - This is primarily a READ-ONLY consultation session. You MUST NOT:
@@ -42,7 +41,7 @@ Findings are organized into two parts:
     - Suggest a descriptive filename based on the topic discussed
     - Write findings to `wip/consult/<name>.md`
     - Unless user specifies a different location
-    - Use the two-part structure (Recommendations + Analysis)
+    - Use the two-part structure (Analysis first, Recommendations last)
     - Include dated heading and topic
   - Do NOT write findings unless the user explicitly requests it
 - The session continues until the user explicitly ends it (e.g., "end consultation", "done consulting", "exit consult mode").
@@ -53,10 +52,10 @@ Findings are organized into two parts:
    - Briefly explain the read-only constraints and two-part structure.
    - Ask what the user would like to explore or discuss.
 
-2. Research and explore (Part 2: Analysis and Options):
+2. Research and explore (Part 1: Analysis and Options):
    - Listen to the user's question or topic.
    - Use read-only tools (Read, Glob, Grep, WebSearch, WebFetch, Task with Explore agent) to research.
-   - Build up findings in Part 2: Analysis and Options:
+   - Build up findings in Part 1: Analysis and Options:
      - Document discoveries, patterns, and code references
      - Present multiple approaches when applicable
      - Note trade-offs and considerations
@@ -67,14 +66,13 @@ Findings are organized into two parts:
    - After answering, check if the user has more questions.
    - Offer to dive deeper into related topics.
    - Suggest areas that might be worth exploring.
-   - When the way forward becomes clear, offer to move to recommendations.
 
-4. Formulate recommendations (Part 1: Recommendations):
-   - Once the approach is decided:
-     - Write detailed, actionable recommendations in Part 1
+4. Formulate recommendations (Part 2: Recommendations):
+   - Only when the user explicitly asks to move items to recommendations:
+     - Move or write detailed, actionable recommendations in Part 2
      - Include specific file paths, function signatures, implementation details
      - Make recommendations detailed enough to be used in an openspec proposal
-     - Keep Part 2 as supporting analysis
+     - Keep Part 1 as supporting analysis
 
 5. Save findings (on explicit request):
    - When user asks to save/document findings:
@@ -83,11 +81,11 @@ Findings are organized into two parts:
        ```markdown
        # [Topic] - [Date]
 
-       ## Part 1: Recommendations
-       [Detailed changes to implement - may be empty initially]
-
-       ## Part 2: Analysis and Options
+       ## Part 1: Analysis and Options
        [Research findings, discoveries, code references]
+
+       ## Part 2: Recommendations
+       [Empty until user decides what belongs here]
        ```
      - Confirm what was written
 

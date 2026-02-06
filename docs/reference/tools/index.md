@@ -1,6 +1,6 @@
 # Tool Reference
 
-**15 Packs. 100+ Tools.**
+**16 Packs. 113 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -18,11 +18,12 @@ Complete reference of all built-in tool packs and functions.
 | [**file**](file.md) | Secure file operations with path boundary enforcement. | 10 | MIT | `copy`, `delete`, `edit`, `info`, `list`, `move`, `read`, `search`, `tree`, `write` |
 | [**ground**](ground.md) | Grounded search with sources. | 5 | [Google Gemini](https://ai.google.dev/) (MIT) | `dev`, `docs`, `reddit`, `search`, `search_batch` |
 | [**llm**](llm.md) | AI-powered data transformation. | 2 | MIT | `transform`, `transform_file` |
+| [**mem**](mem.md) | Persistent AI agent memory with semantic search. | 16 | MIT | `append`, `context`, `count`, `decay`, `delete`, `export`, `list_memories`, `load`, `read`, `read_batch`, `search`, `stats`, `update`, `update_batch`, `write`, `write_batch` |
 | [**ot**](ot.md) | Introspection and management tools. | 11 | MIT | `aliases`, `config`, `health`, `help`, `notify`, `packs`, `reload`, `servers`, `snippets`, `stats`, `tools` |
 | [**package**](package.md) | Package version lookup and security audits. | 5 | MIT | `audit`, `models`, `npm`, `pypi`, `version` |
 | [**ripgrep**](ripgrep.md) | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
 | [**scaffold**](scaffold.md) | Extension scaffolding. | 4 | MIT | `create`, `extensions`, `templates`, `validate` |
 | [**web**](web.md) | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
-| | **Total** | **97** | | |
+| | **Total** | **113** | | |
 
 

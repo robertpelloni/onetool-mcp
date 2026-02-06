@@ -168,6 +168,7 @@ nav:
           - File: reference/tools/file.md
           - Ground: reference/tools/ground.md
           - LLM: reference/tools/llm.md
+          - Mem: reference/tools/mem.md
           - OT (Meta): reference/tools/ot.md
           - Package: reference/tools/package.md
           - Ripgrep: reference/tools/ripgrep.md

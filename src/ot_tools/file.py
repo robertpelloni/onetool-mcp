@@ -50,6 +50,7 @@ from pydantic import BaseModel, Field
 from ot.config import get_tool_config
 from ot.logging import LogSpan
 from ot.paths import resolve_cwd_path
+from ot.utils.pathsec import is_path_excluded, validate_path
 
 
 class Config(BaseModel):
@@ -135,91 +136,17 @@ def _expand_path(path: str) -> Path:
     return resolve_cwd_path(path)
 
 
-def _is_excluded(path: Path, exclude_patterns: List[str]) -> bool:  # noqa: UP006
-    """Check if path matches any exclude pattern.
-
-    Args:
-        path: Resolved path to check
-        exclude_patterns: List of fnmatch patterns
-
-    Returns:
-        True if path matches any exclude pattern
-    """
-    path_str = str(path)
-    path_parts = path.parts
-
-    for pattern in exclude_patterns:
-        # Check full path
-        if fnmatch.fnmatch(path_str, f"*{pattern}*"):
-            return True
-        # Check each part of the path
-        for part in path_parts:
-            if fnmatch.fnmatch(part, pattern):
-                return True
-
-    return False
-
-
 def _validate_path(
     path: str, *, must_exist: bool = True
 ) -> tuple[Path | None, str | None]:
-    """Validate and resolve a path against security constraints.
-
-    Args:
-        path: User-provided path string
-        must_exist: If True, path must exist
-
-    Returns:
-        Tuple of (user_path, error_message)
-        If error, user_path is None
-        user_path preserves symlinks for type detection; security is validated
-        against the fully resolved path.
-    """
+    """Validate and resolve a path against file tool security constraints."""
     cfg = _get_file_config()
-
-    # Build user path (preserve symlinks for type detection)
-    try:
-        cwd = resolve_cwd_path(".")
-        p = Path(path).expanduser()
-        user_path = p if p.is_absolute() else cwd / p
-        # Resolve for security validation (follows symlinks)
-        real_path = user_path.resolve()
-    except (OSError, ValueError) as e:
-        return None, f"Invalid path: {e}"
-
-    # Check if path exists when required
-    if must_exist and not user_path.exists():
-        return None, f"Path not found: {path}"
-
-    # Check against allowed directories
-    allowed_dirs: List[Path] = []  # noqa: UP006
-
-    if cfg.allowed_dirs:
-        for allowed in cfg.allowed_dirs:
-            # Use SDK path resolution for allowed_dirs too
-            allowed_dirs.append(resolve_cwd_path(allowed))
-    else:
-        # Default: only cwd and subdirectories
-        allowed_dirs = [cwd]
-
-    # Verify path is under an allowed directory
-    is_allowed = False
-    for allowed in allowed_dirs:
-        try:
-            real_path.relative_to(allowed)
-            is_allowed = True
-            break
-        except ValueError:
-            continue
-
-    if not is_allowed:
-        return None, "Access denied: path outside allowed directories"
-
-    # Check exclude patterns
-    if _is_excluded(real_path, cfg.exclude_patterns):
-        return None, "Access denied: path matches exclude pattern"
-
-    return user_path, None
+    return validate_path(
+        path,
+        must_exist=must_exist,
+        allowed_dirs=cfg.allowed_dirs or None,
+        exclude_patterns=cfg.exclude_patterns,
+    )
 
 
 def _check_file_size(path: Path) -> str | None:
@@ -597,7 +524,7 @@ def list(
                     continue
 
                 # Check against exclude patterns
-                if _is_excluded(entry, cfg.exclude_patterns):
+                if is_path_excluded(entry, cfg.exclude_patterns):
                     continue
 
                 # Get relative path from listing root
@@ -717,7 +644,7 @@ def tree(
                     entry
                     for entry in dir_path.iterdir()
                     if (include_hidden or not entry.name.startswith("."))
-                    and not _is_excluded(entry, cfg.exclude_patterns)
+                    and not is_path_excluded(entry, cfg.exclude_patterns)
                 ]
                 filtered.sort(key=lambda x: (not x.is_dir(), x.name.lower()))
             except PermissionError:
@@ -819,7 +746,7 @@ def search(
                         continue
 
                     # Skip excluded patterns
-                    if _is_excluded(entry, cfg.exclude_patterns):
+                    if is_path_excluded(entry, cfg.exclude_patterns):
                         continue
 
                     # Get relative path and size
@@ -848,7 +775,7 @@ def search(
                         continue
 
                     # Skip excluded patterns
-                    if _is_excluded(entry, cfg.exclude_patterns):
+                    if is_path_excluded(entry, cfg.exclude_patterns):
                         continue
 
                     # Apply file pattern filter if specified
