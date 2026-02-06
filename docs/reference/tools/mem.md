@@ -1,6 +1,6 @@
 # Memory
 
-Persistent memory for AI agents with DuckDB storage and semantic search.
+Persistent memory for AI agents with DuckDB storage and optional semantic search.
 
 ## Highlights
 
@@ -9,8 +9,11 @@ Persistent memory for AI agents with DuckDB storage and semantic search.
 - SHA-256 content dedup prevents duplicate storage
 - Automatic secret/PII redaction on write
 - History tracking on updates for rollback
+- Chunk-and-average embeddings for large content (full document semantics preserved)
+- In-memory read cache with TTL and LRU eviction (auto-invalidated on writes)
 - Importance decay based on age and access patterns
-- YAML and Markdown export/import
+- YAML export/import
+- File-based snap/restore with lossless round-trip
 
 ## Functions
 
@@ -30,8 +33,12 @@ Persistent memory for AI agents with DuckDB storage and semantic search.
 | `mem.update_batch(search_text, replace_text, ...)` | Batch search-and-replace |
 | `mem.decay(dry_run)` | Apply importance decay |
 | `mem.stats()` | Show statistics |
-| `mem.export(format, topic, output)` | Export to YAML or Markdown |
-| `mem.load(file, overwrite)` | Import from YAML |
+| `mem.embed(topic, limit, dry_run)` | Backfill embeddings for un-embedded memories |
+| `mem.flush()` | Wait for background embeddings to complete |
+| `mem.export(topic, output)` | Export to YAML |
+| `mem.load(file)` | Import from YAML (skips duplicates) |
+| `mem.snap(output, topic, ext, on_conflict)` | Snapshot memories to directory with index.yaml |
+| `mem.restore(input, topic, overwrite)` | Restore memories from snap directory |
 
 ## Retrieval Functions
 
@@ -101,21 +108,45 @@ At least one filter (`topic`, `ids`, `category`, or `tags`) is required. Note: `
 | `topic` | str | Optional topic prefix scope |
 | `dry_run` | bool | Preview only (default: True) |
 
+### `mem.snap()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `output` | str | Output directory path (required) |
+| `topic` | str | Topic prefix filter (all memories if omitted) |
+| `ext` | str | File extension for content files (default: ".md") |
+| `on_conflict` | str | "skip" (default) or "overwrite" for existing files |
+
+### `mem.restore()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `input` | str | Input directory path containing index.yaml (required) |
+| `topic` | str | Override base topic (remaps topic prefix) |
+| `overwrite` | bool | Overwrite existing memories with same topic+hash (default: False) |
+
 ## Configuration
 
 ```yaml
 tools:
   mem:
-    db_path: ~/.onetool/mem.db
+    db_path: mem.db  # relative to .onetool/
     model: text-embedding-3-small
     base_url: https://openrouter.ai/api/v1
     dimensions: 1536
     search_limit: 10
     search_extract: 200
+    max_embedding_tokens: 8191
+    read_cache_max_size: 128
+    read_cache_ttl_seconds: 300
     redaction_enabled: true
     redaction_patterns: []
     tags_whitelist: []
     decay_half_life_days: 30
+    allowed_file_dirs: []
+    exclude_file_patterns: [".git", "node_modules", "__pycache__", ".venv", "venv"]
+    embeddings_enabled: false
+    embeddings_async: true
 ```
 
 ## Topic Hierarchy
@@ -173,7 +204,13 @@ mem.read_batch(ids=["abc-123", "def-456"], meta=True)
 mem.context(topic="projects/onetool/", limit=10)
 
 # Export backup
-mem.export(format="yaml", output="memories.yaml")
+mem.export(output="memories.yaml")
+
+# Snapshot to directory (one file per memory + index.yaml)
+mem.snap(output="backup/consult", topic="consult/")
+
+# Restore from snap
+mem.restore(input="backup/consult", topic="consult")
 
 # Batch update
 mem.update_batch(search_text="old_name", replace_text="new_name", dry_run=False)
@@ -182,7 +219,62 @@ mem.update_batch(search_text="old_name", replace_text="new_name", dry_run=False)
 mem.decay(dry_run=False)
 ```
 
+## Embedding Large Content
+
+When content exceeds the embedding model's token limit, it is automatically split into chunks, each chunk is embedded, and the vectors are averaged. This preserves semantic coverage of the full document — pattern search (`mode="pattern"`) always searches the complete stored text regardless.
+
+A safety margin of 100 tokens is subtracted from the limit to avoid edge-case overflows.
+
+Configure the token limit via `max_embedding_tokens` in `onetool.yaml`:
+
+```yaml
+tools:
+  mem:
+    max_embedding_tokens: 8191  # default for text-embedding-3-small
+```
+
+For unknown models, falls back to the `cl100k_base` tiktoken encoding.
+
+## Read Cache
+
+Repeated reads of the same topic are served from an in-memory cache, avoiding redundant DB queries. The cache is automatically invalidated when content changes (write, update, append, delete). Access counts are still incremented on every read, even cache hits.
+
+```yaml
+tools:
+  mem:
+    read_cache_max_size: 128   # max entries (0 = disabled)
+    read_cache_ttl_seconds: 300  # 5 minutes (0 = no expiry)
+```
+
+Bulk operations (`update_batch`, `load`) clear the entire cache.
+
+## Embeddings
+
+Embeddings are **opt-in** and disabled by default. Without embeddings, mem works as pure key-value storage with pattern search. No API key is needed.
+
+To enable semantic search:
+
+```yaml
+tools:
+  mem:
+    embeddings_enabled: true    # Enable embedding generation
+    embeddings_async: true      # Generate in background (default)
+```
+
+When `embeddings_async: true` (default), writes return immediately and embeddings are generated by a background worker thread. Use `mem.flush()` to wait for pending embeddings.
+
+To backfill embeddings for existing memories:
+
+```python
+mem.embed(dry_run=True)           # Preview: how many need embeddings
+mem.embed(dry_run=False)          # Generate embeddings
+mem.embed(topic="projects/", dry_run=False)  # Scoped backfill
+```
+
+When embeddings are disabled, `mem.search(mode="semantic")` and `mem.search(mode="hybrid")` return a helpful message. Pattern search always works regardless of embedding state.
+
 ## Requirements
 
-- `OPENAI_API_KEY` in secrets.yaml for embedding generation
+- `OPENAI_API_KEY` in secrets.yaml (only when `embeddings_enabled: true`)
 - DuckDB (bundled with OneTool)
+- tiktoken (bundled with OneTool)

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persistent memory for AI agents with DuckDB storage and OpenAI embeddings. Provides topic-based memory storage with semantic search, content dedup, secret redaction, and importance decay. Requires `OPENAI_API_KEY` in secrets.yaml.
+Persistent memory for AI agents with DuckDB storage and optional OpenAI embeddings. Provides topic-based memory storage with semantic search, content dedup, secret redaction, and importance decay. Embeddings are opt-in via `embeddings_enabled` config (requires `OPENAI_API_KEY` in secrets.yaml when enabled).
 
 ## Requirements
 
@@ -14,7 +14,8 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **GIVEN** a topic and content
 - **WHEN** `mem.write(topic="projects/onetool/rules", content="Always use keyword-only args")` is called
 - **THEN** it SHALL store the memory with a generated UUID
-- **AND** it SHALL generate an embedding for semantic search
+- **AND** it SHALL generate an embedding if `embeddings_enabled` is true (sync or async per `embeddings_async`)
+- **AND** it SHALL store NULL embedding if `embeddings_enabled` is false
 - **AND** it SHALL compute a SHA-256 content hash for dedup
 
 #### Scenario: Duplicate detection
@@ -99,6 +100,43 @@ The `mem.search()` function SHALL search memories in three modes.
 - **WHEN** `mem.search(query="authentication patterns")` is called
 - **THEN** it SHALL generate a query embedding
 - **AND** rank results by cosine similarity
+
+### Requirement: Embedding Token Handling
+
+Content exceeding the embedding model's token limit SHALL be chunked and averaged rather than truncated, preserving semantic coverage of the full document.
+
+#### Scenario: Content within token limit
+- **GIVEN** content within the model's token limit (minus safety margin)
+- **WHEN** an embedding is generated
+- **THEN** the full content SHALL be embedded as a single string
+
+#### Scenario: Content exceeding token limit (chunk and average)
+- **GIVEN** content exceeding `max_embedding_tokens` minus safety margin (default: 8191 - 100 = 8091)
+- **WHEN** an embedding is generated
+- **THEN** content SHALL be split into token-limited chunks using tiktoken
+- **AND** each chunk SHALL be embedded via a single batch API call
+- **AND** the resulting vectors SHALL be averaged element-wise
+- **AND** the chunk count SHALL be logged
+
+#### Scenario: Safety margin
+- **GIVEN** the configured `max_embedding_tokens` limit
+- **WHEN** chunking is performed
+- **THEN** a safety margin of 100 tokens SHALL be subtracted from the limit
+
+#### Scenario: Configurable token limit
+- **GIVEN** a custom `max_embedding_tokens` value in config
+- **WHEN** an embedding is generated
+- **THEN** the configured limit SHALL be used instead of the default
+
+#### Scenario: Unknown model fallback
+- **GIVEN** an embedding model not recognized by tiktoken
+- **WHEN** token counting is performed
+- **THEN** it SHALL fall back to the `cl100k_base` encoding
+
+#### Scenario: Pattern search unaffected
+- **GIVEN** content that was chunked for embedding
+- **WHEN** `mem.search(mode="pattern")` is used
+- **THEN** it SHALL search the full stored content (not the chunked version)
 
 #### Scenario: Pattern search
 - **GIVEN** a pattern query
@@ -220,37 +258,205 @@ The `mem.decay()` function SHALL apply time-based importance decay.
 
 ### Requirement: Export and Import
 
-The `mem.export()` and `mem.load()` functions SHALL support YAML and Markdown formats.
+The `mem.export()` function SHALL output YAML. The `mem.load()` function SHALL import from YAML, always skipping duplicates.
 
 #### Scenario: Export to YAML
-- **WHEN** `mem.export(format="yaml")` is called
+- **WHEN** `mem.export()` is called
 - **THEN** it SHALL output all memories in YAML format
 
-#### Scenario: Export to Markdown
-- **WHEN** `mem.export(format="markdown")` is called
-- **THEN** it SHALL output memories grouped by topic
+#### Scenario: Export to file
+- **WHEN** `mem.export(output="memories.yaml")` is called
+- **THEN** it SHALL write YAML to the specified file
 
 #### Scenario: Import from YAML
 - **WHEN** `mem.load(file="backup.yaml")` is called
-- **THEN** it SHALL import memories, skipping duplicates by default
+- **THEN** it SHALL import memories, skipping duplicates
+
+### Requirement: Snap and Restore
+
+The `mem.snap()` and `mem.restore()` functions SHALL provide lossless file-based round-trip of memories with full metadata preservation.
+
+#### Scenario: Snap creates files and index
+- **WHEN** `mem.snap(output="backup/consult", topic="consult/")` is called
+- **THEN** it SHALL create one file per memory in the output directory
+- **AND** it SHALL strip the topic filter prefix from file paths
+- **AND** it SHALL write an `index.yaml` containing metadata (topic, file, category, tags, relevance) for each memory
+
+#### Scenario: Snap without topic filter
+- **WHEN** `mem.snap(output="backup/all")` is called
+- **THEN** it SHALL snap all memories
+- **AND** use the full topic as the file path
+
+#### Scenario: Snap custom extension
+- **WHEN** `mem.snap(output="backup/config", ext=".yaml")` is called
+- **THEN** content files SHALL use the specified extension
+
+#### Scenario: Snap skip existing
+- **GIVEN** a file already exists at the output path
+- **WHEN** `mem.snap(output="dir", on_conflict="skip")` is called
+- **THEN** it SHALL skip writing that file but still include it in the index
+
+#### Scenario: Snap overwrite existing
+- **GIVEN** a file already exists at the output path
+- **WHEN** `mem.snap(output="dir", on_conflict="overwrite")` is called
+- **THEN** it SHALL overwrite the existing file
+
+#### Scenario: Snap nested topics
+- **GIVEN** memories with nested topic paths (e.g., `consult/sub/deep`)
+- **WHEN** `mem.snap(output="dir", topic="consult/")` is called
+- **THEN** it SHALL preserve the directory hierarchy (e.g., `sub/deep.md`)
+
+#### Scenario: Restore from snap
+- **WHEN** `mem.restore(input="backup/consult")` is called
+- **THEN** it SHALL read `index.yaml` from the directory
+- **AND** recreate each memory with its original topic, category, tags, and relevance
+- **AND** skip duplicates (same topic + content hash) by default
+
+#### Scenario: Restore with overwrite
+- **WHEN** `mem.restore(input="backup/consult", overwrite=True)` is called
+- **THEN** it SHALL replace existing memories with same topic and content hash
+
+#### Scenario: Restore topic override
+- **WHEN** `mem.restore(input="backup/consult", topic="new-base")` is called
+- **THEN** it SHALL remap topics by stripping the original filter prefix and prepending the new base topic
+
+#### Scenario: Restore missing index
+- **GIVEN** the input directory does not contain `index.yaml`
+- **WHEN** `mem.restore(input="dir")` is called
+- **THEN** it SHALL return an error about missing index.yaml
+
+#### Scenario: Restore missing content file
+- **GIVEN** a file referenced in index.yaml does not exist
+- **WHEN** `mem.restore(input="dir")` is called
+- **THEN** it SHALL report the error and continue with remaining files
+
+#### Scenario: Round-trip lossless
+- **GIVEN** memories with specific content, category, tags, and relevance
+- **WHEN** `mem.snap()` followed by `mem.restore()` is performed
+- **THEN** all metadata SHALL be preserved identically
+
+### Requirement: Read Cache
+
+Repeated reads of the same topic or ID SHALL be served from an in-memory cache to avoid redundant database queries.
+
+#### Scenario: Cache hit
+- **GIVEN** a memory was recently read
+- **WHEN** `mem.read(topic=...)` is called again for the same topic
+- **THEN** it SHALL return cached content without a database SELECT
+- **AND** it SHALL still increment access_count in the database
+
+#### Scenario: Cache invalidation on write
+- **GIVEN** a cached memory
+- **WHEN** `mem.write()`, `mem.update()`, `mem.append()`, or `mem.delete()` modifies that topic
+- **THEN** the cache entry SHALL be invalidated
+
+#### Scenario: Bulk invalidation
+- **WHEN** `mem.update_batch()` or `mem.load()` completes
+- **THEN** the entire cache SHALL be cleared
+
+#### Scenario: Cache disabled
+- **GIVEN** `read_cache_max_size: 0` in config
+- **WHEN** `mem.read()` is called
+- **THEN** every read SHALL query the database directly
+
+#### Scenario: TTL expiry
+- **GIVEN** a cached entry older than `read_cache_ttl_seconds`
+- **WHEN** `mem.read()` is called
+- **THEN** the stale entry SHALL be evicted and a fresh query executed
+
+#### Scenario: LRU eviction
+- **GIVEN** the cache is at `read_cache_max_size` capacity
+- **WHEN** a new entry is cached
+- **THEN** the oldest entry (by timestamp) SHALL be evicted
+
+### Requirement: Optional Embeddings
+
+Embeddings SHALL be opt-in, disabled by default. The mem pack SHALL load and function without `OPENAI_API_KEY` when embeddings are disabled.
+
+#### Scenario: Embeddings disabled (default)
+- **GIVEN** `embeddings_enabled: false` (default)
+- **WHEN** `mem.write()` is called
+- **THEN** it SHALL store the memory with NULL embedding
+- **AND** `mem.read()`, `mem.list_memories()`, and pattern search SHALL work normally
+
+#### Scenario: Embeddings enabled sync
+- **GIVEN** `embeddings_enabled: true` and `embeddings_async: false`
+- **WHEN** `mem.write()` is called
+- **THEN** it SHALL generate the embedding before returning
+
+#### Scenario: Embeddings enabled async
+- **GIVEN** `embeddings_enabled: true` and `embeddings_async: true` (default when enabled)
+- **WHEN** `mem.write()` is called
+- **THEN** it SHALL return immediately with NULL embedding
+- **AND** a background worker SHALL generate the embedding and update the row
+
+#### Scenario: Semantic search when disabled
+- **GIVEN** `embeddings_enabled: false`
+- **WHEN** `mem.search(mode="semantic")` or `mem.search(mode="hybrid")` is called
+- **THEN** it SHALL return a message about enabling `embeddings_enabled`
+
+#### Scenario: Semantic search when enabled but no embeddings
+- **GIVEN** `embeddings_enabled: true` but no memories have embeddings yet
+- **WHEN** `mem.search(mode="semantic")` is called
+- **THEN** it SHALL return a message about running `mem.embed()`
+
+### Requirement: Embedding Backfill
+
+The `mem.embed()` function SHALL generate embeddings for memories that don't have them.
+
+#### Scenario: Dry run preview
+- **WHEN** `mem.embed(dry_run=True)` is called
+- **THEN** it SHALL show the count of memories without embeddings
+
+#### Scenario: Generate embeddings
+- **WHEN** `mem.embed(dry_run=False)` is called
+- **THEN** it SHALL generate embeddings for all un-embedded memories
+
+#### Scenario: Topic-scoped backfill
+- **WHEN** `mem.embed(topic="project/", dry_run=False)` is called
+- **THEN** it SHALL only generate embeddings for memories matching the topic prefix
+
+#### Scenario: Embeddings disabled
+- **GIVEN** `embeddings_enabled: false`
+- **WHEN** `mem.embed()` is called
+- **THEN** it SHALL return a message about enabling embeddings first
+
+### Requirement: Flush
+
+The `mem.flush()` function SHALL wait for all pending background embeddings to complete.
+
+#### Scenario: Flush queue
+- **GIVEN** background embeddings are in progress
+- **WHEN** `mem.flush()` is called
+- **THEN** it SHALL block until the async queue is empty
+
+#### Scenario: No pending work
+- **GIVEN** no background worker is running
+- **WHEN** `mem.flush()` is called
+- **THEN** it SHALL return immediately
 
 ## Configuration
 
 ```yaml
 tools:
   mem:
-    db_path: ~/.onetool/mem.db
+    db_path: mem.db  # relative to .onetool/
     model: text-embedding-3-small
     base_url: https://openrouter.ai/api/v1
     dimensions: 1536
     search_limit: 10
     search_extract: 200
+    max_embedding_tokens: 8191
+    read_cache_max_size: 128
+    read_cache_ttl_seconds: 300
     redaction_enabled: true
     redaction_patterns: []
     tags_whitelist: []
     decay_half_life_days: 30
     allowed_file_dirs: []
     exclude_file_patterns: [".git", "node_modules", "__pycache__", ".venv", "venv"]
+    embeddings_enabled: false
+    embeddings_async: true
 ```
 
 ## Schema

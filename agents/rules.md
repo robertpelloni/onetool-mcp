@@ -50,6 +50,10 @@ Shortcut: `just test` runs the full suite.
 Markers required: speed (`smoke`|`unit`|`integration`|`slow`) + component (`core`|`bench`|`serve`)
 Principles: lean tests, DRY fixtures in `conftest.py`, test behaviour not implementation
 
+## Path Resolution
+
+Paths relative to `.onetool/` (config, databases, logs, stats) must use `resolve_ot_path()` from `ot.meta` or `_resolve_onetool_relative_path()` from config models - never `expand_path()` or `Path.expanduser()`. These resolvers honour `OT_GLOBAL_DIR` and project-level `.onetool/` directories. Use relative defaults (e.g. `mem.db`) not absolute ones (e.g. `~/.onetool/mem.db`). `expand_path()` is only for user-supplied file paths (spreadsheets, arbitrary files on disk).
+
 ## Logging
 
 ```python

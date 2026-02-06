@@ -1,7 +1,8 @@
-"""Persistent memory for AI agents with DuckDB storage and OpenAI embeddings.
+"""Persistent memory for AI agents with DuckDB storage and optional OpenAI embeddings.
 
 Provides topic-based memory storage with semantic search, content dedup,
-secret redaction, and importance decay. Requires OPENAI_API_KEY in secrets.yaml.
+secret redaction, and importance decay. Requires OPENAI_API_KEY in secrets.yaml
+when embeddings are enabled.
 
 Thread safety: Uses a shared DuckDB connection. Concurrent calls from multiple
 threads should use _use_connection() to hold the lock for the full operation.
@@ -16,9 +17,11 @@ import contextlib
 import hashlib
 import logging
 import math
+import queue
 import re
 import shutil
 import threading
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,12 +36,16 @@ __all__ = [
     "count",
     "decay",
     "delete",
+    "embed",
     "export",
+    "flush",
     "list_memories",
     "load",
     "read",
     "read_batch",
+    "restore",
     "search",
+    "snap",
     "stats",
     "update",
     "update_batch",
@@ -51,8 +58,9 @@ __ot_requires__ = {
     "lib": [
         ("duckdb", "pip install duckdb"),
         ("openai", "pip install openai"),
+        ("tiktoken", "pip install tiktoken"),
     ],
-    "secrets": ["OPENAI_API_KEY"],
+    # API key checked at runtime when embeddings enabled (not pack-level requirement)
 }
 
 from pydantic import BaseModel, Field
@@ -60,7 +68,6 @@ from pydantic import BaseModel, Field
 from ot.config import get_tool_config
 from ot.config.secrets import get_secret
 from ot.logging import LogSpan
-from ot.paths import expand_path
 from ot.utils.pathsec import DEFAULT_EXCLUDE_PATTERNS, validate_path
 
 if TYPE_CHECKING:
@@ -74,6 +81,10 @@ logger = logging.getLogger(__name__)
 # Thread lock for connection operations
 _connection_lock = threading.RLock()
 _connection: Any = None
+
+# Read cache: key = (topic or id) -> (content_row_tuple, timestamp)
+_read_cache: dict[str, tuple[Any, float]] = {}
+_read_cache_lock = threading.Lock()
 
 # Valid categories for memories
 VALID_CATEGORIES = {"rule", "context", "decision", "mistake", "discovery", "note"}
@@ -102,8 +113,8 @@ class Config(BaseModel):
     """Pack configuration - discovered by registry."""
 
     db_path: str = Field(
-        default="~/.onetool/mem.db",
-        description="Path to memory DuckDB database",
+        default="mem.db",
+        description="Path to memory DuckDB database (relative to .onetool/)",
     )
     model: str = Field(
         default="text-embedding-3-small",
@@ -153,6 +164,29 @@ class Config(BaseModel):
         default_factory=lambda: DEFAULT_EXCLUDE_PATTERNS.copy(),
         description="Path patterns to exclude from file operations",
     )
+    max_embedding_tokens: int = Field(
+        default=8191,
+        ge=1,
+        description="Max tokens for embedding input (text-embedding-3-small limit: 8191)",
+    )
+    read_cache_max_size: int = Field(
+        default=128,
+        ge=0,
+        description="Max entries in read cache (0 = disabled)",
+    )
+    read_cache_ttl_seconds: int = Field(
+        default=300,
+        ge=0,
+        description="Read cache TTL in seconds (0 = no expiry)",
+    )
+    embeddings_enabled: bool = Field(
+        default=False,
+        description="Enable embedding generation for semantic search (requires OPENAI_API_KEY)",
+    )
+    embeddings_async: bool = Field(
+        default=True,
+        description="Generate embeddings asynchronously (write returns immediately)",
+    )
 
 
 def _get_config() -> Config:
@@ -174,6 +208,62 @@ def _validate_file_path(
 
 
 # ---------------------------------------------------------------------------
+# Read cache
+# ---------------------------------------------------------------------------
+
+
+def _cache_get(key: str) -> Any | None:
+    """Get a cached read result, or None if missing/expired."""
+    config = _get_config()
+    if config.read_cache_max_size == 0:
+        return None
+    with _read_cache_lock:
+        entry = _read_cache.get(key)
+        if entry is None:
+            return None
+        row, ts = entry
+        if config.read_cache_ttl_seconds > 0 and (time.monotonic() - ts) > config.read_cache_ttl_seconds:
+            del _read_cache[key]
+            return None
+        return row
+
+
+def _cache_put(key: str, row: Any) -> None:
+    """Store a read result in the cache, evicting oldest if full."""
+    config = _get_config()
+    if config.read_cache_max_size == 0:
+        return
+    with _read_cache_lock:
+        # Evict oldest entries if at capacity (and this is a new key)
+        if key not in _read_cache and len(_read_cache) >= config.read_cache_max_size:
+            # Remove the oldest entry by timestamp
+            oldest_key = min(_read_cache, key=lambda k: _read_cache[k][1])
+            del _read_cache[oldest_key]
+        _read_cache[key] = (row, time.monotonic())
+
+
+def _cache_invalidate(topic: str | None = None, id: str | None = None) -> None:
+    """Invalidate cache entries matching a topic (prefix) or id."""
+    with _read_cache_lock:
+        if id:
+            # Can't map id back to topic key, so clear entire cache
+            _read_cache.clear()
+            return
+        if topic:
+            # Prefix invalidation: remove topic and any children
+            keys_to_remove = [
+                k
+                for k in _read_cache
+                if k == f"topic:{topic}" or k.startswith(f"topic:{topic}/")
+            ]
+            for k in keys_to_remove:
+                del _read_cache[k]
+            return
+        # No filter: clear everything
+        _read_cache.clear()
+
+
+# ---------------------------------------------------------------------------
 # Database connection and schema
 # ---------------------------------------------------------------------------
 
@@ -190,9 +280,16 @@ def _import_duckdb() -> ModuleType:
 
 
 def _get_db_path() -> Path:
-    """Get the memory database path, expanding ~ and creating parent dirs."""
+    """Get the memory database path, resolving relative to .onetool/ directory.
+
+    Uses resolve_ot_path (not expand_path) so the default "mem.db" resolves
+    against project .onetool/ first, then get_global_dir() which honours
+    OT_GLOBAL_DIR. See agents/rules.md "Path Resolution".
+    """
+    from ot.meta import resolve_ot_path
+
     config = _get_config()
-    db_path = expand_path(config.db_path)
+    db_path = resolve_ot_path(config.db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return db_path
 
@@ -306,8 +403,6 @@ def _close_connection() -> None:
     global _connection
     with _connection_lock:
         if _connection is not None:
-            import contextlib
-
             with contextlib.suppress(Exception):
                 _connection.close()
             _connection = None
@@ -336,17 +431,175 @@ def _get_openai_client() -> OpenAI:
     return OpenAI(api_key=api_key, base_url=config.base_url or None)
 
 
+def _import_tiktoken() -> ModuleType:
+    """Lazy import tiktoken module."""
+    try:
+        import tiktoken
+    except ImportError as e:
+        raise ImportError(
+            "tiktoken is required for mem embedding truncation. Install with: pip install tiktoken"
+        ) from e
+    return tiktoken
+
+
+# Safety margin subtracted from token limit to avoid edge-case overflows.
+# Matches ChunkHound's approach (openai_provider.py:607).
+_TOKEN_SAFETY_MARGIN = 100
+
+
+def _get_tiktoken_encoding(model: str) -> Any:
+    """Get tiktoken encoding for a model, with fallback."""
+    tiktoken = _import_tiktoken()
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        return tiktoken.get_encoding("cl100k_base")
+
+
+def _chunk_text_by_tokens(text: str, max_tokens: int, model: str) -> list[str]:
+    """Split text into chunks that each fit within the token limit.
+
+    Returns a list of text chunks. If the text fits in one chunk, returns [text].
+    """
+    encoding = _get_tiktoken_encoding(model)
+    tokens = encoding.encode(text)
+
+    if len(tokens) <= max_tokens:
+        return [text]
+
+    chunks = []
+    for i in range(0, len(tokens), max_tokens):
+        chunk_tokens = tokens[i : i + max_tokens]
+        chunks.append(encoding.decode(chunk_tokens))
+    return chunks
+
+
 def _generate_embedding(text: str) -> list[float]:
-    """Generate embedding vector for text."""
+    """Generate embedding vector for text.
+
+    If text exceeds the token limit, splits into chunks, embeds each,
+    and returns the averaged vector. This preserves semantic coverage
+    of the full document rather than silently losing the tail.
+    """
     config = _get_config()
-    with LogSpan(span="mem.embedding", model=config.model, textLen=len(text)) as span:
+    effective_limit = max(1, config.max_embedding_tokens - _TOKEN_SAFETY_MARGIN)
+    chunks = _chunk_text_by_tokens(text, effective_limit, config.model)
+
+    with LogSpan(
+        span="mem.embedding",
+        model=config.model,
+        textLen=len(text),
+        chunks=len(chunks),
+    ) as span:
         client = _get_openai_client()
+
+        if len(chunks) == 1:
+            response = client.embeddings.create(
+                model=config.model,
+                input=chunks[0],
+            )
+            span.add("dimensions", len(response.data[0].embedding))
+            return response.data[0].embedding
+
+        # Batch embed all chunks in one API call
         response = client.embeddings.create(
             model=config.model,
-            input=text,
+            input=chunks,
         )
-        span.add("dimensions", len(response.data[0].embedding))
-        return response.data[0].embedding
+        vectors = [item.embedding for item in response.data]
+        dims = len(vectors[0])
+        span.add("dimensions", dims)
+
+        # Average the vectors
+        averaged = [0.0] * dims
+        for vec in vectors:
+            for i in range(dims):
+                averaged[i] += vec[i]
+        n = len(vectors)
+        averaged = [v / n for v in averaged]
+
+        return averaged
+
+
+# ---------------------------------------------------------------------------
+# Background embedding worker
+# ---------------------------------------------------------------------------
+
+# Bounded queue: stores only memory IDs (not content) to avoid memory bloat.
+# maxsize=1000 provides backpressure - enqueue blocks if queue is full.
+_embedding_queue: queue.Queue[str] = queue.Queue(maxsize=1000)
+_embedding_worker_started = False
+_embedding_worker_lock = threading.Lock()
+_embedding_errors: int = 0  # Surfaced in mem.stats()
+
+
+def _enqueue_embedding(memory_id: str) -> None:
+    """Queue a memory ID for background embedding generation."""
+    _ensure_embedding_worker()
+    _embedding_queue.put(memory_id)
+
+
+def _ensure_embedding_worker() -> None:
+    """Start the background embedding worker if not already running."""
+    global _embedding_worker_started
+    with _embedding_worker_lock:
+        if _embedding_worker_started:
+            return
+        t = threading.Thread(target=_embedding_worker, daemon=True)
+        t.start()
+        _embedding_worker_started = True
+
+
+def _embedding_worker() -> None:
+    """Background worker: reads content from DB, generates embedding, writes back.
+
+    Re-reads content from DB (not from queue) to avoid holding large strings
+    in memory and to pick up any content changes between enqueue and processing.
+    Retries up to 3 times with exponential backoff on failure.
+    """
+    global _embedding_errors
+    while True:
+        memory_id = _embedding_queue.get()
+        retries = 0
+        max_retries = 3
+        while retries < max_retries:
+            try:
+                conn = _get_connection()
+                row = conn.execute(
+                    "SELECT content FROM memories WHERE id = ?", [memory_id]
+                ).fetchone()
+                if not row:
+                    break  # Memory was deleted before we got to it
+                embedding = _generate_embedding(row[0])
+                conn.execute(
+                    "UPDATE memories SET embedding = ? WHERE id = ?",
+                    [embedding, memory_id],
+                )
+                break
+            except Exception:
+                retries += 1
+                _embedding_errors += 1
+                if retries < max_retries:
+                    time.sleep(2**retries)  # 2s, 4s, 8s
+                else:
+                    logger.warning(
+                        "Failed embedding for %s after %s retries",
+                        memory_id,
+                        max_retries,
+                        exc_info=True,
+                    )
+        _embedding_queue.task_done()
+
+
+def _maybe_embed(memory_id: str, content: str) -> list[float] | None:
+    """Generate embedding if enabled, async or sync per config. Returns None if skipped/async."""
+    config = _get_config()
+    if not config.embeddings_enabled:
+        return None
+    if config.embeddings_async:
+        _enqueue_embedding(memory_id)
+        return None
+    return _generate_embedding(content)
 
 
 # ---------------------------------------------------------------------------
@@ -516,7 +769,7 @@ def write(
                 return f"Duplicate: Memory with same content already exists in topic '{topic}' (id: {existing[0]})"
 
             memory_id = str(uuid.uuid4())
-            embedding = _generate_embedding(content)
+            embedding = _maybe_embed(memory_id, content)
 
             conn.execute(
                 """
@@ -528,6 +781,7 @@ def write(
 
             s.add("memoryId", memory_id)
             s.add("contentLen", len(content))
+            _cache_invalidate(topic=topic)
             return f"Stored memory {memory_id} in topic '{topic}'"
 
         except ValueError as e:
@@ -660,24 +914,35 @@ def read(
     """
     with LogSpan(span="mem.read", topic=topic) as s:
         try:
-            conn = _get_connection()
+            cache_key = f"id:{id}" if id else f"topic:{topic}"
+            cached_row = _cache_get(cache_key)
 
-            if id:
-                row = conn.execute(
-                    "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE id = ?",
-                    [id],
-                ).fetchone()
+            if cached_row is not None:
+                row = cached_row
+                s.add("cache", "hit")
             else:
-                row = conn.execute(
-                    "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE topic = ?",
-                    [topic],
-                ).fetchone()
+                conn = _get_connection()
 
-            if not row:
-                s.add("found", False)
-                return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
+                if id:
+                    row = conn.execute(
+                        "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE id = ?",
+                        [id],
+                    ).fetchone()
+                else:
+                    row = conn.execute(
+                        "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE topic = ?",
+                        [topic],
+                    ).fetchone()
 
-            # Increment access count
+                if not row:
+                    s.add("found", False)
+                    return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
+
+                _cache_put(cache_key, row)
+                s.add("cache", "miss")
+
+            # Increment access count (always, even on cache hit)
+            conn = _get_connection()
             conn.execute(
                 "UPDATE memories SET access_count = access_count + 1, last_accessed = now() WHERE id = ?",
                 [row[0]],
@@ -853,6 +1118,16 @@ def search(
         try:
             conn = _get_connection()
 
+            if mode in ("semantic", "hybrid") and not config.embeddings_enabled:
+                return "Semantic search requires embeddings. Enable with: tools.mem.embeddings_enabled: true"
+
+            if mode in ("semantic", "hybrid"):
+                has_embeddings = conn.execute(
+                    "SELECT 1 FROM memories WHERE embedding IS NOT NULL LIMIT 1"
+                ).fetchone()
+                if not has_embeddings:
+                    return "No embeddings found. Run mem.embed(dry_run=False) to generate them."
+
             if mode == "semantic":
                 results = _search_semantic(conn, query, topic, category, tags, limit, config)
             elif mode == "pattern":
@@ -930,7 +1205,7 @@ def _search_pattern(
     sql = """
         SELECT id, topic, content, category, tags, relevance, access_count
         FROM memories
-        WHERE (content ILIKE ? OR topic ILIKE ?)
+        WHERE (content ILIKE ? ESCAPE '\\' OR topic ILIKE ? ESCAPE '\\')
     """
     # Escape LIKE special characters so they match literally
     escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -1169,6 +1444,7 @@ def delete(
                     # Clean up history too
                     conn.execute("DELETE FROM memory_history WHERE memory_id = ?", [id])
                     s.add("deleted", 1)
+                    _cache_invalidate(id=id)
                     return f"Deleted memory {id}"
                 else:
                     s.add("deleted", 0)
@@ -1199,6 +1475,7 @@ def delete(
             conn.execute(del_sql, topic_params)
 
             s.add("deleted", match_count)
+            _cache_invalidate(topic=topic)
             return f"Deleted {match_count} memories matching topic '{topic}'"
 
         except Exception as e:
@@ -1263,7 +1540,7 @@ def update(
             # Redact and update
             content = _redact(content)
             new_hash = _content_hash(content)
-            embedding = _generate_embedding(content)
+            embedding = _maybe_embed(memory_id, content)
 
             conn.execute(
                 """
@@ -1275,6 +1552,7 @@ def update(
             )
 
             s.add("memoryId", memory_id)
+            _cache_invalidate(topic=topic, id=memory_id)
             return f"Updated memory {memory_id} in topic '{topic}'"
 
         except Exception as e:
@@ -1336,7 +1614,7 @@ def append(
 
             new_content = old_content + separator + _redact(content)
             new_hash = _content_hash(new_content)
-            embedding = _generate_embedding(new_content)
+            embedding = _maybe_embed(memory_id, new_content)
 
             conn.execute(
                 """
@@ -1349,6 +1627,7 @@ def append(
 
             s.add("memoryId", memory_id)
             s.add("newLen", len(new_content))
+            _cache_invalidate(topic=topic, id=memory_id)
             return f"Appended to memory {memory_id} in topic '{topic}' (now {len(new_content)} chars)"
 
         except Exception as e:
@@ -1459,8 +1738,9 @@ def update_batch(
         try:
             conn = _get_connection()
 
-            sql = "SELECT id, topic, content FROM memories WHERE content LIKE ?"
-            params: list[Any] = [f"%{search_text}%"]
+            escaped = search_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            sql = "SELECT id, topic, content FROM memories WHERE content LIKE ? ESCAPE '\\'"
+            params: list[Any] = [f"%{escaped}%"]
 
             topic_sql, topic_params = _topic_filter(topic)
             sql += topic_sql
@@ -1494,7 +1774,7 @@ def update_batch(
 
                 new_content = old_content.replace(search_text, replace_text)
                 new_hash = _content_hash(new_content)
-                embedding = _generate_embedding(new_content)
+                embedding = _maybe_embed(memory_id, new_content)
 
                 conn.execute(
                     """
@@ -1507,6 +1787,7 @@ def update_batch(
                 updated += 1
 
             s.add("updated", updated)
+            _cache_invalidate()  # Batch update: clear entire cache
             return f"Updated {updated} memories: replaced '{search_text}' with '{replace_text}'"
 
         except Exception as e:
@@ -1646,6 +1927,12 @@ def stats() -> str:
             # History count
             history_count = conn.execute("SELECT COUNT(*) FROM memory_history").fetchone()[0]
 
+            # Embedding stats
+            without_embeddings = conn.execute(
+                "SELECT COUNT(*) FROM memories WHERE embedding IS NULL"
+            ).fetchone()[0]
+            config = _get_config()
+
             s.add("total", total)
 
             lines = [
@@ -1655,6 +1942,11 @@ def stats() -> str:
                 f"  Total content: {size_stats[0]:,} chars",
                 f"  Avg content: {int(size_stats[1]):,} chars",
                 f"  Max content: {size_stats[2]:,} chars",
+                f"\nEmbeddings: {'enabled' if config.embeddings_enabled else 'disabled'}",
+                f"  With embeddings: {total - without_embeddings}",
+                f"  Without embeddings: {without_embeddings}",
+                f"  Pending in queue: {_embedding_queue.qsize()}",
+                f"  Embedding errors: {_embedding_errors}",
                 "\nCategories:",
             ]
             for cat, cnt in categories:
@@ -1671,16 +1963,98 @@ def stats() -> str:
             return f"Error getting stats: {e}"
 
 
+def embed(
+    *,
+    topic: str | None = None,
+    limit: int = 100,
+    dry_run: bool = True,
+) -> str:
+    """Generate embeddings for memories that don't have them.
+
+    Use after enabling embeddings_enabled to backfill existing memories.
+
+    Args:
+        topic: Optional topic prefix filter
+        limit: Maximum memories to process (default: 100)
+        dry_run: If True, only report count without generating (default: True)
+
+    Returns:
+        Summary of backfill results.
+
+    Example:
+        mem.embed(dry_run=True)           # Preview count
+        mem.embed(dry_run=False)           # Generate embeddings
+        mem.embed(topic="projects/", dry_run=False)  # Scoped backfill
+    """
+    config = _get_config()
+    if not config.embeddings_enabled:
+        return "Embeddings are disabled. Enable with: tools.mem.embeddings_enabled: true"
+
+    with LogSpan(span="mem.embed", topic=topic, limit=limit, dry_run=dry_run) as s:
+        try:
+            conn = _get_connection()
+
+            sql = "SELECT id, content FROM memories WHERE embedding IS NULL"
+            params: list[Any] = []
+            if topic:
+                topic_sql, topic_params = _topic_filter(topic)
+                sql += topic_sql
+                params.extend(topic_params)
+            sql += " LIMIT ?"
+            params.append(limit)
+
+            rows = conn.execute(sql, params).fetchall()
+
+            if not rows:
+                return "All memories already have embeddings"
+
+            if dry_run:
+                s.add("count", len(rows))
+                return f"Found {len(rows)} memories without embeddings. Run with dry_run=False to generate."
+
+            generated = 0
+            for memory_id, content in rows:
+                embedding = _generate_embedding(content)
+                conn.execute(
+                    "UPDATE memories SET embedding = ? WHERE id = ?",
+                    [embedding, memory_id],
+                )
+                generated += 1
+
+            s.add("generated", generated)
+            return f"Generated embeddings for {generated} memories"
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error generating embeddings: {e}"
+
+
+def flush() -> str:
+    """Wait for all pending background embeddings to complete.
+
+    Returns:
+        Completion status.
+
+    Example:
+        mem.flush()
+    """
+    if not _embedding_worker_started:
+        return "No background embeddings pending"
+    try:
+        _embedding_queue.join()
+        return "All pending embeddings completed"
+    except Exception as e:
+        return f"Error: {e}"
+
+
 def export(
     *,
-    format: str = "yaml",
     topic: str | None = None,
     output: str | None = None,
 ) -> str:
-    """Export memories to YAML or Markdown format.
+    """Export memories to YAML format.
 
     Args:
-        format: Output format - "yaml" or "markdown"
         topic: Optional topic prefix filter
         output: Output file path (default: prints to stdout)
 
@@ -1688,13 +2062,10 @@ def export(
         Exported content or file path confirmation.
 
     Example:
-        mem.export(format="yaml", output="memories.yaml")
-        mem.export(format="markdown", topic="projects/onetool/")
+        mem.export(output="memories.yaml")
+        mem.export(topic="projects/onetool/")
     """
-    if format not in ("yaml", "markdown"):
-        return f"Error: Invalid format '{format}'. Must be 'yaml' or 'markdown'"
-
-    with LogSpan(span="mem.export", format=format, topic=topic) as s:
+    with LogSpan(span="mem.export", topic=topic) as s:
         try:
             conn = _get_connection()
 
@@ -1719,7 +2090,7 @@ def export(
 
             s.add("memoryCount", len(rows))
 
-            content = _export_yaml(rows) if format == "yaml" else _export_markdown(rows)
+            content = _export_yaml(rows)
 
             if output:
                 validated_path, error = _validate_file_path(output, must_exist=False)
@@ -1761,44 +2132,20 @@ def _export_yaml(rows: list[tuple]) -> str:
     return "\n".join(lines)
 
 
-def _export_markdown(rows: list[tuple]) -> str:
-    """Export memories to Markdown format."""
-    lines = ["# Memory Export\n"]
-    current_topic = None
-
-    for r in rows:
-        topic = r[1]
-        if topic != current_topic:
-            lines.append(f"\n## {topic}\n")
-            current_topic = topic
-
-        tags_str = ", ".join(r[4]) if r[4] else "none"
-        lines.extend([
-            f"### {r[3]} (relevance: {r[5]})",
-            f"*Tags: {tags_str} | Accessed: {r[6]}x | ID: {r[0]}*\n",
-            r[2],
-            "",
-        ])
-    return "\n".join(lines)
-
-
 def load(
     *,
     file: str,
-    overwrite: bool = False,
 ) -> str:
-    """Import memories from a YAML file.
+    """Import memories from a YAML file. Skips duplicates.
 
     Args:
         file: Path to YAML file to import
-        overwrite: If True, overwrite existing memories with same topic+hash
 
     Returns:
         Import summary.
 
     Example:
         mem.load(file="memories.yaml")
-        mem.load(file="backup.yaml", overwrite=True)
     """
     with LogSpan(span="mem.load", file=file) as s:
         try:
@@ -1838,19 +2185,16 @@ def load(
                     [topic, content_hash],
                 ).fetchone()
 
-                if existing and not overwrite:
+                if existing:
                     skipped += 1
                     continue
-
-                if existing and overwrite:
-                    conn.execute("DELETE FROM memories WHERE id = ?", [existing[0]])
 
                 memory_id = mem_data.get("id", str(uuid.uuid4()))
                 category = mem_data.get("category", "note")
                 tags = mem_data.get("tags", [])
                 relevance = max(1, min(10, int(mem_data.get("relevance", 5))))
 
-                embedding = _generate_embedding(content)
+                embedding = _maybe_embed(memory_id, content)
 
                 conn.execute(
                     """
@@ -1863,6 +2207,7 @@ def load(
 
             s.add("imported", imported)
             s.add("skipped", skipped)
+            _cache_invalidate()  # Bulk import: clear entire cache
             return f"Imported {imported} memories, skipped {skipped}"
 
         except ImportError as e:
@@ -1870,3 +2215,276 @@ def load(
         except Exception as e:
             s.add("error", str(e))
             return f"Error importing memories: {e}"
+
+
+def snap(
+    *,
+    output: str,
+    topic: str | None = None,
+    ext: str = ".md",
+    on_conflict: str = "skip",
+) -> str:
+    """Write memories to a directory as individual files with an index.yaml.
+
+    Creates one file per memory record with an index.yaml containing metadata.
+    Round-trips losslessly with `mem.restore()`.
+
+    Args:
+        output: Output directory path
+        topic: Topic prefix filter (all memories if omitted)
+        ext: File extension for content files (default: ".md")
+        on_conflict: "skip" (default) or "overwrite" for existing files
+
+    Returns:
+        Summary of snap results.
+
+    Example:
+        mem.snap(output="backup/consult", topic="consult/")
+        mem.snap(output="backup/all")
+        mem.snap(output="backup/config", topic="config/", ext=".yaml")
+    """
+    if on_conflict not in ("skip", "overwrite"):
+        return f"Error: on_conflict must be 'skip' or 'overwrite', got '{on_conflict}'"
+
+    with LogSpan(span="mem.snap", output=output, topic=topic) as s:
+        try:
+            conn = _get_connection()
+
+            sql = """
+                SELECT id, topic, content, category, tags, relevance, access_count,
+                       created_at, updated_at
+                FROM memories
+                WHERE 1=1
+            """
+            params: list[Any] = []
+
+            topic_sql, topic_params = _topic_filter(topic)
+            sql += topic_sql
+            params.extend(topic_params)
+
+            sql += " ORDER BY topic, created_at"
+
+            rows = conn.execute(sql, params).fetchall()
+
+            if not rows:
+                return "No memories to snap"
+
+            # Determine topic prefix to strip
+            strip_prefix = ""
+            if topic and topic.endswith("/"):
+                strip_prefix = topic
+
+            validated_path, error = _validate_file_path(output, must_exist=False)
+            if error:
+                return f"Error: {error}"
+            assert validated_path is not None
+            validated_path.mkdir(parents=True, exist_ok=True)
+
+            written = 0
+            skipped = 0
+            index_entries = []
+
+            for r in rows:
+                _id, mem_topic, content, category, tags, relevance = (
+                    r[0], r[1], r[2], r[3], r[4] or [], r[5],
+                )
+
+                # Compute relative file path
+                rel_topic = mem_topic
+                if strip_prefix and mem_topic.startswith(strip_prefix):
+                    rel_topic = mem_topic[len(strip_prefix):]
+                elif strip_prefix and mem_topic == strip_prefix.rstrip("/"):
+                    rel_topic = mem_topic.rsplit("/", 1)[-1]
+
+                file_rel = rel_topic + ext
+                file_path = validated_path / file_rel
+
+                if file_path.exists() and on_conflict == "skip":
+                    skipped += 1
+                    index_entries.append({
+                        "topic": mem_topic,
+                        "file": file_rel,
+                        "category": category,
+                        "tags": tags,
+                        "relevance": relevance,
+                    })
+                    continue
+
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(content, encoding="utf-8")
+                written += 1
+
+                index_entries.append({
+                    "topic": mem_topic,
+                    "file": file_rel,
+                    "category": category,
+                    "tags": tags,
+                    "relevance": relevance,
+                })
+
+            # Write index.yaml
+            now_str = datetime.now(UTC).isoformat()
+            filter_val = f'"{topic}"' if topic else "null"
+            index_lines = [
+                "snapshot:",
+                f'  created_at: "{now_str}"',
+                f"  topic_filter: {filter_val}",
+                f'  ext: "{ext}"',
+                f"  count: {len(index_entries)}",
+                "",
+                "memories:",
+            ]
+            for entry in index_entries:
+                tags_str = "[" + ", ".join(f'"{t}"' for t in entry["tags"]) + "]"
+                index_lines.extend([
+                    f'  - topic: "{entry["topic"]}"',
+                    f'    file: "{entry["file"]}"',
+                    f'    category: "{entry["category"]}"',
+                    f"    tags: {tags_str}",
+                    f'    relevance: {entry["relevance"]}',
+                    "",
+                ])
+
+            index_path = validated_path / "index.yaml"
+            index_path.write_text("\n".join(index_lines), encoding="utf-8")
+
+            s.add("written", written)
+            s.add("skipped", skipped)
+            s.add("total", len(index_entries))
+            return f"Snap {len(index_entries)} memories to {validated_path} ({written} written, {skipped} skipped)"
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error creating snap: {e}"
+
+
+def restore(
+    *,
+    input: str,
+    topic: str | None = None,
+    overwrite: bool = False,
+) -> str:
+    """Restore memories from a snap directory (created by `mem.snap`).
+
+    Reads index.yaml and content files, recreating memories with full metadata.
+
+    Args:
+        input: Input directory path (must contain index.yaml)
+        topic: Override base topic (otherwise uses topics from index)
+        overwrite: If True, overwrite existing memories with same topic+hash
+
+    Returns:
+        Restore summary.
+
+    Example:
+        mem.restore(input="backup/consult", topic="consult")
+        mem.restore(input="backup/consult", topic="consult", overwrite=True)
+    """
+    with LogSpan(span="mem.restore", input=input) as s:
+        try:
+            try:
+                import yaml
+            except ImportError as e:
+                raise ImportError(
+                    "pyyaml is required for YAML import. Install with: pip install pyyaml"
+                ) from e
+
+            validated_path, error = _validate_file_path(input, must_exist=True)
+            if error:
+                return f"Error: {error}"
+            assert validated_path is not None
+
+            if not validated_path.is_dir():
+                return f"Error: '{input}' is not a directory"
+
+            index_path = validated_path / "index.yaml"
+            if not index_path.exists():
+                return f"Error: index.yaml not found in '{input}'"
+
+            data = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+            if not data or "memories" not in data:
+                return "Error: Invalid index.yaml - expected 'memories' key"
+
+            # Determine topic remapping
+            snapshot_meta = data.get("snapshot", {})
+            original_filter = snapshot_meta.get("topic_filter")
+
+            memories = data["memories"]
+            restored = 0
+            skipped = 0
+            errors = []
+
+            for entry in memories:
+                mem_topic = entry.get("topic", "")
+                file_rel = entry.get("file", "")
+                category = entry.get("category", "note")
+                tags = entry.get("tags", [])
+                relevance = max(1, min(10, int(entry.get("relevance", 5))))
+
+                if not mem_topic or not file_rel:
+                    errors.append("Missing topic or file in index entry")
+                    continue
+
+                # Remap topic if override provided
+                if topic is not None:
+                    # Strip original filter prefix, prepend new topic
+                    rel = mem_topic
+                    if original_filter and mem_topic.startswith(original_filter):
+                        rel = mem_topic[len(original_filter):]
+                    elif original_filter and mem_topic == original_filter.rstrip("/"):
+                        rel = mem_topic.rsplit("/", 1)[-1]
+                    mem_topic = f"{topic}/{rel}" if rel else topic
+
+                # Read content file
+                content_path = validated_path / file_rel
+                if not content_path.exists():
+                    errors.append(f"File not found: {file_rel}")
+                    continue
+
+                content = content_path.read_text(encoding="utf-8")
+                content_hash = _content_hash(content)
+
+                conn = _get_connection()
+
+                # Check for existing
+                existing = conn.execute(
+                    "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
+                    [mem_topic, content_hash],
+                ).fetchone()
+
+                if existing and not overwrite:
+                    skipped += 1
+                    continue
+
+                if existing and overwrite:
+                    conn.execute("DELETE FROM memories WHERE id = ?", [existing[0]])
+
+                memory_id = str(uuid.uuid4())
+                embedding = _maybe_embed(memory_id, content)
+
+                conn.execute(
+                    """
+                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [memory_id, mem_topic, content, content_hash, category, tags, relevance, embedding],
+                )
+                restored += 1
+
+            s.add("restored", restored)
+            s.add("skipped", skipped)
+            s.add("errors", len(errors))
+            _cache_invalidate()
+
+            parts = [f"Restored {restored} memories, skipped {skipped}"]
+            if errors:
+                parts.append(f", {len(errors)} errors")
+                for err in errors[:5]:
+                    parts.append(f"\n  - {err}")
+            return "".join(parts)
+
+        except ImportError as e:
+            return f"Error: {e}"
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error restoring snap: {e}"

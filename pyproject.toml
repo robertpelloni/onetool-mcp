@@ -35,6 +35,7 @@ dependencies = [
     "questionary>=2.1.1",         # bench interactive prompts
     # === LLM & Search ===
     "openai>=2.15.0",             # code_search embeddings, LLM tools
+    "tiktoken>=0.9.0",            # Token counting for embedding truncation
     "google-genai>=1.60.0",       # grounding_search (Gemini)
     # === Database ===
     "duckdb>=1.4.3",              # code_search, db tool

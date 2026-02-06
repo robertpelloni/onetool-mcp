@@ -15,7 +15,12 @@ import pytest
 from ot_tools.mem import (
     Config,
     VALID_CATEGORIES,
+    _cache_get,
+    _cache_invalidate,
+    _cache_put,
     _content_hash,
+    _read_cache,
+    _read_cache_lock,
     _redact,
     _topic_filter,
     _validate_category,
@@ -157,6 +162,132 @@ class TestValidateCategory:
 
 
 # ---------------------------------------------------------------------------
+# Read cache tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestReadCache:
+    """Test read cache get/put/invalidate."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self):
+        """Clear the read cache before and after each test."""
+        with _read_cache_lock:
+            _read_cache.clear()
+        yield
+        with _read_cache_lock:
+            _read_cache.clear()
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_put_and_get(self, _mock_config):
+        row = ("id-1", "topic/a", "content", "note", [], 5, 0)
+        _cache_put("topic:topic/a", row)
+        assert _cache_get("topic:topic/a") == row
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_miss_returns_none(self, _mock_config):
+        assert _cache_get("topic:nonexistent") is None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=0))
+    def test_disabled_cache_never_stores(self, _mock_config):
+        _cache_put("topic:a", ("row",))
+        assert _cache_get("topic:a") is None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=2, read_cache_ttl_seconds=300))
+    def test_evicts_oldest_at_capacity(self, _mock_config):
+        _cache_put("topic:a", ("row-a",))
+        _cache_put("topic:b", ("row-b",))
+        _cache_put("topic:c", ("row-c",))  # Should evict "a"
+        assert _cache_get("topic:a") is None
+        assert _cache_get("topic:b") is not None
+        assert _cache_get("topic:c") is not None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=0))
+    def test_ttl_zero_means_no_expiry(self, _mock_config):
+        _cache_put("topic:a", ("row",))
+        assert _cache_get("topic:a") is not None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_invalidate_by_topic(self, _mock_config):
+        _cache_put("topic:proj/a", ("row-a",))
+        _cache_put("topic:proj/b", ("row-b",))
+        _cache_put("topic:other/c", ("row-c",))
+        _cache_invalidate(topic="proj/a")
+        assert _cache_get("topic:proj/a") is None
+        assert _cache_get("topic:proj/b") is not None
+        assert _cache_get("topic:other/c") is not None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_invalidate_by_topic_prefix(self, _mock_config):
+        _cache_put("topic:proj/a", ("row-a",))
+        _cache_put("topic:proj/b", ("row-b",))
+        _cache_put("topic:other/c", ("row-c",))
+        _cache_invalidate(topic="proj")
+        # "proj" prefix invalidation removes proj/a and proj/b
+        assert _cache_get("topic:proj/a") is None
+        assert _cache_get("topic:proj/b") is None
+        assert _cache_get("topic:other/c") is not None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_invalidate_by_id_clears_all(self, _mock_config):
+        _cache_put("topic:a", ("row-a",))
+        _cache_put("id:123", ("row-123",))
+        _cache_invalidate(id="123")
+        # id invalidation clears entire cache (can't map id back to topic)
+        assert _cache_get("topic:a") is None
+        assert _cache_get("id:123") is None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_invalidate_no_args_clears_all(self, _mock_config):
+        _cache_put("topic:a", ("row-a",))
+        _cache_put("topic:b", ("row-b",))
+        _cache_invalidate()
+        assert _cache_get("topic:a") is None
+        assert _cache_get("topic:b") is None
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestReadCacheIntegration:
+    """Test that read() uses the cache."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self):
+        with _read_cache_lock:
+            _read_cache.clear()
+        yield
+        with _read_cache_lock:
+            _read_cache.clear()
+
+    @patch("ot_tools.mem._get_connection")
+    def test_second_read_hits_cache(self, mock_conn):
+        from ot_tools.mem import read
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-123", "test/topic", "cached content", "note",
+            [], 5, 0, datetime.now(), datetime.now(),
+        )
+
+        # First read: cache miss
+        result1 = read(topic="test/topic")
+        assert result1 == "cached content"
+        # SELECT was called
+        select_calls_1 = len(conn.execute.call_args_list)
+
+        # Second read: cache hit — should not add another SELECT
+        result2 = read(topic="test/topic")
+        assert result2 == "cached content"
+        # Only the UPDATE (access_count) should have been added, no new SELECT
+        select_calls_2 = len(conn.execute.call_args_list)
+        # First read: 1 SELECT + 1 UPDATE = 2 calls. Second read: 1 UPDATE = 1 more call.
+        assert select_calls_2 == select_calls_1 + 1
+
+
+# ---------------------------------------------------------------------------
 # CRUD operation tests with mocked DuckDB
 # ---------------------------------------------------------------------------
 
@@ -166,12 +297,12 @@ class TestValidateCategory:
 class TestWrite:
     """Test mem.write() with mocked database and embeddings."""
 
-    @patch("ot_tools.mem._generate_embedding")
+    @patch("ot_tools.mem._maybe_embed")
     @patch("ot_tools.mem._get_connection")
     def test_stores_new_memory(self, mock_conn, mock_embed):
         from ot_tools.mem import write
 
-        mock_embed.return_value = [0.1] * 1536
+        mock_embed.return_value = None
 
         conn = MagicMock()
         mock_conn.return_value = conn
@@ -221,12 +352,12 @@ class TestWrite:
         assert result == "Error: Provide content or file"
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("ot_tools.mem._generate_embedding")
+    @patch("ot_tools.mem._maybe_embed")
     @patch("ot_tools.mem._get_connection")
     def test_reads_from_file(self, mock_conn, mock_embed, tmp_path):
         from ot_tools.mem import write
 
-        mock_embed.return_value = [0.1] * 1536
+        mock_embed.return_value = None
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = None
@@ -475,15 +606,18 @@ class TestReadBatch:
 class TestSearch:
     """Test mem.search() with mocked database and embeddings."""
 
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
     @patch("ot_tools.mem._generate_embedding")
     @patch("ot_tools.mem._get_connection")
-    def test_semantic_search(self, mock_conn, mock_embed):
+    def test_semantic_search(self, mock_conn, mock_embed, _mock_config):
         from ot_tools.mem import search
 
         mock_embed.return_value = [0.1] * 1536
 
         conn = MagicMock()
         mock_conn.return_value = conn
+        # First execute: has_embeddings check; second: actual search
+        conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "topic/one", "content one", "note", ["tag"], 5, 2, 0.95),
         ]
@@ -515,23 +649,26 @@ class TestSearch:
         assert "Error" in result
         assert "Invalid mode" in result
 
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
     @patch("ot_tools.mem._generate_embedding")
     @patch("ot_tools.mem._get_connection")
-    def test_no_results(self, mock_conn, mock_embed):
+    def test_no_results(self, mock_conn, mock_embed, _mock_config):
         from ot_tools.mem import search
 
         mock_embed.return_value = [0.1] * 1536
         conn = MagicMock()
         mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = []
 
         result = search(query="nothing")
 
         assert "No memories found" in result
 
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
     @patch("ot_tools.mem._generate_embedding")
     @patch("ot_tools.mem._get_connection")
-    def test_search_custom_extract(self, mock_conn, mock_embed):
+    def test_search_custom_extract(self, mock_conn, mock_embed, _mock_config):
         from ot_tools.mem import search
 
         mock_embed.return_value = [0.1] * 1536
@@ -539,6 +676,7 @@ class TestSearch:
 
         conn = MagicMock()
         mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "topic/one", long_content, "note", [], 5, 1, 0.9),
         ]
@@ -550,9 +688,10 @@ class TestSearch:
         assert "a" * 51 not in result
         assert "..." in result
 
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
     @patch("ot_tools.mem._generate_embedding")
     @patch("ot_tools.mem._get_connection")
-    def test_search_extract_zero_returns_full(self, mock_conn, mock_embed):
+    def test_search_extract_zero_returns_full(self, mock_conn, mock_embed, _mock_config):
         from ot_tools.mem import search
 
         mock_embed.return_value = [0.1] * 1536
@@ -560,6 +699,7 @@ class TestSearch:
 
         conn = MagicMock()
         mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "topic/one", long_content, "note", [], 5, 1, 0.9),
         ]
@@ -568,6 +708,184 @@ class TestSearch:
 
         assert "a" * 500 in result
         assert "..." not in result
+
+
+# ---------------------------------------------------------------------------
+# Optional embeddings tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestMaybeEmbed:
+    """Test _maybe_embed helper with different config states."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    def test_disabled_returns_none(self, _mock_config):
+        from ot_tools.mem import _maybe_embed
+
+        result = _maybe_embed("mem-id", "some content")
+        assert result is None
+
+    @patch("ot_tools.mem._generate_embedding", return_value=[0.1, 0.2, 0.3])
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=False))
+    def test_sync_returns_vector(self, _mock_config, _mock_embed):
+        from ot_tools.mem import _maybe_embed
+
+        result = _maybe_embed("mem-id", "some content")
+        assert result == [0.1, 0.2, 0.3]
+
+    @patch("ot_tools.mem._enqueue_embedding")
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=True))
+    def test_async_enqueues_and_returns_none(self, _mock_config, mock_enqueue):
+        from ot_tools.mem import _maybe_embed
+
+        result = _maybe_embed("mem-id", "some content")
+        assert result is None
+        mock_enqueue.assert_called_once_with("mem-id")
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSearchEmbeddingsDisabled:
+    """Test search returns helpful messages when embeddings disabled."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    def test_semantic_search_returns_message(self, _mock_config):
+        from ot_tools.mem import search
+
+        result = search(query="test query")
+        assert "embeddings_enabled" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    def test_hybrid_search_returns_message(self, _mock_config):
+        from ot_tools.mem import search
+
+        result = search(query="test query", mode="hybrid")
+        assert "embeddings_enabled" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("ot_tools.mem._get_connection")
+    def test_pattern_search_works_when_disabled(self, mock_conn, _mock_config):
+        from ot_tools.mem import search
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "topic/one", "matching content", "note", [], 5, 1),
+        ]
+
+        result = search(query="matching", mode="pattern")
+        assert "Found 1 memories" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSearchNoEmbeddings:
+    """Test search returns guidance when enabled but no embeddings exist."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("ot_tools.mem._get_connection")
+    def test_semantic_no_embeddings_returns_guidance(self, mock_conn, _mock_config):
+        from ot_tools.mem import search
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None  # No embeddings exist
+
+        result = search(query="test query")
+        assert "mem.embed" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestWriteWithoutEmbeddings:
+    """Test that write stores NULL embedding when disabled."""
+
+    @patch("ot_tools.mem._maybe_embed", return_value=None)
+    @patch("ot_tools.mem._get_connection")
+    def test_write_stores_null_embedding(self, mock_conn, _mock_embed):
+        from ot_tools.mem import write
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None  # No duplicate
+
+        result = write(topic="test/topic", content="test content")
+
+        assert "Stored memory" in result
+        # Verify embedding parameter is None in INSERT
+        insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
+        assert len(insert_calls) == 1
+        insert_params = insert_calls[0][0][1]
+        assert insert_params[7] is None  # embedding is 8th parameter
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestEmbedFunction:
+    """Test mem.embed() backfill function."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    def test_disabled_returns_message(self, _mock_config):
+        from ot_tools.mem import embed
+
+        result = embed()
+        assert "disabled" in result.lower()
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("ot_tools.mem._get_connection")
+    def test_dry_run_shows_count(self, mock_conn, _mock_config):
+        from ot_tools.mem import embed
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "content one"),
+            ("id-2", "content two"),
+        ]
+
+        result = embed(dry_run=True)
+        assert "2 memories" in result
+
+    @patch("ot_tools.mem._generate_embedding", return_value=[0.1] * 1536)
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("ot_tools.mem._get_connection")
+    def test_generates_embeddings(self, mock_conn, _mock_config, _mock_embed):
+        from ot_tools.mem import embed
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "content one"),
+        ]
+
+        result = embed(dry_run=False)
+        assert "Generated embeddings for 1 memories" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("ot_tools.mem._get_connection")
+    def test_all_embedded_returns_message(self, mock_conn, _mock_config):
+        from ot_tools.mem import embed
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = []
+
+        result = embed()
+        assert "already have embeddings" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestFlush:
+    """Test mem.flush() queue drain."""
+
+    def test_no_worker_returns_immediately(self):
+        from ot_tools.mem import flush
+
+        result = flush()
+        assert "No background embeddings pending" in result
 
 
 @pytest.mark.unit
@@ -665,12 +983,12 @@ class TestDelete:
 class TestUpdate:
     """Test mem.update() with mocked database and embeddings."""
 
-    @patch("ot_tools.mem._generate_embedding")
+    @patch("ot_tools.mem._maybe_embed")
     @patch("ot_tools.mem._get_connection")
     def test_updates_single_match(self, mock_conn, mock_embed):
         from ot_tools.mem import update
 
-        mock_embed.return_value = [0.1] * 1536
+        mock_embed.return_value = None
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
@@ -714,12 +1032,12 @@ class TestUpdate:
 class TestAppend:
     """Test mem.append() with mocked database and embeddings."""
 
-    @patch("ot_tools.mem._generate_embedding")
+    @patch("ot_tools.mem._maybe_embed")
     @patch("ot_tools.mem._get_connection")
     def test_appends_content(self, mock_conn, mock_embed):
         from ot_tools.mem import append
 
-        mock_embed.return_value = [0.1] * 1536
+        mock_embed.return_value = None
         conn = MagicMock()
         mock_conn.return_value = conn
 
@@ -862,6 +1180,7 @@ class TestStats:
             (10,),           # total count
             (5000, 500, 2000),  # size stats
             (3,),            # history count
+            (2,),            # without embeddings count
         ]
         conn.execute.return_value.fetchall.side_effect = [
             [("note", 5), ("rule", 3), ("decision", 2)],  # categories
@@ -872,6 +1191,7 @@ class TestStats:
 
         assert "10" in result
         assert "Memory Statistics" in result
+        assert "Embeddings:" in result
 
     @patch("ot_tools.mem._get_connection")
     def test_empty_stats(self, mock_conn):
@@ -889,7 +1209,7 @@ class TestStats:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestExport:
-    """Test mem.export() format output."""
+    """Test mem.export() YAML output."""
 
     @patch("ot_tools.mem._get_connection")
     def test_export_yaml(self, mock_conn):
@@ -901,26 +1221,11 @@ class TestExport:
             ("id-1", "topic/one", "content one", "note", ["tag1"], 5, 2, datetime.now(), datetime.now()),
         ]
 
-        result = export(format="yaml")
+        result = export()
 
         assert "memories:" in result
         assert "topic/one" in result
         assert "content one" in result
-
-    @patch("ot_tools.mem._get_connection")
-    def test_export_markdown(self, mock_conn):
-        from ot_tools.mem import export
-
-        conn = MagicMock()
-        mock_conn.return_value = conn
-        conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "content one", "note", ["tag1"], 5, 2, datetime.now(), datetime.now()),
-        ]
-
-        result = export(format="markdown")
-
-        assert "# Memory Export" in result
-        assert "## topic/one" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("ot_tools.mem._get_connection")
@@ -934,17 +1239,10 @@ class TestExport:
         ]
 
         out_file = tmp_path / "export.yaml"
-        result = export(format="yaml", output=str(out_file))
+        result = export(output=str(out_file))
 
         assert "Exported 1 memories" in result
         assert out_file.exists()
-
-    def test_invalid_format(self):
-        from ot_tools.mem import export
-
-        result = export(format="csv")
-        assert "Error" in result
-        assert "Invalid format" in result
 
     @patch("ot_tools.mem._get_connection")
     def test_empty_export(self, mock_conn):
@@ -973,12 +1271,12 @@ class TestLoad:
         assert "not found" in result.lower()
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("ot_tools.mem._generate_embedding")
+    @patch("ot_tools.mem._maybe_embed")
     @patch("ot_tools.mem._get_connection")
     def test_imports_from_yaml(self, mock_conn, mock_embed, tmp_path):
         from ot_tools.mem import load
 
-        mock_embed.return_value = [0.1] * 1536
+        mock_embed.return_value = None
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = None  # No existing
@@ -996,6 +1294,290 @@ class TestLoad:
         result = load(file=str(yaml_file))
 
         assert "Imported 1 memories" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSnap:
+    """Test mem.snap() file-based export."""
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_snapshot_creates_files_and_index(self, mock_conn, tmp_path):
+        from ot_tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "docs/readme", "# README content", "note", ["tag1"], 5, 2,
+             datetime.now(), datetime.now()),
+        ]
+
+        out_dir = tmp_path / "backup"
+        result = snap(output=str(out_dir))
+
+        assert "Snap 1 memories" in result
+        assert (out_dir / "docs/readme.md").exists()
+        assert (out_dir / "docs/readme.md").read_text() == "# README content"
+        assert (out_dir / "index.yaml").exists()
+        index_text = (out_dir / "index.yaml").read_text()
+        assert "docs/readme" in index_text
+        assert "docs/readme.md" in index_text
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_snapshot_with_topic_filter(self, mock_conn, tmp_path):
+        from ot_tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "consult/ask", "ask content", "note", [], 5, 0,
+             datetime.now(), datetime.now()),
+            ("id-2", "consult/mem-tool", "mem content", "discovery", [], 7, 1,
+             datetime.now(), datetime.now()),
+        ]
+
+        out_dir = tmp_path / "snap"
+        result = snap(output=str(out_dir), topic="consult/")
+
+        assert "Snap 2 memories" in result
+        # Topic prefix stripped: "consult/ask" -> "ask.md"
+        assert (out_dir / "ask.md").exists()
+        assert (out_dir / "mem-tool.md").exists()
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_snapshot_skip_existing(self, mock_conn, tmp_path):
+        from ot_tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "notes/a", "content a", "note", [], 5, 0,
+             datetime.now(), datetime.now()),
+        ]
+
+        out_dir = tmp_path / "snap"
+        out_dir.mkdir()
+        (out_dir / "notes").mkdir()
+        (out_dir / "notes/a.md").write_text("existing")
+
+        result = snap(output=str(out_dir), on_conflict="skip")
+
+        assert "1 skipped" in result
+        assert (out_dir / "notes/a.md").read_text() == "existing"
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_snapshot_overwrite_existing(self, mock_conn, tmp_path):
+        from ot_tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "notes/a", "new content", "note", [], 5, 0,
+             datetime.now(), datetime.now()),
+        ]
+
+        out_dir = tmp_path / "snap"
+        out_dir.mkdir()
+        (out_dir / "notes").mkdir()
+        (out_dir / "notes/a.md").write_text("old content")
+
+        result = snap(output=str(out_dir), on_conflict="overwrite")
+
+        assert "1 written" in result
+        assert (out_dir / "notes/a.md").read_text() == "new content"
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_snapshot_nested_topics(self, mock_conn, tmp_path):
+        from ot_tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "consult/sub/deep", "deep content", "rule", ["important"], 9, 0,
+             datetime.now(), datetime.now()),
+        ]
+
+        out_dir = tmp_path / "snap"
+        result = snap(output=str(out_dir), topic="consult/")
+
+        assert "Snap 1 memories" in result
+        assert (out_dir / "sub/deep.md").exists()
+        assert (out_dir / "sub/deep.md").read_text() == "deep content"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestRestore:
+    """Test mem.restore() from snapshot directory."""
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_restore_from_snapshot(self, mock_conn, mock_embed, tmp_path):
+        from ot_tools.mem import restore
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None  # No existing
+
+        # Create snapshot directory
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+        (snap_dir / "ask.md").write_text("ask content")
+        (snap_dir / "index.yaml").write_text(
+            'snapshot:\n'
+            '  topic_filter: "consult/"\n'
+            '  count: 1\n'
+            'memories:\n'
+            '  - topic: "consult/ask"\n'
+            '    file: "ask.md"\n'
+            '    category: "note"\n'
+            '    tags: ["research"]\n'
+            '    relevance: 7\n'
+        )
+
+        result = restore(input=str(snap_dir))
+
+        assert "Restored 1 memories" in result
+        # Verify INSERT was called with correct topic and metadata
+        insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
+        assert len(insert_calls) == 1
+        insert_params = insert_calls[0][0][1]
+        assert insert_params[1] == "consult/ask"  # topic
+        assert insert_params[4] == "note"  # category
+        assert insert_params[5] == ["research"]  # tags
+        assert insert_params[6] == 7  # relevance
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_restore_skips_duplicates(self, mock_conn, mock_embed, tmp_path):
+        from ot_tools.mem import restore
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = ("existing-id",)  # Already exists
+
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+        (snap_dir / "a.md").write_text("content")
+        (snap_dir / "index.yaml").write_text(
+            'memories:\n'
+            '  - topic: "test/a"\n'
+            '    file: "a.md"\n'
+            '    category: "note"\n'
+            '    tags: []\n'
+            '    relevance: 5\n'
+        )
+
+        result = restore(input=str(snap_dir))
+
+        assert "skipped 1" in result
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_restore_overwrite(self, mock_conn, mock_embed, tmp_path):
+        from ot_tools.mem import restore
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = ("existing-id",)
+
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+        (snap_dir / "a.md").write_text("new content")
+        (snap_dir / "index.yaml").write_text(
+            'memories:\n'
+            '  - topic: "test/a"\n'
+            '    file: "a.md"\n'
+            '    category: "note"\n'
+            '    tags: []\n'
+            '    relevance: 5\n'
+        )
+
+        result = restore(input=str(snap_dir), overwrite=True)
+
+        assert "Restored 1 memories" in result
+        # Should have DELETE + INSERT
+        delete_calls = [c for c in conn.execute.call_args_list if "DELETE" in str(c)]
+        assert len(delete_calls) >= 1
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    def test_restore_missing_index(self, tmp_path):
+        from ot_tools.mem import restore
+
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+
+        result = restore(input=str(snap_dir))
+
+        assert "Error" in result
+        assert "index.yaml" in result
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._get_connection")
+    def test_restore_missing_file(self, mock_conn, tmp_path):
+        from ot_tools.mem import restore
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+        (snap_dir / "index.yaml").write_text(
+            'memories:\n'
+            '  - topic: "test/a"\n'
+            '    file: "missing.md"\n'
+            '    category: "note"\n'
+            '    tags: []\n'
+            '    relevance: 5\n'
+        )
+
+        result = restore(input=str(snap_dir))
+
+        assert "1 errors" in result
+
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_restore_topic_override(self, mock_conn, mock_embed, tmp_path):
+        from ot_tools.mem import restore
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        snap_dir = tmp_path / "snap"
+        snap_dir.mkdir()
+        (snap_dir / "ask.md").write_text("content")
+        (snap_dir / "index.yaml").write_text(
+            'snapshot:\n'
+            '  topic_filter: "consult/"\n'
+            'memories:\n'
+            '  - topic: "consult/ask"\n'
+            '    file: "ask.md"\n'
+            '    category: "note"\n'
+            '    tags: []\n'
+            '    relevance: 5\n'
+        )
+
+        result = restore(input=str(snap_dir), topic="new-base")
+
+        assert "Restored 1 memories" in result
+        insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
+        insert_params = insert_calls[0][0][1]
+        assert insert_params[1] == "new-base/ask"  # remapped topic
 
 
 # ---------------------------------------------------------------------------
@@ -1031,11 +1613,66 @@ class TestGetOpenAIClient:
 
 @pytest.mark.unit
 @pytest.mark.tools
+class TestChunkTextByTokens:
+    """Test _chunk_text_by_tokens token-aware splitting."""
+
+    def test_short_text_single_chunk(self):
+        from ot_tools.mem import _chunk_text_by_tokens
+
+        chunks = _chunk_text_by_tokens("hello world", 8191, "text-embedding-3-small")
+        assert chunks == ["hello world"]
+
+    def test_long_text_splits_into_chunks(self):
+        from ot_tools.mem import _chunk_text_by_tokens
+
+        text = "word " * 20000  # ~20000 tokens
+        chunks = _chunk_text_by_tokens(text, 100, "text-embedding-3-small")
+        assert len(chunks) > 1
+        # Each chunk should decode back to valid text
+        for chunk in chunks:
+            assert isinstance(chunk, str)
+            assert len(chunk) > 0
+
+    def test_exact_limit_single_chunk(self):
+        from ot_tools.mem import _chunk_text_by_tokens
+
+        import tiktoken
+
+        encoding = tiktoken.encoding_for_model("text-embedding-3-small")
+        text = "hello world this is a test"
+        token_count = len(encoding.encode(text))
+        chunks = _chunk_text_by_tokens(text, token_count, "text-embedding-3-small")
+        assert chunks == [text]
+
+    def test_unknown_model_falls_back(self):
+        from ot_tools.mem import _chunk_text_by_tokens
+
+        chunks = _chunk_text_by_tokens("hello world", 8191, "unknown-model-xyz")
+        assert chunks == ["hello world"]
+
+    def test_chunks_cover_all_content(self):
+        from ot_tools.mem import _chunk_text_by_tokens
+
+        import tiktoken
+
+        encoding = tiktoken.encoding_for_model("text-embedding-3-small")
+        text = "word " * 500  # moderate text
+        chunks = _chunk_text_by_tokens(text, 100, "text-embedding-3-small")
+        # Rejoin all chunk tokens — should equal original tokens
+        original_tokens = encoding.encode(text)
+        chunk_tokens = []
+        for chunk in chunks:
+            chunk_tokens.extend(encoding.encode(chunk))
+        assert len(chunk_tokens) == len(original_tokens)
+
+
+@pytest.mark.unit
+@pytest.mark.tools
 class TestGenerateEmbedding:
     """Test _generate_embedding function."""
 
     @patch("ot_tools.mem._get_openai_client")
-    def test_generates_embedding(self, mock_client):
+    def test_generates_embedding_short_text(self, mock_client):
         from ot_tools.mem import _generate_embedding
 
         mock_openai = MagicMock()
@@ -1050,6 +1687,59 @@ class TestGenerateEmbedding:
 
         assert result == [0.1, 0.2, 0.3]
         mock_openai.embeddings.create.assert_called_once()
+
+    @patch("ot_tools.mem._chunk_text_by_tokens")
+    @patch("ot_tools.mem._get_openai_client")
+    def test_averages_multi_chunk_embeddings(self, mock_client, mock_chunk):
+        from ot_tools.mem import _generate_embedding
+
+        # Simulate text splitting into 2 chunks
+        mock_chunk.return_value = ["chunk one", "chunk two"]
+
+        mock_openai = MagicMock()
+        mock_client.return_value = mock_openai
+
+        # API returns 2 embeddings (one per chunk)
+        embed1 = MagicMock()
+        embed1.embedding = [1.0, 0.0, 0.0]
+        embed2 = MagicMock()
+        embed2.embedding = [0.0, 1.0, 0.0]
+        mock_response = MagicMock()
+        mock_response.data = [embed1, embed2]
+        mock_openai.embeddings.create.return_value = mock_response
+
+        result = _generate_embedding("very long text")
+
+        # Should average the two vectors
+        assert result == [0.5, 0.5, 0.0]
+        # Should pass both chunks as a batch
+        call_kwargs = mock_openai.embeddings.create.call_args[1]
+        assert call_kwargs["input"] == ["chunk one", "chunk two"]
+
+    @patch("ot_tools.mem._chunk_text_by_tokens")
+    @patch("ot_tools.mem._get_openai_client")
+    def test_single_chunk_passes_string_not_list(self, mock_client, mock_chunk):
+        from ot_tools.mem import _generate_embedding
+
+        mock_chunk.return_value = ["short text"]
+
+        mock_openai = MagicMock()
+        mock_client.return_value = mock_openai
+        mock_response = MagicMock()
+        mock_response.data = [MagicMock()]
+        mock_response.data[0].embedding = [0.1, 0.2, 0.3]
+        mock_openai.embeddings.create.return_value = mock_response
+
+        _generate_embedding("short text")
+
+        # Single chunk: should pass string directly, not a list
+        call_kwargs = mock_openai.embeddings.create.call_args[1]
+        assert call_kwargs["input"] == "short text"
+
+    def test_safety_margin_applied(self):
+        from ot_tools.mem import _TOKEN_SAFETY_MARGIN
+
+        assert _TOKEN_SAFETY_MARGIN == 100
 
 
 # ---------------------------------------------------------------------------
@@ -1098,7 +1788,7 @@ class TestFilePathSecurity:
             ("id-1", "topic/one", "content", "note", [], 5, 0, datetime.now(), datetime.now()),
         ]
 
-        result = export(format="yaml", output="/tmp/evil_export.yaml")
+        result = export(output="/tmp/evil_export.yaml")
 
         assert "Error" in result
         assert "outside allowed directories" in result

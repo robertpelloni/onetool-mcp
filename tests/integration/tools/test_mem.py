@@ -301,23 +301,16 @@ class TestMemLifecycle:
     def test_export_yaml(self, mem_db):
         mem_db.write(topic="export/test", content="exported content")
 
-        result = mem_db.export(format="yaml")
+        result = mem_db.export()
         assert "memories:" in result
         assert "export/test" in result
         assert "exported content" in result
-
-    def test_export_markdown(self, mem_db):
-        mem_db.write(topic="export/md", content="markdown content")
-
-        result = mem_db.export(format="markdown")
-        assert "# Memory Export" in result
-        assert "## export/md" in result
 
     def test_export_to_file(self, mem_db, tmp_path):
         mem_db.write(topic="export/file", content="file content")
 
         out_file = tmp_path / "output.yaml"
-        result = mem_db.export(format="yaml", output=str(out_file))
+        result = mem_db.export(output=str(out_file))
         assert "Exported 1 memories" in result
         assert out_file.exists()
         assert "file content" in out_file.read_text()
@@ -326,7 +319,7 @@ class TestMemLifecycle:
         # Write and export
         mem_db.write(topic="roundtrip/test", content="roundtrip content")
         out_file = tmp_path / "backup.yaml"
-        mem_db.export(format="yaml", output=str(out_file))
+        mem_db.export(output=str(out_file))
 
         # Delete and re-import
         conn = mem_db._get_connection()
@@ -344,7 +337,7 @@ class TestMemLifecycle:
         mem_db.write(topic="roundtrip/multi", content=multiline)
 
         out_file = tmp_path / "multi.yaml"
-        mem_db.export(format="yaml", output=str(out_file))
+        mem_db.export(output=str(out_file))
 
         # Clear and re-import
         conn = mem_db._get_connection()
