@@ -163,6 +163,49 @@ class TestWrapExternalContent:
 
 @pytest.mark.unit
 @pytest.mark.core
+class TestFormatAwareBoundaries:
+    """Test format-native comment-style boundaries."""
+
+    def test_yaml_uses_hash_comments(self):
+        """YAML formats use # comment boundaries."""
+        for fmt in ("yml", "yml_h"):
+            result = wrap_external_content("key: value", fmt=fmt)
+            assert result.startswith("# <external-content-")
+            assert result.endswith(">")
+            assert "# </external-content-" in result
+
+    def test_json_uses_block_comments(self):
+        """JSON formats use /* */ comment boundaries."""
+        for fmt in ("json", "json_h"):
+            result = wrap_external_content('{"key": "value"}', fmt=fmt)
+            assert result.startswith("/* <external-content-")
+            assert result.endswith("*/")
+            assert "/* </external-content-" in result
+
+    def test_raw_uses_xml_tags(self):
+        """Raw format uses XML-style tags."""
+        result = wrap_external_content("data", fmt="raw")
+        assert result.startswith("<external-content-")
+        assert result.endswith(">")
+        assert "</external-content-" in result
+
+    def test_no_fmt_uses_xml_tags(self):
+        """No format specified uses XML-style tags (default)."""
+        result = wrap_external_content("data")
+        assert result.startswith("<external-content-")
+        assert "</external-content-" in result
+
+    def test_sanitize_output_passes_fmt(self):
+        """sanitize_output passes fmt to wrap_external_content."""
+        result = sanitize_output("key: value", fmt="yml_h")
+        assert result.startswith("# <external-content-")
+
+        result = sanitize_output('{"key": 1}', fmt="json")
+        assert result.startswith("/* <external-content-")
+
+
+@pytest.mark.unit
+@pytest.mark.core
 class TestSanitizeOutput:
     """Test main sanitize_output entry point."""
 
@@ -216,29 +259,34 @@ class TestSanitizeMagicVariable:
         tool_funcs = load_tool_functions(tools_dir)
 
         with patch("ot.executor.runner.get_config", return_value=mock_config):
-            result = execute_python_code(
+            result, _raw, should_sanitize, _fmt = execute_python_code(
                 '{"key": "value with __ot trigger"}',
                 tool_functions=tool_funcs,
             )
 
-        # Config has security.sanitize.enabled=True, so output is wrapped
+        # Sanitization flag reflects config default
+        assert should_sanitize is True
+        # Text is NOT sanitized at this layer (sanitization moved to server.py)
         assert "key" in result
-        assert "<external-content-" in result
-        assert "[REDACTED:trigger]" in result
 
-    def test_sanitize_true_wraps(self, executor):
-        """__sanitize__ = True enables wrapping and sanitization."""
-        code = '''__sanitize__ = True
-{"key": "__ot should be redacted"}'''
-        result = executor(code)
-        assert "<external-content-" in result
-        assert "__ot" not in result
-        assert "[REDACTED:trigger]" in result
+    @pytest.mark.parametrize(
+        ("sanitize_val", "expected"),
+        [("True", True), ("False", False)],
+        ids=["enabled", "disabled"],
+    )
+    def test_sanitize_flag_returned(self, sanitize_val, expected):
+        """__sanitize__ value is returned as should_sanitize flag."""
+        from pathlib import Path
 
-    def test_sanitize_false_skips(self, executor):
-        """__sanitize__ = False skips sanitization."""
-        code = '''__sanitize__ = False
-{"key": "__ot should not be redacted"}'''
-        result = executor(code)
-        assert "<external-content-" not in result
-        assert "__ot" in result
+        from ot.executor.runner import execute_python_code
+        from ot.executor.tool_loader import load_tool_functions
+
+        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ot_tools"
+        tool_funcs = load_tool_functions(tools_dir)
+
+        code = f'''__sanitize__ = {sanitize_val}
+{{"key": "value"}}'''
+        _text, _raw, should_sanitize, _fmt = execute_python_code(
+            code, tool_functions=tool_funcs
+        )
+        assert should_sanitize is expected

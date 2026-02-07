@@ -28,7 +28,7 @@ from ot.executor.pack_proxy import build_execution_namespace
 from ot.executor.result_store import get_result_store
 from ot.executor.tool_loader import load_tool_functions, load_tool_registry
 from ot.logging import LogSpan
-from ot.utils import sanitize_output, serialize_result
+from ot.utils import serialize_result
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,6 +48,9 @@ class CommandResult:
     success: bool = True
     error_type: str | None = None
     line_number: int | None = None
+    raw: Any = None
+    should_sanitize: bool = True
+    format: str = "json"
 
 
 # Sentinel value to distinguish explicit None return from no return
@@ -211,7 +214,7 @@ def execute_python_code(
     tool_functions: dict[str, Any] | None = None,
     tools_dir: Path | None = None,
     validate: bool = True,
-) -> str:
+) -> tuple[str, Any, bool, str]:
     """Execute Python code with tool functions available.
 
     Args:
@@ -221,7 +224,7 @@ def execute_python_code(
         validate: Whether to validate code before execution (default True)
 
     Returns:
-        String result from the code execution
+        Tuple of (serialized string, raw Python object, sanitize flag, format mode)
 
     Raises:
         ValueError: If validation fails or execution fails
@@ -278,23 +281,20 @@ def execute_python_code(
         default_sanitize = config.security.sanitize.enabled
         should_sanitize: bool = namespace.get("__sanitize__", default_sanitize)
 
-        # Helper to apply sanitization if enabled
-        def _maybe_sanitize(content: str) -> str:
-            if should_sanitize:
-                return sanitize_output(content, enabled=True)
-            return content
-
         # Check for sentinel - no return value
         if result is _NO_RETURN:
             # Return stdout if available, otherwise success message
             output = stdout_output or "Code executed successfully (no return value)"
-            return _maybe_sanitize(output)
+            return output, None, should_sanitize, fmt
 
         # Explicit None return (e.g., from print())
         if result is None:
             # Return stdout if available (captures print output)
             output = stdout_output or "None"
-            return _maybe_sanitize(output)
+            return output, None, should_sanitize, fmt
+
+        # Preserve raw result before serialization
+        raw_result = result
 
         # If we have both a result and stdout, include both
         if stdout_output:
@@ -302,7 +302,7 @@ def execute_python_code(
         else:
             output = serialize_result(result, fmt)
 
-        return _maybe_sanitize(output)
+        return output, raw_result, should_sanitize, fmt
 
     except Exception as e:
         error_msg, line_num = _map_error_line(e, line_offset)
@@ -468,7 +468,7 @@ async def execute_command(
         try:
             if use_thread_pool:
                 # Run in thread pool so event loop can process proxy calls
-                result = await asyncio.to_thread(
+                text_result, raw_result, sanitize, result_fmt = await asyncio.to_thread(
                     execute_python_code,
                     stripped,
                     tool_functions=tool_namespace,
@@ -476,29 +476,33 @@ async def execute_command(
                 )
             else:
                 # Direct execution for non-proxy calls (no overhead)
-                result = execute_python_code(
+                text_result, raw_result, sanitize, result_fmt = execute_python_code(
                     stripped, tool_functions=tool_namespace, validate=should_validate
                 )
 
             # Check for large output and store if needed
             config = get_config()
             max_size = config.output.max_inline_size
-            result_size = len(result.encode("utf-8"))
+            result_size = len(text_result.encode("utf-8"))
 
             if max_size > 0 and result_size > max_size:
                 # Store large output and return summary
                 store = get_result_store()
-                stored = store.store(result, tool=stripped[:50])
-                result = serialize_result(stored.to_dict(), "json")
+                stored = store.store(text_result, tool=stripped[:50])
+                text_result = serialize_result(stored.to_dict(), "json")
+                raw_result = stored.to_dict()
                 span.add("storedHandle", stored.handle)
                 span.add("storedSize", result_size)
 
-            span.add("resultLength", len(result))
+            span.add("resultLength", len(text_result))
             return CommandResult(
                 command=command,
-                result=result,
+                result=text_result,
+                raw=raw_result,
                 executor="python",
                 success=True,
+                should_sanitize=sanitize,
+                format=result_fmt,
             )
         except ValueError as e:
             return CommandResult(

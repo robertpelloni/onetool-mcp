@@ -144,11 +144,11 @@ class TestSerializeResultFormats:
 class TestFormatMagicVariable:
     """Test __format__ magic variable integration with executor."""
 
-    def test_format_default_compact_json(self, executor):
+    def test_format_default_json(self, executor):
         """Default format (no __format__) produces compact JSON."""
         result = executor('{"name": "test", "value": 123}')
-        assert result == '{"name":"test","value":123}'
         assert "\n" not in result
+        assert json.loads(result) == {"name": "test", "value": 123}
 
     def test_format_json_h(self, executor):
         """__format__ = 'json_h' produces human-readable JSON."""
@@ -185,12 +185,13 @@ class TestFormatMagicVariable:
         assert "'name'" in result or "name" in result
 
     def test_format_invalid_falls_back(self, executor):
-        """Invalid __format__ value falls back to compact JSON."""
+        """Invalid __format__ value falls back to json."""
         code = '''__format__ = "invalid_format"
 {"name": "test", "value": 123}'''
         result = executor(code)
-        # Should fall back to compact JSON
-        assert result == '{"name":"test","value":123}'
+        # Should fall back to json (compact)
+        assert "\n" not in result
+        assert json.loads(result) == {"name": "test", "value": 123}
 
     def test_format_set_mid_execution(self, executor):
         """__format__ can be set after other statements."""

@@ -32,13 +32,12 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
 from fastmcp import Context, FastMCP
+from fastmcp.tools.tool import ToolResult
 from loguru import logger
 
 from ot.config.loader import get_config
 from ot.executor import SimpleExecutor, execute_command
 from ot.executor.runner import prepare_command
-
-# Import logging first to remove Loguru's default console handler
 from ot.logging import LogSpan, configure_logging
 from ot.prompts import get_prompts, get_tool_description, get_tool_examples
 from ot.proxy import get_proxy_manager
@@ -49,6 +48,7 @@ from ot.stats import (
     set_stats_writer,
 )
 from ot.support import get_startup_message
+from ot.utils import sanitize_output
 
 _config = get_config()
 
@@ -287,7 +287,7 @@ def _get_run_description() -> str:
         "openWorldHint": True,
     },
 )
-async def run(command: str, ctx: Context) -> str:  # noqa: ARG001
+async def run(command: str, ctx: Context) -> ToolResult:  # noqa: ARG001
     # Get registry (cached, no rescan per request) and executor
     registry = get_registry()
     executor = _get_executor()
@@ -299,7 +299,7 @@ async def run(command: str, ctx: Context) -> str:  # noqa: ARG001
     prepared = prepare_command(command)
 
     if prepared.error:
-        return f"Error: {prepared.error}"
+        return ToolResult(content=f"Error: {prepared.error}")
 
     # Step 2: Execute through unified runner (skip validation since already done)
     result = await execute_command(
@@ -322,7 +322,10 @@ async def run(command: str, ctx: Context) -> str:  # noqa: ARG001
             error_type=result.error_type,
         )
 
-    return result.result
+    # Return ToolResult with content only — prevents FastMCP from auto-generating
+    # structuredContent (which Claude Code prefers over content text)
+    text = sanitize_output(result.result, enabled=result.should_sanitize, fmt=result.format)
+    return ToolResult(content=text)
 
 
 def main() -> None:

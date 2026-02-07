@@ -75,17 +75,24 @@ def sanitize_tag_closes(content: str) -> str:
 def wrap_external_content(
     content: str,
     source: str | None = None,
+    fmt: str = "",
 ) -> str:
     """Wrap external content in GUID-tagged boundaries.
 
     Applies all three defense layers:
     1. Sanitize trigger patterns
     2. Sanitize tag patterns
-    3. Wrap in unpredictable GUID boundary tags
+    3. Wrap in unpredictable GUID boundary tags using format-native comments
+
+    Boundary style adapts to the output format:
+    - yml/yml_h: ``# <external-content-XXXX>``
+    - json/json_h: ``/* <external-content-XXXX> */`` (not strict JSON; for LLM consumption only)
+    - raw/other: ``<external-content-XXXX>`` (XML-style)
 
     Args:
         content: External content to wrap
         source: Optional source identifier (e.g., URL, tool name)
+        fmt: Output format mode (json, json_h, yml, yml_h, raw)
 
     Returns:
         Content wrapped in boundary tags with sanitization applied.
@@ -99,17 +106,29 @@ def wrap_external_content(
     content = sanitize_triggers(content)
     content = sanitize_tag_closes(content)
 
-    # Build source attribute if provided
-    source_attr = f' source="{source}"' if source else ""
+    # Build boundary tag based on format
+    tag = f"external-content-{boundary_id}"
+    if source:
+        tag += f' source="{source}"'
 
-    # Wrap in boundary tags
-    return f"<external-content-{boundary_id}{source_attr}>\n{content}\n</external-content-{boundary_id}>"
+    if fmt in ("yml", "yml_h"):
+        open_tag = f"# <{tag}>"
+        close_tag = f"# </external-content-{boundary_id}>"
+    elif fmt in ("json", "json_h"):
+        open_tag = f"/* <{tag}> */"
+        close_tag = f"/* </external-content-{boundary_id}> */"
+    else:
+        open_tag = f"<{tag}>"
+        close_tag = f"</external-content-{boundary_id}>"
+
+    return f"{open_tag}\n{content}\n{close_tag}"
 
 
 def sanitize_output(
     content: str,
     source: str | None = None,
     enabled: bool = True,
+    fmt: str = "",
 ) -> str:
     """Sanitize tool output for prompt injection protection.
 
@@ -120,6 +139,7 @@ def sanitize_output(
         content: Tool output content
         source: Optional source identifier (e.g., tool name, URL)
         enabled: Whether sanitization is enabled (default True)
+        fmt: Output format mode for format-native comment boundaries
 
     Returns:
         Sanitized content wrapped in boundary tags, or original if disabled
@@ -127,4 +147,4 @@ def sanitize_output(
     if not enabled:
         return content
 
-    return wrap_external_content(content, source=source)
+    return wrap_external_content(content, source=source, fmt=fmt)

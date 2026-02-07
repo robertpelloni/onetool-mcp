@@ -96,6 +96,7 @@ credentials/
 .chunkhound/
 scratch/
 diagrams/
+docs-dev/
 msg/
 plan/
 wip/

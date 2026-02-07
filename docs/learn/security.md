@@ -178,7 +178,7 @@ External content fetched by tools (web scraping, search results, APIs) may conta
 
 1. **Trigger sanitization** - Replace `__ot`, `mcp__onetool` patterns with `[REDACTED:trigger]`
 2. **Tag sanitization** - Remove `<external-content-*>` patterns that could escape boundaries
-3. **GUID-tagged boundaries** - Wrap external content in unpredictable tags
+3. **GUID-tagged boundaries** - Wrap external content in unpredictable tags using format-native comments (`#` for YAML, `/* */` for JSON, XML-style for raw/other)
 
 **Example attack blocked:**
 

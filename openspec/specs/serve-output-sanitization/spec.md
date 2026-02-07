@@ -48,8 +48,8 @@ The system SHALL sanitise boundary tag patterns to prevent escape and confusion 
 
 The system SHALL wrap sanitised content in GUID-tagged boundaries.
 
-#### Scenario: Content wrapping
-- **GIVEN** sanitised tool output and source identifier
+#### Scenario: Content wrapping (default/raw)
+- **GIVEN** sanitised tool output, source identifier, and no format or `raw` format
 - **WHEN** boundary wrapping is applied
 - **THEN** output SHALL be wrapped as:
 
@@ -59,10 +59,32 @@ The system SHALL wrap sanitised content in GUID-tagged boundaries.
   </external-content-{id}>
   ```
 
+#### Scenario: Content wrapping (YAML format)
+- **GIVEN** sanitised tool output and format `yml` or `yml_h`
+- **WHEN** boundary wrapping is applied
+- **THEN** output SHALL use hash-comment boundaries:
+
+  ```text
+  # <external-content-{id} source="{source}">
+  {sanitised_content}
+  # </external-content-{id}>
+  ```
+
+#### Scenario: Content wrapping (JSON format)
+- **GIVEN** sanitised tool output and format `json` or `json_h`
+- **WHEN** boundary wrapping is applied
+- **THEN** output SHALL use block-comment boundaries (not strict JSON; for LLM consumption):
+
+  ```text
+  /* <external-content-{id} source="{source}"> */
+  {sanitised_content}
+  /* </external-content-{id}> */
+  ```
+
 #### Scenario: ID uniqueness
 - **GIVEN** multiple tool outputs in the same session
 - **WHEN** each output is wrapped
-- **THEN** each SHALL have a unique ID (12 hex chars from UUIDv4)
+- **THEN** each SHALL have a unique ID (4 hex chars from UUIDv4)
 
 #### Scenario: Source attribution
 - **GIVEN** tool output with source identifier
@@ -91,7 +113,7 @@ The system SHALL support enabling/disabling sanitisation via magic variable.
 #### Scenario: Default behaviour
 - **GIVEN** code that does not set `__sanitize__`
 - **WHEN** the result is returned
-- **THEN** sanitisation SHALL NOT be applied (opt-in)
+- **THEN** sanitisation SHALL follow the `security.sanitize.enabled` config setting (enabled by default)
 
 ### Requirement: Sanitisation Visibility
 
