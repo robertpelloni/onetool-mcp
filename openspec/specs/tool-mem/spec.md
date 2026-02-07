@@ -17,6 +17,7 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **AND** it SHALL generate an embedding if `embeddings_enabled` is true (sync or async per `embeddings_async`)
 - **AND** it SHALL store NULL embedding if `embeddings_enabled` is false
 - **AND** it SHALL compute a SHA-256 content hash for dedup
+- **AND** it SHALL store an empty `meta` MAP by default
 
 #### Scenario: Duplicate detection
 - **GIVEN** a memory already exists with the same topic and content hash
@@ -29,6 +30,13 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **WHEN** `mem.write(topic="config", file="~/.onetool/config/onetool.yaml")` is called
 - **THEN** it SHALL read content from the file
 - **AND** store it as a memory
+- **AND** auto-populate `source`, `source_mtime`, and `content_type` in meta
+
+#### Scenario: Write with table of contents
+- **GIVEN** markdown content with headings
+- **WHEN** `mem.write(topic="spec", file="spec.md", toc=True)` is called
+- **THEN** it SHALL parse headings (H1-H3 by default) and store a section index in `meta['sections']`
+- **AND** store `section_count` in meta
 
 #### Scenario: Relevance validation
 - **GIVEN** a relevance value outside 1-10
@@ -45,6 +53,11 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **WHEN** `mem.write_batch(topic="docs", glob_pattern="docs/**/*.md")` is called
 - **THEN** it SHALL create a memory per file
 - **AND** preserve directory structure relative to the glob root as subtopic (e.g., `docs/sub/file` not `docs/file`)
+
+#### Scenario: Batch write with toc
+- **GIVEN** a glob pattern and `toc=True`
+- **WHEN** `mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)` is called
+- **THEN** each file SHALL have its headings parsed and section index stored in meta
 
 ### Requirement: Memory Retrieval
 
@@ -90,6 +103,96 @@ The `mem.read_batch()` function SHALL retrieve full content for multiple memorie
 - **GIVEN** `meta=True`
 - **WHEN** `mem.read_batch(topic="projects/", meta=True)` is called
 - **THEN** each memory SHALL include a metadata header (topic, category, tags, etc.)
+
+### Requirement: Read Modes
+
+The `mem.read()` and `mem.read_batch()` functions SHALL support a `mode` parameter for different output formats.
+
+#### Scenario: Content mode (default)
+- **WHEN** `mem.read(topic="spec")` is called
+- **THEN** it SHALL return the full content (same as before)
+
+#### Scenario: TOC mode
+- **WHEN** `mem.read(topic="spec", mode="toc")` is called
+- **THEN** it SHALL return a numbered section index with line ranges
+
+#### Scenario: Meta mode
+- **WHEN** `mem.read(topic="spec", mode="meta")` is called
+- **THEN** it SHALL return metadata only (topic, category, tags, relevance, meta map) without content
+
+#### Scenario: All mode
+- **WHEN** `mem.read(topic="spec", mode="all")` is called
+- **THEN** it SHALL return metadata header, meta map, and full content
+
+#### Scenario: read_batch mode
+- **WHEN** `mem.read_batch(topic="specs/", mode="toc")` is called
+- **THEN** it SHALL return toc for each matching memory
+
+### Requirement: Table of Contents
+
+The `mem.toc()` function SHALL display a numbered section index with staleness detection.
+
+#### Scenario: Display TOC
+- **GIVEN** a memory written with `toc=True`
+- **WHEN** `mem.toc(topic="spec")` is called
+- **THEN** it SHALL return a numbered list of sections with line ranges
+
+#### Scenario: Staleness warning
+- **GIVEN** a memory with `source` and `source_mtime` in meta
+- **WHEN** `mem.toc()` is called and the source file has been modified since storage
+- **THEN** it SHALL append a staleness warning
+
+#### Scenario: Source file deleted
+- **GIVEN** a memory with `source` in meta pointing to a deleted file
+- **WHEN** `mem.toc()` is called
+- **THEN** it SHALL append a warning that the source file no longer exists
+
+### Requirement: Section Extraction
+
+The `mem.slice()` function SHALL extract content by section number, heading path, line range, or mixed list.
+
+#### Scenario: Slice by section number
+- **WHEN** `mem.slice(topic="spec", select=1)` is called
+- **THEN** it SHALL return the content of the first section
+
+#### Scenario: Slice by heading path
+- **WHEN** `mem.slice(topic="spec", select="Requirements")` is called
+- **THEN** it SHALL match section headings case-insensitively and return matching content
+
+#### Scenario: Slice by line range
+- **WHEN** `mem.slice(topic="spec", select=":50")` is called
+- **THEN** it SHALL return the first 50 lines
+
+#### Scenario: Slice by mixed list
+- **WHEN** `mem.slice(topic="spec", select=[1, "Requirements", "200:300"])` is called
+- **THEN** it SHALL apply the appropriate rule to each element and concatenate results
+
+### Requirement: TOC Recomputation
+
+When `mem.update()` or `mem.append()` modifies a memory that has `sections` in meta, it SHALL reparse headings and update the section index.
+
+#### Scenario: Update with existing TOC
+- **GIVEN** a memory with `sections` in meta
+- **WHEN** `mem.update()` is called with new content
+- **THEN** it SHALL recompute the section index from the new content
+
+#### Scenario: Append with existing TOC
+- **GIVEN** a memory with `sections` in meta
+- **WHEN** `mem.append()` is called with new content
+- **THEN** it SHALL recompute the section index from the combined content
+
+### Requirement: Schema Migration
+
+The memories table SHALL include a `meta MAP(VARCHAR, VARCHAR) DEFAULT MAP()` column for extensible key-value metadata.
+
+#### Scenario: New database
+- **WHEN** a new database is created
+- **THEN** the memories table SHALL include the `meta` column
+
+#### Scenario: Existing database migration
+- **GIVEN** an existing database without the `meta` column
+- **WHEN** the connection is established
+- **THEN** the `meta` column SHALL be added via ALTER TABLE
 
 ### Requirement: Memory Search
 
@@ -377,7 +480,7 @@ Embeddings SHALL be opt-in, disabled by default. The mem pack SHALL load and fun
 - **GIVEN** `embeddings_enabled: false` (default)
 - **WHEN** `mem.write()` is called
 - **THEN** it SHALL store the memory with NULL embedding
-- **AND** `mem.read()`, `mem.list_memories()`, and pattern search SHALL work normally
+- **AND** `mem.read()`, `mem.list()`, and pattern search SHALL work normally
 
 #### Scenario: Embeddings enabled sync
 - **GIVEN** `embeddings_enabled: true` and `embeddings_async: false`
@@ -474,7 +577,8 @@ CREATE TABLE memories (
     created_at     TIMESTAMP DEFAULT now(),
     updated_at     TIMESTAMP DEFAULT now(),
     last_accessed  TIMESTAMP DEFAULT now(),
-    embedding      FLOAT[1536]
+    embedding      FLOAT[1536],
+    meta           MAP(VARCHAR, VARCHAR) DEFAULT MAP()
 );
 
 CREATE TABLE memory_history (

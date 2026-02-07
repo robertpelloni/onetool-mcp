@@ -13,6 +13,7 @@ Reference: ChunkHound connection patterns, code_search.py embedding patterns.
 
 from __future__ import annotations
 
+import builtins
 import contextlib
 import hashlib
 import logging
@@ -39,14 +40,16 @@ __all__ = [
     "embed",
     "export",
     "flush",
-    "list_memories",
+    "list",
     "load",
     "read",
     "read_batch",
     "restore",
     "search",
+    "slice",
     "snap",
     "stats",
+    "toc",
     "update",
     "update_batch",
     "write",
@@ -77,6 +80,9 @@ if TYPE_CHECKING:
     from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+# Alias to avoid conflict with the module-level list() function
+_builtins_list = builtins.list
 
 # Thread lock for connection operations
 _connection_lock = threading.RLock()
@@ -359,8 +365,17 @@ def _use_connection() -> Generator[Any, None, None]:
         yield conn
 
 
+def _has_column(conn: Any, table: str, column: str) -> bool:
+    """Check if a column exists in a DuckDB table."""
+    rows = conn.execute(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
+        [table, column],
+    ).fetchall()
+    return len(rows) > 0
+
+
 def _ensure_tables(conn: Any) -> None:
-    """Create memory tables if they don't exist."""
+    """Create memory tables if they don't exist, then apply migrations."""
     config = _get_config()
     dim = config.dimensions
 
@@ -377,7 +392,8 @@ def _ensure_tables(conn: Any) -> None:
             created_at     TIMESTAMP DEFAULT now(),
             updated_at     TIMESTAMP DEFAULT now(),
             last_accessed  TIMESTAMP DEFAULT now(),
-            embedding      FLOAT[{dim}]
+            embedding      FLOAT[{dim}],
+            meta           MAP(VARCHAR, VARCHAR) DEFAULT MAP()
         )
     """)
 
@@ -396,6 +412,18 @@ def _ensure_tables(conn: Any) -> None:
             updated_at     TIMESTAMP DEFAULT now()
         )
     """)
+
+    _migrate_tables(conn)
+
+
+def _migrate_tables(conn: Any) -> None:
+    """Apply schema migrations to existing tables.
+
+    Each migration checks before applying so it is safe to call repeatedly.
+    """
+    # v2: add meta column for extensible key-value metadata
+    if not _has_column(conn, "memories", "meta"):
+        conn.execute("ALTER TABLE memories ADD COLUMN meta MAP(VARCHAR, VARCHAR) DEFAULT MAP()")
 
 
 def _close_connection() -> None:
@@ -693,6 +721,99 @@ def _validate_category(category: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Markdown heading parser and section index
+# ---------------------------------------------------------------------------
+
+# Matches ATX headings: # Heading, ## Heading, etc.
+_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
+
+
+def _parse_headings(content: str, *, max_depth: int = 3) -> list[dict[str, Any]]:
+    """Parse markdown headings and compute line ranges for each section.
+
+    Returns a list of dicts with keys: heading, level, start, end.
+    Lines are 1-indexed. ``end`` is inclusive and points to the last line
+    of the section (the line before the next heading or EOF).
+    """
+    lines = content.split("\n")
+    headings: list[dict[str, Any]] = []
+
+    for i, line in enumerate(lines):
+        m = _HEADING_RE.match(line)
+        if m and len(m.group(1)) <= max_depth:
+            headings.append({
+                "heading": m.group(2).strip(),
+                "level": len(m.group(1)),
+                "start": i + 1,  # 1-indexed
+                "end": len(lines),  # will be adjusted below
+            })
+
+    # Adjust end lines: each section ends just before the next heading
+    for idx in range(len(headings) - 1):
+        headings[idx]["end"] = headings[idx + 1]["start"] - 1
+
+    return headings
+
+
+def _encode_sections(headings: list[dict[str, Any]]) -> str:
+    """Encode parsed headings into pipe-delimited section index string.
+
+    Format: ``heading:start-end|heading:start-end``
+
+    Pipes in headings are escaped as ``\\|`` to avoid splitting ambiguity.
+    """
+    parts = []
+    for h in headings:
+        escaped = h["heading"].replace("\\", "\\\\").replace("|", "\\|")
+        parts.append(f"{escaped}:{h['start']}-{h['end']}")
+    return "|".join(parts)
+
+
+def _decode_sections(encoded: str) -> list[dict[str, Any]]:
+    """Decode pipe-delimited section index string back to heading dicts.
+
+    Handles escaped pipes (``\\|``) in headings.
+    """
+    if not encoded:
+        return []
+    # Split on unescaped pipes: split on | that is not preceded by \
+    # We use a two-pass approach: replace escaped pipes with a placeholder,
+    # split, then restore.
+    placeholder = "\x00"
+    safe = encoded.replace("\\|", placeholder)
+    sections = []
+    for part in safe.split("|"):
+        part = part.replace(placeholder, "|")
+        # Split on last colon to handle headings containing colons
+        colon_idx = part.rfind(":")
+        if colon_idx == -1:
+            continue
+        heading = part[:colon_idx].replace("\\\\", "\\")
+        range_str = part[colon_idx + 1:]
+        dash_idx = range_str.find("-")
+        if dash_idx == -1:
+            continue
+        try:
+            start = int(range_str[:dash_idx])
+            end = int(range_str[dash_idx + 1:])
+        except ValueError:
+            continue
+        sections.append({"heading": heading, "start": start, "end": end})
+    return sections
+
+
+def _build_toc(sections: list[dict[str, Any]], content: str) -> str:
+    """Build a human-readable table of contents from section data."""
+    if not sections:
+        return "No sections found"
+    total_lines = len(content.split("\n"))
+    lines = [f"Table of Contents ({len(sections)} sections, {total_lines} lines)\n"]
+    for i, sec in enumerate(sections, 1):
+        lines.append(f"  {i}. {sec['heading']} (lines {sec['start']}-{sec['end']})")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Phase 1 - Foundation: CRUD operations
 # ---------------------------------------------------------------------------
 
@@ -705,6 +826,7 @@ def write(
     tags: list[str] | None = None,
     relevance: int = 5,
     file: str | None = None,
+    toc: bool = False,
 ) -> str:
     """Store a memory with topic, content, and optional metadata.
 
@@ -720,6 +842,7 @@ def write(
         tags: Optional list of tags for categorisation
         relevance: Importance score 1-10 (default: 5)
         file: Path to file to read content from (mutually exclusive with content)
+        toc: If True, parse markdown headings and store section index in meta
 
     Returns:
         Confirmation message with memory ID, or error message.
@@ -728,6 +851,7 @@ def write(
         mem.write(topic="projects/onetool/rules", content="Always use keyword-only args")
         mem.write(topic="learnings/python", content="Use __future__ annotations", category="discovery")
         mem.write(topic="config", file="~/.onetool/config/onetool.yaml")
+        mem.write(topic="spec", file="spec.md", toc=True)
     """
     with LogSpan(span="mem.write", topic=topic, category=category) as s:
         try:
@@ -741,20 +865,36 @@ def write(
                 return "Error: relevance must be between 1 and 10"
             validated_tags = _validate_tags(tags)
 
+            meta: dict[str, str] = {}
+            validated_path: Path | None = None
+
             if file:
                 validated_path, error = _validate_file_path(file, must_exist=True)
                 if error:
                     s.add("error", "path_validation")
                     return f"Error: {error}"
                 assert validated_path is not None
-                file_size = validated_path.stat().st_size
-                if file_size > 1_000_000:
+                file_stat = validated_path.stat()
+                if file_stat.st_size > 1_000_000:
                     s.add("error", "file_too_large")
-                    return f"Error: File too large ({file_size / 1_000_000:.1f}MB). Max 1MB for memory content."
+                    return f"Error: File too large ({file_stat.st_size / 1_000_000:.1f}MB). Max 1MB for memory content."
                 content = validated_path.read_text(encoding="utf-8")
 
+                # Auto-populate file metadata
+                meta["source"] = str(validated_path.resolve())
+                meta["source_mtime"] = str(file_stat.st_mtime)
+                meta["content_type"] = validated_path.suffix.lstrip(".") or "txt"
+
+            assert content is not None  # guaranteed by file read or early return
             content = _redact(content)
             content_hash = _content_hash(content)
+
+            # Parse TOC if requested
+            if toc:
+                headings = _parse_headings(content)
+                if headings:
+                    meta["sections"] = _encode_sections(headings)
+                    meta["section_count"] = str(len(headings))
 
             conn = _get_connection()
 
@@ -773,16 +913,17 @@ def write(
 
             conn.execute(
                 """
-                INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                [memory_id, topic, content, content_hash, category, validated_tags, relevance, embedding],
+                [memory_id, topic, content, content_hash, category, validated_tags, relevance, embedding, meta],
             )
 
             s.add("memoryId", memory_id)
             s.add("contentLen", len(content))
             _cache_invalidate(topic=topic)
-            return f"Stored memory {memory_id} in topic '{topic}'"
+            toc_msg = f" (toc: {meta.get('section_count', '0')} sections)" if toc else ""
+            return f"Stored memory {memory_id} in topic '{topic}'{toc_msg}"
 
         except ValueError as e:
             s.add("error", "validation")
@@ -799,6 +940,7 @@ def write_batch(
     category: str = "note",
     tags: list[str] | None = None,
     relevance: int = 5,
+    toc: bool = False,
 ) -> str:
     """Store multiple memories from files matching a glob pattern.
 
@@ -811,12 +953,14 @@ def write_batch(
         category: Category for all memories
         tags: Tags applied to all memories
         relevance: Relevance score for all memories
+        toc: If True, parse markdown headings and store section index per file
 
     Returns:
         Summary of stored memories.
 
     Example:
         mem.write_batch(topic="docs", glob_pattern="docs/**/*.md", category="context")
+        mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)
     """
     from ot.paths import get_effective_cwd
 
@@ -862,6 +1006,7 @@ def write_batch(
                     category=category,
                     tags=tags,
                     relevance=relevance,
+                    toc=toc,
                 )
                 if result.startswith("Stored"):
                     stored += 1
@@ -889,11 +1034,16 @@ def write_batch(
             return f"Error in batch write: {e}"
 
 
+_READ_COLUMNS = "id, topic, content, category, tags, relevance, access_count, created_at, updated_at, meta"
+_VALID_READ_MODES = {"content", "toc", "meta", "all"}
+
+
 def read(
     *,
     topic: str,
     id: str | None = None,
     meta: bool = False,
+    mode: str = "content",
 ) -> str:
     """Read a memory by exact topic match or ID.
 
@@ -903,6 +1053,7 @@ def read(
         topic: Exact topic path to read
         id: Optional memory ID for direct lookup (overrides topic match)
         meta: If True, include metadata header (topic, category, tags, etc.)
+        mode: Output mode - "content" (default), "toc" (section index), "meta" (metadata only), "all"
 
     Returns:
         Memory content (with metadata header if meta=True), or error if not found.
@@ -910,9 +1061,13 @@ def read(
     Example:
         mem.read(topic="projects/onetool/rules")
         mem.read(topic="projects/onetool/rules", meta=True)
+        mem.read(topic="spec", mode="toc")
         mem.read(id="abc-123-def")
     """
-    with LogSpan(span="mem.read", topic=topic) as s:
+    if mode not in _VALID_READ_MODES:
+        return f"Error: Invalid mode '{mode}'. Must be one of: {', '.join(sorted(_VALID_READ_MODES))}"
+
+    with LogSpan(span="mem.read", topic=topic, mode=mode) as s:
         try:
             cache_key = f"id:{id}" if id else f"topic:{topic}"
             cached_row = _cache_get(cache_key)
@@ -925,12 +1080,12 @@ def read(
 
                 if id:
                     row = conn.execute(
-                        "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE id = ?",
+                        f"SELECT {_READ_COLUMNS} FROM memories WHERE id = ?",
                         [id],
                     ).fetchone()
                 else:
                     row = conn.execute(
-                        "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE topic = ?",
+                        f"SELECT {_READ_COLUMNS} FROM memories WHERE topic = ?",
                         [topic],
                     ).fetchone()
 
@@ -951,24 +1106,64 @@ def read(
             s.add("found", True)
             s.add("memoryId", row[0])
 
-            if not meta:
-                return row[2]
-
-            return (
-                f"Topic: {row[1]}\n"
-                f"Category: {row[3]}\n"
-                f"Tags: {', '.join(row[4]) if row[4] else 'none'}\n"
-                f"Relevance: {row[5]}\n"
-                f"Accessed: {row[6] + 1} times\n"
-                f"Created: {row[7]}\n"
-                f"Updated: {row[8]}\n"
-                f"ID: {row[0]}\n"
-                f"\n{row[2]}"
-            )
+            # row indices: 0=id, 1=topic, 2=content, 3=category, 4=tags,
+            #              5=relevance, 6=access_count, 7=created_at, 8=updated_at, 9=meta
+            return _format_read_row(row, meta=meta, mode=mode)
 
         except Exception as e:
             s.add("error", str(e))
             return f"Error reading memory: {e}"
+
+
+def _format_read_row(row: Any, *, meta: bool, mode: str) -> str:
+    """Format a single memory row according to mode and meta flags.
+
+    Row indices: 0=id, 1=topic, 2=content, 3=category, 4=tags,
+                 5=relevance, 6=access_count, 7=created_at, 8=updated_at, 9=meta
+    """
+    row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+
+    if mode == "meta":
+        lines = [
+            f"Topic: {row[1]}",
+            f"Category: {row[3]}",
+            f"Tags: {', '.join(row[4]) if row[4] else 'none'}",
+            f"Relevance: {row[5]}",
+            f"Accessed: {row[6] + 1} times",
+            f"Created: {row[7]}",
+            f"Updated: {row[8]}",
+            f"ID: {row[0]}",
+        ]
+        if row_meta:
+            lines.append("Meta:")
+            for k, v in sorted(row_meta.items()):
+                lines.append(f"  {k}: {v}")
+        return "\n".join(lines)
+
+    if mode == "toc":
+        sections = _decode_sections(row_meta.get("sections", ""))
+        return _build_toc(sections, row[2])
+
+    # mode == "content" or "all"
+    content = row[2]
+    if not meta and mode == "content":
+        return content
+
+    header = (
+        f"Topic: {row[1]}\n"
+        f"Category: {row[3]}\n"
+        f"Tags: {', '.join(row[4]) if row[4] else 'none'}\n"
+        f"Relevance: {row[5]}\n"
+        f"Accessed: {row[6] + 1} times\n"
+        f"Created: {row[7]}\n"
+        f"Updated: {row[8]}\n"
+        f"ID: {row[0]}"
+    )
+    if row_meta and mode == "all":
+        meta_lines = [f"  {k}: {v}" for k, v in sorted(row_meta.items())]
+        header += "\nMeta:\n" + "\n".join(meta_lines)
+
+    return f"{header}\n\n{content}"
 
 
 def read_batch(
@@ -978,6 +1173,7 @@ def read_batch(
     category: str | None = None,
     tags: list[str] | None = None,
     meta: bool = False,
+    mode: str = "content",
     limit: int = 50,
 ) -> str:
     """Read multiple memories by topic prefix, IDs, category, or tags.
@@ -991,6 +1187,7 @@ def read_batch(
         category: Category filter
         tags: Tag filter (matches memories with any of these tags)
         meta: If True, include metadata header per memory
+        mode: Output mode - "content" (default), "toc" (section index), "meta" (metadata only), "all"
         limit: Maximum results (default: 50)
 
     Returns:
@@ -1000,23 +1197,27 @@ def read_batch(
         mem.read_batch(topic="projects/onetool/agents/")
         mem.read_batch(ids=["abc-123", "def-456"], meta=True)
         mem.read_batch(category="rule", limit=10)
+        mem.read_batch(topic="specs/", mode="toc")
     """
+    if mode not in _VALID_READ_MODES:
+        return f"Error: Invalid mode '{mode}'. Must be one of: {', '.join(sorted(_VALID_READ_MODES))}"
+
     if not any([topic, ids, category, tags]):
         return "Error: At least one filter (topic, ids, category, or tags) is required"
 
     if ids and any([topic, category, tags]):
         return "Error: ids cannot be combined with other filters (topic, category, tags)"
 
-    with LogSpan(span="mem.read_batch", topic=topic, limit=limit) as s:
+    with LogSpan(span="mem.read_batch", topic=topic, mode=mode, limit=limit) as s:
         try:
             conn = _get_connection()
 
             if ids:
                 placeholders = ", ".join("?" for _ in ids)
-                sql = f"SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE id IN ({placeholders})"
-                params: list[Any] = list(ids)
+                sql = f"SELECT {_READ_COLUMNS} FROM memories WHERE id IN ({placeholders})"
+                params: _builtins_list[Any] = _builtins_list(ids)
             else:
-                sql = "SELECT id, topic, content, category, tags, relevance, access_count, created_at, updated_at FROM memories WHERE 1=1"
+                sql = f"SELECT {_READ_COLUMNS} FROM memories WHERE 1=1"
                 params = []
 
                 topic_sql, topic_params = _topic_filter(topic)
@@ -1052,20 +1253,11 @@ def read_batch(
 
             parts = []
             for row in rows:
-                if meta:
-                    parts.append(
-                        f"Topic: {row[1]}\n"
-                        f"Category: {row[3]}\n"
-                        f"Tags: {', '.join(row[4]) if row[4] else 'none'}\n"
-                        f"Relevance: {row[5]}\n"
-                        f"Accessed: {row[6] + 1} times\n"
-                        f"Created: {row[7]}\n"
-                        f"Updated: {row[8]}\n"
-                        f"ID: {row[0]}\n"
-                        f"\n{row[2]}"
-                    )
+                formatted = _format_read_row(row, meta=meta, mode=mode)
+                if mode == "content" and not meta:
+                    parts.append(f"# {row[1]}\n\n{formatted}")
                 else:
-                    parts.append(f"# {row[1]}\n\n{row[2]}")
+                    parts.append(formatted)
 
             noun = "memory" if len(rows) == 1 else "memories"
             return f"Read {len(rows)} {noun}\n\n---\n\n" + "\n\n---\n\n".join(parts)
@@ -1073,6 +1265,197 @@ def read_batch(
         except Exception as e:
             s.add("error", str(e))
             return f"Error reading memories: {e}"
+
+
+# Line range regex: matches patterns like ":50", "400:", "151:200", "-50:"
+_LINE_RANGE_RE = re.compile(r"^-?\d*:\d*$")
+
+
+def toc(
+    *,
+    topic: str,
+    id: str | None = None,
+) -> str:
+    """Display a numbered section index for a memory with table of contents.
+
+    Checks source file staleness when source metadata is available.
+
+    Args:
+        topic: Topic of the memory
+        id: Optional memory ID (overrides topic)
+
+    Returns:
+        Numbered section index with line ranges, or error.
+
+    Example:
+        mem.toc(topic="spec")
+        mem.toc(id="abc-123")
+    """
+    with LogSpan(span="mem.toc", topic=topic) as s:
+        try:
+            conn = _get_connection()
+
+            if id:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE id = ?", [id]
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE topic = ?", [topic]
+                ).fetchone()
+
+            if not row:
+                s.add("found", False)
+                return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
+
+            row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+            sections = _decode_sections(row_meta.get("sections", ""))
+            result = _build_toc(sections, row[2])
+
+            # Staleness detection
+            source = row_meta.get("source")
+            source_mtime = row_meta.get("source_mtime")
+            if source and source_mtime:
+                source_path = Path(source)
+                if source_path.exists():
+                    current_mtime = source_path.stat().st_mtime
+                    if current_mtime > float(source_mtime):
+                        result += "\n\nWarning: Source file has been modified since this memory was stored. Consider re-writing with mem.write()."
+                else:
+                    result += "\n\nWarning: Source file no longer exists."
+
+            s.add("sections", len(sections))
+            return result
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error reading toc: {e}"
+
+
+def slice(
+    *,
+    topic: str,
+    select: int | str | list[int | str],
+    id: str | None = None,
+) -> str:
+    """Extract content by section number, heading path, line range, or mixed list.
+
+    Format detection (polymorphic):
+    - int: section number (1-indexed)
+    - str matching ``-?\\d*:\\d*``: line range (e.g., ":50", "400:", "151:200", "-50:")
+    - str otherwise: heading path lookup (case-insensitive substring match)
+    - list: apply the above rules to each element
+
+    Args:
+        topic: Topic of the memory
+        select: Section selector - int, str, or list of mixed
+        id: Optional memory ID (overrides topic)
+
+    Returns:
+        Extracted content, or error.
+
+    Example:
+        mem.slice(topic="spec", select=1)
+        mem.slice(topic="spec", select="Requirements")
+        mem.slice(topic="spec", select=":50")
+        mem.slice(topic="spec", select=[1, "Requirements", "200:300"])
+    """
+    with LogSpan(span="mem.slice", topic=topic) as s:
+        try:
+            conn = _get_connection()
+
+            if id:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE id = ?", [id]
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE topic = ?", [topic]
+                ).fetchone()
+
+            if not row:
+                s.add("found", False)
+                return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
+
+            content = row[2]
+            lines = content.split("\n")
+            row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+            sections = _decode_sections(row_meta.get("sections", ""))
+
+            # Normalise select to a sequence
+            selectors: _builtins_list[int | str] = select if type(select) is _builtins_list else [select]  # type: ignore[assignment]
+
+            extracted_parts: list[str] = []
+            for sel in selectors:
+                part = _resolve_slice(sel, lines, sections)
+                if part is not None:
+                    extracted_parts.append(part)
+
+            if not extracted_parts:
+                return "No matching content found for the given selector(s)"
+
+            s.add("parts", len(extracted_parts))
+            return "\n\n".join(extracted_parts)
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error slicing memory: {e}"
+
+
+def _resolve_slice(
+    sel: int | str,
+    lines: list[str],
+    sections: list[dict[str, Any]],
+) -> str | None:
+    """Resolve a single slice selector to content."""
+    total = len(lines)
+
+    # int: section number (1-indexed)
+    if isinstance(sel, int):
+        if 1 <= sel <= len(sections):
+            sec = sections[sel - 1]
+            return "\n".join(lines[sec["start"] - 1 : sec["end"]])
+        return None
+
+    # str: check if line range
+    if _LINE_RANGE_RE.match(sel):
+        return _resolve_line_range(sel, lines, total)
+
+    # str: heading path lookup (case-insensitive substring)
+    sel_lower = sel.lower()
+    for sec in sections:
+        if sel_lower in sec["heading"].lower():
+            return "\n".join(lines[sec["start"] - 1 : sec["end"]])
+    return None
+
+
+def _resolve_line_range(spec: str, lines: list[str], total: int) -> str | None:
+    """Parse and resolve a line range spec like ':50', '400:', '151:200', '-50:'."""
+    parts = spec.split(":")
+    start_str, end_str = parts[0], parts[1]
+
+    if start_str == "" and end_str == "":
+        return None  # ":" alone is invalid
+
+    # Parse start
+    if start_str == "":
+        start = 1
+    else:
+        start = int(start_str)
+        if start < 0:
+            start = max(1, total + start + 1)
+
+    # Parse end
+    end = total if end_str == "" else int(end_str)
+
+    if start < 1:
+        start = 1
+    if end > total:
+        end = total
+    if start > end:
+        return None
+
+    return "\n".join(lines[start - 1 : end])
 
 
 def search(
@@ -1303,7 +1686,7 @@ def _format_search_results(results: list[dict[str, Any]], query: str, extract: i
     return "\n".join(lines)
 
 
-def list_memories(
+def list(
     *,
     topic: str | None = None,
     category: str | None = None,
@@ -1320,9 +1703,9 @@ def list_memories(
         Formatted list of memories.
 
     Example:
-        mem.list_memories()
-        mem.list_memories(topic="projects/onetool/")
-        mem.list_memories(category="rule")
+        mem.list()
+        mem.list(topic="projects/onetool/")
+        mem.list(category="rule")
     """
     with LogSpan(span="mem.list", topic=topic, category=category, limit=limit) as s:
         try:
@@ -1512,11 +1895,11 @@ def update(
 
             if id:
                 rows = conn.execute(
-                    "SELECT id, content FROM memories WHERE id = ?", [id]
+                    "SELECT id, content, meta FROM memories WHERE id = ?", [id]
                 ).fetchall()
             else:
                 rows = conn.execute(
-                    "SELECT id, content FROM memories WHERE topic = ?", [topic]
+                    "SELECT id, content, meta FROM memories WHERE topic = ?", [topic]
                 ).fetchall()
 
             if not rows:
@@ -1529,6 +1912,7 @@ def update(
 
             memory_id = rows[0][0]
             old_content = rows[0][1]
+            existing_meta: dict[str, str] = dict(rows[0][2]) if rows[0][2] else {}
 
             # Save history
             history_id = str(uuid.uuid4())
@@ -1542,13 +1926,23 @@ def update(
             new_hash = _content_hash(content)
             embedding = _maybe_embed(memory_id, content)
 
+            # Recompute toc if the memory already has sections
+            if "sections" in existing_meta:
+                headings = _parse_headings(content)
+                if headings:
+                    existing_meta["sections"] = _encode_sections(headings)
+                    existing_meta["section_count"] = str(len(headings))
+                else:
+                    del existing_meta["sections"]
+                    existing_meta.pop("section_count", None)
+
             conn.execute(
                 """
                 UPDATE memories
-                SET content = ?, content_hash = ?, embedding = ?, updated_at = now()
+                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = now()
                 WHERE id = ?
                 """,
-                [content, new_hash, embedding, memory_id],
+                [content, new_hash, embedding, existing_meta, memory_id],
             )
 
             s.add("memoryId", memory_id)
@@ -1587,11 +1981,11 @@ def append(
 
             if id:
                 row = conn.execute(
-                    "SELECT id, content FROM memories WHERE id = ?", [id]
+                    "SELECT id, content, meta FROM memories WHERE id = ?", [id]
                 ).fetchone()
             else:
                 rows = conn.execute(
-                    "SELECT id, content FROM memories WHERE topic = ?", [topic]
+                    "SELECT id, content, meta FROM memories WHERE topic = ?", [topic]
                 ).fetchall()
                 if len(rows) > 1:
                     s.add("error", "multiple_matches")
@@ -1604,6 +1998,7 @@ def append(
 
             memory_id = row[0]
             old_content = row[1]
+            existing_meta: dict[str, str] = dict(row[2]) if row[2] else {}
 
             # Save history
             history_id = str(uuid.uuid4())
@@ -1616,13 +2011,23 @@ def append(
             new_hash = _content_hash(new_content)
             embedding = _maybe_embed(memory_id, new_content)
 
+            # Recompute toc if the memory already has sections
+            if "sections" in existing_meta:
+                headings = _parse_headings(new_content)
+                if headings:
+                    existing_meta["sections"] = _encode_sections(headings)
+                    existing_meta["section_count"] = str(len(headings))
+                else:
+                    del existing_meta["sections"]
+                    existing_meta.pop("section_count", None)
+
             conn.execute(
                 """
                 UPDATE memories
-                SET content = ?, content_hash = ?, embedding = ?, updated_at = now()
+                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = now()
                 WHERE id = ?
                 """,
-                [new_content, new_hash, embedding, memory_id],
+                [new_content, new_hash, embedding, existing_meta, memory_id],
             )
 
             s.add("memoryId", memory_id)

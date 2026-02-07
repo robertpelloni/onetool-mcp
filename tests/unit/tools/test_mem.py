@@ -15,10 +15,14 @@ import pytest
 from ot_tools.mem import (
     Config,
     VALID_CATEGORIES,
+    _build_toc,
     _cache_get,
     _cache_invalidate,
     _cache_put,
     _content_hash,
+    _decode_sections,
+    _encode_sections,
+    _parse_headings,
     _read_cache,
     _read_cache_lock,
     _redact,
@@ -26,6 +30,16 @@ from ot_tools.mem import (
     _validate_category,
     _validate_tags,
 )
+
+
+@pytest.fixture()
+def _clear_read_cache():
+    """Clear the read cache before and after each test."""
+    with _read_cache_lock:
+        _read_cache.clear()
+    yield
+    with _read_cache_lock:
+        _read_cache.clear()
 
 
 @pytest.fixture()
@@ -168,17 +182,9 @@ class TestValidateCategory:
 
 @pytest.mark.unit
 @pytest.mark.tools
+@pytest.mark.usefixtures("_clear_read_cache")
 class TestReadCache:
     """Test read cache get/put/invalidate."""
-
-    @pytest.fixture(autouse=True)
-    def _clear_cache(self):
-        """Clear the read cache before and after each test."""
-        with _read_cache_lock:
-            _read_cache.clear()
-        yield
-        with _read_cache_lock:
-            _read_cache.clear()
 
     @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_put_and_get(self, _mock_config):
@@ -250,16 +256,9 @@ class TestReadCache:
 
 @pytest.mark.unit
 @pytest.mark.tools
+@pytest.mark.usefixtures("_clear_read_cache")
 class TestReadCacheIntegration:
     """Test that read() uses the cache."""
-
-    @pytest.fixture(autouse=True)
-    def _clear_cache(self):
-        with _read_cache_lock:
-            _read_cache.clear()
-        yield
-        with _read_cache_lock:
-            _read_cache.clear()
 
     @patch("ot_tools.mem._get_connection")
     def test_second_read_hits_cache(self, mock_conn):
@@ -269,7 +268,7 @@ class TestReadCacheIntegration:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "cached content", "note",
-            [], 5, 0, datetime.now(), datetime.now(),
+            [], 5, 0, datetime.now(), datetime.now(), {},
         )
 
         # First read: cache miss
@@ -396,7 +395,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "memory content", "note",
-            ["tag1"], 5, 3, datetime.now(), datetime.now(),
+            ["tag1"], 5, 3, datetime.now(), datetime.now(), {},
         )
 
         result = read(topic="test/topic")
@@ -411,7 +410,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "memory content", "note",
-            ["tag1"], 5, 3, datetime.now(), datetime.now(),
+            ["tag1"], 5, 3, datetime.now(), datetime.now(), {},
         )
 
         result = read(topic="test/topic", meta=True)
@@ -430,7 +429,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "content", "rule",
-            [], 7, 1, datetime.now(), datetime.now(),
+            [], 7, 1, datetime.now(), datetime.now(), {},
         )
 
         result = read(topic="ignored", id="id-123")
@@ -462,8 +461,8 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 2, datetime.now(), datetime.now()),
-            ("id-2", "proj/b", "content b", "rule", [], 8, 0, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 2, datetime.now(), datetime.now(), {}),
+            ("id-2", "proj/b", "content b", "rule", [], 8, 0, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(topic="proj/")
@@ -479,7 +478,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", [], 5, 1, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "content a", "note", [], 5, 1, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(ids=["id-1"])
@@ -494,7 +493,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 3, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 3, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(topic="proj/", meta=True)
@@ -555,7 +554,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "rule content", "rule", [], 5, 1, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "rule content", "rule", [], 5, 1, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(category="rule")
@@ -573,7 +572,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "tagged content", "note", ["tag1"], 5, 1, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "tagged content", "note", ["tag1"], 5, 1, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(tags=["tag1"])
@@ -590,7 +589,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "combined content", "rule", [], 5, 1, datetime.now(), datetime.now()),
+            ("id-1", "proj/a", "combined content", "rule", [], 5, 1, datetime.now(), datetime.now(), {}),
         ]
 
         result = read_batch(topic="proj/", category="rule")
@@ -814,11 +813,11 @@ class TestWriteWithoutEmbeddings:
         result = write(topic="test/topic", content="test content")
 
         assert "Stored memory" in result
-        # Verify embedding parameter is None in INSERT
+        # Verify embedding parameter is None in INSERT (index 7, 0-based)
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         assert len(insert_calls) == 1
         insert_params = insert_calls[0][0][1]
-        assert insert_params[7] is None  # embedding is 8th parameter
+        assert insert_params[7] is None  # embedding is 8th parameter (index 7)
 
 
 @pytest.mark.unit
@@ -891,11 +890,11 @@ class TestFlush:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestListMemories:
-    """Test mem.list_memories() with mocked database."""
+    """Test mem.list() with mocked database."""
 
     @patch("ot_tools.mem._get_connection")
     def test_lists_memories(self, mock_conn):
-        from ot_tools.mem import list_memories
+        from ot_tools.mem import list
 
         conn = MagicMock()
         mock_conn.return_value = conn
@@ -904,7 +903,7 @@ class TestListMemories:
             ("id-2", "topic/two", "rule", [], 8, 0, datetime.now(), 200),
         ]
 
-        result = list_memories()
+        result = list()
 
         assert "Found 2 memories" in result
         assert "topic/one" in result
@@ -912,13 +911,13 @@ class TestListMemories:
 
     @patch("ot_tools.mem._get_connection")
     def test_empty_list(self, mock_conn):
-        from ot_tools.mem import list_memories
+        from ot_tools.mem import list
 
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = []
 
-        result = list_memories()
+        result = list()
 
         assert "No memories found" in result
 
@@ -992,7 +991,7 @@ class TestUpdate:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "old content"),
+            ("id-123", "old content", {}),
         ]
 
         result = update(topic="test/topic", content="new content")
@@ -1006,8 +1005,8 @@ class TestUpdate:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "content 1"),
-            ("id-2", "content 2"),
+            ("id-1", "content 1", {}),
+            ("id-2", "content 2", {}),
         ]
 
         result = update(topic="ambiguous/topic", content="new")
@@ -1041,9 +1040,9 @@ class TestAppend:
         conn = MagicMock()
         mock_conn.return_value = conn
 
-        # Mock for single match via fetchall
+        # Mock for single match via fetchall (id, content, meta)
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "original content"),
+            ("id-123", "original content", {}),
         ]
 
         result = append(topic="test/topic", content="appended text")
@@ -1883,3 +1882,461 @@ class TestExportYaml:
         assert "      line two" in result
         # Should NOT have broken YAML double-quoted strings
         assert 'content: "' not in result
+
+
+# ---------------------------------------------------------------------------
+# Navigation tests: heading parser, encoder, toc, slice
+# ---------------------------------------------------------------------------
+
+SAMPLE_MD = """\
+# Introduction
+
+Some intro text.
+
+## Requirements
+
+### Requirement: Search
+
+Search details here.
+
+## Configuration
+
+Config details here.
+"""
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestParseHeadings:
+    """Test _parse_headings markdown heading parser."""
+
+    def test_parses_h1_h2_h3(self):
+        headings = _parse_headings(SAMPLE_MD)
+        names = [h["heading"] for h in headings]
+        assert names == ["Introduction", "Requirements", "Requirement: Search", "Configuration"]
+
+    def test_respects_max_depth(self):
+        headings = _parse_headings(SAMPLE_MD, max_depth=2)
+        names = [h["heading"] for h in headings]
+        assert "Requirement: Search" not in names
+        assert "Introduction" in names
+        assert "Requirements" in names
+
+    def test_line_ranges(self):
+        headings = _parse_headings(SAMPLE_MD)
+        # First section starts at line 1
+        assert headings[0]["start"] == 1
+        # Each section ends before the next starts
+        for i in range(len(headings) - 1):
+            assert headings[i]["end"] == headings[i + 1]["start"] - 1
+        # Last section ends at total lines
+        total_lines = len(SAMPLE_MD.split("\n"))
+        assert headings[-1]["end"] == total_lines
+
+    def test_empty_content(self):
+        assert _parse_headings("") == []
+
+    def test_no_headings(self):
+        assert _parse_headings("just plain text\nno headings here") == []
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSectionEncoder:
+    """Test _encode_sections / _decode_sections round-trip."""
+
+    def test_round_trip(self):
+        headings = _parse_headings(SAMPLE_MD)
+        encoded = _encode_sections(headings)
+        decoded = _decode_sections(encoded)
+        assert len(decoded) == len(headings)
+        for orig, dec in zip(headings, decoded):
+            assert dec["heading"] == orig["heading"]
+            assert dec["start"] == orig["start"]
+            assert dec["end"] == orig["end"]
+
+    def test_empty_encode(self):
+        assert _encode_sections([]) == ""
+
+    def test_empty_decode(self):
+        assert _decode_sections("") == []
+
+    def test_heading_with_colon(self):
+        """Headings containing colons should round-trip correctly."""
+        headings = [{"heading": "Requirement: Search", "start": 1, "end": 10}]
+        encoded = _encode_sections(headings)
+        decoded = _decode_sections(encoded)
+        assert decoded[0]["heading"] == "Requirement: Search"
+        assert decoded[0]["start"] == 1
+        assert decoded[0]["end"] == 10
+
+    def test_heading_with_pipe(self):
+        """Headings containing pipes should round-trip correctly."""
+        headings = [
+            {"heading": "A | B", "start": 1, "end": 5},
+            {"heading": "Normal", "start": 6, "end": 10},
+        ]
+        encoded = _encode_sections(headings)
+        decoded = _decode_sections(encoded)
+        assert len(decoded) == 2
+        assert decoded[0]["heading"] == "A | B"
+        assert decoded[1]["heading"] == "Normal"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestBuildToc:
+    """Test _build_toc formatting."""
+
+    def test_formats_numbered_sections(self):
+        sections = _decode_sections("Intro:1-5|Details:6-20")
+        toc = _build_toc(sections, "x\n" * 20)
+        assert "1. Intro (lines 1-5)" in toc
+        assert "2. Details (lines 6-20)" in toc
+        assert "2 sections" in toc
+
+    def test_empty_sections(self):
+        assert "No sections found" in _build_toc([], "content")
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestTocFunction:
+    """Test mem.toc() with mocked database."""
+
+    @patch("ot_tools.mem._get_connection")
+    def test_returns_toc(self, mock_conn):
+        from ot_tools.mem import toc
+
+        sections_str = _encode_sections(_parse_headings(SAMPLE_MD))
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
+            datetime.now(), datetime.now(), {"sections": sections_str, "section_count": "4"},
+        )
+
+        result = toc(topic="spec")
+        assert "Introduction" in result
+        assert "Requirements" in result
+        assert "4 sections" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_not_found(self, mock_conn):
+        from ot_tools.mem import toc
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        result = toc(topic="nonexistent")
+        assert "No memory found" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_staleness_warning(self, mock_conn, tmp_path):
+        from ot_tools.mem import toc
+
+        source_file = tmp_path / "spec.md"
+        source_file.write_text(SAMPLE_MD)
+        old_mtime = str(source_file.stat().st_mtime - 100)  # pretend stored mtime is older
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
+            datetime.now(), datetime.now(),
+            {"sections": "Intro:1-3", "source": str(source_file), "source_mtime": old_mtime},
+        )
+
+        result = toc(topic="spec")
+        assert "modified since" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSliceFunction:
+    """Test mem.slice() with mocked database."""
+
+    @pytest.fixture()
+    def _mock_slice_conn(self):
+        """Set up a mock connection returning SAMPLE_MD with sections."""
+        sections_str = _encode_sections(_parse_headings(SAMPLE_MD))
+        row = (
+            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
+            datetime.now(), datetime.now(),
+            {"sections": sections_str, "section_count": "4"},
+        )
+        with patch("ot_tools.mem._get_connection") as mock_conn:
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchone.return_value = row
+            yield
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_by_section_number(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select=1)
+        assert "Introduction" in result
+        assert "Some intro text" in result
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_by_heading(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select="Configuration")
+        assert "Config details" in result
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_by_heading_case_insensitive(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select="configuration")
+        assert "Config details" in result
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_by_line_range(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select=":3")
+        lines = result.split("\n")
+        assert len(lines) == 3
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_mixed_list(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select=[1, "Configuration"])
+        assert "Introduction" in result
+        assert "Config details" in result
+
+    @pytest.mark.usefixtures("_mock_slice_conn")
+    def test_slice_no_match(self):
+        from ot_tools.mem import slice
+
+        result = slice(topic="spec", select="nonexistent heading")
+        assert "No matching content" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_slice_not_found(self, mock_conn):
+        from ot_tools.mem import slice
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        result = slice(topic="nonexistent", select=1)
+        assert "No memory found" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+@pytest.mark.usefixtures("_clear_read_cache")
+class TestReadMode:
+    """Test mem.read() mode parameter."""
+
+    @patch("ot_tools.mem._get_connection")
+    def test_toc_mode(self, mock_conn):
+        from ot_tools.mem import read
+
+        sections_str = _encode_sections(_parse_headings(SAMPLE_MD))
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
+            datetime.now(), datetime.now(), {"sections": sections_str},
+        )
+
+        result = read(topic="spec", mode="toc")
+        assert "Introduction" in result
+        assert "Requirements" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_meta_mode(self, mock_conn):
+        from ot_tools.mem import read
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "spec", "some stored body", "rule", ["tag1"], 7, 3,
+            datetime.now(), datetime.now(), {"source": "/path/to/file"},
+        )
+
+        result = read(topic="spec", mode="meta")
+        assert "Topic: spec" in result
+        assert "Category: rule" in result
+        assert "source: /path/to/file" in result
+        assert "some stored body" not in result  # meta mode excludes content
+
+    def test_invalid_mode(self):
+        from ot_tools.mem import read
+
+        result = read(topic="test", mode="invalid")
+        assert "Error" in result
+        assert "Invalid mode" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestWriteWithToc:
+    """Test mem.write() with toc=True."""
+
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_stores_sections_in_meta(self, mock_conn, mock_embed):
+        from ot_tools.mem import write
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None  # No duplicate
+
+        result = write(topic="spec", content=SAMPLE_MD, toc=True)
+
+        assert "Stored memory" in result
+        assert "toc:" in result
+        assert "4 sections" in result
+        # Verify meta was passed in INSERT
+        insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
+        assert len(insert_calls) == 1
+        insert_params = insert_calls[0][0][1]
+        meta = insert_params[8]  # meta is 9th parameter
+        assert "sections" in meta
+        assert "section_count" in meta
+        assert meta["section_count"] == "4"
+
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_without_toc_has_empty_meta(self, mock_conn, mock_embed):
+        from ot_tools.mem import write
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        write(topic="simple", content="no headings", toc=False)
+
+        insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
+        insert_params = insert_calls[0][0][1]
+        meta = insert_params[8]
+        assert meta == {}
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestUpdateRecomputesToc:
+    """Test that update() recomputes toc when sections exist in meta."""
+
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_recomputes_sections(self, mock_conn, mock_embed):
+        from ot_tools.mem import update
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+
+        old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 5}])
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-123", "old content", {"sections": old_sections, "section_count": "1"}),
+        ]
+
+        new_content = "# New Heading\n\nNew content\n\n## Second\n\nMore"
+        result = update(topic="test/topic", content=new_content)
+
+        assert "Updated memory" in result
+        # Verify UPDATE was called with recomputed meta
+        update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
+        assert len(update_calls) >= 1
+        update_params = update_calls[0][0][1]
+        meta = update_params[3]  # meta is 4th param in UPDATE
+        assert "sections" in meta
+        assert meta["section_count"] == "2"
+
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_no_recompute_without_sections(self, mock_conn, mock_embed):
+        from ot_tools.mem import update
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-123", "old content", {}),
+        ]
+
+        result = update(topic="test/topic", content="# New\n\nContent")
+
+        assert "Updated memory" in result
+        update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
+        update_params = update_calls[0][0][1]
+        meta = update_params[3]
+        assert "sections" not in meta
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestAppendRecomputesToc:
+    """Test that append() recomputes toc when sections exist in meta."""
+
+    @patch("ot_tools.mem._maybe_embed")
+    @patch("ot_tools.mem._get_connection")
+    def test_recomputes_sections_on_append(self, mock_conn, mock_embed):
+        from ot_tools.mem import append
+
+        mock_embed.return_value = None
+        conn = MagicMock()
+        mock_conn.return_value = conn
+
+        old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 3}])
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-123", "# Old\n\nOld content", {"sections": old_sections, "section_count": "1"}),
+        ]
+
+        result = append(topic="test/topic", content="# New Section\n\nAppended")
+
+        assert "Appended to memory" in result
+        update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
+        assert len(update_calls) >= 1
+        update_params = update_calls[0][0][1]
+        meta = update_params[3]  # meta is 4th param in UPDATE
+        assert "sections" in meta
+        assert meta["section_count"] == "2"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestResolveLineRange:
+    """Test _resolve_line_range helper."""
+
+    def test_first_n_lines(self):
+        from ot_tools.mem import _resolve_line_range
+
+        lines = ["a", "b", "c", "d", "e"]
+        assert _resolve_line_range(":3", lines, 5) == "a\nb\nc"
+
+    def test_from_line_to_end(self):
+        from ot_tools.mem import _resolve_line_range
+
+        lines = ["a", "b", "c", "d", "e"]
+        assert _resolve_line_range("4:", lines, 5) == "d\ne"
+
+    def test_range(self):
+        from ot_tools.mem import _resolve_line_range
+
+        lines = ["a", "b", "c", "d", "e"]
+        assert _resolve_line_range("2:4", lines, 5) == "b\nc\nd"
+
+    def test_negative_start(self):
+        from ot_tools.mem import _resolve_line_range
+
+        lines = ["a", "b", "c", "d", "e"]
+        result = _resolve_line_range("-2:", lines, 5)
+        assert result == "d\ne"
+
+    def test_empty_spec(self):
+        from ot_tools.mem import _resolve_line_range
+
+        lines = ["a", "b"]
+        assert _resolve_line_range(":", lines, 2) is None

@@ -143,14 +143,14 @@ class TestMemCRUDLifecycle:
         assert mem_db.count() == "3"
         assert mem_db.count(topic="count/") == "2"
 
-    def test_list_memories(self, mem_db):
+    def test_list(self, mem_db):
         mem_db.write(topic="list/a", content="alpha", category="rule")
         mem_db.write(topic="list/b", content="beta", category="note")
 
-        result = mem_db.list_memories()
+        result = mem_db.list()
         assert "Found 2 memories" in result
 
-        result = mem_db.list_memories(category="rule")
+        result = mem_db.list(category="rule")
         assert "Found 1 memory" in result
 
 
@@ -183,7 +183,7 @@ class TestMemWriteBatch:
         assert "3 stored" in result
 
         # Verify subtopics preserve directory structure
-        listing = mem_db.list_memories(topic="cmds/")
+        listing = mem_db.list(topic="cmds/")
         assert "cmds/proj/review" in listing
         assert "cmds/proj/stage" in listing
         assert "cmds/top" in listing
@@ -357,3 +357,143 @@ class TestMemLifecycle:
 
         result = mem_db.decay(dry_run=True)
         assert "Decay preview" in result
+
+
+# ---------------------------------------------------------------------------
+# Navigation: toc, slice, read modes
+# ---------------------------------------------------------------------------
+
+SAMPLE_NAV_MD = """\
+# Introduction
+
+Some intro text here.
+
+## Requirements
+
+### Requirement: Search
+
+Search must support pattern matching.
+
+## Configuration
+
+Set `embeddings_enabled: true` to enable.
+"""
+
+
+@pytest.mark.integration
+@pytest.mark.tools
+class TestMemNavigation:
+    """Test section navigation: write with toc, toc(), slice(), read modes."""
+
+    def test_write_with_toc(self, mem_db):
+        result = mem_db.write(topic="nav/spec", content=SAMPLE_NAV_MD, toc=True)
+        assert "Stored memory" in result
+        assert "toc:" in result
+        assert "4 sections" in result
+
+    def test_toc_returns_sections(self, mem_db):
+        mem_db.write(topic="nav/toc", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.toc(topic="nav/toc")
+        assert "Introduction" in result
+        assert "Requirements" in result
+        assert "Configuration" in result
+        assert "4 sections" in result
+
+    def test_toc_no_sections(self, mem_db):
+        mem_db.write(topic="nav/plain", content="no headings here")
+        result = mem_db.toc(topic="nav/plain")
+        assert "No sections found" in result
+
+    def test_slice_by_section_number(self, mem_db):
+        mem_db.write(topic="nav/slice-num", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.slice(topic="nav/slice-num", select=1)
+        assert "Introduction" in result
+        assert "Some intro text" in result
+
+    def test_slice_by_heading(self, mem_db):
+        mem_db.write(topic="nav/slice-head", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.slice(topic="nav/slice-head", select="Configuration")
+        assert "embeddings_enabled" in result
+
+    def test_slice_by_heading_case_insensitive(self, mem_db):
+        mem_db.write(topic="nav/slice-ci", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.slice(topic="nav/slice-ci", select="configuration")
+        assert "embeddings_enabled" in result
+
+    def test_slice_by_line_range(self, mem_db):
+        mem_db.write(topic="nav/slice-lr", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.slice(topic="nav/slice-lr", select=":3")
+        lines = result.split("\n")
+        assert len(lines) == 3
+
+    def test_slice_mixed_list(self, mem_db):
+        mem_db.write(topic="nav/slice-mix", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.slice(topic="nav/slice-mix", select=[1, "Configuration"])
+        assert "Introduction" in result
+        assert "embeddings_enabled" in result
+
+    def test_read_mode_toc(self, mem_db):
+        mem_db.write(topic="nav/read-toc", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.read(topic="nav/read-toc", mode="toc")
+        assert "Introduction" in result
+        assert "4 sections" in result
+
+    def test_read_mode_meta(self, mem_db):
+        mem_db.write(topic="nav/read-meta", content=SAMPLE_NAV_MD, category="rule")
+        result = mem_db.read(topic="nav/read-meta", mode="meta")
+        assert "Topic: nav/read-meta" in result
+        assert "Category: rule" in result
+        # meta mode should not include the content body
+        assert "Some intro text" not in result
+
+    def test_read_mode_all(self, mem_db):
+        mem_db.write(topic="nav/read-all", content=SAMPLE_NAV_MD, toc=True)
+        result = mem_db.read(topic="nav/read-all", mode="all")
+        assert "Topic: nav/read-all" in result
+        assert "Some intro text" in result
+
+    def test_update_recomputes_toc(self, mem_db):
+        mem_db.write(topic="nav/upd-toc", content=SAMPLE_NAV_MD, toc=True)
+        toc_before = mem_db.toc(topic="nav/upd-toc")
+        assert "4 sections" in toc_before
+
+        new_content = "# Only One Section\n\nSimple content."
+        mem_db.update(topic="nav/upd-toc", content=new_content)
+        toc_after = mem_db.toc(topic="nav/upd-toc")
+        assert "1 sections" in toc_after
+        assert "Only One Section" in toc_after
+
+    def test_read_batch_mode_toc(self, mem_db):
+        mem_db.write(topic="nav/batch/a", content=SAMPLE_NAV_MD, toc=True)
+        mem_db.write(topic="nav/batch/b", content="# Single\n\nContent.", toc=True)
+        result = mem_db.read_batch(topic="nav/batch/", mode="toc")
+        assert "Introduction" in result
+        assert "Single" in result
+
+    def test_write_file_with_toc(self, mem_db, tmp_path):
+        """Write from file with toc=True populates source metadata and sections."""
+        spec_file = tmp_path / "spec.md"
+        spec_file.write_text(SAMPLE_NAV_MD)
+        result = mem_db.write(topic="nav/file-toc", file=str(spec_file), toc=True)
+        assert "Stored memory" in result
+        assert "4 sections" in result
+
+        # Verify meta contains source info
+        meta_result = mem_db.read(topic="nav/file-toc", mode="meta")
+        assert "source:" in meta_result
+        assert "source_mtime:" in meta_result
+        assert "content_type:" in meta_result
+
+    def test_staleness_detection(self, mem_db, tmp_path):
+        """toc() warns when source file has changed since storage."""
+        spec_file = tmp_path / "stale.md"
+        spec_file.write_text("# Old\n\nContent")
+        mem_db.write(topic="nav/stale", file=str(spec_file), toc=True)
+
+        # Modify the source file (ensure mtime changes)
+        import time
+        time.sleep(0.1)
+        spec_file.write_text("# New\n\nChanged content\n\n## Extra\n\nMore.")
+
+        result = mem_db.toc(topic="nav/stale")
+        assert "modified since" in result

@@ -14,21 +14,25 @@ Persistent memory for AI agents with DuckDB storage and optional semantic search
 - Importance decay based on age and access patterns
 - YAML export/import
 - File-based snap/restore with lossless round-trip
+- Section navigation: table of contents, section slicing, and staleness detection
+- Extensible `meta` column for key-value metadata per memory
 
 ## Functions
 
 | Function | Description |
 |----------|-------------|
-| `mem.write(topic, content, ...)` | Store a memory |
-| `mem.write_batch(topic, glob_pattern, ...)` | Bulk store from files (preserves directory structure) |
-| `mem.read(topic, id)` | Read full content of a single memory |
-| `mem.read_batch(topic, ids, ...)` | Read full content of multiple memories |
+| `mem.write(topic, content, ..., toc)` | Store a memory (with optional section index) |
+| `mem.write_batch(topic, glob_pattern, ..., toc)` | Bulk store from files (preserves directory structure) |
+| `mem.read(topic, id, mode)` | Read a single memory (mode: content/toc/meta/all) |
+| `mem.read_batch(topic, ids, ..., mode)` | Read multiple memories (mode: content/toc/meta/all) |
+| `mem.toc(topic, id)` | Display numbered section index with staleness detection |
+| `mem.slice(topic, select, id)` | Extract content by section number, heading, line range, or list |
 | `mem.search(query, mode, ...)` | Search memories (returns meta + truncated extract) |
-| `mem.list_memories(topic, category)` | List memories (returns meta only, no content) |
+| `mem.list(topic, category)` | List memories (returns meta only, no content) |
 | `mem.count(topic, category)` | Count memories |
 | `mem.delete(topic, id, confirm)` | Delete memories |
-| `mem.update(topic, content, id)` | Update a memory |
-| `mem.append(topic, content, id)` | Append to a memory |
+| `mem.update(topic, content, id)` | Update a memory (recomputes toc if sections exist) |
+| `mem.append(topic, content, id)` | Append to a memory (recomputes toc if sections exist) |
 | `mem.context(topic, limit)` | Load hot cache context |
 | `mem.update_batch(search_text, replace_text, ...)` | Batch search-and-replace |
 | `mem.decay(dry_run)` | Apply importance decay |
@@ -46,10 +50,14 @@ The retrieval functions return different levels of detail:
 
 | Function | Returns | Use when |
 |----------|---------|----------|
-| `mem.list_memories()` | Meta only (topic, category, relevance, access count, size, tags, id) | Browsing what's stored |
+| `mem.list()` | Meta only (topic, category, relevance, access count, size, tags, id) | Browsing what's stored |
 | `mem.search()` | Meta + truncated extract (default 200 chars, configurable via `extract`) | Finding relevant memories |
 | `mem.read()` | Full content for a single memory (optionally with meta header via `meta=True`) | Reading one specific memory |
+| `mem.read(mode="toc")` | Numbered section index with line ranges | Navigating a large document |
+| `mem.read(mode="meta")` | Metadata only (including meta map) | Inspecting memory properties |
 | `mem.read_batch()` | Full content for multiple memories with dividers | Reading several memories at once |
+| `mem.toc()` | Section index with staleness detection | Checking document structure |
+| `mem.slice()` | Extracted sections by number, heading, or line range | Reading specific parts |
 
 ## Key Parameters
 
@@ -62,7 +70,8 @@ The retrieval functions return different levels of detail:
 | `category` | str | One of: rule, context, decision, mistake, discovery, note |
 | `tags` | list | Optional tags for categorisation |
 | `relevance` | int | Importance 1-10, enforced (default: 5) |
-| `file` | str | Read content from file instead (max 1MB) |
+| `file` | str | Read content from file instead (max 1MB). Auto-populates `source`, `source_mtime`, `content_type` in meta |
+| `toc` | bool | Parse markdown headings and store section index in meta (default: False) |
 
 ### `mem.write_batch()`
 
@@ -73,6 +82,7 @@ The retrieval functions return different levels of detail:
 | `category` | str | Category for all memories (default: note) |
 | `tags` | list | Tags applied to all memories |
 | `relevance` | int | Relevance score for all memories (default: 5) |
+| `toc` | bool | Parse markdown headings per file (default: False) |
 
 ### `mem.search()`
 
@@ -95,9 +105,27 @@ The retrieval functions return different levels of detail:
 | `category` | str | Category filter |
 | `tags` | list | Tag filter (matches any) |
 | `meta` | bool | Include metadata headers (default: False) |
+| `mode` | str | Output mode: "content" (default), "toc", "meta", "all" |
 | `limit` | int | Max results (default: 50) |
 
 At least one filter (`topic`, `ids`, `category`, or `tags`) is required. Note: `ids` cannot be combined with other filters (`topic`, `category`, `tags`).
+
+### `mem.toc()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic` | str | Topic of the memory |
+| `id` | str | Optional memory ID (overrides topic) |
+
+Returns a numbered section index with line ranges. Warns if the source file has been modified since storage.
+
+### `mem.slice()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic` | str | Topic of the memory |
+| `select` | int/str/list | Section selector: section number (int), line range (":50", "400:", "151:200"), heading path (str), or mixed list |
+| `id` | str | Optional memory ID (overrides topic) |
 
 ### `mem.update_batch()`
 
@@ -217,7 +245,51 @@ mem.update_batch(search_text="old_name", replace_text="new_name", dry_run=False)
 
 # Apply importance decay
 mem.decay(dry_run=False)
+
+# Store a spec with table of contents
+mem.write(topic="spec", file="spec.md", toc=True)
+
+# View section index
+mem.toc(topic="spec")
+
+# Read just section 2
+mem.slice(topic="spec", select=2)
+
+# Read by heading name
+mem.slice(topic="spec", select="Requirements")
+
+# Read first 50 lines
+mem.slice(topic="spec", select=":50")
+
+# Read multiple sections at once
+mem.slice(topic="spec", select=[1, "Requirements", "200:300"])
+
+# Read metadata only
+mem.read(topic="spec", mode="meta")
+
+# Bulk store specs with toc
+mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)
 ```
+
+## Section Navigation
+
+When storing markdown files, use `toc=True` to build a section index. This enables agents to inspect document structure and extract specific sections without consuming full token cost.
+
+**Workflow:**
+1. `mem.write(topic="spec", file="spec.md", toc=True)` - store with section index
+2. `mem.toc(topic="spec")` - view numbered sections with line ranges
+3. `mem.slice(topic="spec", select=2)` - read only the section you need
+
+The `toc()` function checks if the source file has changed since storage and warns about staleness. When `mem.update()` or `mem.append()` modifies a memory that has sections, the section index is automatically recomputed.
+
+**Slice selectors:**
+- `int` - section number (1-indexed)
+- `":50"` - first 50 lines
+- `"400:"` - line 400 to end
+- `"151:200"` - line range
+- `"-50:"` - last 50 lines
+- `"Requirements"` - heading path (case-insensitive substring match)
+- `[1, "Requirements", "200:300"]` - mixed list
 
 ## Embedding Large Content
 
