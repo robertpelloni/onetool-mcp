@@ -1,14 +1,13 @@
-"""Persistent memory for AI agents with DuckDB storage and optional OpenAI embeddings.
+"""Persistent memory for AI agents with SQLite storage and optional OpenAI embeddings.
 
 Provides topic-based memory storage with semantic search, content dedup,
 secret redaction, and importance decay. Requires OPENAI_API_KEY in secrets.yaml
 when embeddings are enabled.
 
-Thread safety: Uses a shared DuckDB connection. Concurrent calls from multiple
-threads should use _use_connection() to hold the lock for the full operation.
-MCP tool dispatch is single-threaded so this is safe in normal usage.
-
-Reference: ChunkHound connection patterns, code_search.py embedding patterns.
+Thread safety: Uses a shared SQLite connection with WAL mode. Concurrent calls
+from multiple threads should use _use_connection() to hold the lock for the
+full operation. MCP tool dispatch is single-threaded so this is safe in normal
+usage.
 """
 
 from __future__ import annotations
@@ -16,11 +15,13 @@ from __future__ import annotations
 import builtins
 import contextlib
 import hashlib
+import json
 import logging
 import math
 import queue
 import re
-import shutil
+import sqlite3
+import struct
 import threading
 import time
 import uuid
@@ -59,7 +60,6 @@ __all__ = [
 # Dependency declarations for CLI validation
 __ot_requires__ = {
     "lib": [
-        ("duckdb", "pip install duckdb"),
         ("openai", "pip install openai"),
         ("tiktoken", "pip install tiktoken"),
     ],
@@ -79,10 +79,10 @@ if TYPE_CHECKING:
 
     from openai import OpenAI
 
-logger = logging.getLogger(__name__)
-
 # Alias to avoid conflict with the module-level list() function
 _builtins_list = builtins.list
+
+logger = logging.getLogger(__name__)
 
 # Thread lock for connection operations
 _connection_lock = threading.RLock()
@@ -120,7 +120,7 @@ class Config(BaseModel):
 
     db_path: str = Field(
         default="mem.db",
-        description="Path to memory DuckDB database (relative to .onetool/)",
+        description="Path to memory SQLite database (relative to .onetool/)",
     )
     model: str = Field(
         default="text-embedding-3-small",
@@ -274,17 +274,6 @@ def _cache_invalidate(topic: str | None = None, id: str | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _import_duckdb() -> ModuleType:
-    """Lazy import duckdb module."""
-    try:
-        import duckdb
-    except ImportError as e:
-        raise ImportError(
-            "duckdb is required for mem. Install with: pip install duckdb"
-        ) from e
-    return duckdb
-
-
 def _get_db_path() -> Path:
     """Get the memory database path, resolving relative to .onetool/ directory.
 
@@ -300,34 +289,28 @@ def _get_db_path() -> Path:
     return db_path
 
 
-_WAL_CORRUPTION_INDICATORS = [
-    "Failure while replaying WAL file",
-    "BinderException",
-    "Binder Error",
-    "Cannot bind index",
-]
+def _cosine_similarity(a_blob: bytes | None, b_blob: bytes | None) -> float | None:
+    """Cosine similarity between two packed float32 BLOB vectors.
+
+    Registered as a SQLite UDF so it can be used in ORDER BY clauses.
+    """
+    if a_blob is None or b_blob is None:
+        return None
+    n = len(a_blob) // 4
+    a = struct.unpack(f"<{n}f", a_blob)
+    b = struct.unpack(f"<{n}f", b_blob)
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(x * x for x in b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
 
 
-def _is_wal_corruption_error(error_msg: str) -> bool:
-    """Check if a DuckDB error indicates WAL corruption."""
-    return any(indicator in error_msg for indicator in _WAL_CORRUPTION_INDICATORS)
-
-
-def _handle_wal_corruption(db_path: Path) -> None:
-    """Handle WAL corruption by backing up and removing the WAL file."""
-    wal_path = db_path.with_suffix(".duckdb.wal")
-    if wal_path.exists():
-        backup_path = wal_path.with_suffix(".wal.corrupt")
-        logger.warning("WAL corruption detected, backing up to %s", backup_path)
-        shutil.copy2(wal_path, backup_path)
-        wal_path.unlink()
-
-
-def _get_connection() -> Any:
-    """Get or create a read-write DuckDB connection with WAL handling.
+def _get_connection() -> sqlite3.Connection:
+    """Get or create a read-write SQLite connection with WAL mode.
 
     Uses a module-level connection with thread lock for safety.
-    Follows ChunkHound patterns for WAL corruption detection and recovery.
     """
     global _connection
     with _connection_lock:
@@ -338,18 +321,15 @@ def _get_connection() -> Any:
             except Exception:
                 _connection = None
 
-        duckdb = _import_duckdb()
         db_path = _get_db_path()
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
 
-        try:
-            _connection = duckdb.connect(str(db_path), read_only=False)
-        except Exception as e:
-            if _is_wal_corruption_error(str(e)):
-                _handle_wal_corruption(db_path)
-                _connection = duckdb.connect(str(db_path), read_only=False)
-            else:
-                raise
+        # Register cosine similarity UDF
+        conn.create_function("cosine_similarity", 2, _cosine_similarity)
 
+        _connection = conn
         _ensure_tables(_connection)
         return _connection
 
@@ -358,42 +338,36 @@ def _get_connection() -> Any:
 def _use_connection() -> Generator[Any, None, None]:
     """Context manager that holds the connection lock for the entire operation.
 
-    Ensures thread-safe access to the shared DuckDB connection.
+    Ensures thread-safe access to the shared SQLite connection.
     """
     conn = _get_connection()
     with _connection_lock:
         yield conn
 
 
-def _has_column(conn: Any, table: str, column: str) -> bool:
-    """Check if a column exists in a DuckDB table."""
-    rows = conn.execute(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
-        [table, column],
-    ).fetchall()
-    return len(rows) > 0
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    """Check if a column exists in a SQLite table."""
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(r[1] == column for r in rows)
 
 
-def _ensure_tables(conn: Any) -> None:
+def _ensure_tables(conn: sqlite3.Connection) -> None:
     """Create memory tables if they don't exist, then apply migrations."""
-    config = _get_config()
-    dim = config.dimensions
-
-    conn.execute(f"""
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS memories (
-            id             VARCHAR PRIMARY KEY,
-            topic          VARCHAR NOT NULL,
+            id             TEXT PRIMARY KEY,
+            topic          TEXT NOT NULL,
             content        TEXT NOT NULL,
-            content_hash   VARCHAR NOT NULL,
-            category       VARCHAR DEFAULT 'note',
-            tags           VARCHAR[],
+            content_hash   TEXT NOT NULL,
+            category       TEXT DEFAULT 'note',
+            tags           TEXT DEFAULT '[]',
             relevance      INTEGER DEFAULT 5,
             access_count   INTEGER DEFAULT 0,
-            created_at     TIMESTAMP DEFAULT now(),
-            updated_at     TIMESTAMP DEFAULT now(),
-            last_accessed  TIMESTAMP DEFAULT now(),
-            embedding      FLOAT[{dim}],
-            meta           MAP(VARCHAR, VARCHAR) DEFAULT MAP()
+            created_at     TEXT DEFAULT (datetime('now')),
+            updated_at     TEXT DEFAULT (datetime('now')),
+            last_accessed  TEXT DEFAULT (datetime('now')),
+            embedding      BLOB,
+            meta           TEXT DEFAULT '{}'
         )
     """)
 
@@ -406,24 +380,25 @@ def _ensure_tables(conn: Any) -> None:
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS memory_history (
-            id             VARCHAR PRIMARY KEY,
-            memory_id      VARCHAR NOT NULL,
+            id             TEXT PRIMARY KEY,
+            memory_id      TEXT NOT NULL,
             content        TEXT NOT NULL,
-            updated_at     TIMESTAMP DEFAULT now()
+            updated_at     TEXT DEFAULT (datetime('now'))
         )
     """)
 
     _migrate_tables(conn)
 
 
-def _migrate_tables(conn: Any) -> None:
+def _migrate_tables(conn: sqlite3.Connection) -> None:
     """Apply schema migrations to existing tables.
 
     Each migration checks before applying so it is safe to call repeatedly.
     """
     # v2: add meta column for extensible key-value metadata
     if not _has_column(conn, "memories", "meta"):
-        conn.execute("ALTER TABLE memories ADD COLUMN meta MAP(VARCHAR, VARCHAR) DEFAULT MAP()")
+        conn.execute("ALTER TABLE memories ADD COLUMN meta TEXT DEFAULT '{}'")
+    conn.commit()
 
 
 def _close_connection() -> None:
@@ -434,6 +409,50 @@ def _close_connection() -> None:
             with contextlib.suppress(Exception):
                 _connection.close()
             _connection = None
+
+
+# ---------------------------------------------------------------------------
+# Serialisation helpers for SQLite columns
+# ---------------------------------------------------------------------------
+
+
+def _serialize_embedding(vec: list[float] | None) -> bytes | None:
+    """Pack a float list into a BLOB for SQLite storage."""
+    if vec is None:
+        return None
+    return struct.pack(f"<{len(vec)}f", *vec)
+
+
+def _deserialize_embedding(blob: bytes | None) -> list[float] | None:
+    """Unpack a BLOB back to a float list."""
+    if blob is None:
+        return None
+    n = len(blob) // 4
+    return _builtins_list(struct.unpack(f"<{n}f", blob))
+
+
+def _serialize_tags(tags: list[str] | None) -> str:
+    """Serialize tag list to JSON string."""
+    return json.dumps(tags or [])
+
+
+def _deserialize_tags(raw: str | None) -> list[str]:
+    """Deserialize JSON string back to tag list."""
+    if not raw:
+        return []
+    return json.loads(raw)
+
+
+def _serialize_meta(meta: dict[str, str] | None) -> str:
+    """Serialize meta dict to JSON string."""
+    return json.dumps(meta or {})
+
+
+def _deserialize_meta(raw: str | None) -> dict[str, str]:
+    """Deserialize JSON string back to meta dict."""
+    if not raw:
+        return {}
+    return json.loads(raw)
 
 
 # ---------------------------------------------------------------------------
@@ -592,17 +611,18 @@ def _embedding_worker() -> None:
         max_retries = 3
         while retries < max_retries:
             try:
-                conn = _get_connection()
-                row = conn.execute(
-                    "SELECT content FROM memories WHERE id = ?", [memory_id]
-                ).fetchone()
-                if not row:
-                    break  # Memory was deleted before we got to it
-                embedding = _generate_embedding(row[0])
-                conn.execute(
-                    "UPDATE memories SET embedding = ? WHERE id = ?",
-                    [embedding, memory_id],
-                )
+                with _use_connection() as conn:
+                    row = conn.execute(
+                        "SELECT content FROM memories WHERE id = ?", [memory_id]
+                    ).fetchone()
+                    if not row:
+                        break  # Memory was deleted before we got to it
+                    embedding = _generate_embedding(row[0])
+                    conn.execute(
+                        "UPDATE memories SET embedding = ? WHERE id = ?",
+                        [_serialize_embedding(embedding), memory_id],
+                    )
+                    conn.commit()
                 break
             except Exception:
                 retries += 1
@@ -656,6 +676,18 @@ def _topic_filter(topic: str | None) -> tuple[str, list[Any]]:
         return " AND topic LIKE ?", [like_pattern]
     else:
         return " AND topic = ?", [topic]
+
+
+def _tags_filter_sql(tags: list[str]) -> tuple[str, list[str]]:
+    """Build SQL WHERE clause fragment for tag filtering.
+
+    Tags are stored as a JSON array in a TEXT column. Uses json_each() to
+    check if any of the provided tags exist in the stored array.
+    Returns (sql_fragment, params).
+    """
+    placeholders = ", ".join("?" for _ in tags)
+    sql = f" AND EXISTS (SELECT 1 FROM json_each(tags) WHERE json_each.value IN ({placeholders}))"
+    return sql, tags
 
 
 def _redact(content: str) -> str:
@@ -916,8 +948,11 @@ def write(
                 INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                [memory_id, topic, content, content_hash, category, validated_tags, relevance, embedding, meta],
+                [memory_id, topic, content, content_hash, category,
+                 _serialize_tags(validated_tags), relevance,
+                 _serialize_embedding(embedding), _serialize_meta(meta)],
             )
+            conn.commit()
 
             s.add("memoryId", memory_id)
             s.add("contentLen", len(content))
@@ -990,19 +1025,13 @@ def write_batch(
                 if not f.is_file():
                     continue
 
-                validated_path, error = _validate_file_path(str(f), must_exist=True)
-                if error:
-                    errors.append(f"{f.name}: {error}")
-                    continue
-                assert validated_path is not None
-
                 # Preserve directory structure relative to glob root
                 rel = f.relative_to(glob_root)
                 # Strip extension and use path components as subtopic
                 subtopic = f"{topic}/{rel.with_suffix('').as_posix()}"
                 result = write(
                     topic=subtopic,
-                    content=validated_path.read_text(encoding="utf-8"),
+                    file=str(f),
                     category=category,
                     tags=tags,
                     relevance=relevance,
@@ -1099,9 +1128,14 @@ def read(
             # Increment access count (always, even on cache hit)
             conn = _get_connection()
             conn.execute(
-                "UPDATE memories SET access_count = access_count + 1, last_accessed = now() WHERE id = ?",
+                "UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id = ?",
                 [row[0]],
             )
+            conn.commit()
+
+            # Update row with incremented access_count for accurate display
+            row = (*row[:6], row[6] + 1, *row[7:])
+            _cache_put(cache_key, row)
 
             s.add("found", True)
             s.add("memoryId", row[0])
@@ -1121,15 +1155,16 @@ def _format_read_row(row: Any, *, meta: bool, mode: str) -> str:
     Row indices: 0=id, 1=topic, 2=content, 3=category, 4=tags,
                  5=relevance, 6=access_count, 7=created_at, 8=updated_at, 9=meta
     """
-    row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+    tags = _deserialize_tags(row[4])
+    row_meta = _deserialize_meta(row[9])
 
     if mode == "meta":
         lines = [
             f"Topic: {row[1]}",
             f"Category: {row[3]}",
-            f"Tags: {', '.join(row[4]) if row[4] else 'none'}",
+            f"Tags: {', '.join(tags) if tags else 'none'}",
             f"Relevance: {row[5]}",
-            f"Accessed: {row[6] + 1} times",
+            f"Accessed: {row[6]} times",
             f"Created: {row[7]}",
             f"Updated: {row[8]}",
             f"ID: {row[0]}",
@@ -1152,9 +1187,9 @@ def _format_read_row(row: Any, *, meta: bool, mode: str) -> str:
     header = (
         f"Topic: {row[1]}\n"
         f"Category: {row[3]}\n"
-        f"Tags: {', '.join(row[4]) if row[4] else 'none'}\n"
+        f"Tags: {', '.join(tags) if tags else 'none'}\n"
         f"Relevance: {row[5]}\n"
-        f"Accessed: {row[6] + 1} times\n"
+        f"Accessed: {row[6]} times\n"
         f"Created: {row[7]}\n"
         f"Updated: {row[8]}\n"
         f"ID: {row[0]}"
@@ -1229,8 +1264,9 @@ def read_batch(
                     params.append(category)
 
                 if tags:
-                    sql += " AND list_has_any(tags, ?)"
-                    params.append(tags)
+                    tags_sql, tags_params = _tags_filter_sql(tags)
+                    sql += tags_sql
+                    params.extend(tags_params)
 
             sql += " ORDER BY topic ASC LIMIT ?"
             params.append(limit)
@@ -1245,9 +1281,10 @@ def read_batch(
             row_ids = [r[0] for r in rows]
             placeholders = ", ".join("?" for _ in row_ids)
             conn.execute(
-                f"UPDATE memories SET access_count = access_count + 1, last_accessed = now() WHERE id IN ({placeholders})",
+                f"UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id IN ({placeholders})",
                 row_ids,
             )
+            conn.commit()
 
             s.add("found", len(rows))
 
@@ -1308,7 +1345,7 @@ def toc(
                 s.add("found", False)
                 return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
 
-            row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+            row_meta = _deserialize_meta(row[9])
             sections = _decode_sections(row_meta.get("sections", ""))
             result = _build_toc(sections, row[2])
 
@@ -1379,7 +1416,7 @@ def slice(
 
             content = row[2]
             lines = content.split("\n")
-            row_meta: dict[str, str] = dict(row[9]) if row[9] else {}
+            row_meta = _deserialize_meta(row[9])
             sections = _decode_sections(row_meta.get("sections", ""))
 
             # Normalise select to a sequence
@@ -1472,7 +1509,7 @@ def search(
 
     Args:
         query: Search query text
-        mode: Search mode - "semantic" (vector cosine), "pattern" (ILIKE), or "hybrid" (RRF)
+        mode: Search mode - "semantic" (vector cosine), "pattern" (LIKE), or "hybrid" (RRF)
         topic: Optional topic prefix filter (e.g., "projects/" matches all under projects)
         category: Optional category filter
         limit: Maximum results (default: config search_limit)
@@ -1499,10 +1536,10 @@ def search(
 
     with LogSpan(span="mem.search", query=query, mode=mode, topic=topic, limit=limit) as s:
         try:
-            conn = _get_connection()
-
             if mode in ("semantic", "hybrid") and not config.embeddings_enabled:
                 return "Semantic search requires embeddings. Enable with: tools.mem.embeddings_enabled: true"
+
+            conn = _get_connection()
 
             if mode in ("semantic", "hybrid"):
                 has_embeddings = conn.execute(
@@ -1512,11 +1549,11 @@ def search(
                     return "No embeddings found. Run mem.embed(dry_run=False) to generate them."
 
             if mode == "semantic":
-                results = _search_semantic(conn, query, topic, category, tags, limit, config)
+                results = _search_semantic(conn, query, topic, category, tags, limit)
             elif mode == "pattern":
                 results = _search_pattern(conn, query, topic, category, tags, limit)
             else:
-                results = _search_hybrid(conn, query, topic, category, tags, limit, config)
+                results = _search_hybrid(conn, query, topic, category, tags, limit)
 
             if not results:
                 s.add("resultCount", 0)
@@ -1537,19 +1574,18 @@ def _search_semantic(
     category: str | None,
     tags: list[str] | None,
     limit: int,
-    config: Config,
 ) -> list[dict[str, Any]]:
     """Semantic search using vector cosine similarity."""
     embedding = _generate_embedding(query)
-    dim = config.dimensions
+    query_blob = _serialize_embedding(embedding)
 
-    sql = f"""
+    sql = """
         SELECT id, topic, content, category, tags, relevance, access_count,
-               array_cosine_similarity(embedding, ?::FLOAT[{dim}]) as score
+               cosine_similarity(embedding, ?) as score
         FROM memories
         WHERE embedding IS NOT NULL
     """
-    params: list[Any] = [embedding]
+    params: list[Any] = [query_blob]
 
     topic_sql, topic_params = _topic_filter(topic)
     sql += topic_sql
@@ -1560,8 +1596,9 @@ def _search_semantic(
         params.append(category)
 
     if tags:
-        sql += " AND list_has_any(tags, ?)"
-        params.append(tags)
+        tags_sql, tags_params = _tags_filter_sql(tags)
+        sql += tags_sql
+        params.extend(tags_params)
 
     sql += " ORDER BY score DESC LIMIT ?"
     params.append(limit)
@@ -1570,7 +1607,8 @@ def _search_semantic(
     return [
         {
             "id": r[0], "topic": r[1], "content": r[2], "category": r[3],
-            "tags": r[4], "relevance": r[5], "access_count": r[6], "score": round(r[7], 4),
+            "tags": _deserialize_tags(r[4]), "relevance": r[5], "access_count": r[6],
+            "score": round(r[7], 4) if r[7] is not None else 0.0,
         }
         for r in rows
     ]
@@ -1584,11 +1622,11 @@ def _search_pattern(
     tags: list[str] | None,
     limit: int,
 ) -> list[dict[str, Any]]:
-    """Pattern search using ILIKE matching."""
+    """Pattern search using LIKE matching (case-insensitive in SQLite by default)."""
     sql = """
         SELECT id, topic, content, category, tags, relevance, access_count
         FROM memories
-        WHERE (content ILIKE ? ESCAPE '\\' OR topic ILIKE ? ESCAPE '\\')
+        WHERE (content LIKE ? ESCAPE '\\' OR topic LIKE ? ESCAPE '\\')
     """
     # Escape LIKE special characters so they match literally
     escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -1604,8 +1642,9 @@ def _search_pattern(
         params.append(category)
 
     if tags:
-        sql += " AND list_has_any(tags, ?)"
-        params.append(tags)
+        tags_sql, tags_params = _tags_filter_sql(tags)
+        sql += tags_sql
+        params.extend(tags_params)
 
     sql += " ORDER BY relevance DESC, updated_at DESC LIMIT ?"
     params.append(limit)
@@ -1614,7 +1653,7 @@ def _search_pattern(
     return [
         {
             "id": r[0], "topic": r[1], "content": r[2], "category": r[3],
-            "tags": r[4], "relevance": r[5], "access_count": r[6], "score": 1.0,
+            "tags": _deserialize_tags(r[4]), "relevance": r[5], "access_count": r[6], "score": 1.0,
         }
         for r in rows
     ]
@@ -1627,7 +1666,6 @@ def _search_hybrid(
     category: str | None,
     tags: list[str] | None,
     limit: int,
-    config: Config,
 ) -> list[dict[str, Any]]:
     """Hybrid search combining semantic and pattern results via RRF.
 
@@ -1637,7 +1675,7 @@ def _search_hybrid(
 
     # Get both result sets (fetch more than limit for better fusion)
     fetch_limit = limit * 3
-    semantic_results = _search_semantic(conn, query, topic, category, tags, fetch_limit, config)
+    semantic_results = _search_semantic(conn, query, topic, category, tags, fetch_limit)
     pattern_results = _search_pattern(conn, query, topic, category, tags, fetch_limit)
 
     # Build RRF scores
@@ -1736,7 +1774,7 @@ def list(
             noun = "memory" if len(rows) == 1 else "memories"
             lines = [f"Found {len(rows)} {noun}:\n"]
             for r in rows:
-                tags_str = ", ".join(r[3]) if r[3] else ""
+                tags_str = ", ".join(_deserialize_tags(r[3])) or ""
                 lines.append(
                     f"  {r[1]} [{r[2]}] rel={r[4]} accessed={r[5]}x len={r[7]}"
                     f"{' tags=' + tags_str if tags_str else ''}"
@@ -1826,6 +1864,7 @@ def delete(
                 if result:
                     # Clean up history too
                     conn.execute("DELETE FROM memory_history WHERE memory_id = ?", [id])
+                    conn.commit()
                     s.add("deleted", 1)
                     _cache_invalidate(id=id)
                     return f"Deleted memory {id}"
@@ -1856,6 +1895,7 @@ def delete(
 
             del_sql = "DELETE FROM memories WHERE 1=1" + topic_sql
             conn.execute(del_sql, topic_params)
+            conn.commit()
 
             s.add("deleted", match_count)
             _cache_invalidate(topic=topic)
@@ -1912,7 +1952,7 @@ def update(
 
             memory_id = rows[0][0]
             old_content = rows[0][1]
-            existing_meta: dict[str, str] = dict(rows[0][2]) if rows[0][2] else {}
+            existing_meta: dict[str, str] = _deserialize_meta(rows[0][2])
 
             # Save history
             history_id = str(uuid.uuid4())
@@ -1939,11 +1979,13 @@ def update(
             conn.execute(
                 """
                 UPDATE memories
-                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = now()
+                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
                 WHERE id = ?
                 """,
-                [content, new_hash, embedding, existing_meta, memory_id],
+                [content, new_hash, _serialize_embedding(embedding),
+                 _serialize_meta(existing_meta), memory_id],
             )
+            conn.commit()
 
             s.add("memoryId", memory_id)
             _cache_invalidate(topic=topic, id=memory_id)
@@ -1998,7 +2040,7 @@ def append(
 
             memory_id = row[0]
             old_content = row[1]
-            existing_meta: dict[str, str] = dict(row[2]) if row[2] else {}
+            existing_meta: dict[str, str] = _deserialize_meta(row[2])
 
             # Save history
             history_id = str(uuid.uuid4())
@@ -2024,11 +2066,13 @@ def append(
             conn.execute(
                 """
                 UPDATE memories
-                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = now()
+                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
                 WHERE id = ?
                 """,
-                [new_content, new_hash, embedding, existing_meta, memory_id],
+                [new_content, new_hash, _serialize_embedding(embedding),
+                 _serialize_meta(existing_meta), memory_id],
             )
+            conn.commit()
 
             s.add("memoryId", memory_id)
             s.add("newLen", len(new_content))
@@ -2093,9 +2137,10 @@ def context(
             ids = [r[0] for r in rows]
             placeholders = ", ".join("?" for _ in ids)
             conn.execute(
-                f"UPDATE memories SET access_count = access_count + 1, last_accessed = now() WHERE id IN ({placeholders})",
+                f"UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id IN ({placeholders})",
                 ids,
             )
+            conn.commit()
 
             s.add("resultCount", len(rows))
 
@@ -2144,7 +2189,7 @@ def update_batch(
             conn = _get_connection()
 
             escaped = search_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            sql = "SELECT id, topic, content FROM memories WHERE content LIKE ? ESCAPE '\\'"
+            sql = "SELECT id, topic, content, meta FROM memories WHERE content LIKE ? ESCAPE '\\'"
             params: list[Any] = [f"%{escaped}%"]
 
             topic_sql, topic_params = _topic_filter(topic)
@@ -2169,6 +2214,7 @@ def update_batch(
             updated = 0
             for r in rows:
                 memory_id, _topic, old_content = r[0], r[1], r[2]
+                existing_meta: dict[str, str] = _deserialize_meta(r[3])
 
                 # Save history
                 history_id = str(uuid.uuid4())
@@ -2181,16 +2227,28 @@ def update_batch(
                 new_hash = _content_hash(new_content)
                 embedding = _maybe_embed(memory_id, new_content)
 
+                # Recompute TOC if the memory has sections
+                if "sections" in existing_meta:
+                    headings = _parse_headings(new_content)
+                    if headings:
+                        existing_meta["sections"] = _encode_sections(headings)
+                        existing_meta["section_count"] = str(len(headings))
+                    else:
+                        del existing_meta["sections"]
+                        existing_meta.pop("section_count", None)
+
                 conn.execute(
                     """
                     UPDATE memories
-                    SET content = ?, content_hash = ?, embedding = ?, updated_at = now()
+                    SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
                     WHERE id = ?
                     """,
-                    [new_content, new_hash, embedding, memory_id],
+                    [new_content, new_hash, _serialize_embedding(embedding),
+                     _serialize_meta(existing_meta), memory_id],
                 )
                 updated += 1
 
+            conn.commit()
             s.add("updated", updated)
             _cache_invalidate()  # Batch update: clear entire cache
             return f"Updated {updated} memories: replaced '{search_text}' with '{replace_text}'"
@@ -2235,7 +2293,9 @@ def decay(
             decay_results = []
 
             for r in rows:
-                memory_id, topic, relevance, access_count, created_at = r
+                memory_id, topic, relevance, access_count, created_at_str = r
+                # SQLite stores timestamps as ISO text strings
+                created_at = datetime.fromisoformat(created_at_str)
                 if created_at.tzinfo is None:
                     created_at = created_at.replace(tzinfo=UTC)
                 age_days = (now - created_at).total_seconds() / 86400
@@ -2243,7 +2303,7 @@ def decay(
                 decay_factor = 0.5 ** (age_days / half_life)
                 access_boost = 1 + math.log(access_count + 1) * 0.1
                 decayed_score = relevance * decay_factor * access_boost
-                new_relevance = max(1, min(10, round(decayed_score)))
+                new_relevance = max(1, min(relevance, round(decayed_score)))
 
                 decay_results.append({
                     "id": memory_id,
@@ -2279,6 +2339,7 @@ def decay(
                     )
                     updated += 1
 
+            conn.commit()
             s.add("updated", updated)
             return f"Applied decay to {updated} memories (half_life={half_life}d)"
 
@@ -2313,8 +2374,8 @@ def stats() -> str:
             topics = conn.execute(
                 """
                 SELECT
-                    CASE WHEN position('/' IN topic) > 0
-                         THEN substring(topic, 1, position('/' IN topic) - 1)
+                    CASE WHEN instr(topic, '/') > 0
+                         THEN substr(topic, 1, instr(topic, '/') - 1)
                          ELSE topic
                     END as root_topic,
                     COUNT(*) as cnt
@@ -2422,10 +2483,11 @@ def embed(
                 embedding = _generate_embedding(content)
                 conn.execute(
                     "UPDATE memories SET embedding = ? WHERE id = ?",
-                    [embedding, memory_id],
+                    [_serialize_embedding(embedding), memory_id],
                 )
                 generated += 1
 
+            conn.commit()
             s.add("generated", generated)
             return f"Generated embeddings for {generated} memories"
 
@@ -2476,7 +2538,7 @@ def export(
 
             sql = """
                 SELECT id, topic, content, category, tags, relevance, access_count,
-                       created_at, updated_at
+                       created_at, updated_at, meta
                 FROM memories
                 WHERE 1=1
             """
@@ -2517,10 +2579,12 @@ def _export_yaml(rows: list[tuple]) -> str:
     """Export memories to YAML format."""
     lines = ["memories:"]
     for r in rows:
-        tags_str = "[" + ", ".join(f'"{t}"' for t in (r[4] or [])) + "]"
+        tags_str = "[" + ", ".join(f'"{t}"' for t in _deserialize_tags(r[4])) + "]"
         # Use block scalar |- for content to safely handle newlines and special chars
         content_lines = r[2].split("\n")
         indented_content = "\n".join(f"      {line}" for line in content_lines)
+        meta_dict = _deserialize_meta(r[9])
+        meta_json = json.dumps(meta_dict) if meta_dict else "{}"
         lines.extend([
             f"  - id: \"{r[0]}\"",
             f"    topic: \"{r[1]}\"",
@@ -2532,6 +2596,7 @@ def _export_yaml(rows: list[tuple]) -> str:
             f"    access_count: {r[6]}",
             f"    created_at: \"{r[7]}\"",
             f"    updated_at: \"{r[8]}\"",
+            f"    meta: '{meta_json}'",
             "",
         ])
     return "\n".join(lines)
@@ -2596,20 +2661,32 @@ def load(
 
                 memory_id = mem_data.get("id", str(uuid.uuid4()))
                 category = mem_data.get("category", "note")
-                tags = mem_data.get("tags", [])
+                mem_tags = mem_data.get("tags", [])
                 relevance = max(1, min(10, int(mem_data.get("relevance", 5))))
+
+                # Restore meta if present
+                meta_raw = mem_data.get("meta", "{}")
+                if isinstance(meta_raw, dict):
+                    meta_str = _serialize_meta(meta_raw)
+                elif isinstance(meta_raw, str):
+                    # Validate it's valid JSON, normalise
+                    meta_str = _serialize_meta(_deserialize_meta(meta_raw))
+                else:
+                    meta_str = "{}"
 
                 embedding = _maybe_embed(memory_id, content)
 
                 conn.execute(
                     """
-                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    [memory_id, topic, content, content_hash, category, tags, relevance, embedding],
+                    [memory_id, topic, content, content_hash, category,
+                     _serialize_tags(mem_tags), relevance, _serialize_embedding(embedding), meta_str],
                 )
                 imported += 1
 
+            conn.commit()
             s.add("imported", imported)
             s.add("skipped", skipped)
             _cache_invalidate()  # Bulk import: clear entire cache
@@ -2657,7 +2734,7 @@ def snap(
 
             sql = """
                 SELECT id, topic, content, category, tags, relevance, access_count,
-                       created_at, updated_at
+                       created_at, updated_at, meta
                 FROM memories
                 WHERE 1=1
             """
@@ -2690,9 +2767,11 @@ def snap(
             index_entries = []
 
             for r in rows:
-                _id, mem_topic, content, category, tags, relevance = (
-                    r[0], r[1], r[2], r[3], r[4] or [], r[5],
+                _id, mem_topic, content, category, raw_tags, relevance = (
+                    r[0], r[1], r[2], r[3], r[4], r[5],
                 )
+                tags = _deserialize_tags(raw_tags)
+                raw_meta = _deserialize_meta(r[9])
 
                 # Compute relative file path
                 rel_topic = mem_topic
@@ -2712,6 +2791,7 @@ def snap(
                         "category": category,
                         "tags": tags,
                         "relevance": relevance,
+                        "meta": raw_meta,
                     })
                     continue
 
@@ -2725,6 +2805,7 @@ def snap(
                     "category": category,
                     "tags": tags,
                     "relevance": relevance,
+                    "meta": raw_meta,
                 })
 
             # Write index.yaml
@@ -2741,12 +2822,14 @@ def snap(
             ]
             for entry in index_entries:
                 tags_str = "[" + ", ".join(f'"{t}"' for t in entry["tags"]) + "]"
+                meta_json = json.dumps(entry.get("meta", {}))
                 index_lines.extend([
                     f'  - topic: "{entry["topic"]}"',
                     f'    file: "{entry["file"]}"',
                     f'    category: "{entry["category"]}"',
                     f"    tags: {tags_str}",
                     f'    relevance: {entry["relevance"]}',
+                    f"    meta: '{meta_json}'",
                     "",
                 ])
 
@@ -2818,6 +2901,7 @@ def restore(
             restored = 0
             skipped = 0
             errors = []
+            conn = _get_connection()
 
             for entry in memories:
                 mem_topic = entry.get("topic", "")
@@ -2825,6 +2909,15 @@ def restore(
                 category = entry.get("category", "note")
                 tags = entry.get("tags", [])
                 relevance = max(1, min(10, int(entry.get("relevance", 5))))
+
+                # Restore meta if present
+                meta_raw = entry.get("meta", {})
+                if isinstance(meta_raw, dict):
+                    meta_str = _serialize_meta(meta_raw)
+                elif isinstance(meta_raw, str):
+                    meta_str = _serialize_meta(_deserialize_meta(meta_raw))
+                else:
+                    meta_str = "{}"
 
                 if not mem_topic or not file_rel:
                     errors.append("Missing topic or file in index entry")
@@ -2849,8 +2942,6 @@ def restore(
                 content = content_path.read_text(encoding="utf-8")
                 content_hash = _content_hash(content)
 
-                conn = _get_connection()
-
                 # Check for existing
                 existing = conn.execute(
                     "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
@@ -2869,13 +2960,15 @@ def restore(
 
                 conn.execute(
                     """
-                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    [memory_id, mem_topic, content, content_hash, category, tags, relevance, embedding],
+                    [memory_id, mem_topic, content, content_hash, category,
+                     _serialize_tags(tags), relevance, _serialize_embedding(embedding), meta_str],
                 )
                 restored += 1
 
+            conn.commit()
             s.add("restored", restored)
             s.add("skipped", skipped)
             s.add("errors", len(errors))

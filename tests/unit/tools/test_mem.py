@@ -1,7 +1,7 @@
 """Tests for persistent memory tool pack.
 
 Tests helpers, CRUD operations, safety features, and lifecycle functions
-with mocked DuckDB and OpenAI.
+with mocked SQLite and OpenAI.
 """
 
 from __future__ import annotations
@@ -21,11 +21,13 @@ from ot_tools.mem import (
     _cache_put,
     _content_hash,
     _decode_sections,
+    _deserialize_meta,
     _encode_sections,
     _parse_headings,
     _read_cache,
     _read_cache_lock,
     _redact,
+    _serialize_meta,
     _topic_filter,
     _validate_category,
     _validate_tags,
@@ -268,7 +270,7 @@ class TestReadCacheIntegration:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "cached content", "note",
-            [], 5, 0, datetime.now(), datetime.now(), {},
+            '[]', 5, 0, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
         )
 
         # First read: cache miss
@@ -287,7 +289,7 @@ class TestReadCacheIntegration:
 
 
 # ---------------------------------------------------------------------------
-# CRUD operation tests with mocked DuckDB
+# CRUD operation tests with mocked SQLite
 # ---------------------------------------------------------------------------
 
 
@@ -395,7 +397,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "memory content", "note",
-            ["tag1"], 5, 3, datetime.now(), datetime.now(), {},
+            '["tag1"]', 5, 3, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
         )
 
         result = read(topic="test/topic")
@@ -410,7 +412,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "memory content", "note",
-            ["tag1"], 5, 3, datetime.now(), datetime.now(), {},
+            '["tag1"]', 5, 3, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
         )
 
         result = read(topic="test/topic", meta=True)
@@ -429,7 +431,7 @@ class TestRead:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
             "id-123", "test/topic", "content", "rule",
-            [], 7, 1, datetime.now(), datetime.now(), {},
+            '[]', 7, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
         )
 
         result = read(topic="ignored", id="id-123")
@@ -461,8 +463,8 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 2, datetime.now(), datetime.now(), {}),
-            ("id-2", "proj/b", "content b", "rule", [], 8, 0, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "content a", "note", '["tag1"]', 5, 2, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
+            ("id-2", "proj/b", "content b", "rule", '[]', 8, 0, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(topic="proj/")
@@ -478,7 +480,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", [], 5, 1, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "content a", "note", '[]', 5, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(ids=["id-1"])
@@ -493,7 +495,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "content a", "note", ["tag1"], 5, 3, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "content a", "note", '["tag1"]', 5, 3, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(topic="proj/", meta=True)
@@ -554,7 +556,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "rule content", "rule", [], 5, 1, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "rule content", "rule", '[]', 5, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(category="rule")
@@ -572,7 +574,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "tagged content", "note", ["tag1"], 5, 1, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "tagged content", "note", '["tag1"]', 5, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(tags=["tag1"])
@@ -580,7 +582,7 @@ class TestReadBatch:
         assert "Read 1 memory" in result
         assert "tagged content" in result
         sql_arg = conn.execute.call_args_list[0][0][0]
-        assert "list_has_any(tags, ?)" in sql_arg
+        assert "json_each" in sql_arg
 
     @patch("ot_tools.mem._get_connection")
     def test_combined_topic_and_category(self, mock_conn):
@@ -589,7 +591,7 @@ class TestReadBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "proj/a", "combined content", "rule", [], 5, 1, datetime.now(), datetime.now(), {}),
+            ("id-1", "proj/a", "combined content", "rule", '[]', 5, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}'),
         ]
 
         result = read_batch(topic="proj/", category="rule")
@@ -618,7 +620,7 @@ class TestSearch:
         # First execute: has_embeddings check; second: actual search
         conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "content one", "note", ["tag"], 5, 2, 0.95),
+            ("id-1", "topic/one", "content one", "note", '["tag"]', 5, 2, 0.95),
         ]
 
         result = search(query="test query")
@@ -634,7 +636,7 @@ class TestSearch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "matching content", "note", [], 5, 1),
+            ("id-1", "topic/one", "matching content", "note", '[]', 5, 1),
         ]
 
         result = search(query="matching", mode="pattern")
@@ -677,7 +679,7 @@ class TestSearch:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", long_content, "note", [], 5, 1, 0.9),
+            ("id-1", "topic/one", long_content, "note", '[]', 5, 1, 0.9),
         ]
 
         result = search(query="test", extract=50)
@@ -700,7 +702,7 @@ class TestSearch:
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (1,)
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", long_content, "note", [], 5, 1, 0.9),
+            ("id-1", "topic/one", long_content, "note", '[]', 5, 1, 0.9),
         ]
 
         result = search(query="test", extract=0)
@@ -771,7 +773,7 @@ class TestSearchEmbeddingsDisabled:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "matching content", "note", [], 5, 1),
+            ("id-1", "topic/one", "matching content", "note", '[]', 5, 1),
         ]
 
         result = search(query="matching", mode="pattern")
@@ -899,8 +901,8 @@ class TestListMemories:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "note", ["tag1"], 5, 2, datetime.now(), 100),
-            ("id-2", "topic/two", "rule", [], 8, 0, datetime.now(), 200),
+            ("id-1", "topic/one", "note", '["tag1"]', 5, 2, datetime.now().isoformat(), 100),
+            ("id-2", "topic/two", "rule", '[]', 8, 0, datetime.now().isoformat(), 200),
         ]
 
         result = list()
@@ -991,7 +993,7 @@ class TestUpdate:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "old content", {}),
+            ("id-123", "old content", '{}'),
         ]
 
         result = update(topic="test/topic", content="new content")
@@ -1005,8 +1007,8 @@ class TestUpdate:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "content 1", {}),
-            ("id-2", "content 2", {}),
+            ("id-1", "content 1", '{}'),
+            ("id-2", "content 2", '{}'),
         ]
 
         result = update(topic="ambiguous/topic", content="new")
@@ -1042,7 +1044,7 @@ class TestAppend:
 
         # Mock for single match via fetchall (id, content, meta)
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "original content", {}),
+            ("id-123", "original content", '{}'),
         ]
 
         result = append(topic="test/topic", content="appended text")
@@ -1106,8 +1108,8 @@ class TestUpdateBatch:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "old_name is used here"),
-            ("id-2", "topic/two", "old_name appears twice: old_name"),
+            ("id-1", "topic/one", "old_name is used here", "{}"),
+            ("id-2", "topic/two", "old_name appears twice: old_name", "{}"),
         ]
 
         result = update_batch(search_text="old_name", replace_text="new_name")
@@ -1140,7 +1142,7 @@ class TestDecay:
         conn = MagicMock()
         mock_conn.return_value = conn
         # Memory created 60 days ago, accessed 0 times, relevance 10
-        old_time = datetime(2025, 12, 1, tzinfo=timezone.utc)
+        old_time = datetime(2025, 12, 1, tzinfo=timezone.utc).isoformat()
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "old/topic", 10, 0, old_time),
         ]
@@ -1217,7 +1219,7 @@ class TestExport:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "content one", "note", ["tag1"], 5, 2, datetime.now(), datetime.now()),
+            ("id-1", "topic/one", "content one", "note", '["tag1"]', 5, 2, datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         result = export()
@@ -1234,7 +1236,7 @@ class TestExport:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "content", "note", [], 5, 0, datetime.now(), datetime.now()),
+            ("id-1", "topic/one", "content", "note", '[]', 5, 0, datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_file = tmp_path / "export.yaml"
@@ -1308,8 +1310,8 @@ class TestSnap:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "docs/readme", "# README content", "note", ["tag1"], 5, 2,
-             datetime.now(), datetime.now()),
+            ("id-1", "docs/readme", "# README content", "note", '["tag1"]', 5, 2,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_dir = tmp_path / "backup"
@@ -1331,10 +1333,10 @@ class TestSnap:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "consult/ask", "ask content", "note", [], 5, 0,
-             datetime.now(), datetime.now()),
-            ("id-2", "consult/mem-tool", "mem content", "discovery", [], 7, 1,
-             datetime.now(), datetime.now()),
+            ("id-1", "consult/ask", "ask content", "note", '[]', 5, 0,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
+            ("id-2", "consult/mem-tool", "mem content", "discovery", '[]', 7, 1,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_dir = tmp_path / "snap"
@@ -1353,8 +1355,8 @@ class TestSnap:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "notes/a", "content a", "note", [], 5, 0,
-             datetime.now(), datetime.now()),
+            ("id-1", "notes/a", "content a", "note", '[]', 5, 0,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_dir = tmp_path / "snap"
@@ -1375,8 +1377,8 @@ class TestSnap:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "notes/a", "new content", "note", [], 5, 0,
-             datetime.now(), datetime.now()),
+            ("id-1", "notes/a", "new content", "note", '[]', 5, 0,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_dir = tmp_path / "snap"
@@ -1397,8 +1399,8 @@ class TestSnap:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "consult/sub/deep", "deep content", "rule", ["important"], 9, 0,
-             datetime.now(), datetime.now()),
+            ("id-1", "consult/sub/deep", "deep content", "rule", '["important"]', 9, 0,
+             datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         out_dir = tmp_path / "snap"
@@ -1450,7 +1452,7 @@ class TestRestore:
         insert_params = insert_calls[0][0][1]
         assert insert_params[1] == "consult/ask"  # topic
         assert insert_params[4] == "note"  # category
-        assert insert_params[5] == ["research"]  # tags
+        assert insert_params[5] == '["research"]'  # tags (JSON)
         assert insert_params[6] == 7  # relevance
 
     @pytest.mark.usefixtures("_mock_cwd")
@@ -1577,6 +1579,7 @@ class TestRestore:
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         insert_params = insert_calls[0][0][1]
         assert insert_params[1] == "new-base/ask"  # remapped topic
+
 
 
 # ---------------------------------------------------------------------------
@@ -1784,7 +1787,7 @@ class TestFilePathSecurity:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "content", "note", [], 5, 0, datetime.now(), datetime.now()),
+            ("id-1", "topic/one", "content", "note", '[]', 5, 0, datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         result = export(output="/tmp/evil_export.yaml")
@@ -1872,7 +1875,7 @@ class TestExportYaml:
         from ot_tools.mem import _export_yaml
 
         rows = [
-            ("id-1", "topic/one", "line one\nline two\nline three", "note", ["tag"], 5, 2, datetime.now(), datetime.now()),
+            ("id-1", "topic/one", "line one\nline two\nline three", "note", '["tag"]', 5, 2, datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
         ]
 
         result = _export_yaml(rows)
@@ -2012,8 +2015,9 @@ class TestTocFunction:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
-            datetime.now(), datetime.now(), {"sections": sections_str, "section_count": "4"},
+            "id-1", "spec", SAMPLE_MD, "note", '[]', 5, 0,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            _serialize_meta({"sections": sections_str, "section_count": "4"}),
         )
 
         result = toc(topic="spec")
@@ -2043,9 +2047,9 @@ class TestTocFunction:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
-            datetime.now(), datetime.now(),
-            {"sections": "Intro:1-3", "source": str(source_file), "source_mtime": old_mtime},
+            "id-1", "spec", SAMPLE_MD, "note", '[]', 5, 0,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            _serialize_meta({"sections": "Intro:1-3", "source": str(source_file), "source_mtime": old_mtime}),
         )
 
         result = toc(topic="spec")
@@ -2062,9 +2066,9 @@ class TestSliceFunction:
         """Set up a mock connection returning SAMPLE_MD with sections."""
         sections_str = _encode_sections(_parse_headings(SAMPLE_MD))
         row = (
-            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
-            datetime.now(), datetime.now(),
-            {"sections": sections_str, "section_count": "4"},
+            "id-1", "spec", SAMPLE_MD, "note", '[]', 5, 0,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            _serialize_meta({"sections": sections_str, "section_count": "4"}),
         )
         with patch("ot_tools.mem._get_connection") as mock_conn:
             conn = MagicMock()
@@ -2143,8 +2147,9 @@ class TestReadMode:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", SAMPLE_MD, "note", [], 5, 0,
-            datetime.now(), datetime.now(), {"sections": sections_str},
+            "id-1", "spec", SAMPLE_MD, "note", '[]', 5, 0,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            _serialize_meta({"sections": sections_str}),
         )
 
         result = read(topic="spec", mode="toc")
@@ -2158,8 +2163,9 @@ class TestReadMode:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", "some stored body", "rule", ["tag1"], 7, 3,
-            datetime.now(), datetime.now(), {"source": "/path/to/file"},
+            "id-1", "spec", "some stored body", "rule", '["tag1"]', 7, 3,
+            datetime.now().isoformat(), datetime.now().isoformat(),
+            _serialize_meta({"source": "/path/to/file"}),
         )
 
         result = read(topic="spec", mode="meta")
@@ -2196,11 +2202,11 @@ class TestWriteWithToc:
         assert "Stored memory" in result
         assert "toc:" in result
         assert "4 sections" in result
-        # Verify meta was passed in INSERT
+        # Verify meta was passed in INSERT (serialised as JSON)
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         assert len(insert_calls) == 1
         insert_params = insert_calls[0][0][1]
-        meta = insert_params[8]  # meta is 9th parameter
+        meta = _deserialize_meta(insert_params[8])  # meta is 9th parameter (JSON string)
         assert "sections" in meta
         assert "section_count" in meta
         assert meta["section_count"] == "4"
@@ -2219,7 +2225,7 @@ class TestWriteWithToc:
 
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         insert_params = insert_calls[0][0][1]
-        meta = insert_params[8]
+        meta = _deserialize_meta(insert_params[8])
         assert meta == {}
 
 
@@ -2239,18 +2245,18 @@ class TestUpdateRecomputesToc:
 
         old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 5}])
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "old content", {"sections": old_sections, "section_count": "1"}),
+            ("id-123", "old content", _serialize_meta({"sections": old_sections, "section_count": "1"})),
         ]
 
         new_content = "# New Heading\n\nNew content\n\n## Second\n\nMore"
         result = update(topic="test/topic", content=new_content)
 
         assert "Updated memory" in result
-        # Verify UPDATE was called with recomputed meta
+        # Verify UPDATE was called with recomputed meta (serialised as JSON)
         update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
         assert len(update_calls) >= 1
         update_params = update_calls[0][0][1]
-        meta = update_params[3]  # meta is 4th param in UPDATE
+        meta = _deserialize_meta(update_params[3])  # meta is 4th param in UPDATE (JSON string)
         assert "sections" in meta
         assert meta["section_count"] == "2"
 
@@ -2263,7 +2269,7 @@ class TestUpdateRecomputesToc:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "old content", {}),
+            ("id-123", "old content", '{}'),
         ]
 
         result = update(topic="test/topic", content="# New\n\nContent")
@@ -2271,7 +2277,7 @@ class TestUpdateRecomputesToc:
         assert "Updated memory" in result
         update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
         update_params = update_calls[0][0][1]
-        meta = update_params[3]
+        meta = _deserialize_meta(update_params[3])
         assert "sections" not in meta
 
 
@@ -2291,7 +2297,7 @@ class TestAppendRecomputesToc:
 
         old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 3}])
         conn.execute.return_value.fetchall.return_value = [
-            ("id-123", "# Old\n\nOld content", {"sections": old_sections, "section_count": "1"}),
+            ("id-123", "# Old\n\nOld content", _serialize_meta({"sections": old_sections, "section_count": "1"})),
         ]
 
         result = append(topic="test/topic", content="# New Section\n\nAppended")
@@ -2300,7 +2306,7 @@ class TestAppendRecomputesToc:
         update_calls = [c for c in conn.execute.call_args_list if "UPDATE memories" in str(c)]
         assert len(update_calls) >= 1
         update_params = update_calls[0][0][1]
-        meta = update_params[3]  # meta is 4th param in UPDATE
+        meta = _deserialize_meta(update_params[3])  # meta is 4th param in UPDATE (JSON string)
         assert "sections" in meta
         assert meta["section_count"] == "2"
 

@@ -25,7 +25,7 @@ Stage files for a logical change and suggest a conventional commit message.
      Ref: #123
      ```
    - Description: 50-72 chars ideal, can be longer if needed
-   - Multiple changes: separate with commas
+   - Multiple changes: separate with semicolons
    - Second line for issue reference only (if applicable)
 
 ## Commit Message Format
@@ -107,15 +107,15 @@ perf(tool:ripgrep): reduce token usage by 50%
 
 ### Multiple Changes (most important first) ✅
 ```
-feat(config): add compact array format, update security template, fix tests
-fix(tool:brave): prevent racing, add retry logic, improve error handling
-refactor(config): simplify loader, remove inheritance, flatten includes
-docs: update readme, fix typos in contributing guide, add examples
+feat(config): add compact array format; update security template; fix tests
+fix(tool:brave): prevent racing; add retry logic; improve error handling
+refactor(config): simplify loader; remove inheritance; flatten includes
+docs: update readme; fix typos in contributing guide; add examples
 ```
 
 ### With Issue Reference ✅
 ```
-fix(tool:brave): prevent racing of requests, add retry logic
+fix(tool:brave): prevent racing of requests; add retry logic
 Ref: #123
 ```
 

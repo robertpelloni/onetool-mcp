@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Persistent memory for AI agents with DuckDB storage and optional OpenAI embeddings. Provides topic-based memory storage with semantic search, content dedup, secret redaction, and importance decay. Embeddings are opt-in via `embeddings_enabled` config (requires `OPENAI_API_KEY` in secrets.yaml when enabled).
+Persistent memory for AI agents with SQLite storage and optional OpenAI embeddings. Provides topic-based memory storage with semantic search, content dedup, secret redaction, and importance decay. Embeddings are opt-in via `embeddings_enabled` config (requires `OPENAI_API_KEY` in secrets.yaml when enabled).
 
 ## Requirements
 
@@ -17,7 +17,7 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **AND** it SHALL generate an embedding if `embeddings_enabled` is true (sync or async per `embeddings_async`)
 - **AND** it SHALL store NULL embedding if `embeddings_enabled` is false
 - **AND** it SHALL compute a SHA-256 content hash for dedup
-- **AND** it SHALL store an empty `meta` MAP by default
+- **AND** it SHALL store an empty `meta` JSON object by default
 
 #### Scenario: Duplicate detection
 - **GIVEN** a memory already exists with the same topic and content hash
@@ -51,8 +51,9 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 #### Scenario: Batch write from glob
 - **GIVEN** a glob pattern
 - **WHEN** `mem.write_batch(topic="docs", glob_pattern="docs/**/*.md")` is called
-- **THEN** it SHALL create a memory per file
+- **THEN** it SHALL create a memory per file using the `file=` write path
 - **AND** preserve directory structure relative to the glob root as subtopic (e.g., `docs/sub/file` not `docs/file`)
+- **AND** auto-populate `source`, `source_mtime`, and `content_type` in meta for each file
 
 #### Scenario: Batch write with toc
 - **GIVEN** a glob pattern and `toc=True`
@@ -169,7 +170,7 @@ The `mem.slice()` function SHALL extract content by section number, heading path
 
 ### Requirement: TOC Recomputation
 
-When `mem.update()` or `mem.append()` modifies a memory that has `sections` in meta, it SHALL reparse headings and update the section index.
+When `mem.update()`, `mem.append()`, or `mem.update_batch()` modifies a memory that has `sections` in meta, it SHALL reparse headings and update the section index.
 
 #### Scenario: Update with existing TOC
 - **GIVEN** a memory with `sections` in meta
@@ -181,9 +182,14 @@ When `mem.update()` or `mem.append()` modifies a memory that has `sections` in m
 - **WHEN** `mem.append()` is called with new content
 - **THEN** it SHALL recompute the section index from the combined content
 
+#### Scenario: Batch update with existing TOC
+- **GIVEN** a memory with `sections` in meta
+- **WHEN** `mem.update_batch()` replaces content that changes line positions
+- **THEN** it SHALL recompute the section index from the updated content
+
 ### Requirement: Schema Migration
 
-The memories table SHALL include a `meta MAP(VARCHAR, VARCHAR) DEFAULT MAP()` column for extensible key-value metadata.
+The memories table SHALL include a `meta TEXT DEFAULT '{}'` column for extensible key-value metadata stored as JSON.
 
 #### Scenario: New database
 - **WHEN** a new database is created
@@ -244,7 +250,7 @@ Content exceeding the embedding model's token limit SHALL be chunked and average
 #### Scenario: Pattern search
 - **GIVEN** a pattern query
 - **WHEN** `mem.search(query="database", mode="pattern")` is called
-- **THEN** it SHALL match using ILIKE on content and topic
+- **THEN** it SHALL match using LIKE on content and topic
 
 #### Scenario: Hybrid search
 - **GIVEN** a query with mode="hybrid"
@@ -347,7 +353,7 @@ The `mem.update_batch()` function SHALL support search-and-replace.
 
 #### Scenario: Apply changes
 - **WHEN** `mem.update_batch(search_text="old", replace_text="new", dry_run=False)` is called
-- **THEN** it SHALL update content, save history, and re-generate embeddings
+- **THEN** it SHALL update content, save history, re-generate embeddings, and recompute TOC if sections exist
 
 ### Requirement: Importance Decay
 
@@ -357,7 +363,7 @@ The `mem.decay()` function SHALL apply time-based importance decay.
 - **GIVEN** a memory with relevance, age, and access count
 - **WHEN** decay is applied
 - **THEN** new score = relevance * 0.5^(age/half_life) * (1 + log(access+1) * 0.1)
-- **AND** result is clamped to 1-10
+- **AND** result is clamped to range [1, original_relevance] (decay never increases relevance)
 
 ### Requirement: Export and Import
 
@@ -366,6 +372,7 @@ The `mem.export()` function SHALL output YAML. The `mem.load()` function SHALL i
 #### Scenario: Export to YAML
 - **WHEN** `mem.export()` is called
 - **THEN** it SHALL output all memories in YAML format
+- **AND** it SHALL include the `meta` column in the YAML output
 
 #### Scenario: Export to file
 - **WHEN** `mem.export(output="memories.yaml")` is called
@@ -374,6 +381,7 @@ The `mem.export()` function SHALL output YAML. The `mem.load()` function SHALL i
 #### Scenario: Import from YAML
 - **WHEN** `mem.load(file="backup.yaml")` is called
 - **THEN** it SHALL import memories, skipping duplicates
+- **AND** it SHALL restore the `meta` column from the YAML if present
 
 ### Requirement: Snap and Restore
 
@@ -383,7 +391,7 @@ The `mem.snap()` and `mem.restore()` functions SHALL provide lossless file-based
 - **WHEN** `mem.snap(output="backup/consult", topic="consult/")` is called
 - **THEN** it SHALL create one file per memory in the output directory
 - **AND** it SHALL strip the topic filter prefix from file paths
-- **AND** it SHALL write an `index.yaml` containing metadata (topic, file, category, tags, relevance) for each memory
+- **AND** it SHALL write an `index.yaml` containing metadata (topic, file, category, tags, relevance, meta) for each memory
 
 #### Scenario: Snap without topic filter
 - **WHEN** `mem.snap(output="backup/all")` is called
@@ -412,7 +420,7 @@ The `mem.snap()` and `mem.restore()` functions SHALL provide lossless file-based
 #### Scenario: Restore from snap
 - **WHEN** `mem.restore(input="backup/consult")` is called
 - **THEN** it SHALL read `index.yaml` from the directory
-- **AND** recreate each memory with its original topic, category, tags, and relevance
+- **AND** recreate each memory with its original topic, category, tags, relevance, and meta
 - **AND** skip duplicates (same topic + content hash) by default
 
 #### Scenario: Restore with overwrite
@@ -566,25 +574,28 @@ tools:
 
 ```sql
 CREATE TABLE memories (
-    id             VARCHAR PRIMARY KEY,
-    topic          VARCHAR NOT NULL,
+    id             TEXT PRIMARY KEY,
+    topic          TEXT NOT NULL,
     content        TEXT NOT NULL,
-    content_hash   VARCHAR NOT NULL,
-    category       VARCHAR DEFAULT 'note',
-    tags           VARCHAR[],
+    content_hash   TEXT NOT NULL,
+    category       TEXT DEFAULT 'note',
+    tags           TEXT DEFAULT '[]',          -- JSON array
     relevance      INTEGER DEFAULT 5,
     access_count   INTEGER DEFAULT 0,
-    created_at     TIMESTAMP DEFAULT now(),
-    updated_at     TIMESTAMP DEFAULT now(),
-    last_accessed  TIMESTAMP DEFAULT now(),
-    embedding      FLOAT[1536],
-    meta           MAP(VARCHAR, VARCHAR) DEFAULT MAP()
+    created_at     TEXT DEFAULT (datetime('now')),
+    updated_at     TEXT DEFAULT (datetime('now')),
+    last_accessed  TEXT DEFAULT (datetime('now')),
+    embedding      BLOB,                       -- packed float32 via struct
+    meta           TEXT DEFAULT '{}'            -- JSON object
 );
 
+CREATE INDEX idx_memories_topic ON memories(topic);
+CREATE INDEX idx_memories_content_hash ON memories(content_hash);
+
 CREATE TABLE memory_history (
-    id             VARCHAR PRIMARY KEY,
-    memory_id      VARCHAR NOT NULL,
+    id             TEXT PRIMARY KEY,
+    memory_id      TEXT NOT NULL,
     content        TEXT NOT NULL,
-    updated_at     TIMESTAMP DEFAULT now()
+    updated_at     TEXT DEFAULT (datetime('now'))
 );
 ```

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from ot.config.secrets import get_secret
+from tests.integration.tools.conftest import get_test_secret
 
 
 @pytest.mark.integration
@@ -20,7 +20,7 @@ class TestContext7Live:
     @pytest.fixture(autouse=True)
     def skip_if_unavailable(self):
         """Skip tests if Context7 is not available or API key not set."""
-        if not get_secret("CONTEXT7_API_KEY"):
+        if not get_test_secret("CONTEXT7_API_KEY"):
             pytest.skip("CONTEXT7_API_KEY not configured")
 
         # Context7 module creates httpx client at import time which may fail

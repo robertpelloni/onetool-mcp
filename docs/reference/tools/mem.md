@@ -1,6 +1,6 @@
 # Memory
 
-Persistent memory for AI agents with DuckDB storage and optional semantic search.
+Persistent memory for AI agents with SQLite storage and optional semantic search.
 
 ## Highlights
 
@@ -34,8 +34,8 @@ Persistent memory for AI agents with DuckDB storage and optional semantic search
 | `mem.update(topic, content, id)` | Update a memory (recomputes toc if sections exist) |
 | `mem.append(topic, content, id)` | Append to a memory (recomputes toc if sections exist) |
 | `mem.context(topic, limit)` | Load hot cache context |
-| `mem.update_batch(search_text, replace_text, ...)` | Batch search-and-replace |
-| `mem.decay(dry_run)` | Apply importance decay |
+| `mem.update_batch(search_text, replace_text, ...)` | Batch search-and-replace (recomputes toc if sections exist) |
+| `mem.decay(dry_run)` | Apply importance decay (never increases relevance) |
 | `mem.stats()` | Show statistics |
 | `mem.embed(topic, limit, dry_run)` | Backfill embeddings for un-embedded memories |
 | `mem.flush()` | Wait for background embeddings to complete |
@@ -348,5 +348,5 @@ When embeddings are disabled, `mem.search(mode="semantic")` and `mem.search(mode
 ## Requirements
 
 - `OPENAI_API_KEY` in secrets.yaml (only when `embeddings_enabled: true`)
-- DuckDB (bundled with OneTool)
+- SQLite (Python stdlib `sqlite3`)
 - tiktoken (bundled with OneTool)

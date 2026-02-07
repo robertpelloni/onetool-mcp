@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from ot.config.secrets import get_secret
+from tests.integration.tools.conftest import get_test_secret
 
 
 @pytest.mark.integration
@@ -20,7 +20,7 @@ class TestGroundingSearchLive:
     @pytest.fixture(autouse=True)
     def skip_if_no_api_key(self):
         """Skip tests if GEMINI_API_KEY is not set."""
-        if not get_secret("GEMINI_API_KEY"):
+        if not get_test_secret("GEMINI_API_KEY"):
             pytest.skip("GEMINI_API_KEY not configured")
 
     def test_search_live(self):

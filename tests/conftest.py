@@ -60,16 +60,7 @@ def require(condition: bool, reason: str, request: pytest.FixtureRequest) -> Non
         pytest.fail(f"Missing requirement: {reason} (use --allow-skips to skip)")
 
 
-# -----------------------------------------------------------------------------
-# Secrets Setup for Integration Tests
-# -----------------------------------------------------------------------------
-
-# Set OT_SECRETS_FILE for integration tests that need API keys
 _project_root = Path(__file__).parent.parent
-_secrets_file = _project_root / "secrets.yaml"
-if _secrets_file.exists():
-    os.environ.setdefault("OT_SECRETS_FILE", str(_secrets_file))
-
 
 if TYPE_CHECKING:
     from _pytest.nodes import Item

@@ -1,6 +1,6 @@
 """Integration tests for persistent memory tool pack.
 
-Uses real DuckDB database with mocked OpenAI embeddings.
+Uses real SQLite database with mocked OpenAI embeddings.
 Tests full CRUD lifecycle, dedup, search, and export/import.
 """
 
@@ -9,9 +9,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-# Skip all tests if dependencies are not available
-duckdb = pytest.importorskip("duckdb")
 
 
 @pytest.fixture
@@ -23,7 +20,7 @@ def mem_db(tmp_path):
     """
     import ot_tools.mem as mem_module
 
-    db_path = tmp_path / "test_mem.duckdb"
+    db_path = tmp_path / "test_mem.sqlite"
 
     # Close any existing connection
     mem_module._close_connection()
@@ -65,7 +62,7 @@ def mem_db(tmp_path):
 @pytest.mark.integration
 @pytest.mark.tools
 class TestMemCRUDLifecycle:
-    """Test full create-read-update-delete lifecycle with real DuckDB."""
+    """Test full create-read-update-delete lifecycle with real SQLite."""
 
     def test_write_and_read(self, mem_db):
         result = mem_db.write(topic="test/lifecycle", content="hello world", category="note")
@@ -203,7 +200,7 @@ class TestMemWriteBatch:
 @pytest.mark.integration
 @pytest.mark.tools
 class TestMemSearch:
-    """Test search with real DuckDB (mocked embeddings)."""
+    """Test search with real SQLite (mocked embeddings)."""
 
     def test_pattern_search(self, mem_db):
         mem_db.write(topic="search/py", content="Python is great for scripting")
@@ -233,7 +230,7 @@ class TestMemSearch:
 @pytest.mark.integration
 @pytest.mark.tools
 class TestMemSafety:
-    """Test redaction and tag validation with real DuckDB."""
+    """Test redaction and tag validation with real SQLite."""
 
     def test_redacts_api_key_on_write(self, mem_db):
         mem_db.write(
@@ -265,7 +262,7 @@ class TestMemSafety:
 @pytest.mark.integration
 @pytest.mark.tools
 class TestMemLifecycle:
-    """Test lifecycle features with real DuckDB."""
+    """Test lifecycle features with real SQLite."""
 
     def test_update_batch_dry_run(self, mem_db):
         mem_db.write(topic="batch/a", content="uses old_name here")
@@ -497,3 +494,115 @@ class TestMemNavigation:
 
         result = mem_db.toc(topic="nav/stale")
         assert "modified since" in result
+
+
+# ---------------------------------------------------------------------------
+# Defect regression tests (D1-D7)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.tools
+class TestDefectRegressions:
+    """Regression tests for defects D1-D7 found via code audit."""
+
+    def test_update_batch_recomputes_toc(self, mem_db):
+        """D1: update_batch must recompute TOC sections after content changes."""
+        mem_db.write(
+            topic="d1/toc-batch",
+            content="# Title\n\nOld text\n\n## Section\n\nBody",
+            toc=True,
+        )
+        toc_before = mem_db.toc(topic="d1/toc-batch")
+        assert "Section" in toc_before
+
+        mem_db.update_batch(
+            search_text="Old text",
+            replace_text="New line 1\nNew line 2\nNew line 3",
+            dry_run=False,
+        )
+        toc_after = mem_db.toc(topic="d1/toc-batch")
+        assert "Section" in toc_after
+
+        # Slice should return correct content after recomputation
+        sliced = mem_db.slice(topic="d1/toc-batch", select=2)
+        assert "Body" in sliced
+
+    def test_export_load_preserves_meta(self, mem_db, tmp_path):
+        """D2: export/load must preserve meta column (sections, source info)."""
+        mem_db.write(
+            topic="d2/meta-roundtrip",
+            content="# Title\n\n## Section\n\nBody",
+            toc=True,
+        )
+        meta_before = mem_db.read(topic="d2/meta-roundtrip", mode="meta")
+        assert "section_count" in meta_before
+
+        export_path = str(tmp_path / "meta-test.yaml")
+        mem_db.export(output=export_path)
+
+        mem_db.delete(topic="d2/meta-roundtrip", confirm=True)
+        mem_db.load(file=export_path)
+
+        meta_after = mem_db.read(topic="d2/meta-roundtrip", mode="meta")
+        assert "section_count" in meta_after
+
+    def test_snap_restore_preserves_meta(self, mem_db, tmp_path):
+        """D3: snap/restore must preserve meta column."""
+        mem_db.write(
+            topic="d3/snap-meta",
+            content="# Doc\n\n## Part\n\nText",
+            toc=True,
+        )
+        meta_before = mem_db.read(topic="d3/snap-meta", mode="meta")
+        assert "section_count" in meta_before
+
+        snap_dir = str(tmp_path / "snap-meta")
+        mem_db.snap(output=snap_dir, topic="d3/")
+
+        mem_db.delete(topic="d3/snap-meta", confirm=True)
+        mem_db.restore(input=snap_dir, topic="d3")
+
+        meta_after = mem_db.read(topic="d3/snap-meta", mode="meta")
+        assert "section_count" in meta_after
+
+    def test_write_batch_populates_file_meta(self, mem_db, tmp_path):
+        """D4: write_batch must populate source/source_mtime/content_type in meta."""
+        doc = tmp_path / "docs" / "test.md"
+        doc.parent.mkdir()
+        doc.write_text("# Title\n\nContent")
+
+        with patch("ot.paths.get_effective_cwd", return_value=tmp_path):
+            mem_db.write_batch(
+                topic="d4/batch-meta",
+                glob_pattern="docs/*.md",
+                toc=True,
+            )
+        result = mem_db.read(topic="d4/batch-meta/test", mode="meta")
+        assert "source" in result
+        assert "source_mtime" in result
+        assert "content_type" in result
+
+    def test_decay_never_increases_relevance(self, mem_db):
+        """D5: decay must never increase relevance beyond original value."""
+        mem_db.write(topic="d5/decay", content="some content", relevance=5)
+        # Simulate accesses to boost access_count
+        for _ in range(10):
+            mem_db.read(topic="d5/decay")
+
+        result = mem_db.decay(dry_run=True)
+        # Should never show an increase
+        assert "5 -> 6" not in result
+        assert "5 -> 7" not in result
+
+    def test_access_count_display_increments(self, mem_db):
+        """D7: access count display must increment correctly across reads."""
+        mem_db.write(topic="d7/access-display", content="hello")
+
+        r1 = mem_db.read(topic="d7/access-display", mode="meta")
+        r2 = mem_db.read(topic="d7/access-display", mode="meta")
+        r3 = mem_db.read(topic="d7/access-display", mode="meta")
+
+        assert "Accessed: 1 times" in r1
+        assert "Accessed: 2 times" in r2
+        assert "Accessed: 3 times" in r3
