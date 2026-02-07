@@ -10,10 +10,9 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Find do sanity testing and find issues. 
 
 Test out the following packs:
-Packs: brave, code, context7, convert, db, devtools, diagram, excel, file, github, ground, llm, ot, package, ripgrep, scaffold, web
+Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, llm, ot, package, ripgrep, scaffold, web
 
 When testing
-- code with db at demo/.chunkhound
 - convert with files at demo/data
 - db with db at demo/db/northwind.db
 - excel with files at demo/data

@@ -124,16 +124,6 @@ clean:
     uv cache clean
 
 # ============================================================================
-# CODE SEARCH (ChunkHound)
-# ============================================================================
-
-# Index current project for semantic code search (requires OPENAI_API_KEY env var)
-index path=".":
-    @echo "=== Indexing {{ path }} for semantic code search ==="
-    uvx chunkhound index {{ path }} --db {{ path }}/.chunkhound/chunks.db --model text-embedding-3-small --base-url https://openrouter.ai/api/v1
-    @echo "=== Index complete. Use code.search() or code.status() ==="
-
-# ============================================================================
 # MODULES (use `just <module>::<task>`)
 # ============================================================================
 

@@ -683,5 +683,4 @@ Third-Party Credits:
 * trafilatura: Apache 2.0 (Adrien Barbaresi)
 * brave-search-mcp-server: MIT (Anthropic; Brave Software)
 * context7: MIT (Upstash, Inc.)
-* ChunkHound: MIT (Ofri Wolfus)
 * mcp-alchemy: MPL 2.0 (Rune Kaagaard)

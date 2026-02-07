@@ -185,7 +185,7 @@ Topics use `/` as separator for path-based hierarchy:
 projects/onetool/rules
 projects/onetool/decisions
 learnings/python
-learnings/duckdb
+learnings/sqlite
 ```
 
 Filtering with trailing `/` matches all children: `topic="projects/"` matches everything under projects.

@@ -46,7 +46,7 @@ scenarios:
           Use check_python_versions with: {"requirements": ["httpx==0.20.0"]}
 
       - name: "compare:multiple-mcp"
-        server: [package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, chunkhound, mcp-alchemy, magic, supabase, railway]
+        server: [package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, mcp-alchemy, magic, supabase, railway]
         tags: [compare, multiple-mcp, npm, pypi]
         evaluate: version_found
         prompt: |
@@ -87,7 +87,7 @@ scenarios:
     tasks:
 
       - name: "compare:multi-mcp"
-        server: [package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, chunkhound, mcp-alchemy, magic, supabase, railway]
+        server: [package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, mcp-alchemy, magic, supabase, railway]
         tags: [compare, mcp, multi-prompt, npm, pypi]
         evaluate: version_found
         prompt: |
@@ -193,13 +193,6 @@ servers:
     args: ["-y", "gemini-grounding"]
     env:
       GEMINI_API_KEY: ${B_GEMINI_API_KEY}
-
-  chunkhound:
-    type: stdio
-    command: uvx
-    args: ["chunkhound", "mcp"]
-    env:
-      OPENAI_API_KEY: ${B_OPENAI_API_KEY}
 
   mcp-alchemy:
     type: stdio

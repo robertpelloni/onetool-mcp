@@ -133,26 +133,26 @@ Tools with optional dependencies must use lazy imports inside functions:
 **Wrong** - fails at module load:
 
 ```python
-import duckdb  # BREAKS tool loading if duckdb not installed
+import sqlalchemy  # BREAKS tool loading if sqlalchemy not installed
 
-def search(*, query: str) -> str:
-    conn = duckdb.connect(":memory:")
+def query(*, sql: str) -> str:
+    engine = sqlalchemy.create_engine("sqlite:///:memory:")
     ...
 ```
 
 **Correct** - lazy import inside function:
 
 ```python
-def search(*, query: str) -> str:
-    """Search using DuckDB."""
+def query(*, sql: str) -> str:
+    """Query using SQLAlchemy."""
     try:
-        import duckdb
+        import sqlalchemy
     except ImportError as e:
         raise ImportError(
-            "duckdb is required for search. Install with: pip install duckdb"
+            "sqlalchemy is required for query. Install with: pip install sqlalchemy"
         ) from e
 
-    conn = duckdb.connect(":memory:")
+    engine = sqlalchemy.create_engine("sqlite:///:memory:")
     ...
 ```
 

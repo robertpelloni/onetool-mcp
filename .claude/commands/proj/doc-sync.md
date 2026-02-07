@@ -94,8 +94,7 @@ Process each tool file in `src/ot_tools/`:
 1. `brave_search.py` → `docs/reference/tools/brave-search.md`
 2. `web_fetch.py` → `docs/reference/tools/web-fetch.md`
 3. `context7.py` → `docs/reference/tools/context7.md`
-4. `code_search.py` → `docs/reference/tools/code-search.md`
-5. `transform.py` → `docs/reference/tools/transform.md`
+4. `transform.py` → `docs/reference/tools/transform.md`
 6. `db.py` → `docs/reference/tools/database.md`
 7. `package.py` → `docs/reference/tools/package.md`
 8. `ripgrep.py` → `docs/reference/tools/ripgrep.md`

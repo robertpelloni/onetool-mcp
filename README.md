@@ -116,7 +116,6 @@ Verify: `onetool init validate`
 | Pack       | Tools                                   | Description            |
 | ---------- | --------------------------------------- | ---------------------- |
 | `brave`    | `search`, `news`                        | Web and news search    |
-| `code`     | `search`, `search_batch`, `status`      | Semantic code search   |
 | `context7` | `resolve`, `get_docs`                   | Library documentation  |
 | `convert`  | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
 | `db`       | `query`, `schema`, `tables`             | Database operations    |

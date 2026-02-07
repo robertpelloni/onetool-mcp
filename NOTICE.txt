@@ -32,15 +32,6 @@ https://github.com/upstash/context7
 Used in: tools/context7.py (API integration patterns)
 
 ================================================================================
-ChunkHound
-================================================================================
-Copyright (c) 2025 Ofri Wolfus
-Licensed under the MIT License
-https://github.com/chunkhound/chunkhound
-
-Used in: tools/code_search.py (LanceDB schema and indexing patterns)
-
-================================================================================
 mcp-alchemy
 ================================================================================
 Copyright (c) 2024 Rune Kaagaard

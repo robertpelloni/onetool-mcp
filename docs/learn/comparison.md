@@ -31,4 +31,4 @@ Multi-turn conversations amplify the token overhead. Over 3 turns, `multi-mcp` a
 ## Assumptions
 
 - Benchmark model: google/gemini-3-flash-preview
-- multi-mpc has the following MCP servers: package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, chunkhound, mcp-alchemy, magic, supabase, railway
+- multi-mpc has the following MCP servers: package-version, brave-search, context7, github, fetch, sequential-thinking, filesystem, memory, plantuml, excel, ripgrep, gemini-grounding, mcp-alchemy, magic, supabase, railway

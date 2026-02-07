@@ -490,7 +490,7 @@ def _import_tiktoken() -> ModuleType:
 
 
 # Safety margin subtracted from token limit to avoid edge-case overflows.
-# Matches ChunkHound's approach (openai_provider.py:607).
+# Standard safety margin for embedding token limits.
 _TOKEN_SAFETY_MARGIN = 100
 
 

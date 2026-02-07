@@ -22,11 +22,6 @@ tools:
   transform:
     model: google/gemini-3-flash-preview
     base_url: https://openrouter.ai/api/v1
-  # Code search (semantic search via ChunkHound)
-  code:
-    base_url: https://openrouter.ai/api/v1
-    model: text-embedding-3-small
-
 servers:
   # Package Version MCP Server (stdio)
   # No auth required

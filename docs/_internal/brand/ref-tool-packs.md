@@ -8,7 +8,6 @@
 | **web**      | Content extraction      | Fetch web pages and extract clean, readable content optimized for agents. Supports batch URL processing with configurable output formats. |
 | **ground**   | Google grounded search  | Google-powered search with Gemini grounding. Specialized modes for developer resources, documentation sites, and Reddit discussions. |
 | **context7** | Library documentation   | Access up-to-date documentation and code examples for any programming library. Search across thousands of packages and frameworks. |
-| **code**     | Semantic code search    | Find code by meaning, not just text. Query indexed codebases using natural language to discover relevant functions and patterns. |
 | **ripgrep**  | Fast regex search       | Lightning-fast text search across files using ripgrep. Search patterns, list matching files, count occurrences, and filter by file type. |
 | **llm**      | LLM data transformation | Pipe any tool output through an LLM for transformation. Extract structured data, summarize content, or reformat results on the fly. |
 | **db**       | SQL queries             | Connect to any SQLAlchemy-compatible database. Execute queries, explore schemas, and list tables across PostgreSQL, MySQL, SQLite, and more. |

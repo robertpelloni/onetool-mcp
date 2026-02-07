@@ -9,7 +9,6 @@ Complete reference of all built-in tool packs and functions.
 | Pack | Description | Tool Count | Credits | Tools |
 |------|-------------|---|---------|-------|
 | [**brave**](brave.md) | Web search via Brave Search API. | 6 | [brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server) (MIT) | `image`, `local`, `news`, `search`, `search_batch`, `video` |
-| [**code**](code.md) | Semantic code search. | 3 | [ChunkHound](https://github.com/chunkhound/chunkhound) (MIT) | `search`, `search_batch`, `status` |
 | [**context7**](context7.md) | Library documentation lookup. | 2 | [context7](https://github.com/upstash/context7) (MIT) | `doc`, `search` |
 | [**convert**](convert.md) | Convert PDF, Word, PowerPoint, Excel to Markdown. | 5 | MIT | `auto`, `excel`, `pdf`, `powerpoint`, `word` |
 | [**db**](db.md) | SQL database queries. | 3 | [mcp-alchemy](https://github.com/runekaagaard/mcp-alchemy) (MPL 2.0) | `query`, `schema`, `tables` |

@@ -72,7 +72,6 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-brave-search](tool-brave-search/spec.md) | Brave Search API (web, news, local, image, video) |
 | [tool-context7](tool-context7/spec.md) | Context7 library documentation API |
 | [tool-grounding-search](tool-grounding-search/spec.md) | Google grounding via Gemini API |
-| [tool-code-search](tool-code-search/spec.md) | Semantic code search via ChunkHound |
 | [tool-web-fetch](tool-web-fetch/spec.md) | Web content extraction via trafilatura |
 | [tool-transform](tool-transform/spec.md) | LLM-powered data transformation |
 | [tool-db](tool-db/spec.md) | SQL database queries via SQLAlchemy |

@@ -32,16 +32,6 @@ setup:
     @mkdir -p {{ _dir }}/db
     curl -sL -o {{ _dir }}/db/northwind.db \
         https://github.com/jpwhite3/northwind-SQLite3/raw/main/dist/northwind.db
-    @echo "=== Downloading OpenTelemetry demo ==="
-    curl -sL -o {{ _dir }}/opentelemetry-demo-main.zip \
-        https://github.com/open-telemetry/opentelemetry-demo/archive/refs/heads/main.zip
-    cd {{ _dir }} && unzip -q -o opentelemetry-demo-main.zip
-    @echo "=== Indexing for code search ==="
-    mkdir -p {{ _dir }}/.chunkhound
-    uvx chunkhound index {{ _dir }}/opentelemetry-demo-main \
-        --db {{ _dir }}/.chunkhound/chunks.db \
-        --model text-embedding-3-small \
-        --base-url https://openrouter.ai/api/v1
     @echo "=== Downloading benchmark PDFs ==="
     @mkdir -p {{ _dir }}/data
     curl -sL -o {{ _dir }}/data/gpt3-paper.pdf https://arxiv.org/pdf/2005.14165
@@ -51,9 +41,6 @@ setup:
 # Remove demo assets
 clean:
     rm -rf {{ _dir }}/db/northwind.db
-    rm -rf {{ _dir }}/opentelemetry-demo-main.zip
-    rm -rf {{ _dir }}/opentelemetry-demo-main
-    rm -rf {{ _dir }}/.chunkhound
     rm -rf {{ _dir }}/data/*.pdf
     rm -rf {{ _dir }}/tmp/*
     @echo "Demo assets cleaned"

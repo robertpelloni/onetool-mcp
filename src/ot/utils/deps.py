@@ -8,14 +8,14 @@ Example:
     from ot.utils import requires_cli, requires_lib
 
     @requires_cli("rg", install="brew install ripgrep")
-    @requires_lib("duckdb", install="pip install duckdb")
-    def search(query: str) -> str:
+    @requires_lib("sqlalchemy", install="pip install sqlalchemy")
+    def query(sql: str) -> str:
         ...
 
     # Module-level declaration (for AST scanning)
     __ot_requires__ = {
         "cli": [("rg", "brew install ripgrep")],
-        "lib": [("duckdb", "pip install duckdb")],
+        "lib": [("sqlalchemy", "pip install sqlalchemy")],
     }
 """
 
@@ -126,7 +126,7 @@ def requires_lib(
     Does NOT perform runtime checking - use check_lib() for that.
 
     Args:
-        name: Package name (e.g., "duckdb", "openai")
+        name: Package name (e.g., "sqlalchemy", "openai")
         install: Installation instructions (default: "pip install {name}")
         import_name: Import name if different from package name
 
@@ -134,7 +134,7 @@ def requires_lib(
         Decorator that adds dependency metadata to the function
 
     Example:
-        @requires_lib("duckdb", install="pip install duckdb")
+        @requires_lib("sqlalchemy", install="pip install sqlalchemy")
         def query_database(sql: str) -> str:
             ...
 
@@ -391,10 +391,10 @@ def ensure_lib(
 
     Example:
         def my_tool() -> str:
-            if error := ensure_lib("duckdb"):
+            if error := ensure_lib("sqlalchemy"):
                 return error
-            import duckdb
-            # Continue with duckdb operations
+            import sqlalchemy
+            # Continue with sqlalchemy operations
     """
     dep = check_lib(name, import_name)
     if dep.available:

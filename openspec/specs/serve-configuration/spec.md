@@ -564,17 +564,16 @@ The system SHALL support tool-specific configuration via the `tools:` section, w
 - **DEFAULT** 60.0 seconds (from ripgrep.py Config class)
 - **RANGE** 1.0 - 300.0 seconds
 
-#### Scenario: Code search configuration
+#### Scenario: Memory tool configuration
 - **GIVEN** configuration with:
   ```yaml
   tools:
-    code:
-      limit: 25
+    mem:
+      search_limit: 25
   ```
-- **WHEN** code.* functions are called
+- **WHEN** mem.* functions are called
 - **THEN** they SHALL return up to 25 results
-- **DEFAULT** 10 (from code.py Config class)
-- **RANGE** 1 - 100
+- **DEFAULT** 10 (from mem.py Config class)
 
 #### Scenario: Database configuration
 - **GIVEN** configuration with:

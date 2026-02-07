@@ -56,7 +56,6 @@ Stage files for a logical change and suggest a conventional commit message.
 
 **Tool Packs** (use format `tool:name`):
 - `tool:brave` - Brave search
-- `tool:code` - Code search
 - `tool:context7` - Context7 documentation
 - `tool:convert` - Document conversion
 - `tool:db` - Database operations
@@ -67,7 +66,7 @@ Stage files for a logical change and suggest a conventional commit message.
 - `tool:llm` - LLM transform
 - `tool:ot` - Meta/introspection tools
 - `tool:package` - Package info
-- `tool:ripgrep` - Code search
+- `tool:ripgrep` - Text search
 - `tool:scaffold` - Tool scaffolding
 - `tool:web` - Web fetch
 

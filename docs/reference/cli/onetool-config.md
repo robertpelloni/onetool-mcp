@@ -134,14 +134,6 @@ servers:
 | Pack | Field | Type | Default | Range | Description |
 |------|-------|------|---------|-------|-------------|
 | brave | timeout | float | 60.0 | 1-300 | API request timeout (seconds) |
-| code | base_url | string | https://openrouter.ai/api/v1 | - | Embedding API base URL |
-| code | content_limit | int | 500 | 100-10K | Content preview character limit |
-| code | content_limit_expanded | int | 2000 | 500-20K | Expanded content character limit |
-| code | db_path | string | .chunkhound/chunks.db | - | Chunks database path |
-| code | dimensions | int | 1536 | - | Embedding dimensions |
-| code | limit | int | 10 | 1-100 | Max search results |
-| code | model | string | text-embedding-3-small | - | Embedding model |
-| code | provider | string | openai | - | Embedding provider |
 | context7 | docs_limit | int | 10 | 1-20 | Max documentation results |
 | context7 | timeout | float | 30.0 | 1-120 | API request timeout (seconds) |
 | db | max_chars | int | 4000 | 100-100K | Query output truncation |

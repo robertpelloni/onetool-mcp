@@ -89,7 +89,6 @@ PACK_NAME = "ot"
 # Documentation URL mapping for packs with misaligned slugs
 DOC_SLUGS: dict[str, str] = {
     "brave": "brave-search",
-    "code": "code-search",
     "db": "database",
     "ground": "grounding-search",
     "llm": "transform",

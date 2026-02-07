@@ -31,10 +31,6 @@ DEFAULT_TIMEOUT = 30.0
 
 # Known server error hints for better diagnostics
 _SERVER_ERROR_HINTS: dict[str, str] = {
-    "chunkhound": (
-        "ChunkHound requires: 1) Valid OPENAI_API_KEY, "
-        "2) Indexed codebase (run 'uvx chunkhound index <path>' first)"
-    ),
     "github": (
         "GitHub Copilot MCP requires a token with 'Copilot Requests' permission "
         "from an account with active Copilot subscription"
