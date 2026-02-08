@@ -52,7 +52,7 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **GIVEN** a glob pattern
 - **WHEN** `mem.write_batch(topic="docs", glob_pattern="docs/**/*.md")` is called
 - **THEN** it SHALL create a memory per file using the `file=` write path
-- **AND** preserve directory structure relative to the glob root as subtopic (e.g., `docs/sub/file` not `docs/file`)
+- **AND** preserve directory structure relative to the glob root as subtopic, including the file extension (e.g., `docs/sub/file.md` not `docs/sub/file`)
 - **AND** auto-populate `source`, `source_mtime`, and `content_type` in meta for each file
 
 #### Scenario: Batch write with toc
@@ -396,11 +396,12 @@ The `mem.snap()` and `mem.restore()` functions SHALL provide lossless file-based
 #### Scenario: Snap without topic filter
 - **WHEN** `mem.snap(output="backup/all")` is called
 - **THEN** it SHALL snap all memories
-- **AND** use the full topic as the file path
+- **AND** use the full topic as the file path (no extension appended by default)
 
 #### Scenario: Snap custom extension
 - **WHEN** `mem.snap(output="backup/config", ext=".yaml")` is called
-- **THEN** content files SHALL use the specified extension
+- **THEN** content files SHALL have the specified extension appended to the topic path
+- **NOTE** `ext` defaults to `""` — the topic itself is the file path
 
 #### Scenario: Snap skip existing
 - **GIVEN** a file already exists at the output path
@@ -415,7 +416,7 @@ The `mem.snap()` and `mem.restore()` functions SHALL provide lossless file-based
 #### Scenario: Snap nested topics
 - **GIVEN** memories with nested topic paths (e.g., `consult/sub/deep`)
 - **WHEN** `mem.snap(output="dir", topic="consult/")` is called
-- **THEN** it SHALL preserve the directory hierarchy (e.g., `sub/deep.md`)
+- **THEN** it SHALL preserve the directory hierarchy (e.g., `sub/deep`)
 
 #### Scenario: Restore from snap
 - **WHEN** `mem.restore(input="backup/consult")` is called
@@ -479,6 +480,16 @@ Repeated reads of the same topic or ID SHALL be served from an in-memory cache t
 - **GIVEN** the cache is at `read_cache_max_size` capacity
 - **WHEN** a new entry is cached
 - **THEN** the oldest entry (by timestamp) SHALL be evicted
+
+#### Scenario: Manual cache clear
+- **WHEN** `mem.cache_clear()` is called
+- **THEN** it SHALL clear all entries from the read cache
+- **AND** return the number of evicted entries and remaining entries
+
+#### Scenario: Manual cache clear by topic
+- **WHEN** `mem.cache_clear(topic="proj")` is called
+- **THEN** it SHALL clear only cache entries matching the topic prefix
+- **AND** leave other entries intact
 
 ### Requirement: Optional Embeddings
 
@@ -545,6 +556,116 @@ The `mem.flush()` function SHALL wait for all pending background embeddings to c
 - **GIVEN** no background worker is running
 - **WHEN** `mem.flush()` is called
 - **THEN** it SHALL return immediately
+
+### Requirement: Staleness Check
+
+The `mem.stale()` function SHALL check which file-backed memories have outdated content relative to their source files.
+
+#### Scenario: Bulk staleness check
+- **WHEN** `mem.stale(topic="docs/")` is called
+- **THEN** it SHALL query all memories under the topic prefix
+- **AND** compare `meta.source_mtime` against the current file modification time for each
+- **AND** return a summary with counts of fresh, stale, and missing memories
+
+#### Scenario: Stale detection
+- **WHEN** a memory's source file has been modified since storage
+- **THEN** it SHALL be reported as stale with stored and current dates
+
+#### Scenario: Missing source detection
+- **WHEN** a memory's source file no longer exists
+- **THEN** it SHALL be reported as missing
+
+#### Scenario: Non-file-backed memories skipped
+- **WHEN** a memory has no `source` or `source_mtime` in meta
+- **THEN** it SHALL be skipped from staleness checking
+
+#### Scenario: No file-backed memories
+- **WHEN** no memories with source metadata are found
+- **THEN** it SHALL return "No file-backed memories found"
+
+### Requirement: Memory Listing Format
+
+The `mem.list()` function SHALL display memories with parenthesised metadata. Parameters: `format` (`"list"` default, or `"tree"`), `depth` (int, default `0` = unlimited, only used with `format="tree"`).
+
+#### Scenario: List output format
+- **WHEN** `mem.list()` is called
+- **THEN** each entry SHALL show topic followed by parenthesised metadata
+- **AND** metadata SHALL always include id (first 8 chars), len, and category
+- **AND** sec SHALL only appear when section_count > 0
+- **AND** rel SHALL only appear when not the default value (5)
+- **AND** tags SHALL be pipe-separated and only shown when non-empty
+- **AND** access_count SHALL NOT appear in list output
+
+#### Scenario: Tree format
+- **WHEN** `mem.list(format="tree", topic="proj/docs/")` is called
+- **THEN** it SHALL group topics by path components into a tree structure
+- **AND** directory nodes SHALL show `(mem_count=N)` with total descendant count
+- **AND** leaf nodes SHALL show the same parenthesised metadata as flat list format
+
+#### Scenario: Tree depth limit
+- **WHEN** `mem.list(format="tree", topic="proj/", depth=1)` is called
+- **THEN** it SHALL show only the top-level groups without expanding children
+
+#### Scenario: Tree unlimited depth
+- **WHEN** `mem.list(format="tree", depth=0)` is called (default)
+- **THEN** it SHALL expand the full tree hierarchy
+
+### Requirement: Memory Refresh
+
+The `mem.refresh()` function SHALL re-read source files for stale file-backed memories.
+
+#### Scenario: Dry run (default)
+- **WHEN** `mem.refresh(topic="docs/")` is called
+- **THEN** it SHALL report stale files that would be updated without modifying the database
+
+#### Scenario: Apply refresh
+- **WHEN** `mem.refresh(topic="docs/", dry_run=False)` is called
+- **THEN** it SHALL re-read each stale source file
+- **AND** store old content in `memory_history`
+- **AND** update content, content_hash, and updated_at
+- **AND** update `meta.source_mtime` to current
+- **AND** re-generate embedding if embeddings are enabled
+
+#### Scenario: TOC recomputation on refresh
+- **WHEN** a refreshed memory has `sections` in meta
+- **THEN** it SHALL reparse headings and update the section index
+
+#### Scenario: Missing source files skipped
+- **WHEN** a memory's source file no longer exists during refresh
+- **THEN** it SHALL skip the memory with a warning (not delete it)
+
+#### Scenario: File size limit
+- **WHEN** a source file exceeds 1MB during refresh
+- **THEN** it SHALL skip the file with a warning
+
+#### Scenario: Fresh memories unchanged
+- **WHEN** a memory's source file has not been modified
+- **THEN** it SHALL leave the memory untouched
+
+### Requirement: Batch Slice
+
+The `mem.slice_batch()` function SHALL extract sections from multiple memories in a single call. Each item in `items` is a dict with `topic` (str) or `id` (str), and `select` (int, str, or list). Max 20 items.
+
+#### Scenario: Multiple topics with selectors
+- **WHEN** `mem.slice_batch(items=[...])` is called with multiple topic/selector pairs
+- **THEN** it SHALL return sliced content for each item separated by dividers
+- **AND** include a topic header with selector label for each result
+
+#### Scenario: Mixed selector types
+- **WHEN** items contain int, str, and line-range selectors
+- **THEN** each SHALL be resolved using the same logic as `mem.slice()`
+
+#### Scenario: Per-item errors
+- **WHEN** an item references a non-existent topic or unmatched selector
+- **THEN** it SHALL include an error for that item without failing the entire batch
+
+#### Scenario: Item limit
+- **WHEN** more than 20 items are provided
+- **THEN** it SHALL return an error
+
+#### Scenario: Access count increment
+- **WHEN** `mem.slice_batch()` fetches memories from the database
+- **THEN** it SHALL increment `access_count` and update `last_accessed` for all fetched rows
 
 ## Configuration
 

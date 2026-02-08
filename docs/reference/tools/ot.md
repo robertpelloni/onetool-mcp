@@ -21,7 +21,7 @@ Internal tools for OneTool introspection and management.
 | `ot.snippets(pattern, info)` | List snippets, filter by pattern |
 | `ot.config()` | Show aliases, snippets, and server names |
 | `ot.health()` | Check tool dependencies and API connectivity |
-| `ot.stats(period, tool, output)` | Get runtime usage statistics |
+| `ot.stats(period, tool, output, info)` | Get runtime usage statistics |
 | `ot.notify(topic, message)` | Publish message to configured topic |
 | `ot.reload()` | Force configuration reload |
 | `ot.security(check)` | Check security rules and allowlists |
@@ -264,14 +264,27 @@ ot.stats(tool="brave.search")
 
 # Generate HTML report
 ot.stats(output="stats.html")
+
+# Control detail level
+ot.stats(info="list")   # names only
+ot.stats(info="min")    # name + summary (default)
+ot.stats(info="full")   # complete details
 ```
+
+The `info` parameter controls the detail level of the output:
+
+| Level | Description |
+|-------|-------------|
+| `list` | Tool names only |
+| `min` | Name + summary stats (default) |
+| `full` | Complete details with per-tool breakdown |
 
 Returns JSON with:
 - `total_calls` - Total number of tool calls
 - `success_rate` - Percentage of successful calls
 - `context_saved` - Estimated context tokens saved
 - `time_saved_ms` - Estimated time saved in milliseconds
-- `tools` - Per-tool breakdown
+- `tools` - Per-tool breakdown (info="min" or "full")
 
 ## ot.notify()
 

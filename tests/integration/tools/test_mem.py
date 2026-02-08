@@ -6,6 +6,7 @@ Tests full CRUD lifecycle, dedup, search, and export/import.
 
 from __future__ import annotations
 
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -179,11 +180,11 @@ class TestMemWriteBatch:
 
         assert "3 stored" in result
 
-        # Verify subtopics preserve directory structure
+        # Verify subtopics preserve directory structure (including extension)
         listing = mem_db.list(topic="cmds/")
-        assert "cmds/proj/review" in listing
-        assert "cmds/proj/stage" in listing
-        assert "cmds/top" in listing
+        assert "cmds/proj/review.md" in listing
+        assert "cmds/proj/stage.md" in listing
+        assert "cmds/top.md" in listing
 
     def test_no_files_matched(self, mem_db, tmp_path):
         with patch("ot.paths.get_effective_cwd", return_value=tmp_path):
@@ -488,7 +489,6 @@ class TestMemNavigation:
         mem_db.write(topic="nav/stale", file=str(spec_file), toc=True)
 
         # Modify the source file (ensure mtime changes)
-        import time
         time.sleep(0.1)
         spec_file.write_text("# New\n\nChanged content\n\n## Extra\n\nMore.")
 
@@ -578,7 +578,7 @@ class TestDefectRegressions:
                 glob_pattern="docs/*.md",
                 toc=True,
             )
-        result = mem_db.read(topic="d4/batch-meta/test", mode="meta")
+        result = mem_db.read(topic="d4/batch-meta/test.md", mode="meta")
         assert "source" in result
         assert "source_mtime" in result
         assert "content_type" in result
@@ -606,3 +606,176 @@ class TestDefectRegressions:
         assert "Accessed: 1 times" in r1
         assert "Accessed: 2 times" in r2
         assert "Accessed: 3 times" in r3
+
+
+# ---------------------------------------------------------------------------
+# stale / list(format="tree") / refresh integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.tools
+class TestStaleTreeRefresh:
+    """Integration tests for stale(), list(format='tree'), and refresh() with real SQLite."""
+
+    def test_stale_detects_modified_file(self, mem_db, tmp_path):
+        """Write from file, modify file, stale() reports it."""
+        f = tmp_path / "doc.md"
+        f.write_text("original content")
+        mem_db.write(topic="stale-test/doc.md", file=str(f))
+
+        # Modify the file (touch with new content)
+        time.sleep(0.05)
+        f.write_text("modified content")
+
+        result = mem_db.stale(topic="stale-test/")
+        assert "1 stale" in result
+        assert "stale-test/doc.md" in result
+
+    def test_stale_fresh_file(self, mem_db, tmp_path):
+        """Write from file, don't modify, stale() reports fresh."""
+        f = tmp_path / "fresh.md"
+        f.write_text("content")
+        mem_db.write(topic="stale-fresh/fresh.md", file=str(f))
+
+        result = mem_db.stale(topic="stale-fresh/")
+        assert "1 fresh" in result
+
+    def test_tree_shows_hierarchy(self, mem_db):
+        """Tree shows nested topic hierarchy with counts and leaf metadata."""
+        mem_db.write(topic="tree-test/arch/index.md", content="arch index")
+        mem_db.write(topic="tree-test/arch/core.md", content="arch core")
+        mem_db.write(topic="tree-test/code/testing.md", content="code testing")
+
+        result = mem_db.list(format="tree", topic="tree-test/")
+        assert "tree-test/  (mem_count=3)" in result
+        assert "── arch/  (mem_count=2)" in result
+        assert "── code/  (mem_count=1)" in result
+        # Leaf nodes should show metadata
+        assert "── index.md  (id=" in result
+        assert "category=note" in result
+
+    def test_tree_depth_limit(self, mem_db):
+        """Tree with depth=1 collapses children."""
+        mem_db.write(topic="tree-depth/a/b/c", content="deep")
+        mem_db.write(topic="tree-depth/a/b/d", content="deep2")
+
+        result = mem_db.list(format="tree", topic="tree-depth/", depth=1)
+        assert "── a/  (mem_count=2)" in result
+        # Children should not appear
+        assert "b/" not in result or "── c  (id=" not in result
+
+    def test_refresh_round_trip(self, mem_db, tmp_path):
+        """Write from file, modify file, refresh, verify content updated."""
+        f = tmp_path / "refresh.md"
+        f.write_text("# Original\n\nOriginal content\n")
+        mem_db.write(topic="refresh-test/refresh.md", file=str(f), toc=True)
+
+        # Verify original stored
+        result = mem_db.read(topic="refresh-test/refresh.md")
+        assert "Original content" in result
+
+        # Modify file
+        time.sleep(0.05)
+        f.write_text("# Updated\n\nUpdated content\n")
+
+        # Dry run first
+        result = mem_db.refresh(topic="refresh-test/")
+        assert "dry run" in result
+        assert "1 stale" in result
+
+        # Original content still in DB
+        result = mem_db.read(topic="refresh-test/refresh.md")
+        assert "Original content" in result
+
+        # Apply refresh
+        result = mem_db.refresh(topic="refresh-test/", dry_run=False)
+        assert "apply" in result
+        assert "1 stale" in result
+        assert "updated" in result
+
+        # Content should now be updated
+        result = mem_db.read(topic="refresh-test/refresh.md")
+        assert "Updated content" in result
+
+    def test_refresh_preserves_history(self, mem_db, tmp_path):
+        """Refresh creates history record of old content."""
+        f = tmp_path / "hist.md"
+        f.write_text("version 1")
+        mem_db.write(topic="refresh-hist/hist.md", file=str(f))
+
+        time.sleep(0.05)
+        f.write_text("version 2")
+
+        mem_db.refresh(topic="refresh-hist/", dry_run=False)
+
+        # Check history table
+        conn = mem_db._get_connection()
+        history = conn.execute(
+            "SELECT content FROM memory_history"
+        ).fetchall()
+        assert any("version 1" in h[0] for h in history)
+
+    def test_refresh_missing_source_not_deleted(self, mem_db, tmp_path):
+        """Refresh skips memories with missing source files (doesn't delete them)."""
+        f = tmp_path / "temp.md"
+        f.write_text("temp content")
+        mem_db.write(topic="refresh-missing/temp.md", file=str(f))
+
+        # Delete the source file
+        f.unlink()
+
+        result = mem_db.refresh(topic="refresh-missing/", dry_run=False)
+        assert "1 missing" in result
+
+        # Memory should still exist
+        result = mem_db.read(topic="refresh-missing/temp.md")
+        assert "temp content" in result
+
+
+# ---------------------------------------------------------------------------
+# slice_batch integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.tools
+class TestSliceBatch:
+    """Integration tests for mem.slice_batch() with real SQLite."""
+
+    def test_slice_batch_round_trip(self, mem_db):
+        """Write 3 memories with TOC, slice_batch all 3, verify content."""
+        mem_db.write(topic="sb/a.md", content="# Intro\n\nHello world\n\n# Details\n\nMore info", toc=True)
+        mem_db.write(topic="sb/b.md", content="# Setup\n\nStep one\n\n# Run\n\nStep two", toc=True)
+        mem_db.write(topic="sb/c.md", content="# Config\n\nYAML stuff\n\n# Deploy\n\nShip it", toc=True)
+
+        result = mem_db.slice_batch(items=[
+            {"topic": "sb/a.md", "select": "Intro"},
+            {"topic": "sb/b.md", "select": "Run"},
+            {"topic": "sb/c.md", "select": "Deploy"},
+        ])
+
+        assert "Sliced 3 memories" in result
+        assert "Hello world" in result
+        assert "Step two" in result
+        assert "Ship it" in result
+        # Sections we didn't ask for should not appear
+        assert "Step one" not in result
+        assert "YAML stuff" not in result
+
+    def test_slice_batch_increments_access_count(self, mem_db):
+        """Verify access_count incremented for all sliced memories."""
+        mem_db.write(topic="sb-ac/a", content="# H1\n\nContent", toc=True)
+        mem_db.write(topic="sb-ac/b", content="# H1\n\nContent", toc=True)
+
+        mem_db.slice_batch(items=[
+            {"topic": "sb-ac/a", "select": "H1"},
+            {"topic": "sb-ac/b", "select": "H1"},
+        ])
+
+        conn = mem_db._get_connection()
+        counts = conn.execute(
+            "SELECT topic, access_count FROM memories WHERE topic LIKE 'sb-ac/%' ORDER BY topic"
+        ).fetchall()
+        assert counts[0][1] >= 1  # sb-ac/a
+        assert counts[1][1] >= 1  # sb-ac/b

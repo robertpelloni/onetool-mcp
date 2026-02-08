@@ -406,6 +406,138 @@ def test_timed_tool_call_records_error() -> None:
         assert call_kwargs["error_type"] == "ValueError"
 
 
+def _make_mock_cfg(tmpdir: str) -> tuple:
+    """Create mock config and stats file for ot.stats() tests."""
+    from unittest.mock import MagicMock
+
+    mock_cfg = MagicMock()
+    mock_cfg.stats.enabled = True
+    mock_cfg.stats.context_per_call = 30000
+    mock_cfg.stats.time_overhead_per_call_ms = 4000
+    mock_cfg.stats.model = "test/model"
+    mock_cfg.stats.cost_per_million_input_tokens = 15.0
+    mock_cfg.stats.cost_per_million_output_tokens = 75.0
+    mock_cfg.stats.chars_per_token = 4.0
+
+    stats_path = Path(tmpdir) / "stats.jsonl"
+
+    # Write 15 tools so we can verify top-10 truncation
+    records = [
+        {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+        {"ts": "2024-01-15T10:01:00Z", "type": "run", "client": "test", "chars_in": 200, "chars_out": 600, "duration_ms": 800, "success": False, "error_type": "Err"},
+    ]
+    for i in range(15):
+        records.append(
+            {"ts": f"2024-01-15T10:{i:02d}:30Z", "type": "tool", "client": "test", "tool": f"pack.tool_{i}", "duration_ms": 100 * (15 - i), "success": True},
+        )
+    stats_path.write_text("\n".join(json.dumps(r) for r in records))
+
+    mock_cfg.get_stats_file_path.return_value = stats_path
+    mock_cfg.get_result_store_path.return_value = Path(tmpdir)
+
+    return mock_cfg, stats_path
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_ot_stats_info_list() -> None:
+    """ot.stats(info='list') returns compact summary without tools."""
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mock_cfg, _ = _make_mock_cfg(tmpdir)
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            from ot.meta import stats
+
+            result = stats(info="list")
+
+            assert isinstance(result, dict)
+            assert "total_calls" in result
+            assert "success_rate" in result
+            assert "error_count" in result
+            assert "savings_usd" in result
+            # Should NOT have tools or verbose fields
+            assert "tools" not in result
+            assert "top_tools" not in result
+            assert "total_chars_in" not in result
+            assert "model" not in result
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_ot_stats_info_min() -> None:
+    """ot.stats(info='min') returns summary + top 10 tools."""
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mock_cfg, _ = _make_mock_cfg(tmpdir)
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            from ot.meta import stats
+
+            result = stats(info="min")
+
+            assert isinstance(result, dict)
+            assert "total_calls" in result
+            assert "success_rate" in result
+            assert "savings_usd" in result
+            assert "coffees" in result
+            assert "top_tools" in result
+            # Max 10 tools
+            assert len(result["top_tools"]) == 10
+            # Compact tool format
+            first = result["top_tools"][0]
+            assert "tool" in first
+            assert "calls" in first
+            assert "success_rate" in first
+            assert "avg_ms" in first
+            # Should NOT have verbose fields
+            assert "total_chars_in" not in result
+            assert "model" not in result
+            assert "tools" not in result
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_ot_stats_info_full() -> None:
+    """ot.stats(info='full') returns all fields including support."""
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mock_cfg, _ = _make_mock_cfg(tmpdir)
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            from ot.meta import stats
+
+            result = stats(info="full")
+
+            assert isinstance(result, dict)
+            assert "total_calls" in result
+            assert "total_chars_in" in result
+            assert "total_chars_out" in result
+            assert "model" in result
+            assert "tools" in result
+            assert "support" in result
+            # All 15 tools present
+            assert len(result["tools"]) == 15
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_ot_stats_default_is_min() -> None:
+    """ot.stats() defaults to info='min' behavior."""
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        mock_cfg, _ = _make_mock_cfg(tmpdir)
+        with patch("ot.meta.get_config", return_value=mock_cfg):
+            from ot.meta import stats
+
+            result = stats()
+
+            assert isinstance(result, dict)
+            assert "top_tools" in result
+            assert "tools" not in result
+
+
 @pytest.mark.unit
 @pytest.mark.core
 def test_ot_stats_html_write_error() -> None:

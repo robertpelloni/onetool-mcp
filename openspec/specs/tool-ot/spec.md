@@ -130,17 +130,27 @@ The `ot.reload()` function SHALL force reload of all configuration.
 
 ### Requirement: Runtime Statistics
 
-The `ot.stats()` function SHALL return aggregated runtime statistics.
+The `ot.stats()` function SHALL return aggregated runtime statistics with configurable detail level.
 
-#### Scenario: Get all-time stats
-- **GIVEN** statistics collection is enabled
-- **WHEN** `ot.stats()` is called
-- **THEN** it SHALL return aggregated statistics including:
-  - `total_calls`: Total number of tool calls
-  - `success_rate`: Percentage of successful calls
-  - `context_saved`: Estimated context tokens saved
-  - `time_saved_ms`: Estimated time saved in milliseconds
-  - `tools`: Per-tool breakdown
+#### Scenario: Info level list
+- **GIVEN** `info="list"` parameter
+- **WHEN** `ot.stats(info="list")` is called
+- **THEN** it SHALL return summary only: `{period, total_calls, success_rate, error_count, savings_usd}`
+- **AND** it SHALL NOT include tools breakdown
+
+#### Scenario: Info level min (default)
+- **GIVEN** `info="min"` parameter or no info parameter
+- **WHEN** `ot.stats()` or `ot.stats(info="min")` is called
+- **THEN** it SHALL return summary stats: `{period, total_calls, success_rate, error_count, total_duration_ms, savings_usd, coffees}`
+- **AND** it SHALL include `top_tools` with the top 10 tools sorted by call count (descending)
+- **AND** each tool entry SHALL include: `{tool, calls, success_rate, avg_ms}`
+
+#### Scenario: Info level full
+- **GIVEN** `info="full"` parameter
+- **WHEN** `ot.stats(info="full")` is called
+- **THEN** it SHALL return all fields including: `total_chars_in`, `total_chars_out`, `model`, `cost_estimate_usd`, `context_saved`, `time_saved_ms`
+- **AND** it SHALL include `tools` with all tools and full per-tool stats
+- **AND** it SHALL include `support` dict
 
 #### Scenario: Filter by period
 - **GIVEN** statistics collection is enabled
@@ -173,6 +183,11 @@ The `ot.stats()` function SHALL return aggregated runtime statistics.
 - **GIVEN** an invalid period value
 - **WHEN** `ot.stats(period="invalid")` is called
 - **THEN** it SHALL return: "Error: Invalid period 'invalid'. Valid: day, week, month, all. Example: ot.stats(period='day')"
+
+#### Scenario: Invalid info
+- **GIVEN** an invalid info value
+- **WHEN** `ot.stats(info="invalid")` is called
+- **THEN** it SHALL return: "Error: Invalid info level 'invalid'. Valid: list, min, full. Example: ot.stats(info='min')"
 
 ---
 

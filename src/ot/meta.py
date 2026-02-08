@@ -1654,6 +1654,7 @@ def stats(
     *,
     period: str = "all",
     tool: str = "",
+    info: InfoLevel = "min",
     output: str = "",
 ) -> dict[str, Any] | str:
     """Get runtime statistics for OneTool usage.
@@ -1664,26 +1665,27 @@ def stats(
     Args:
         period: Time period to filter - "day", "week", "month", or "all" (default: "all")
         tool: Filter by tool name (e.g., "brave.search"). Empty for all tools.
+        info: Output verbosity level - "list" (summary only, no tools),
+              "min" (summary + top 10 tools, default), or "full" (everything)
         output: Path to write HTML report. Empty for JSON output only.
 
     Returns:
-        Dict with aggregated statistics including:
-        - total_calls: Total number of tool calls
-        - success_rate: Percentage of successful calls
-        - context_saved: Estimated context tokens saved
-        - time_saved_ms: Estimated time saved in milliseconds
-        - tools: Per-tool breakdown
+        Dict with aggregated statistics. Detail depends on info level:
+        - "list": total_calls, success_rate, error_count, savings_usd
+        - "min": summary stats + top 10 tools sorted by calls
+        - "full": all fields including per-tool chars, durations, model info
 
     Example:
         ot.stats()
         ot.stats(period="day")
+        ot.stats(info="full")
         ot.stats(period="week", tool="brave.search")
         ot.stats(output="stats_report.html")
     """
     from ot.stats import Period, StatsReader
     from ot.support import get_support_dict
 
-    with log(span="ot.stats", period=period, tool=tool or None) as s:
+    with log(span="ot.stats", period=period, tool=tool or None, info=info) as s:
         cfg = get_config()
 
         # Validate period
@@ -1691,6 +1693,12 @@ def stats(
         if period not in valid_periods:
             s.add("error", "invalid_period")
             return f"Error: Invalid period '{period}'. Valid: day, week, month, all. Example: ot.stats(period='day')"
+
+        # Validate info level
+        valid_info: list[InfoLevel] = ["list", "min", "full"]
+        if info not in valid_info:
+            s.add("error", "invalid_info")
+            return f"Error: Invalid info level '{info}'. Valid: list, min, full. Example: ot.stats(info='min')"
 
         # Check if stats are enabled
         if not cfg.stats.enabled:
@@ -1714,10 +1722,48 @@ def stats(
             tool=tool if tool else None,
         )
 
-        result = aggregated.to_dict()
-        result["support"] = get_support_dict()
-        s.add("totalCalls", result["total_calls"])
-        s.add("toolCount", len(result["tools"]))
+        full_result = aggregated.to_dict()
+        s.add("totalCalls", full_result["total_calls"])
+        s.add("toolCount", len(full_result["tools"]))
+
+        # Format based on info level
+        if info == "list":
+            # Summary only, no tools breakdown
+            result: dict[str, Any] = {
+                "period": full_result["period"],
+                "total_calls": full_result["total_calls"],
+                "success_rate": full_result["success_rate"],
+                "error_count": full_result["error_count"],
+                "savings_usd": full_result["savings_usd"],
+            }
+        elif info == "min":
+            # Summary + top 10 tools by calls
+            top_tools = sorted(
+                full_result["tools"], key=lambda t: t["total_calls"], reverse=True
+            )[:10]
+            compact_tools = [
+                {
+                    "tool": t["tool"],
+                    "calls": t["total_calls"],
+                    "success_rate": t["success_rate"],
+                    "avg_ms": t["avg_duration_ms"],
+                }
+                for t in top_tools
+            ]
+            result = {
+                "period": full_result["period"],
+                "total_calls": full_result["total_calls"],
+                "success_rate": full_result["success_rate"],
+                "error_count": full_result["error_count"],
+                "total_duration_ms": full_result["total_duration_ms"],
+                "savings_usd": full_result["savings_usd"],
+                "coffees": full_result["coffees"],
+                "top_tools": compact_tools,
+            }
+        else:
+            # info == "full" — everything
+            result = full_result
+            result["support"] = get_support_dict()
 
         # Generate HTML report if output path specified
         if output:

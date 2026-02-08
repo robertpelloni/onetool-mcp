@@ -43,6 +43,10 @@ Persistent memory for AI agents with SQLite storage and optional semantic search
 | `mem.load(file)` | Import from YAML (skips duplicates) |
 | `mem.snap(output, topic, ext, on_conflict)` | Snapshot memories to directory with index.yaml |
 | `mem.restore(input, topic, overwrite)` | Restore memories from snap directory |
+| `mem.stale(topic)` | Check which file-backed memories are outdated |
+| `mem.refresh(topic, dry_run)` | Re-read source files for stale memories |
+| `mem.slice_batch(items)` | Extract sections from multiple memories in one call |
+| `mem.cache_clear(topic)` | Clear the in-memory read cache |
 
 ## Retrieval Functions
 
@@ -142,7 +146,7 @@ Returns a numbered section index with line ranges. Warns if the source file has 
 |-----------|------|-------------|
 | `output` | str | Output directory path (required) |
 | `topic` | str | Topic prefix filter (all memories if omitted) |
-| `ext` | str | File extension for content files (default: ".md") |
+| `ext` | str | File extension for content files (default: "") |
 | `on_conflict` | str | "skip" (default) or "overwrite" for existing files |
 
 ### `mem.restore()`
@@ -152,6 +156,37 @@ Returns a numbered section index with line ranges. Warns if the source file has 
 | `input` | str | Input directory path containing index.yaml (required) |
 | `topic` | str | Override base topic (remaps topic prefix) |
 | `overwrite` | bool | Overwrite existing memories with same topic+hash (default: False) |
+
+### `mem.stale()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic` | str | Topic prefix filter (all memories if omitted) |
+
+Checks file-backed memories for staleness by comparing stored `source_mtime` against the current file modification time. Only checks memories written via `file=`.
+
+### `mem.refresh()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic` | str | Topic prefix filter (all memories if omitted) |
+| `dry_run` | bool | Preview only (default: True) |
+
+Re-reads source files for stale memories and updates their content. Preserves history.
+
+### `mem.slice_batch()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `items` | list | List of dicts, each with `topic` or `id` (str) and `select` (int, str, or list). Max 20 items. |
+
+Extract sections from multiple memories in a single call.
+
+### `mem.cache_clear()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `topic` | str | Clear only entries under this topic prefix. If omitted, clears the entire cache. |
 
 ## Configuration
 
@@ -269,6 +304,22 @@ mem.read(topic="spec", mode="meta")
 
 # Bulk store specs with toc
 mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)
+
+# Check for stale file-backed memories
+mem.stale(topic="docs/")
+
+# Refresh stale memories from source files
+mem.refresh(topic="docs/", dry_run=False)
+
+# Batch slice: extract sections from multiple memories at once
+mem.slice_batch(items=[
+    {"topic": "spec", "select": 2},
+    {"topic": "rules", "select": "Requirements"},
+])
+
+# Clear read cache
+mem.cache_clear()
+mem.cache_clear(topic="docs/")
 ```
 
 ## Section Navigation

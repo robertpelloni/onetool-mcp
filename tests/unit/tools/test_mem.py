@@ -6,6 +6,7 @@ with mocked SQLite and OpenAI.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -286,6 +287,44 @@ class TestReadCacheIntegration:
         select_calls_2 = len(conn.execute.call_args_list)
         # First read: 1 SELECT + 1 UPDATE = 2 calls. Second read: 1 UPDATE = 1 more call.
         assert select_calls_2 == select_calls_1 + 1
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+@pytest.mark.usefixtures("_clear_read_cache")
+class TestCacheClear:
+    """Test mem.cache_clear() public API."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_clear_all(self, _mock_config):
+        from ot_tools.mem import cache_clear
+
+        _cache_put("topic:a", ("row-a",))
+        _cache_put("topic:b", ("row-b",))
+        result = cache_clear()
+        assert "2 entries evicted" in result
+        assert _cache_get("topic:a") is None
+        assert _cache_get("topic:b") is None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_clear_by_topic(self, _mock_config):
+        from ot_tools.mem import cache_clear
+
+        _cache_put("topic:proj/a", ("row-a",))
+        _cache_put("topic:proj/b", ("row-b",))
+        _cache_put("topic:other/c", ("row-c",))
+        result = cache_clear(topic="proj")
+        assert "2 entries evicted" in result
+        assert "1 remaining" in result
+        assert _cache_get("topic:proj/a") is None
+        assert _cache_get("topic:other/c") is not None
+
+    @patch("ot_tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    def test_clear_empty_cache(self, _mock_config):
+        from ot_tools.mem import cache_clear
+
+        result = cache_clear()
+        assert "0 entries evicted" in result
 
 
 # ---------------------------------------------------------------------------
@@ -901,8 +940,8 @@ class TestListMemories:
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
-            ("id-1", "topic/one", "note", '["tag1"]', 5, 2, datetime.now().isoformat(), 100),
-            ("id-2", "topic/two", "rule", '[]', 8, 0, datetime.now().isoformat(), 200),
+            ("id-1abcd", "topic/one", "note", '["tag1"]', 5, 2, datetime.now().isoformat(), 100, None),
+            ("id-2efgh", "topic/two", "rule", '[]', 8, 0, datetime.now().isoformat(), 200, None),
         ]
 
         result = list()
@@ -910,6 +949,97 @@ class TestListMemories:
         assert "Found 2 memories" in result
         assert "topic/one" in result
         assert "topic/two" in result
+        assert "category=note" in result
+        assert "category=rule" in result
+        assert "id=id-1abcd" in result
+        assert "[note]" not in result  # old format gone
+        assert "rel=8" in result  # non-default relevance shown
+        assert "rel=5" not in result  # default relevance hidden
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_with_tags(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/tagged", "note", '["a", "b"]', 5, 0, datetime.now().isoformat(), 50, None),
+        ]
+
+        result = list()
+
+        assert "tags=a|b" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_no_tags(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/notags", "note", '[]', 5, 0, datetime.now().isoformat(), 50, None),
+        ]
+
+        result = list()
+
+        assert "tags=" not in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_rel_default_hidden(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/default", "note", '[]', 5, 0, datetime.now().isoformat(), 50, None),
+        ]
+
+        result = list()
+
+        assert "rel=" not in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_rel_non_default_shown(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/high", "note", '[]', 8, 0, datetime.now().isoformat(), 50, None),
+        ]
+
+        result = list()
+
+        assert "rel=8" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_sec_shown(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/sections", "context", '[]', 5, 0, datetime.now().isoformat(), 500,
+             '{"section_count": "3"}'),
+        ]
+
+        result = list()
+
+        assert "sec=3" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_list_format_sec_absent(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1abcd", "topic/nosec", "note", '[]', 5, 0, datetime.now().isoformat(), 50, None),
+        ]
+
+        result = list()
+
+        assert "sec=" not in result
 
     @patch("ot_tools.mem._get_connection")
     def test_empty_list(self, mock_conn):
@@ -1318,12 +1448,11 @@ class TestSnap:
         result = snap(output=str(out_dir))
 
         assert "Snap 1 memories" in result
-        assert (out_dir / "docs/readme.md").exists()
-        assert (out_dir / "docs/readme.md").read_text() == "# README content"
+        assert (out_dir / "docs/readme").exists()
+        assert (out_dir / "docs/readme").read_text() == "# README content"
         assert (out_dir / "index.yaml").exists()
         index_text = (out_dir / "index.yaml").read_text()
         assert "docs/readme" in index_text
-        assert "docs/readme.md" in index_text
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("ot_tools.mem._get_connection")
@@ -1343,9 +1472,9 @@ class TestSnap:
         result = snap(output=str(out_dir), topic="consult/")
 
         assert "Snap 2 memories" in result
-        # Topic prefix stripped: "consult/ask" -> "ask.md"
-        assert (out_dir / "ask.md").exists()
-        assert (out_dir / "mem-tool.md").exists()
+        # Topic prefix stripped: "consult/ask" -> "ask"
+        assert (out_dir / "ask").exists()
+        assert (out_dir / "mem-tool").exists()
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("ot_tools.mem._get_connection")
@@ -1362,12 +1491,12 @@ class TestSnap:
         out_dir = tmp_path / "snap"
         out_dir.mkdir()
         (out_dir / "notes").mkdir()
-        (out_dir / "notes/a.md").write_text("existing")
+        (out_dir / "notes/a").write_text("existing")
 
         result = snap(output=str(out_dir), on_conflict="skip")
 
         assert "1 skipped" in result
-        assert (out_dir / "notes/a.md").read_text() == "existing"
+        assert (out_dir / "notes/a").read_text() == "existing"
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("ot_tools.mem._get_connection")
@@ -1384,12 +1513,12 @@ class TestSnap:
         out_dir = tmp_path / "snap"
         out_dir.mkdir()
         (out_dir / "notes").mkdir()
-        (out_dir / "notes/a.md").write_text("old content")
+        (out_dir / "notes/a").write_text("old content")
 
         result = snap(output=str(out_dir), on_conflict="overwrite")
 
         assert "1 written" in result
-        assert (out_dir / "notes/a.md").read_text() == "new content"
+        assert (out_dir / "notes/a").read_text() == "new content"
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("ot_tools.mem._get_connection")
@@ -1407,8 +1536,8 @@ class TestSnap:
         result = snap(output=str(out_dir), topic="consult/")
 
         assert "Snap 1 memories" in result
-        assert (out_dir / "sub/deep.md").exists()
-        assert (out_dir / "sub/deep.md").read_text() == "deep content"
+        assert (out_dir / "sub/deep").exists()
+        assert (out_dir / "sub/deep").read_text() == "deep content"
 
 
 @pytest.mark.unit
@@ -2346,3 +2475,509 @@ class TestResolveLineRange:
 
         lines = ["a", "b"]
         assert _resolve_line_range(":", lines, 2) is None
+
+
+# ---------------------------------------------------------------------------
+# _check_staleness helper tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestCheckStaleness:
+    """Test _check_staleness helper."""
+
+    def test_skipped_no_source(self):
+        from ot_tools.mem import _check_staleness
+
+        assert _check_staleness({}) == "skipped"
+        assert _check_staleness({"source": "/tmp/f.md"}) == "skipped"
+        assert _check_staleness({"source_mtime": "123"}) == "skipped"
+
+    def test_missing_source(self, tmp_path):
+        from ot_tools.mem import _check_staleness
+
+        meta = {"source": str(tmp_path / "gone.md"), "source_mtime": "123"}
+        assert _check_staleness(meta) == "missing"
+
+    def test_fresh_source(self, tmp_path):
+        from ot_tools.mem import _check_staleness
+
+        f = tmp_path / "fresh.md"
+        f.write_text("content")
+        mtime = str(f.stat().st_mtime)
+        meta = {"source": str(f), "source_mtime": mtime}
+        assert _check_staleness(meta) == "fresh"
+
+    def test_stale_source(self, tmp_path):
+        from ot_tools.mem import _check_staleness
+
+        f = tmp_path / "stale.md"
+        f.write_text("old content")
+        old_mtime = str(f.stat().st_mtime - 100)
+        meta = {"source": str(f), "source_mtime": old_mtime}
+        assert _check_staleness(meta) == "stale"
+
+
+# ---------------------------------------------------------------------------
+# Helper: mock _use_connection context manager
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def _mock_use_conn(rows, *, conn=None):
+    """Patch ``_use_connection`` so it yields *conn* (or a fresh MagicMock)
+    whose first ``execute().fetchall()`` returns *rows*.
+
+    Usage::
+
+        with _mock_use_conn(rows) as ctx:
+            result = stale()          # ctx is the MagicMock connection
+
+        # Or, to inspect calls afterwards:
+        conn = MagicMock()
+        with _mock_use_conn(rows, conn=conn):
+            result = refresh(dry_run=False)
+        assert any("UPDATE" in str(c) for c in conn.execute.call_args_list)
+    """
+    ctx = conn or MagicMock()
+    ctx.execute.return_value.fetchall.return_value = rows
+    with patch("ot_tools.mem._use_connection") as mock_conn:
+        mock_conn.return_value.__enter__ = MagicMock(return_value=ctx)
+        mock_conn.return_value.__exit__ = MagicMock(return_value=False)
+        yield ctx
+
+
+# ---------------------------------------------------------------------------
+# stale() tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestStale:
+    """Test mem.stale() bulk staleness check."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_no_memories(self, _mock_config):
+        from ot_tools.mem import stale
+
+        with _mock_use_conn([]):
+            result = stale()
+        assert "No memories found" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_no_file_backed(self, _mock_config):
+        from ot_tools.mem import stale
+
+        rows = [("topic/a", "{}"), ("topic/b", "{}")]
+        with _mock_use_conn(rows):
+            result = stale()
+        assert "No file-backed memories found" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_mixed_staleness(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import stale
+
+        # Fresh file
+        fresh_file = tmp_path / "fresh.md"
+        fresh_file.write_text("fresh content")
+        fresh_meta = json.dumps({"source": str(fresh_file), "source_mtime": str(fresh_file.stat().st_mtime)})
+
+        # Stale file
+        stale_file = tmp_path / "stale.md"
+        stale_file.write_text("new content")
+        stale_meta = json.dumps({"source": str(stale_file), "source_mtime": str(stale_file.stat().st_mtime - 100)})
+
+        # Missing file
+        missing_meta = json.dumps({"source": str(tmp_path / "gone.md"), "source_mtime": "100"})
+
+        rows = [
+            ("docs/fresh.md", fresh_meta),
+            ("docs/stale.md", stale_meta),
+            ("docs/gone.md", missing_meta),
+        ]
+        with _mock_use_conn(rows):
+            result = stale(topic="docs/")
+
+        assert "1 fresh" in result
+        assert "1 stale" in result
+        assert "1 missing" in result
+        assert "docs/stale.md" in result
+        assert "docs/gone.md" in result
+        assert "source file deleted" in result
+
+
+# ---------------------------------------------------------------------------
+# list(format="tree") tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestListTreeFormat:
+    """Test mem.list(format='tree') topic hierarchy view."""
+
+    @patch("ot_tools.mem._get_connection")
+    def test_empty(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = []
+        result = list(format="tree")
+        assert "No memories found" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_flat_topics(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-a", "a", "note", "[]", 5, 0, datetime.now().isoformat(), 100, None),
+            ("id-b", "b", "note", "[]", 5, 0, datetime.now().isoformat(), 200, None),
+            ("id-c", "c", "note", "[]", 5, 0, datetime.now().isoformat(), 300, None),
+        ]
+        result = list(format="tree")
+
+        assert "(all)  (mem_count=3)" in result
+        assert "── a  (id=id-a" in result
+        assert "── b  (id=id-b" in result
+        assert "category=note" in result
+        # Tree connectors present
+        assert "├──" in result or "└──" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_nested_topics_with_counts(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "proj/docs/arch/index.md", "context", "[]", 5, 0, datetime.now().isoformat(), 1534, None),
+            ("id-2", "proj/docs/arch/core.md", "context", "[]", 5, 0, datetime.now().isoformat(), 2202, None),
+            ("id-3", "proj/docs/code/testing.md", "context", "[]", 5, 0, datetime.now().isoformat(), 2761, None),
+        ]
+        result = list(format="tree", topic="proj/docs/")
+
+        assert "proj/docs/  (mem_count=3)" in result
+        assert "── arch/  (mem_count=2)" in result
+        assert "── code/  (mem_count=1)" in result
+        assert "── index.md  (id=id-1" in result
+        assert "── core.md  (id=id-2" in result
+        assert "── testing.md  (id=id-3" in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_depth_limit(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "proj/docs/arch/index.md", "context", "[]", 5, 0, datetime.now().isoformat(), 1534, None),
+            ("id-2", "proj/docs/arch/core.md", "context", "[]", 5, 0, datetime.now().isoformat(), 2202, None),
+            ("id-3", "proj/docs/code/testing.md", "context", "[]", 5, 0, datetime.now().isoformat(), 2761, None),
+        ]
+        result = list(format="tree", topic="proj/docs/", depth=1)
+
+        assert "── arch/  (mem_count=2)" in result
+        assert "── code/  (mem_count=1)" in result
+        # Should NOT show children at depth=1
+        assert "index.md" not in result
+        assert "testing.md" not in result
+
+    @patch("ot_tools.mem._get_connection")
+    def test_tree_leaf_with_tags(self, mock_conn):
+        from ot_tools.mem import list
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "tagged", "note", '["a", "b"]', 5, 0, datetime.now().isoformat(), 50, None),
+        ]
+        result = list(format="tree")
+
+        assert "tags=a|b" in result
+
+
+# ---------------------------------------------------------------------------
+# refresh() tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestRefresh:
+    """Test mem.refresh() source file re-read."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_dry_run_reports_without_modifying(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import refresh
+
+        stale_file = tmp_path / "stale.md"
+        stale_file.write_text("new content here")
+        meta = json.dumps({"source": str(stale_file), "source_mtime": str(stale_file.stat().st_mtime - 100)})
+
+        rows = [("mem-1", "docs/stale.md", "old content", meta)]
+        ctx = MagicMock()
+        with _mock_use_conn(rows, conn=ctx):
+            result = refresh(topic="docs/")
+
+        assert "dry run" in result
+        assert "1 stale" in result
+        assert "would update" in result
+        # DB should NOT have been written to (no INSERT/UPDATE calls beyond the SELECT)
+        update_calls = [c for c in ctx.execute.call_args_list if "UPDATE" in str(c) or "INSERT" in str(c)]
+        assert len(update_calls) == 0
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_apply_updates_content(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import refresh
+
+        stale_file = tmp_path / "stale.md"
+        stale_file.write_text("updated content")
+        meta = json.dumps({"source": str(stale_file), "source_mtime": str(stale_file.stat().st_mtime - 100)})
+
+        rows = [("mem-1", "docs/stale.md", "old content", meta)]
+
+        conn_mock = MagicMock()
+        with (
+            _mock_use_conn(rows, conn=conn_mock),
+            patch("ot_tools.mem._maybe_embed", return_value=None),
+            patch("ot_tools.mem._cache_invalidate"),
+        ):
+            result = refresh(topic="docs/", dry_run=False)
+
+        assert "apply" in result
+        assert "1 stale" in result
+        assert "updated" in result
+        # Should have INSERT (history) and UPDATE (memory) calls
+        all_sql = [str(c) for c in conn_mock.execute.call_args_list]
+        assert any("INSERT" in s for s in all_sql)
+        assert any("UPDATE" in s for s in all_sql)
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_missing_source_skipped(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import refresh
+
+        meta = json.dumps({"source": str(tmp_path / "gone.md"), "source_mtime": "100"})
+        rows = [("mem-1", "docs/gone.md", "content", meta)]
+
+        with _mock_use_conn(rows):
+            result = refresh(topic="docs/", dry_run=False)
+
+        assert "1 missing" in result
+        assert "docs/gone.md" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_fresh_untouched(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import refresh
+
+        fresh_file = tmp_path / "fresh.md"
+        fresh_file.write_text("content")
+        meta = json.dumps({"source": str(fresh_file), "source_mtime": str(fresh_file.stat().st_mtime)})
+
+        rows = [("mem-1", "docs/fresh.md", "content", meta)]
+        with _mock_use_conn(rows):
+            result = refresh(topic="docs/")
+
+        assert "1 fresh" in result
+        assert "stale" not in result.lower() or "0 stale" in result.lower()
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_toc_recomputed_on_refresh(self, _mock_config, tmp_path):
+        import json
+
+        from ot_tools.mem import refresh
+
+        stale_file = tmp_path / "stale.md"
+        stale_file.write_text("# New Heading\n\nNew content\n")
+        meta = json.dumps({
+            "source": str(stale_file),
+            "source_mtime": str(stale_file.stat().st_mtime - 100),
+            "sections": "Old Heading:1-3",
+            "section_count": "1",
+        })
+
+        rows = [("mem-1", "docs/stale.md", "# Old Heading\n\nOld content\n", meta)]
+
+        conn_mock = MagicMock()
+        with (
+            _mock_use_conn(rows, conn=conn_mock),
+            patch("ot_tools.mem._maybe_embed", return_value=None),
+            patch("ot_tools.mem._cache_invalidate"),
+        ):
+            result = refresh(topic="docs/", dry_run=False)
+
+        assert "1 stale" in result
+        # Verify the meta was updated with new sections by checking the UPDATE call
+        update_calls = [c for c in conn_mock.execute.call_args_list if "UPDATE" in str(c)]
+        assert len(update_calls) > 0
+        # The meta arg should contain "New Heading"
+        update_args = update_calls[0]
+        meta_arg = update_args[0][1][3]  # 4th positional param is meta
+        assert "New Heading" in meta_arg
+
+
+# ---------------------------------------------------------------------------
+# slice_batch() tests
+# ---------------------------------------------------------------------------
+
+
+def _make_read_row(
+    *,
+    id: str = "id-1",
+    topic: str = "t/a",
+    content: str = "# H1\n\nParagraph\n\n# H2\n\nMore text",
+    category: str = "note",
+    tags: str = "[]",
+    relevance: int = 5,
+    access_count: int = 0,
+    created_at: str = "2025-01-01",
+    updated_at: str = "2025-01-01",
+    meta: str = '{"sections": "H1:1-3|H2:5-7", "section_count": "2"}',
+) -> tuple:
+    """Build a fake row matching _READ_COLUMNS order."""
+    return (id, topic, content, category, tags, relevance, access_count, created_at, updated_at, meta)
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSliceBatch:
+    """Test mem.slice_batch() batch section extraction."""
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_multiple_topics(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        row_a = _make_read_row(id="1", topic="docs/a.md", content="# Intro\n\nHello\n\n# Details\n\nWorld",
+                               meta='{"sections": "Intro:1-3|Details:5-7", "section_count": "2"}')
+        row_b = _make_read_row(id="2", topic="docs/b.md", content="# Setup\n\nStep 1\n\n# Run\n\nStep 2",
+                               meta='{"sections": "Setup:1-3|Run:5-7", "section_count": "2"}')
+        rows = [row_a, row_b]
+
+        with (
+            patch("ot_tools.mem._get_connection") as mock_conn,
+            patch("ot_tools.mem._cache_put"),
+        ):
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchall.return_value = rows
+            result = slice_batch(items=[
+                {"topic": "docs/a.md", "select": "Intro"},
+                {"topic": "docs/b.md", "select": "Run"},
+            ])
+
+        assert "Sliced 2 memories" in result
+        assert "docs/a.md [Intro]" in result
+        assert "docs/b.md [Run]" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_mixed_selectors(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        row = _make_read_row(id="1", topic="docs/a.md", content="# H1\n\nLine2\n\n# H2\n\nLine6\nLine7")
+        with (
+            patch("ot_tools.mem._get_connection") as mock_conn,
+            patch("ot_tools.mem._cache_put"),
+        ):
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchall.return_value = [row]
+            result = slice_batch(items=[
+                {"topic": "docs/a.md", "select": 1},
+                {"topic": "docs/a.md", "select": "H2"},
+                {"topic": "docs/a.md", "select": ":3"},
+            ])
+
+        assert "Sliced 3 memories" in result
+        assert "[Section 1]" in result
+        assert "[H2]" in result
+        assert "[:3]" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_missing_topic(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        row = _make_read_row(id="1", topic="docs/a.md")
+        with (
+            patch("ot_tools.mem._get_connection") as mock_conn,
+            patch("ot_tools.mem._cache_put"),
+        ):
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchall.return_value = [row]
+            result = slice_batch(items=[
+                {"topic": "docs/a.md", "select": "H1"},
+                {"topic": "docs/missing.md", "select": "Intro"},
+            ])
+
+        assert "docs/a.md" in result
+        assert "No memory found" in result
+        assert "docs/missing.md" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_no_match_selector(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        row = _make_read_row(id="1", topic="docs/a.md")
+        with (
+            patch("ot_tools.mem._get_connection") as mock_conn,
+            patch("ot_tools.mem._cache_put"),
+        ):
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchall.return_value = [row]
+            result = slice_batch(items=[
+                {"topic": "docs/a.md", "select": "NonExistentHeading"},
+            ])
+
+        assert "No matching content" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_empty_items(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        result = slice_batch(items=[])
+        assert "Error" in result
+        assert "non-empty" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_max_items_exceeded(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        items = [{"topic": f"t/{i}", "select": 1} for i in range(21)]
+        result = slice_batch(items=items)
+        assert "Error" in result
+        assert "20" in result
+
+    @patch("ot_tools.mem._get_config", return_value=Config())
+    def test_invalid_item_missing_select(self, _mock_config):
+        from ot_tools.mem import slice_batch
+
+        row = _make_read_row(id="1", topic="docs/a.md")
+        with (
+            patch("ot_tools.mem._get_connection") as mock_conn,
+            patch("ot_tools.mem._cache_put"),
+        ):
+            conn = MagicMock()
+            mock_conn.return_value = conn
+            conn.execute.return_value.fetchall.return_value = [row]
+            result = slice_batch(items=[
+                {"topic": "docs/a.md"},
+                {"topic": "docs/a.md", "select": "H1"},
+            ])
+
+        assert "'select' is required" in result
+        assert "docs/a.md [H1]" in result

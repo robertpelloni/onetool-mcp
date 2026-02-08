@@ -34,6 +34,7 @@ pack = "mem"
 
 __all__ = [
     "append",
+    "cache_clear",
     "context",
     "count",
     "decay",
@@ -45,10 +46,13 @@ __all__ = [
     "load",
     "read",
     "read_batch",
+    "refresh",
     "restore",
     "search",
     "slice",
+    "slice_batch",
     "snap",
+    "stale",
     "stats",
     "toc",
     "update",
@@ -267,6 +271,42 @@ def _cache_invalidate(topic: str | None = None, id: str | None = None) -> None:
             return
         # No filter: clear everything
         _read_cache.clear()
+
+
+def cache_clear(
+    *,
+    topic: str | None = None,
+) -> str:
+    """Clear the in-memory read cache.
+
+    Args:
+        topic: Clear only entries under this topic prefix. If omitted, clears the entire cache.
+
+    Returns:
+        Confirmation message with number of evicted entries.
+
+    Example:
+        mem.cache_clear()
+        mem.cache_clear(topic="docs/")
+    """
+    # Perform count and invalidation under one lock to avoid TOCTOU race.
+    # Inline the invalidation logic here instead of calling _cache_invalidate
+    # which also acquires _read_cache_lock (non-reentrant).
+    with _read_cache_lock:
+        before = len(_read_cache)
+        if topic:
+            keys_to_remove = [
+                k for k in _read_cache
+                if k == f"topic:{topic}" or k.startswith(f"topic:{topic}/")
+            ]
+            for k in keys_to_remove:
+                del _read_cache[k]
+        else:
+            _read_cache.clear()
+        after = len(_read_cache)
+    evicted = before - after
+    scope = f"topic '{topic}'" if topic else "all"
+    return f"Cache cleared ({scope}): {evicted} entries evicted, {after} remaining"
 
 
 # ---------------------------------------------------------------------------
@@ -845,6 +885,24 @@ def _build_toc(sections: list[dict[str, Any]], content: str) -> str:
     return "\n".join(lines)
 
 
+def _check_staleness(meta: dict[str, str]) -> str:
+    """Check staleness of a file-backed memory.
+
+    Returns one of: "fresh", "stale", "missing", "skipped".
+    """
+    source = meta.get("source")
+    source_mtime = meta.get("source_mtime")
+    if not source or not source_mtime:
+        return "skipped"
+    source_path = Path(source)
+    if not source_path.exists():
+        return "missing"
+    current_mtime = source_path.stat().st_mtime
+    if current_mtime > float(source_mtime):
+        return "stale"
+    return "fresh"
+
+
 # ---------------------------------------------------------------------------
 # Phase 1 - Foundation: CRUD operations
 # ---------------------------------------------------------------------------
@@ -1027,8 +1085,7 @@ def write_batch(
 
                 # Preserve directory structure relative to glob root
                 rel = f.relative_to(glob_root)
-                # Strip extension and use path components as subtopic
-                subtopic = f"{topic}/{rel.with_suffix('').as_posix()}"
+                subtopic = f"{topic}/{rel.as_posix()}"
                 result = write(
                     topic=subtopic,
                     file=str(f),
@@ -1350,16 +1407,11 @@ def toc(
             result = _build_toc(sections, row[2])
 
             # Staleness detection
-            source = row_meta.get("source")
-            source_mtime = row_meta.get("source_mtime")
-            if source and source_mtime:
-                source_path = Path(source)
-                if source_path.exists():
-                    current_mtime = source_path.stat().st_mtime
-                    if current_mtime > float(source_mtime):
-                        result += "\n\nWarning: Source file has been modified since this memory was stored. Consider re-writing with mem.write()."
-                else:
-                    result += "\n\nWarning: Source file no longer exists."
+            status = _check_staleness(row_meta)
+            if status == "stale":
+                result += "\n\nWarning: Source file has been modified since this memory was stored. Consider re-writing with mem.write()."
+            elif status == "missing":
+                result += "\n\nWarning: Source file no longer exists."
 
             s.add("sections", len(sections))
             return result
@@ -1493,6 +1545,180 @@ def _resolve_line_range(spec: str, lines: list[str], total: int) -> str | None:
         return None
 
     return "\n".join(lines[start - 1 : end])
+
+
+def _selector_label(select: int | str | _builtins_list[int | str]) -> str:
+    """Build a human-readable label for a slice selector."""
+    if isinstance(select, int):
+        return f"Section {select}"
+    if isinstance(select, str):
+        return select
+    # list
+    parts = []
+    for s in select:
+        if isinstance(s, int):
+            parts.append(f"Section {s}")
+        else:
+            parts.append(str(s))
+    return ", ".join(parts)
+
+
+def slice_batch(
+    *,
+    items: list[dict[str, Any]],
+) -> str:
+    """Extract sections from multiple memories in a single call.
+
+    Each item specifies a memory (by topic or id) and a selector.
+    Uses a batch DB query to minimise round-trips.
+
+    Args:
+        items: List of dicts, each with 'topic' or 'id' (str) and 'select'
+               (int, str, or list). Max 20 items.
+
+    Returns:
+        Concatenated sliced content with topic headers and dividers.
+
+    Example:
+        mem.slice_batch(items=[
+            {"topic": "docs/creating-tools.md", "select": "Checklist"},
+            {"topic": "docs/testing.md", "select": "Required Markers"},
+            {"topic": "docs/spec-format.md", "select": "Rules"},
+        ])
+        mem.slice_batch(items=[
+            {"topic": "spec.md", "select": [1, "Requirements"]},
+            {"id": "abc-123", "select": ":50"},
+        ])
+    """
+    with LogSpan(span="mem.slice_batch", itemCount=len(items) if items else 0) as s:
+        try:
+            if not items:
+                return "Error: items must be a non-empty list"
+            if len(items) > 20:
+                return f"Error: Maximum 20 items allowed, got {len(items)}"
+
+            # Validate items and collect lookup keys (deduplicated)
+            topic_keys_set: set[str] = set()
+            id_keys_set: set[str] = set()
+            validated: _builtins_list[tuple[dict[str, Any], str | None, str | None]] = []
+
+            for item in items:
+                if not isinstance(item, dict):
+                    validated.append((item, None, None))
+                    continue
+                sel = item.get("select")
+                topic = item.get("topic")
+                mid = item.get("id")
+                if sel is None:
+                    validated.append((item, None, None))
+                    continue
+                if not topic and not mid:
+                    validated.append((item, None, None))
+                    continue
+                if topic and mid:
+                    validated.append((item, None, None))
+                    continue
+                if topic:
+                    topic_keys_set.add(topic)
+                    validated.append((item, topic, None))
+                else:
+                    id_keys_set.add(mid)  # type: ignore[arg-type]
+                    validated.append((item, None, mid))
+
+            # Batch fetch all needed rows
+            row_map: dict[str, Any] = {}  # keyed by topic or id
+            conn = _get_connection()
+
+            topic_keys = sorted(topic_keys_set)
+            id_keys = sorted(id_keys_set)
+
+            if topic_keys or id_keys:
+                conditions = []
+                params: _builtins_list[Any] = []
+                if topic_keys:
+                    placeholders = ", ".join("?" for _ in topic_keys)
+                    conditions.append(f"topic IN ({placeholders})")
+                    params.extend(topic_keys)
+                if id_keys:
+                    placeholders = ", ".join("?" for _ in id_keys)
+                    conditions.append(f"id IN ({placeholders})")
+                    params.extend(id_keys)
+
+                sql = f"SELECT {_READ_COLUMNS} FROM memories WHERE {' OR '.join(conditions)}"
+                rows = conn.execute(sql, params).fetchall()
+
+                # Index by topic and id
+                for row in rows:
+                    row_map[f"topic:{row[1]}"] = row
+                    row_map[f"id:{row[0]}"] = row
+
+                # Increment access counts
+                if rows:
+                    row_ids = [r[0] for r in rows]
+                    id_placeholders = ", ".join("?" for _ in row_ids)
+                    conn.execute(
+                        f"UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id IN ({id_placeholders})",
+                        row_ids,
+                    )
+                    conn.commit()
+
+                # Populate cache
+                for row in rows:
+                    _cache_put(f"topic:{row[1]}", row)
+
+            # Process each item
+            result_parts: _builtins_list[str] = []
+            sliced_count = 0
+
+            for item, topic, mid in validated:
+                # Items with topic=None and mid=None failed validation in the first pass
+                sel = item.get("select") if isinstance(item, dict) else None
+
+                if sel is None:
+                    label = topic or mid or str(item)
+                    result_parts.append(f"# {label}\n\nError: 'select' is required for each item")
+                    continue
+                if not topic and not mid:
+                    result_parts.append("# (invalid item)\n\nError: Each item must have 'topic' or 'id'")
+                    continue
+
+                # Look up row
+                key = f"topic:{topic}" if topic else f"id:{mid}"
+                row = row_map.get(key)
+                if not row:
+                    label = topic or mid
+                    result_parts.append(f"# {label} [{_selector_label(sel)}]\n\nError: No memory found for {'topic' if topic else 'id'} '{label}'")
+                    continue
+
+                # Apply selector
+                content = row[2]
+                lines = content.split("\n")
+                row_meta = _deserialize_meta(row[9])
+                sections = _decode_sections(row_meta.get("sections", ""))
+
+                selectors: _builtins_list[int | str] = sel if type(sel) is _builtins_list else [sel]  # type: ignore[assignment]
+                extracted: _builtins_list[str] = []
+                for sel_item in selectors:
+                    part = _resolve_slice(sel_item, lines, sections)
+                    if part is not None:
+                        extracted.append(part)
+
+                display_topic = row[1]  # use actual topic from DB
+                sel_label = _selector_label(sel)
+                if extracted:
+                    result_parts.append(f"# {display_topic} [{sel_label}]\n\n" + "\n\n".join(extracted))
+                    sliced_count += 1
+                else:
+                    result_parts.append(f"# {display_topic} [{sel_label}]\n\nNo matching content found for selector(s)")
+
+            s.add("sliced", sliced_count)
+            s.add("total", len(items))
+            noun = "memory" if sliced_count == 1 else "memories"
+            return f"Sliced {sliced_count} {noun}\n\n---\n\n" + "\n\n---\n\n".join(result_parts)
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error in slice_batch: {e}"
 
 
 def search(
@@ -1729,6 +1955,8 @@ def list(
     topic: str | None = None,
     category: str | None = None,
     limit: int = 50,
+    format: str = "list",
+    depth: int = 0,
 ) -> str:
     """List memories with optional topic prefix and category filtering.
 
@@ -1736,6 +1964,8 @@ def list(
         topic: Topic prefix filter (e.g., "projects/" lists all under projects)
         category: Filter by category
         limit: Maximum results (default: 50)
+        format: Output format — "list" (flat, default) or "tree" (hierarchy)
+        depth: Tree depth limit (0 = unlimited). Only used when format="tree".
 
     Returns:
         Formatted list of memories.
@@ -1744,12 +1974,13 @@ def list(
         mem.list()
         mem.list(topic="projects/onetool/")
         mem.list(category="rule")
+        mem.list(format="tree", topic="proj/", depth=1)
     """
-    with LogSpan(span="mem.list", topic=topic, category=category, limit=limit) as s:
+    with LogSpan(span="mem.list", topic=topic, category=category, limit=limit, format=format) as s:
         try:
             conn = _get_connection()
 
-            sql = "SELECT id, topic, category, tags, relevance, access_count, created_at, length(content) as content_len FROM memories WHERE 1=1"
+            sql = "SELECT id, topic, category, tags, relevance, access_count, created_at, length(content) as content_len, meta FROM memories WHERE 1=1"
             params: list[Any] = []
 
             topic_sql, topic_params = _topic_filter(topic)
@@ -1767,19 +1998,26 @@ def list(
 
             if not rows:
                 s.add("resultCount", 0)
+                if format == "tree":
+                    return "No memories found" + (f" under '{topic}'" if topic else "")
                 return "No memories found"
 
             s.add("resultCount", len(rows))
 
+            if format == "tree":
+                return _format_as_tree(rows, topic=topic, depth=depth)
+
             noun = "memory" if len(rows) == 1 else "memories"
             lines = [f"Found {len(rows)} {noun}:\n"]
             for r in rows:
-                tags_str = ", ".join(_deserialize_tags(r[3])) or ""
-                lines.append(
-                    f"  {r[1]} [{r[2]}] rel={r[4]} accessed={r[5]}x len={r[7]}"
-                    f"{' tags=' + tags_str if tags_str else ''}"
-                    f" id={r[0][:8]}..."
+                tags_list = _deserialize_tags(r[3])
+                row_meta = json.loads(r[8]) if r[8] else {}
+                section_count = int(row_meta.get("section_count", 0))
+                meta_str = _format_entry_meta(
+                    mem_id=r[0], content_len=r[7], section_count=section_count,
+                    relevance=r[4], category=r[2], tags_list=tags_list,
                 )
+                lines.append(f"  {r[1]} {meta_str}")
             return "\n".join(lines)
 
         except Exception as e:
@@ -2703,7 +2941,7 @@ def snap(
     *,
     output: str,
     topic: str | None = None,
-    ext: str = ".md",
+    ext: str = "",
     on_conflict: str = "skip",
 ) -> str:
     """Write memories to a directory as individual files with an index.yaml.
@@ -2714,7 +2952,7 @@ def snap(
     Args:
         output: Output directory path
         topic: Topic prefix filter (all memories if omitted)
-        ext: File extension for content files (default: ".md")
+        ext: File extension appended to topic for content files (default: "" — topic is the file path)
         on_conflict: "skip" (default) or "overwrite" for existing files
 
     Returns:
@@ -2986,3 +3224,360 @@ def restore(
         except Exception as e:
             s.add("error", str(e))
             return f"Error restoring snap: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Staleness, tree, and refresh
+# ---------------------------------------------------------------------------
+
+
+def stale(
+    *,
+    topic: str | None = None,
+) -> str:
+    """Check which file-backed memories have outdated content relative to their source files.
+
+    Scans memories for staleness by comparing stored source_mtime against the
+    current file modification time. Only checks memories that have source
+    metadata (written via file= parameter).
+
+    Args:
+        topic: Topic prefix to filter (e.g., "docs/"). If omitted, checks all memories.
+
+    Returns:
+        Summary of fresh, stale, missing, and skipped memories.
+
+    Example:
+        mem.stale()
+        mem.stale(topic="proj/onetool-mcp/docs-dev/")
+    """
+    with LogSpan(span="mem.stale", topic=topic or "(all)") as s:
+        try:
+            with _use_connection() as conn:
+                sql = "SELECT topic, meta FROM memories WHERE 1=1"
+                topic_sql, params = _topic_filter(topic)
+                sql += topic_sql
+                sql += " ORDER BY topic"
+                rows = conn.execute(sql, params).fetchall()
+
+            if not rows:
+                s.add("found", 0)
+                return "No memories found" + (f" under '{topic}'" if topic else "")
+
+            fresh: _builtins_list[str] = []
+            stale_list: _builtins_list[tuple[str, str, str]] = []
+            missing_list: _builtins_list[str] = []
+            skipped = 0
+
+            for row_topic, raw_meta in rows:
+                meta = _deserialize_meta(raw_meta)
+                status = _check_staleness(meta)
+                if status == "fresh":
+                    fresh.append(row_topic)
+                elif status == "stale":
+                    stored = meta.get("source_mtime", "")
+                    source_path = Path(meta["source"])
+                    try:
+                        current = str(source_path.stat().st_mtime)
+                    except OSError:
+                        missing_list.append(row_topic)
+                        continue
+                    stale_list.append((row_topic, stored, current))
+                elif status == "missing":
+                    missing_list.append(row_topic)
+                else:
+                    skipped += 1
+
+            total_checked = len(fresh) + len(stale_list) + len(missing_list)
+            if total_checked == 0:
+                s.add("skipped", skipped)
+                return "No file-backed memories found" + (f" under '{topic}'" if topic else "")
+
+            scope = f' under "{topic}"' if topic else ""
+            parts = [f"Checked {total_checked} file-backed memories{scope}:"]
+            parts.append(f"  {len(fresh)} fresh")
+
+            if stale_list:
+                parts.append(f"  {len(stale_list)} stale:")
+                for st_topic, stored_mt, current_mt in stale_list:
+                    stored_dt = datetime.fromtimestamp(float(stored_mt), tz=UTC).strftime("%Y-%m-%d")
+                    current_dt = datetime.fromtimestamp(float(current_mt), tz=UTC).strftime("%Y-%m-%d")
+                    parts.append(f"    - {st_topic} (stored: {stored_dt}, file: {current_dt})")
+
+            if missing_list:
+                parts.append(f"  {len(missing_list)} missing:")
+                for m_topic in missing_list:
+                    parts.append(f"    - {m_topic} (source file deleted)")
+
+            if skipped:
+                parts.append(f"  ({skipped} memories without source metadata skipped)")
+
+            s.add("fresh", len(fresh))
+            s.add("stale", len(stale_list))
+            s.add("missing", len(missing_list))
+            s.add("skipped", skipped)
+            return "\n".join(parts)
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error checking staleness: {e}"
+
+
+def _format_as_tree(
+    rows: _builtins_list[Any],
+    *,
+    topic: str | None,
+    depth: int,
+) -> str:
+    """Format list rows as a tree hierarchy.
+
+    Row schema: (id, topic, category, tags, relevance, access_count,
+                 created_at, content_len, meta).
+    """
+    # Strip common prefix if topic filter provided with trailing /
+    prefix = ""
+    if topic and topic.endswith("/"):
+        prefix = topic
+
+    # Build nested tree dict; leaf nodes store metadata tuple
+    tree_dict: dict[str, Any] = {}
+    for r in rows:
+        mem_id, mem_topic, category, tags_raw, relevance = r[0], r[1], r[2], r[3], r[4]
+        content_len, meta_json = r[7], r[8]
+        rel_topic = mem_topic[len(prefix):] if prefix and mem_topic.startswith(prefix) else mem_topic
+        parts = rel_topic.split("/")
+        node = tree_dict
+        for part in parts[:-1]:
+            if part not in node:
+                node[part] = {}
+            elif not isinstance(node[part], dict):
+                # Existing leaf becomes a dict; preserve leaf data under ""
+                leaf_data = node[part]
+                node[part] = {"": leaf_data}
+            node = node[part]
+        # Store leaf with metadata tuple
+        leaf_name = parts[-1]
+        tags_list = _deserialize_tags(tags_raw)
+        row_meta = json.loads(meta_json) if meta_json else {}
+        section_count = int(row_meta.get("section_count", 0))
+        node[leaf_name] = ("_leaf_", mem_id, category, tags_list, content_len, relevance, section_count)
+
+    # Render tree
+    lines: _builtins_list[str] = []
+    total = len(rows)
+    header = f"{prefix}" if prefix else "(all)"
+    lines.append(f"{header}  (mem_count={total})")
+    _render_tree(tree_dict, lines, prefix="", max_depth=depth)
+
+    return "\n".join(lines)
+
+
+def _format_entry_meta(
+    *,
+    mem_id: str,
+    content_len: int,
+    section_count: int,
+    relevance: int,
+    category: str,
+    tags_list: _builtins_list[str],
+) -> str:
+    """Format parenthesised metadata for list and tree entries.
+
+    Attribute order: id, len, sec, rel, category, tags.
+    Hide-if-default: sec hidden when 0, rel hidden when 5, tags hidden when empty.
+    """
+    meta_parts = [f"id={mem_id[:8]}", f"len={content_len}"]
+    if section_count > 0:
+        meta_parts.append(f"sec={section_count}")
+    if relevance != 5:
+        meta_parts.append(f"rel={relevance}")
+    meta_parts.append(f"category={category}")
+    if tags_list:
+        meta_parts.append(f"tags={'|'.join(tags_list)}")
+    return f"({' '.join(meta_parts)})"
+
+
+def _render_tree(
+    node: dict[str, Any],
+    lines: _builtins_list[str],
+    prefix: str,
+    max_depth: int,
+    current_depth: int = 1,
+) -> None:
+    """Recursively render a tree dict into indented lines with box-drawing connectors."""
+    entries = sorted(node)
+    for idx, name in enumerate(entries):
+        is_last = idx == len(entries) - 1
+        connector = "└── " if is_last else "├── "
+        extension = "    " if is_last else "│   "
+        value = node[name]
+        if isinstance(value, tuple) and value and value[0] == "_leaf_":
+            # Leaf node with metadata
+            _, mem_id, category, tags_list, content_len, relevance, section_count = value
+            meta = _format_entry_meta(
+                mem_id=mem_id, content_len=content_len, section_count=section_count,
+                relevance=relevance, category=category, tags_list=tags_list,
+            )
+            lines.append(f"{prefix}{connector}{name}  {meta}")
+        elif isinstance(value, dict):
+            # Directory node - count leaves
+            leaf_count = _count_leaves(value)
+            lines.append(f"{prefix}{connector}{name}/  (mem_count={leaf_count})")
+            if not (max_depth > 0 and current_depth >= max_depth):
+                _render_tree(
+                    value, lines,
+                    prefix=prefix + extension,
+                    max_depth=max_depth,
+                    current_depth=current_depth + 1,
+                )
+
+
+def _count_leaves(node: dict[str, Any] | tuple[Any, ...]) -> int:
+    """Count leaf nodes (memories) in a tree dict or tuple leaf."""
+    if isinstance(node, tuple):
+        return 1
+    if not node:
+        return 0
+    return sum(_count_leaves(v) for v in node.values())
+
+
+def refresh(
+    *,
+    topic: str | None = None,
+    dry_run: bool = True,
+) -> str:
+    """Re-read source files for stale file-backed memories.
+
+    Finds memories whose source files have changed since storage and updates
+    their content. Preserves history (same as update). Default is dry_run=True
+    for safety.
+
+    Args:
+        topic: Topic prefix to filter. If omitted, checks all memories.
+        dry_run: If True (default), report what would change without modifying.
+
+    Returns:
+        Summary of refreshed, skipped, and unchanged memories.
+
+    Example:
+        mem.refresh(topic="proj/onetool-mcp/docs-dev/")
+        mem.refresh(topic="proj/onetool-mcp/docs-dev/", dry_run=False)
+    """
+    mode_label = "dry run" if dry_run else "apply"
+    with LogSpan(span="mem.refresh", topic=topic or "(all)", dryRun=dry_run) as s:
+        try:
+            with _use_connection() as conn:
+                sql = "SELECT id, topic, content, meta FROM memories WHERE 1=1"
+                topic_sql, params = _topic_filter(topic)
+                sql += topic_sql
+                sql += " ORDER BY topic"
+                rows = conn.execute(sql, params).fetchall()
+
+            if not rows:
+                s.add("found", 0)
+                return "No memories found" + (f" under '{topic}'" if topic else "")
+
+            fresh_count = 0
+            stale_entries: _builtins_list[tuple[str, str, str, dict[str, str], str]] = []
+            missing_entries: _builtins_list[str] = []
+            skipped = 0
+
+            for mem_id, mem_topic, old_content, raw_meta in rows:
+                meta = _deserialize_meta(raw_meta)
+                status = _check_staleness(meta)
+                if status == "fresh":
+                    fresh_count += 1
+                elif status == "stale":
+                    source_path = meta["source"]
+                    stale_entries.append((mem_id, mem_topic, old_content, meta, source_path))
+                elif status == "missing":
+                    missing_entries.append(mem_topic)
+                else:
+                    skipped += 1
+
+            total_checked = fresh_count + len(stale_entries) + len(missing_entries)
+            if total_checked == 0:
+                s.add("skipped", skipped)
+                return "No file-backed memories found" + (f" under '{topic}'" if topic else "")
+
+            # Build report
+            scope = f' for "{topic}"' if topic else ""
+            parts = [f"Refresh ({mode_label}){scope}:"]
+
+            if stale_entries:
+                verb = "would update" if dry_run else "updated"
+                parts.append(f"  {len(stale_entries)} stale - {verb}:")
+                for mem_id, mem_topic, old_content, meta, source_path in stale_entries:
+                    p = Path(source_path)
+                    if dry_run:
+                        new_size = p.stat().st_size if p.exists() else 0
+                        parts.append(f"    - {mem_topic} ({len(old_content)} -> {new_size} chars)")
+                    else:
+                        # Actually refresh
+                        try:
+                            new_content = p.read_text(encoding="utf-8")
+                        except OSError:
+                            parts.append(f"    - {mem_topic} (skipped: source file disappeared)")
+                            continue
+                        if len(new_content) > 1_000_000:
+                            parts.append(f"    - {mem_topic} (skipped: file too large)")
+                            continue
+
+                        new_content = _redact(new_content)
+                        new_hash = _content_hash(new_content)
+                        new_mtime = str(p.stat().st_mtime)
+
+                        # Save history
+                        history_id = str(uuid.uuid4())
+                        with _use_connection() as conn:
+                            conn.execute(
+                                "INSERT INTO memory_history (id, memory_id, content) VALUES (?, ?, ?)",
+                                [history_id, mem_id, old_content],
+                            )
+
+                            # Recompute TOC if sections existed
+                            if "sections" in meta:
+                                headings = _parse_headings(new_content)
+                                if headings:
+                                    meta["sections"] = _encode_sections(headings)
+                                    meta["section_count"] = str(len(headings))
+                                else:
+                                    del meta["sections"]
+                                    meta.pop("section_count", None)
+
+                            # Update source_mtime
+                            meta["source_mtime"] = new_mtime
+
+                            embedding = _maybe_embed(mem_id, new_content)
+
+                            conn.execute(
+                                """
+                                UPDATE memories
+                                SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
+                                WHERE id = ?
+                                """,
+                                [new_content, new_hash, _serialize_embedding(embedding),
+                                 _serialize_meta(meta), mem_id],
+                            )
+                            conn.commit()
+
+                        _cache_invalidate(topic=mem_topic)
+                        parts.append(f"    - {mem_topic} ({len(old_content)} -> {len(new_content)} chars)")
+
+            if missing_entries:
+                parts.append(f"  {len(missing_entries)} missing - skipped:")
+                for m_topic in missing_entries:
+                    parts.append(f"    - {m_topic}")
+
+            parts.append(f"  {fresh_count} fresh - no change")
+
+            s.add("stale", len(stale_entries))
+            s.add("missing", len(missing_entries))
+            s.add("fresh", fresh_count)
+            s.add("skipped", skipped)
+            s.add("dryRun", dry_run)
+            return "\n".join(parts)
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error refreshing memories: {e}"
