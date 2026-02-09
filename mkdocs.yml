@@ -159,7 +159,6 @@ nav:
       - Tools:
           - reference/tools/index.md
           - Brave: reference/tools/brave.md
-          - Code: reference/tools/code.md
           - Context7: reference/tools/context7.md
           - Convert: reference/tools/convert.md
           - DB: reference/tools/db.md

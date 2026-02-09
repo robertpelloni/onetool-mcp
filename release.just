@@ -63,8 +63,11 @@ check:
     @echo "Scanning for secrets..."
     gitleaks detect --source . --verbose
     @echo ""
+    @echo "Building docs..."
+    uv run mkdocs build --strict
+    @echo ""
     @echo "Running sanity tests via Claude Code..."
-    claude "/proj:sanity retest all"  
+    claude "/proj:sanity retest all"
     @echo ""
     @echo "=== All checks passed ==="
     @echo ""
