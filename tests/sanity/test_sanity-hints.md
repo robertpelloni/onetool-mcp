@@ -22,9 +22,12 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 - Example: `ground.search(query="topic", max_sources=5)` not `ground.search(query="topic", count=5)`
 
-🔹 **context7 tools**: Use `library_key=` not `library=`
+🔹 **context7 tools**: Different parameters for search vs doc
 
-- Example: `context7.doc(library_key="vercel/next.js", topic="routing")` not `context7.doc(library="...")`
+- `context7.search()` uses `query=` (not `library_key=`)
+- `context7.doc()` uses `library_key=` and `topic=`
+- Example: `context7.search(query="react")`
+- Example: `context7.doc(library_key="vercel/next.js", topic="routing")`
 
 🔹 **convert tools**: Use `pattern=` and `output_dir=`, not `filepath=`
 
@@ -50,15 +53,57 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 - Example: `ripgrep.search(pattern="TODO", path=".", limit=5)`
 
+🔹 **mem tools**: Use `topic=` for identifying memories, `content=` for body text
+
+- Example: `mem.write(topic="test/sanity", content="test data", category="note")`
+- Example: `mem.read(topic="test/sanity")` - exact topic match
+- Example: `mem.list(topic="test/")` - list by topic prefix (use `topic=` not `prefix=`)
+- Example: `mem.search(query="test", limit=5)` - semantic search (requires embeddings enabled)
+- Example: `mem.toc(topic="...")` - get section index
+- Example: `mem.slice(topic="...", sections=[1, 2])` - extract by section number
+- Example: `mem.slice_batch(items=[{"topic": "...", "sections": [1]}])` - batch extraction
+- Example: `mem.stale()` - check for outdated file-backed memories
+- Example: `mem.stats()` - get memory statistics
+- Example: `mem.cache_clear()` - clear result cache
+- Use `mem.delete(topic="test/")` to clean up test memories after testing
+
+🔹 **diagram tools**: Use `provider=` (not `diagram_type=`) and `source=` for rendering
+
+- Example: `diagram.list_providers()` - see available providers
+- Example: `diagram.get_template(name="flowchart")` - get a template
+- Example: `diagram.generate_source(provider="mermaid", source="graph TD; A-->B", name="test", output_dir="output/")`
+- Example: `diagram.render_diagram(provider="mermaid", source="graph TD; A-->B", name="test")`
+
+🔹 **scaffold tools**: Use `template=` and `name=` for creating extensions
+
+- Example: `scaffold.templates()` - list available templates
+- Example: `scaffold.extensions()` - list loaded extensions
+
 🔹 **Snippets use abbreviated parameter names** (by design):
 
 - `$rg` and `$rg_count` use `p=` for pattern (not `pattern=`)
 - `$brv`, `$g`, and `$gh` use `q=` for query (not `query=`)
+- `$c7` and `$c7_eg` use `lib=` for library_key and `q=` for topic
+- `$pkg_pypi` and `$pkg_npm` use `packages=` (comma-separated string, not list)
+- `$web` uses `u=` for URLs (pipe-separated for batch)
 - Example: `$rg p="TODO" ft="py"` not `$rg pattern="TODO" file_type="py"`
+
+🔹 **db tools**: Use SQLite URL format `sqlite:///path/to/db`
+
+- Example: `db.tables(db_url="sqlite:///demo/db/northwind.db")`
+- Example: `db.query(sql="SELECT * FROM users", db_url="sqlite:///data.db")`
+- Not just the file path alone
+
+🔹 **web.fetch**: Use `max_length=` not `max_chars=` to limit output
+
+- Example: `web.fetch(url="...", max_length=500)`
 
 ## Expected behaviors (not bugs)
 
 - `file.write` blocks paths outside allowed directories - this is security working correctly
+- `ot.security()` shows allowed builtins, imports, and call rules - this is informational
+- `mem.search` requires embeddings enabled in config (`tools.mem.embeddings_enabled: true`)
+- `diagram.render_diagram` requires a Kroki server (self-hosted or public) to be configured
 
 ## Test URLs
 
@@ -67,6 +112,12 @@ OneTool is setup correctly with all dependencies and secrets needed.
 ## Test data notes
 
 🔹 **demo/db/northwind.db**: Valid SQLite database (25MB) with 13 tables for testing
+
+🔹 **demo/data/**: Contains test files for convert and excel packs:
+- `file_example_XLS_1000.xlsx` and `sample_sales.xlsx` - Excel files
+- `file_example_1MB.docx` - Word document
+- `file_example_PPT_1MB.pptx` - PowerPoint presentation
+- `attention-paper.pdf` and `gpt3-paper.pdf` - PDF documents
 
 🔹 **File access**: OneTool sandboxes file access - paths outside cwd may be blocked
 
@@ -94,5 +145,13 @@ Test these first for fast coverage (one tool from each category):
 3. `ot.health()` - introspection
 4. `$pkg_pypi packages="requests"` - snippets
 5. `file.tree(path=".", max_depth=1)` - filesystem
+6. `mem.write(topic="test/smoke", content="hello")` then `mem.read(topic="test/smoke")` then `mem.delete(prefix="test/")` - memory
+7. `db.tables(db_url="demo/db/northwind.db")` - database
+8. `ground.search(query="test", max_sources=2)` - grounded search
 
 If all pass, the core infrastructure is working.
+
+## Cleanup after testing
+
+- Delete test memories: `mem.delete(prefix="test/")`
+- Remove any generated files (diagrams, snapshots, converted output)
