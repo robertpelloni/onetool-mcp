@@ -35,7 +35,6 @@ Ref: #123
 | Scope | Pack | Description |
 |-------|------|-------------|
 | `tool:brave` | brave | Brave web/news search |
-| `tool:code` | code | Semantic code search |
 | `tool:context7` | context7 | Library documentation |
 | `tool:convert` | convert | Document conversion |
 | `tool:db` | db | Database operations |

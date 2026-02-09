@@ -188,6 +188,8 @@ __ot wiki.summary(title="Python_(programming_language)")
 - [Tools Reference](https://onetool.beycom.online/reference/tools/) - All 100+ tools
 - [Security](https://onetool.beycom.online/learn/security/) - Security layers
 - [Extending](https://onetool.beycom.online/learn/extending/) - Build your own
+- [Dev Docs](dev/index.md) - Internal developer documentation
+- [Specifications](openspec/specs/INDEX.md) - OpenSpec specifications index
 
 ---
 
