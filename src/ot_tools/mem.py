@@ -319,7 +319,7 @@ def _get_db_path() -> Path:
 
     Uses resolve_ot_path (not expand_path) so the default "mem.db" resolves
     against project .onetool/ first, then get_global_dir() which honours
-    OT_GLOBAL_DIR. See agents/rules.md "Path Resolution".
+    OT_GLOBAL_DIR. See dev/project/guides/configuration.md "Path Resolution".
     """
     from ot.meta import resolve_ot_path
 
@@ -3249,7 +3249,7 @@ def stale(
 
     Example:
         mem.stale()
-        mem.stale(topic="proj/onetool-mcp/docs-dev/")
+        mem.stale(topic="proj/onetool-mcp/dev/")
     """
     with LogSpan(span="mem.stale", topic=topic or "(all)") as s:
         try:
@@ -3460,8 +3460,8 @@ def refresh(
         Summary of refreshed, skipped, and unchanged memories.
 
     Example:
-        mem.refresh(topic="proj/onetool-mcp/docs-dev/")
-        mem.refresh(topic="proj/onetool-mcp/docs-dev/", dry_run=False)
+        mem.refresh(topic="proj/onetool-mcp/dev/")
+        mem.refresh(topic="proj/onetool-mcp/dev/", dry_run=False)
     """
     mode_label = "dry run" if dry_run else "apply"
     with LogSpan(span="mem.refresh", topic=topic or "(all)", dryRun=dry_run) as s:

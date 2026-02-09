@@ -9,12 +9,12 @@ Brand assets, messaging, and reference materials for OneTool.
 | Document | Purpose |
 |----------|---------|
 | **This file** | Snippets, taglines, quick reference |
-| [ref-terminology.md](ref-terminology.md) | Terminology style guide |
-| [ref-claims.md](ref-claims.md) | Benchmark evidence for marketing claims |
-| [ref-links.md](ref-links.md) | External references and resources |
-| [ref-tool-packs.md](ref-tool-packs.md) | Tool pack descriptions |
+| [terminology.md](terminology.md) | Terminology style guide |
+| [claims.md](claims.md) | Benchmark evidence for marketing claims |
+| [links.md](links.md) | External references and resources |
+| [tool-packs.md](tool-packs.md) | Tool pack descriptions |
 
-**Documentation styling:** See [docs](../docs/index.md) for design system and best practices.
+**Documentation styling:** See main docs for design system and best practices.
 
 ---
 
@@ -52,7 +52,7 @@ Don't enumerate tools. Execute code.
 96% fewer tokens. 24x lower cost.
 ```
 
-See [ref-claims.md](ref-claims.md) for benchmark sources.
+See [claims.md](claims.md) for benchmark sources.
 
 ---
 
@@ -64,7 +64,7 @@ See [ref-claims.md](ref-claims.md) for benchmark sources.
 | **24x cost reduction** | 7.35¢ → 0.30¢ per 3-turn conversation |
 | **$30/server/month** | Each MCP server wastes ~$30/month in tokens |
 
-Details and methodology: [ref-claims.md](ref-claims.md)
+Details and methodology: [claims.md](claims.md)
 
 ---
 
@@ -96,7 +96,7 @@ python, mcp, model-context-protocol, mcp-server, llm, code-execution, mcp-tools,
 
 ## Terminology (Quick Reference)
 
-Full guide: [ref-terminology.md](ref-terminology.md)
+Full guide: [terminology.md](terminology.md)
 
 ### Key Rules
 

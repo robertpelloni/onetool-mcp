@@ -1,0 +1,63 @@
+# Configuration
+
+## Resolution Order
+
+Global-only in V2 (no project-level config):
+
+1. `ONETOOL_CONFIG` env var
+2. `--config` CLI argument
+3. `~/.onetool/config/onetool.yaml`
+
+## Config Files
+
+All under `.onetool/config/`:
+
+| File | Purpose |
+|------|---------|
+| `onetool.yaml` | Main config (version, tools_dir, includes, aliases) |
+| `security.yaml` | Validation allowlists (builtins, imports, calls) |
+| `prompts.yaml` | MCP system instructions |
+| `snippets.yaml` | Snippet template definitions |
+| `servers.yaml` | External MCP server definitions |
+| `secrets.yaml` | API keys and credentials |
+
+## Includes
+
+Main config can include other files:
+
+```yaml
+version: 1
+include:
+  - prompts.yaml
+  - security.yaml
+  - snippets.yaml
+```
+
+Maximum include depth: 5 levels.
+
+## Variable Expansion
+
+`${VAR}` reads from `secrets.yaml` only (not env vars). Use `${VAR:-default}` for defaults.
+
+## Output Format Modes
+
+| Mode | Output |
+|------|--------|
+| `json` (default) | Compact JSON |
+| `json_h` | Pretty-printed JSON |
+| `yml` | YAML flow style |
+| `yml_h` | YAML block style |
+| `raw` | Plain `str()` |
+
+## Tool Authors
+
+For tool-specific config (Pydantic Config classes, secrets, path resolution), see [Tool Configuration](../guides/tool-configuration.md).
+
+## Key Files
+
+| File | Role |
+|------|------|
+| `src/ot/config/loader.py` | YAML loading, includes, variable expansion |
+| `src/ot/config/models.py` | OneToolConfig Pydantic model |
+| `src/ot/meta.py` | resolve_ot_path() |
+| `src/ot/utils/format.py` | Result serialisation |

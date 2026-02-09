@@ -303,7 +303,7 @@ def _resolve_config_path(path_str: str) -> Path:
 
     Checks project .onetool/ first, falls back to cwd. This is correct for
     diagram templates (project-specific assets). For persistent data paths
-    use resolve_ot_path() instead - see agents/rules.md "Path Resolution".
+    use resolve_ot_path() instead - see dev/project/guides/configuration.md "Path Resolution".
 
     Args:
         path_str: Path string (relative, absolute, or with ~)

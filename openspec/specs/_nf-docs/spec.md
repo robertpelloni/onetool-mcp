@@ -132,22 +132,22 @@ The project SHALL provide user-facing extension docs at `docs/learn/extending/`.
 
 ### Requirement: Internal Documentation
 
-The project SHALL provide contributor docs at `docs/_internal/`.
+The project SHALL provide contributor docs at `dev/`.
 
 #### Scenario: Contributor overview
-- **GIVEN** a contributor at `_internal/index.md`
+- **GIVEN** a contributor at `dev/index.md`
 - **WHEN** they read it
 - **THEN** they find links to architecture, testing, logging, and CLI patterns
 
 #### Scenario: Internal tool creation
 - **GIVEN** a contributor creating a bundled tool
-- **WHEN** they read `_internal/internal-tools.md`
+- **WHEN** they read `dev/project/guides/creating-tools.md`
 - **THEN** they find the guide for tools in `src/ot_tools/`
 
 #### Scenario: Testing and logging
 - **GIVEN** a contributor debugging or writing tests
 - **WHEN** they look for help
-- **THEN** they find `_internal/testing.md` and `_internal/logging.md`
+- **THEN** they find `dev/practices/testing.md` and `dev/practices/logging.md`
 
 ### Requirement: Directory Index Files
 

@@ -1,8 +1,10 @@
-# Testing Strategy
+# Testing
 
 **Fast feedback. Lean tests. Two markers per test.**
 
 Every test gets a speed tier and a component tag. CI runs smoke tests in 30 seconds.
+
+---
 
 ## Principles
 
@@ -12,55 +14,21 @@ Every test gets a speed tier and a component tag. CI runs smoke tests in 30 seco
 4. **Fast feedback** - Smoke tests run in CI on every push. Slow tests run on merge.
 5. **Isolation** - Mock HTTP/subprocess calls to avoid network I/O in unit tests.
 
-## Test Markers
-
-Every test requires two markers: a **speed tier** and a **component tag**.
-
-### Speed Tiers (pick one)
-
-| Marker | Criteria | When to use |
-|--------|----------|-------------|
-| `smoke` | <1s, no I/O | Quick sanity checks that verify basic functionality |
-| `unit` | <1s, no I/O | Fast isolated tests for pure logic |
-| `integration` | May be slow | End-to-end tests with real dependencies |
-| `slow` | >10s | Long-running tests (benchmarks, large data) |
-
-### Component Tags (pick one)
-
-| Marker | Component |
-|--------|-----------|
-| `tools` | Tool implementations (`ot_tools`) |
-| `core` | Core library (`ot`) |
-| `serve` | MCP server (`onetool`) |
-| `bench` | Benchmark harness (`bench`) |
-| `pkg` | Package management |
-| `spec` | OpenSpec tooling |
-
-### Dependency Tags (add as needed)
-
-| Marker | Requires |
-|--------|----------|
-| `network` | Network access |
-| `api` | API keys (BRAVE_API_KEY, etc. in secrets.yaml) |
-| `playwright` | Playwright browsers installed |
-| `docker` | Docker daemon running |
-
-## Example Test
-
-```python
-import pytest
-
-@pytest.mark.smoke
-@pytest.mark.serve
-def test_server_starts():
-    """Verify server can start without errors."""
-    from onetool.server import create_server
-    server = create_server()
-    assert server is not None
-```
+---
 
 ## Running Tests
 
+Always use `uv run pytest` (never bare `pytest`). Shortcuts via justfile:
+
+```bash
+just test              # all tests (strict - errors on missing requirements)
+just test-lenient      # skip tests with missing requirements
+just test-unit         # unit tests only
+just test-integration  # integration tests only
+just test-coverage     # with coverage report
+```
+
+**Direct pytest usage:**
 ```bash
 # All tests
 uv run pytest
@@ -80,6 +48,45 @@ uv run pytest -m "not slow"
 # Skip tests requiring network
 uv run pytest -m "not network"
 ```
+
+---
+
+## Required Markers
+
+Every test must have **two markers** - a speed tier and a component:
+
+### Speed Tier (pick one)
+
+| Marker | Criteria | When to use |
+|--------|----------|-------------|
+| `smoke` | <1s, no I/O | Quick sanity checks that verify basic functionality |
+| `unit` | <1s, no I/O | Fast isolated tests for pure logic |
+| `integration` | May be slow | End-to-end tests with real dependencies |
+| `slow` | >10s | Long-running tests (benchmarks, large data) |
+
+### Component Tag (pick one)
+
+| Marker | Component |
+|--------|-----------|
+| `core` | Core library (`ot`) - executor, config, registry |
+| `serve` | MCP server (`onetool`) |
+| `tools` | Tool implementations (`ot_tools`) |
+| `bench` | Benchmark harness (`bench`) |
+| `pkg` | Package management |
+| `spec` | OpenSpec tooling |
+
+### Dependency Tags (add as needed)
+
+| Marker | Requires |
+|--------|----------|
+| `network` | Network access |
+| `api` | API keys (BRAVE_API_KEY, etc. in secrets.yaml) |
+| `playwright` | Playwright browsers installed |
+| `docker` | Docker daemon running |
+
+**Tests missing required markers are skipped with a warning.**
+
+---
 
 ## Test Organization
 
@@ -102,39 +109,15 @@ tests/
         └── ...
 ```
 
-Unit and integration tests mirror each other - same filenames, different directories. This requires `__init__.py` files in test directories to avoid module name collisions.
+**Note:** Unit and integration tests mirror each other - same filenames, different directories. This requires `__init__.py` files in test directories to avoid module name collisions.
 
-## Fixture Guidelines
+---
 
-### Good: Shared fixture in conftest.py
+## Shared Fixtures
 
-```python
-# tests/conftest.py
-@pytest.fixture
-def temp_config(tmp_path):
-    config_file = tmp_path / "config.yaml"
-    config_file.write_text("tools: [demo]")
-    return config_file
-```
+### Global Fixtures (from `tests/conftest.py`)
 
-### Bad: Duplicated setup in each test
-
-```python
-# Don't do this
-def test_one():
-    config_file = Path("/tmp/config.yaml")
-    config_file.write_text("tools: [demo]")
-    ...
-
-def test_two():
-    config_file = Path("/tmp/config.yaml")  # Duplicated!
-    config_file.write_text("tools: [demo]")
-    ...
-```
-
-## Global Fixtures
-
-These fixtures are defined in `tests/conftest.py` and available to all tests:
+Available to all tests:
 
 | Fixture | Purpose | Example Usage |
 |---------|---------|---------------|
@@ -143,13 +126,14 @@ These fixtures are defined in `tests/conftest.py` and available to all tests:
 | `mock_secrets` | Mock `ot.config.secrets.get_secret` | `mock_secrets.return_value = "test-key"` |
 | `mock_subprocess` | Mock `subprocess.run` | `mock_subprocess.return_value = MagicMock(returncode=0)` |
 | `mock_config` | Mock `ot.config.get_config` | `mock_config.return_value.tools.ripgrep.timeout = 30` |
+| `reset_config_cache` | Auto-resets config (per-test) | Auto-applied fixture |
 
-### Integration Fixtures
-
-The `tests/integration/tools/conftest.py` provides fixtures for live API tests:
+### Integration Fixtures (from `tests/integration/tools/conftest.py`)
 
 - Forces reload of secrets from `secrets.yaml` for API key access
 - Sets `OT_SECRETS_FILE` environment variable
+
+---
 
 ## Testing Patterns
 
@@ -217,6 +201,23 @@ class TestPackageLive:
         assert "unknown" not in result.lower()
 ```
 
+### Pattern 5: Requiring External Resources
+
+```python
+@pytest.mark.integration
+@pytest.mark.tools
+def test_brave_search(request):
+    require(
+        get_secret("BRAVE_API_KEY") is not None,
+        "BRAVE_API_KEY not configured",
+        request,
+    )
+    result = search(query="test")
+    assert "web" in result
+```
+
+---
+
 ## Writing New Tests
 
 ### Checklist
@@ -237,10 +238,59 @@ class TestPackageLive:
 | Unit tests | `tests/unit/{component}/` | `tests/unit/tools/test_package.py` |
 | Integration tests | `tests/integration/{component}/` | `tests/integration/tools/test_package.py` |
 
-Unit and integration tests mirror each other - same filenames, different directories.
+---
+
+## Fixture Guidelines
+
+### Good: Shared fixture in conftest.py
+
+```python
+# tests/conftest.py
+@pytest.fixture
+def temp_config(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("tools: [demo]")
+    return config_file
+```
+
+### Bad: Duplicated setup in each test
+
+```python
+# Don't do this
+def test_one():
+    config_file = Path("/tmp/config.yaml")
+    config_file.write_text("tools: [demo]")
+    ...
+
+def test_two():
+    config_file = Path("/tmp/config.yaml")  # Duplicated!
+    config_file.write_text("tools: [demo]")
+    ...
+```
+
+---
+
+## Config Isolation
+
+Tests use `tests/.onetool/config/onetool.yaml` with `inherit: none` to ensure isolation from user configs.
+
+---
+
+## Test URLs
+
+Do not use `example.com` - use `https://www.wikipedia.org/` instead for test URLs.
+
+---
 
 ## CI Integration
 
 - **On push**: Run `pytest -m smoke` (~30s)
 - **On PR**: Run `pytest -m "not slow"` (~2min)
 - **Nightly**: Run full suite including slow tests
+
+---
+
+**Related:**
+- Test configuration: `pyproject.toml` → `[tool.pytest.ini_options]`
+- Shared fixtures: `tests/conftest.py`
+- Integration fixtures: `tests/integration/tools/conftest.py`

@@ -190,12 +190,141 @@ Tools to cover:
 
 Finally, list all onetool commands used with full parameters.
 ```
-### Test a Pack
+
+## Memory vs File Access Benchmark
+
+```text
+Title: Memory vs File Access Performance Comparison
+Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+
+## Reference: Hints & Gotchas
+
+Read these before starting. They apply across all phases.
+
+**Mem basics:**
+- Files must be pre-loaded into mem before benchmarking (use mem.write_batch)
+- Memory topics use full path patterns: dev/project/arch/index.md → proj/onetool-mcp/dev/project/arch/index.md
+- toc=True when writing is CRITICAL — without it, section slicing won't work
+- Section names are case-sensitive — use exact headings from mem.toc output
+- mem.read (single) vs mem.read_batch (multiple) vs mem.slice_batch (sections)
+- mem.read mode parameter: "content" (default, content only), "toc" (section index), "meta" (metadata only), "all"
+- meta=True adds a metadata header — omit it for content-only comparison (fairer token count)
+- extract parameter on mem.search provides inline snippets immediately
+
+**File basics:**
+- Read tool needs absolute paths: `/Users/.../dev/project/guides/creating-tools.md`
+- Use Glob to find absolute paths: `Glob(pattern="dev/project/guides/*.md")`
+- Call multiple Read tools in parallel for fair batch comparison
+- Grep gives line matches only — full context requires additional Read calls
+
+**Fair comparison rules:**
+- Don't compare Grep (files only) to mem.search (with content) — match capability levels
+- Load files once before benchmarking; loading cost is not part of the benchmark
+- Record actual token counts — do not pre-judge results
+
+## Phase 1: Discovery (No Token Tracking)
+
+1. **Learn OneTool & Mem API**
+   - `ot.help(info="full")` and `ot.tools(pattern="mem", info="full")`
+
+2. **Explore Mem State**
+   - `mem.stats()` — current memory state
+   - `mem.list(format="tree", depth=3)` — indexed content
+   - `mem.toc(topic="...")` — section structure of key documents
+   - If dev/ docs aren't loaded: `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True)`
+
+3. **Identify Test Files**
+   - Check what dev/ documentation exists in mem vs filesystem
+   - Pick representative files: single doc (~9KB), batch (8 arch docs ~19KB), sections from 3+ docs, cross-doc search
+
+## Phase 2: Setup
+
+4. **Load Target Files into Mem** (one-time, not part of benchmark)
+   - `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True, category="context")`
+   - Verify: `mem.list(topic="proj/onetool-mcp/dev/", format="tree", depth=5, limit=100)`
+
+5. **Prepare Baseline File Paths**
+   - Note absolute paths, file sizes, and line counts: `Bash("wc -l dev/**/*.md")`
+
+## Phase 3: Performance Benchmark (TRACK TOKENS FROM HERE)
+
+Record starting token count before beginning tests.
+
+### Test 1: Single Document Access
+- **File**: Read tool on full document
+- **Mem**: `mem.read(topic="proj/onetool-mcp/dev/project/guides/creating-tools.md")`
+- Record: tokens used, perceived speed, content received
+
+### Test 2: Batch Document Access (8 arch docs)
+- **File**: 8 parallel Read calls for dev/project/arch/*.md
+- **Mem**: `mem.read_batch(topic="proj/onetool-mcp/dev/project/arch/", limit=10)`
+- Record: tokens used, perceived speed, number of docs retrieved
+
+### Test 3: Targeted Section Extraction (3 sections from 3 docs)
+- **File**: Read full files with offset/limit, manually locate sections (use mem.toc to find line numbers)
+- **Mem**: `mem.slice_batch(items=[{"topic": "...", "select": "SectionName"}, ...])`
+- Record: tokens used, precision of extraction
+
+### Test 4: Search + Extract
+- **File**: `Grep(pattern="LogSpan", path="dev/", glob="*.md", output_mode="content", head_limit=10)` + Read calls for context
+- **Mem**: `mem.search(query="LogSpan", mode="pattern", topic="proj/onetool-mcp/dev/", limit=5, extract=500)`
+- Record: tokens used, relevance of results, steps required
+
+### Test 5: Load, Use, Delete Lifecycle
+- Load: `mem.write(topic="temp/test/demo", file="demo/prompts/onetool-in-action.md", toc=True, category="note")`
+- Use: `mem.read(topic="temp/test/demo")` and `mem.slice(topic="temp/test/demo", select="...")`
+- Cleanup: `mem.delete(topic="temp/", confirm=True)`
+- Compare to: Read tool on same file
+- Record: tokens saved across multiple accesses
+
+## Phase 4: Analysis & Report
+
+6. **Calculate Metrics**
+   - Token efficiency: (file_tokens - mem_tokens) / file_tokens * 100
+   - Speed perception: subjective 1-5 rating
+   - Use case fit: when to use each method
+
+7. **Write Report to ./tmp/mem-vs-file-{yyyymmdd}.md**
+
+   ```markdown
+   # Memory vs File Access Comparison
+
+   ## Executive Summary
+   - Winner by token efficiency: [File|Mem]
+   - Winner by speed: [File|Mem]
+   - Overall recommendation: [contextual]
+
+   ## Results
+
+   | Use Case | File Method | File Tokens | File Calls | Mem Method | Mem Tokens | Mem Calls | Savings |
+   |----------|------------|-------------|-----------|------------|------------|-----------|---------|
+   | Single document | Read | ? | 1 | mem.read | ? | 1 | ?% |
+   | Batch (8 docs) | 8× Read | ? | 8 | mem.read_batch | ? | 1 | ?% |
+   | Section extraction | 3× Read + offsets | ? | 3 | mem.slice_batch | ? | 1 | ?% |
+   | Search + context | Grep + Read(s) | ? | 2+ | mem.search | ? | 1 | ?% |
+   | Load/use/delete | Read | ? | 1 | mem lifecycle | ? | 3 | ?% |
+
+   Each row compares File vs Memory for the SAME task. Fill with actual measured values.
+
+   ## Use Case Recommendations
+   ### Use File Access When: ...
+   ### Use Mem Access When: ...
+
+   ## Detailed Test Results
+   [Per-test observations and commands used]
+
+   ## Commands Reference
+   [All commands used, grouped by File vs Mem]
+   ```
 
 ```
+
+## Test a Pack
+
+```text
 Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
 Learn onetool with `ot.help(info="full")`
-Find defect and suggest improvements. 
+Find defect and suggest improvements.
 
 Write the improvements and defects to ./plan/fix/{pack}-fix.md
 

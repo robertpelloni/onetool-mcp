@@ -1,6 +1,8 @@
-# Logging Guide
+# Logging
 
-This guide covers OneTool's structured logging infrastructure built on Loguru.
+OneTool's structured logging infrastructure built on Loguru.
+
+---
 
 ## Quick Start
 
@@ -17,7 +19,46 @@ with LogSpan(span="operation.name", key="value") as s:
 # Logs automatically on exit with duration and status
 ```
 
+---
+
 ## Core Components
+
+### LogSpan
+
+The primary logging interface. Wraps an operation with automatic timing and status:
+
+```python
+from ot.logging import LogSpan
+
+with LogSpan(span="brave.search.web", query=query) as span:
+    results = perform_search(query)
+    span.add("resultCount", len(results))
+    # Auto-logs SUCCESS with duration on exit
+```
+
+On exception, auto-logs FAILED with error details.
+
+**Async usage with FastMCP Context:**
+
+```python
+async with LogSpan.async_span(ctx, span="tool.execute", tool="search") as s:
+    result = await execute_tool()
+    await s.log_info("Tool completed", resultCount=len(result))
+```
+
+### LogEntry
+
+Low-level structured log entry with fluent API for one-shot log entries without a span context:
+
+```python
+from ot.logging import LogEntry
+
+entry = LogEntry(event="command.received")
+entry.add("function", func_name).add("found", True)
+entry.success(status_code=200)
+# or
+entry.failure(error=str(exception))
+```
 
 ### configure_logging(log_name)
 
@@ -35,81 +76,40 @@ configure_logging(log_name="serve")  # Creates logs/serve.log
 - `OT_LOG_DIR`: Directory for log files (default: ../logs, relative to config dir)
 - `OT_LOG_VERBOSE`: Disable truncation, show full values (default: false)
 
-### LogSpan
+---
 
-Context manager that wraps LogEntry and auto-logs on exit with duration and status.
+## Span Naming
 
-```python
-from ot.logging import LogSpan
+Format: `{component}.{operation}[.{detail}]`
 
-# Sync usage
-with LogSpan(span="tool.execute", tool="search") as s:
-    result = execute_tool()
-    s.add("resultCount", len(result))
-# Logs at INFO level with status=SUCCESS and duration
-
-# With exception handling
-with LogSpan(span="api.request", url=url):
-    response = make_request()
-# On exception: logs at ERROR level with status=FAILED, errorType, errorMessage
-```
-
-**Async usage with FastMCP Context:**
-
-```python
-async with LogSpan.async_span(ctx, span="tool.execute", tool="search") as s:
-    result = await execute_tool()
-    await s.log_info("Tool completed", resultCount=len(result))
-```
-
-### LogEntry
-
-Low-level structured log entry with fluent API.
-
-```python
-from ot.logging import LogEntry
-
-entry = LogEntry(span="operation", key="value")
-entry.add("extra", data)
-entry.success()  # or entry.failure(error=exc)
-logger.info(str(entry))
-```
-
-## Span Naming Conventions
-
-Span names use dot-notation: `{component}.{operation}[.{detail}]`
-
-### Server Operations (serve-observability)
+**Examples:**
+- `brave.search.web` - Brave web search
+- `ripgrep.exec` - Ripgrep execution
+- `excel.create` - Excel file creation
+- `config.load` - Config loading
+- `proxy.connect` - MCP proxy connection
 - `mcp.server.start` - Server startup
 - `mcp.server.stop` - Server shutdown
 - `tool.lookup` - Tool resolution
 
-### Tool Operations
+---
 
-See [Internal Tools](internal-tools.md#logging-with-logspan) for tool span naming conventions.
-
-## Examples
-
-### Tool Functions
-
-See [Internal Tools](internal-tools.md#logging-with-logspan) for comprehensive tool logging examples.
-
-### Async MCP Tool
+## Adding Context
 
 ```python
-from ot.logging import LogSpan
-
-async def execute_tool(ctx, tool_name: str, args: dict) -> str:
-    async with LogSpan.async_span(ctx, span="tool.execute", tool=tool_name) as s:
-        tool = registry.get(tool_name)
-        if not tool:
-            s.add("error", "not_found")
-            return f"Tool {tool_name} not found"
-
-        result = await tool.call(**args)
-        s.add("resultLen", len(result))
-        return result
+with LogSpan(span="tool.operation") as span:
+    span.add("resultCount", 42)
+    span.add(returncode=0, outputLen=1024)
 ```
+
+Initial context can be passed in the constructor:
+```python
+LogSpan(span="tool.op", query="test", timeout=30)
+```
+
+---
+
+## Examples
 
 ### Nested Spans
 
@@ -128,6 +128,36 @@ with LogSpan(span="web.fetch", url=url) as outer:
     outer.add("success", True)
 ```
 
+### Async MCP Tool
+
+```python
+from ot.logging import LogSpan
+
+async def execute_tool(ctx, tool_name: str, args: dict) -> str:
+    async with LogSpan.async_span(ctx, span="tool.execute", tool=tool_name) as s:
+        tool = registry.get(tool_name)
+        if not tool:
+            s.add("error", "not_found")
+            return f"Tool {tool_name} not found"
+
+        result = await tool.call(**args)
+        s.add("resultLen", len(result))
+        return result
+```
+
+---
+
+## When to Use
+
+| Scenario | Use |
+|----------|-----|
+| Wrapping an external call (HTTP, subprocess) | `LogSpan` |
+| Recording a discrete event | `LogEntry` |
+| Debug output during development | `loguru.logger.debug()` |
+| User-facing output | Rich console (not logging) |
+
+---
+
 ## Log Output
 
 Logs are written in dev-friendly format to `logs/{log_name}.log` (relative to config directory):
@@ -137,6 +167,14 @@ Logs are written in dev-friendly format to `logs/{log_name}.log` (relative to co
 12:34:57.123 | INFO   | brave:78   | brave.search.web | query=test | resultCount=10 | duration=1.234
 12:34:58.456 | ERROR  | web:92     | web.fetch | url=http://... | status=FAILED | errorType=HTTPError
 ```
+
+**Characteristics:**
+- JSON structured format only
+- File-only (no console output from library code)
+- Automatic duration calculation for spans
+- Sensitive data (URLs, API keys) sanitised automatically
+
+---
 
 ## Configuration
 
@@ -168,36 +206,7 @@ rotation="10 MB"      # Rotate when file reaches 10 MB
 retention="5 days"    # Keep logs for 5 days
 ```
 
-## Test Logging
-
-For tests, use `configure_test_logging()` instead:
-
-```python
-from ot.logging import configure_test_logging
-
-# In conftest.py or test setup
-configure_test_logging(
-    module_name="test_tools",
-    dev_output=True,   # Dev-friendly format to stderr
-    dev_file=False,    # No separate dev log file
-)
-```
-
-This creates:
-- `logs/{module_name}.log` - JSON structured logs
-- Optional `logs/{module_name}.dev.log` - Dev-friendly format (if `dev_file=True`)
-
-## Logger Interception
-
-The logging system intercepts standard Python logging and redirects to Loguru:
-
-**Intercepted loggers** (redirected to Loguru):
-- `fastmcp`, `mcp`, `uvicorn`
-
-**Silenced loggers** (set to WARNING level):
-- `httpcore`, `httpx`, `hpack` - HTTP transport noise
-- `openai`, `openai._base_client` - API client noise
-- `anyio`, `mcp` - Async framework noise
+---
 
 ## Output Formatting
 
@@ -252,3 +261,44 @@ safe_url = sanitize_url("postgres://user:pass@host/db")
 # Truncate a value with field-based limit
 truncated = format_value(long_string, field_name="query")
 ```
+
+---
+
+## Logger Interception
+
+The logging system intercepts standard Python logging and redirects to Loguru:
+
+**Intercepted loggers** (redirected to Loguru):
+- `fastmcp`, `mcp`, `uvicorn`
+
+**Silenced loggers** (set to WARNING level):
+- `httpcore`, `httpx`, `hpack` - HTTP transport noise
+- `openai`, `openai._base_client` - API client noise
+- `anyio`, `mcp` - Async framework noise
+
+---
+
+## Test Logging
+
+For tests, use `configure_test_logging()` instead:
+
+```python
+from ot.logging import configure_test_logging
+
+# In conftest.py or test setup
+configure_test_logging(
+    module_name="test_tools",
+    dev_output=True,   # Dev-friendly format to stderr
+    dev_file=False,    # No separate dev log file
+)
+```
+
+This creates:
+- `logs/{module_name}.log` - JSON structured logs
+- Optional `logs/{module_name}.dev.log` - Dev-friendly format (if `dev_file=True`)
+
+---
+
+**Related:**
+- [Creating Tools](../project/guides/creating-tools.md) - LogSpan usage in tools
+- Configuration: `onetool.yaml` → `log_level`, `log_dir`, `log_verbose`
