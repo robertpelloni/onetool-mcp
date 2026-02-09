@@ -6,16 +6,7 @@ Internal guide for publishing new versions of OneTool.
 
 ## Release Workflow
 
-Three steps: **prep → check → publish**
-
-```bash
-just release::prep 1.0.0b2      # Step 1: Bump version, generate changelog
-# Edit CHANGELOG.md
-
-just release::check             # Step 2: Lint, typecheck, tests, gitleaks, sanity
-
-just release::publish 1.0.0b2   # Step 3: Build, publish, tag, docs
-```
+Three steps: **prepare → check → publish**
 
 ---
 
@@ -89,14 +80,3 @@ After release, verify at:
 - GitHub: https://github.com/beycom/onetool/releases
 - Docs: https://onetool.beycom.online
 
----
-
-## Community Submissions (Major Releases)
-
-For significant releases, submit to directories:
-
-- https://smithery.ai/new
-- https://mcpservers.org/submit
-- PR to punkpeye/awesome-mcp-servers
-
-See `plan/consult/register.md` for details.

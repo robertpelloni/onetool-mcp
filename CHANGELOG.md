@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0] - 2026-02-09
+
+### Highlights
+
+- add persistent memory tool
+- remove code_search (ChunkHound/DuckDB) tool and all references
+
 ## [1.0.0rc3] - 2026-02-05
 
 ### Highlights

@@ -2,3 +2,7 @@
 
 # Test case with fake API key string in error message
 0f43608bd7bf5b7e4fd00d4add310a18e0832054:tests/unit/tools/test_transform.py:generic-api-key:488
+
+# Test fixtures for _redact() function - tests API key redaction
+ab593b620d117075e8a17754a3ea7b474c6ee5ef:tests/unit/tools/test_mem.py:generic-api-key:98
+ab593b620d117075e8a17754a3ea7b474c6ee5ef:tests/unit/tools/test_mem.py:generic-api-key:119
