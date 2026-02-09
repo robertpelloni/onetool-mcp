@@ -1367,6 +1367,8 @@
       
         
       
+        
+      
     
     
     
@@ -1456,7 +1458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/code/" class="md-nav__link">
+      <a href="../../reference/tools/code.md" class="md-nav__link">
         
   
   
@@ -1688,6 +1690,34 @@
     
   
     LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/mem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mem
   
 
     
@@ -2443,7 +2473,7 @@
 <ol>
 <li><strong>Trigger sanitization</strong> - Replace <code>__ot</code>, <code>mcp__onetool</code> patterns with <code>[REDACTED:trigger]</code></li>
 <li><strong>Tag sanitization</strong> - Remove <code>&lt;external-content-*&gt;</code> patterns that could escape boundaries</li>
-<li><strong>GUID-tagged boundaries</strong> - Wrap external content in unpredictable tags</li>
+<li><strong>GUID-tagged boundaries</strong> - Wrap external content in unpredictable tags using format-native comments (<code>#</code> for YAML, <code>/* */</code> for JSON, XML-style for raw/other)</li>
 </ol>
 <p><strong>Example attack blocked:</strong></p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>1. LLM calls web.fetch(url=&quot;https://malicious-site.com&quot;)

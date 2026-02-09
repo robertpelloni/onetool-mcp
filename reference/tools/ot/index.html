@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onetool.beycom.online/reference/tools/ot/">
       
       
-        <link rel="prev" href="../llm/">
+        <link rel="prev" href="../mem/">
       
       
         <link rel="next" href="../package/">
@@ -1090,6 +1090,8 @@
       
         
       
+        
+      
     
     
     
@@ -1182,7 +1184,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../code/" class="md-nav__link">
+      <a href="../code.md" class="md-nav__link">
         
   
   
@@ -1414,6 +1416,34 @@
     
   
     LLM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mem
   
 
     
@@ -2226,7 +2256,7 @@
 <td>Check tool dependencies and API connectivity</td>
 </tr>
 <tr>
-<td><code>ot.stats(period, tool, output)</code></td>
+<td><code>ot.stats(period, tool, output, info)</code></td>
 <td>Get runtime usage statistics</td>
 </tr>
 <tr>
@@ -2447,13 +2477,41 @@
 </span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
 </span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1"># Generate HTML report</span>
 </span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="s2">&quot;stats.html&quot;</span><span class="p">)</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="c1"># Control detail level</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;list&quot;</span><span class="p">)</span>   <span class="c1"># names only</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>    <span class="c1"># name + summary (default)</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span>   <span class="c1"># complete details</span>
 </span></code></pre></div>
+<p>The <code>info</code> parameter controls the detail level of the output:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list</code></td>
+<td>Tool names only</td>
+</tr>
+<tr>
+<td><code>min</code></td>
+<td>Name + summary stats (default)</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>Complete details with per-tool breakdown</td>
+</tr>
+</tbody>
+</table>
 <p>Returns JSON with:
 - <code>total_calls</code> - Total number of tool calls
 - <code>success_rate</code> - Percentage of successful calls
 - <code>context_saved</code> - Estimated context tokens saved
 - <code>time_saved_ms</code> - Estimated time saved in milliseconds
-- <code>tools</code> - Per-tool breakdown</p>
+- <code>tools</code> - Per-tool breakdown (info="min" or "full")</p>
 <h2 id="otnotify">ot.notify()<a class="headerlink" href="#otnotify" title="Permanent link">&para;</a></h2>
 <p>Publish a message to a configured topic.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">notify</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Remember to review PR #123&quot;</span><span class="p">)</span>
@@ -2578,7 +2636,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../llm/" class="md-footer__link md-footer__link--prev" aria-label="Previous: LLM">
+          <a href="../mem/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Mem">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2588,7 +2646,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                LLM
+                Mem
               </div>
             </div>
           </a>
