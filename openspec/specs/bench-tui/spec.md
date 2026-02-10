@@ -77,8 +77,8 @@ The harness CLI SHALL support a configuration file for CLI settings including fa
 
   ```yaml
   favorites:
-    - name: features
-      path: demo/bench/features.yaml
+    - name: comparison
+      path: bench/compare.yaml
     - name: all-bench
-      path: demo/bench/
+      path: bench/*.yaml
   ```

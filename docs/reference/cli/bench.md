@@ -43,11 +43,11 @@ bench run FILE [OPTIONS]
 ## Examples
 
 ```bash
-# Run feature benchmarks
-OT_CWD=demo bench run demo/bench/features.yaml
+# Run comparison benchmark
+bench run demo/bench/compare.yaml
 
-# Run specific tool benchmark
-OT_CWD=demo bench run demo/bench/tool_brave_search.yaml
+# Run tool benchmark
+bench run demo/bench/tool_db.yaml
 ```
 
 ## Benchmark File Structure
@@ -137,18 +137,18 @@ The `demo/` folder provides sample configurations and data for testing.
 ```
 demo/
   .onetool/
-    onetool.yaml      # MCP server config
-    bench.yaml        # Benchmark harness config
-    prompts.yaml      # Prompt templates
+    config/
+      onetool.yaml    # MCP server config
+      bench.yaml      # Benchmark harness config
   bench/              # Benchmark YAML files
-  db/                 # Sample databases (northwind.db)
+  data/               # Sample data (northwind.db, downloaded via setup)
 ```
 
 ### Running with Demo Config
 
 ```bash
 # Run benchmarks
-OT_CWD=demo bench run demo/bench/features.yaml
+bench run demo/bench/compare.yaml
 
 # Or use justfile
 just demo::bench       # TUI picker for demo benchmarks
@@ -158,9 +158,8 @@ just demo::bench       # TUI picker for demo benchmarks
 
 | File | Description |
 |------|-------------|
-| `features.yaml` | Feature showcase (search, docs, transform) |
-| `compare.yaml` | Compare base vs OneTool responses |
-| `tool_*.yaml` | Per-tool benchmarks |
+| `compare.yaml` | Compare base vs MCP vs OneTool responses |
+| `tool_db.yaml` | Database tool benchmark |
 
 ## Prompting Best Practices
 

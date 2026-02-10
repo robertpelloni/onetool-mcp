@@ -247,11 +247,8 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 ### Test data notes
 
-- **demo/data/northwind.db**: Valid SQLite database (25MB) with 13 tables for testing
-- **demo/data/**: Contains test files for convert and excel packs:
-  - `file_example_XLS_1000.xlsx` and `sample_sales.xlsx` - Excel files
-  - `file_example_1MB.docx` - Word document
-  - `file_example_PPT_1MB.pptx` - PowerPoint presentation
+- **demo/data/northwind.db**: Valid SQLite database (25MB) with 13 tables for testing (download via `just demo::setup`)
+- **excel/convert**: Create test files with `excel.create()` or use any local files
 - File access: OneTool sandboxes file access - paths outside cwd may be blocked
 
 ### MCP Server notes

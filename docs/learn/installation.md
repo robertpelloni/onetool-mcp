@@ -188,7 +188,7 @@ onetool --version
 onetool
 
 # Run benchmarks (from source)
-OT_CWD=demo bench run demo/bench/features.yaml
+bench run demo/bench/compare.yaml
 ```
 
 ## Next Steps
