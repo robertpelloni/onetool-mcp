@@ -11,7 +11,7 @@ Spec folder names follow these patterns:
 | `{cli}` | `bench` | Main spec for a CLI (maps to `ot-{cli}`) |
 | `{cli}-{feature}` | `bench-config` | CLI feature spec (extracted from main spec) |
 | `serve-{feature}` | `serve-configuration` | MCP server (`onetool`) feature spec |
-| `tool-{name}` | `tool-brave-search` | Built-in tool spec |
+| `tool-{name}` | `tool-brave` | Built-in tool spec |
 | `_nf-{name}` | `_nf-observability` | Non-functional / cross-cutting spec (prefixed to sort together) |
 
 ---
@@ -62,26 +62,27 @@ The MCP server that exposes tools for LLM code execution.
 | Spec | Purpose |
 |------|---------|
 | [tool-execution](tool-execution/spec.md) | Worker subprocess execution, JSON-RPC |
-| [tool-sdk](tool-sdk/spec.md) | SDK for building extension tools |
 
 ### Built-in Tools
 
 | Spec | Purpose |
 |------|---------|
 | [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, notify, version) |
-| [tool-brave-search](tool-brave-search/spec.md) | Brave Search API (web, news, local, image, video) |
+| [tool-brave](tool-brave/spec.md) | Brave Search API (web, news, local, image, video) |
 | [tool-context7](tool-context7/spec.md) | Context7 library documentation API |
-| [tool-grounding-search](tool-grounding-search/spec.md) | Google grounding via Gemini API |
-| [tool-web-fetch](tool-web-fetch/spec.md) | Web content extraction via trafilatura |
-| [tool-transform](tool-transform/spec.md) | LLM-powered data transformation |
-| [tool-db](tool-db/spec.md) | SQL database queries via SQLAlchemy |
-| [tool-ripgrep](tool-ripgrep/spec.md) | Text/regex search via ripgrep |
-| [tool-excel](tool-excel/spec.md) | Excel workbook operations |
-| [tool-package](tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
-| [tool-notify](tool-notify/spec.md) | Message publishing to topic files |
-| [tool-file](tool-file/spec.md) | File operations |
-| [tool-diagram](tool-diagram/spec.md) | Diagram generation |
 | [tool-convert](tool-convert/spec.md) | Format conversion |
+| [tool-db](tool-db/spec.md) | SQL database queries via SQLAlchemy |
+| [tool-diagram](tool-diagram/spec.md) | Diagram generation |
+| [tool-excel](tool-excel/spec.md) | Excel workbook operations |
+| [tool-file](tool-file/spec.md) | File operations |
+| [tool-ground](tool-ground/spec.md) | Google grounding via Gemini API |
+| [tool-llm](tool-llm/spec.md) | LLM-powered data transformation |
+| [tool-mem](tool-mem/spec.md) | Persistent agent memory with semantic search |
+| [tool-package](tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
+| [tool-ripgrep](tool-ripgrep/spec.md) | Text/regex search via ripgrep |
+| [tool-scaffold](tool-scaffold/spec.md) | Extension scaffolding |
+| [tool-timer](tool-timer/spec.md) | Named stopwatch timers |
+| [tool-web](tool-web/spec.md) | Web content extraction via trafilatura |
 
 ---
 
@@ -109,8 +110,8 @@ CLI for testing and benchmarking MCP servers.
 | Non-Functional | 5 |
 | onetool CLI | 1 |
 | onetool Core | 8 |
-| Tool Infrastructure | 2 |
-| Built-in Tools | 15 |
+| Tool Infrastructure | 1 |
+| Built-in Tools | 16 |
 | bench | 8 |
 | **Total** | **39** |
 
@@ -130,3 +131,9 @@ Specs that have been consolidated into other specs:
 - `testing` → renamed to [_nf-testing](_nf-testing/spec.md)
 - `paths` → renamed to [_nf-paths](_nf-paths/spec.md)
 - `docs` → renamed to [_nf-docs](_nf-docs/spec.md)
+- `tool-brave-search` → renamed to [tool-brave](tool-brave/spec.md)
+- `tool-grounding-search` → renamed to [tool-ground](tool-ground/spec.md)
+- `tool-transform` → renamed to [tool-llm](tool-llm/spec.md)
+- `tool-web-fetch` → renamed to [tool-web](tool-web/spec.md)
+- `tool-notify` → consolidated into [tool-ot](tool-ot/spec.md)
+- `tool-sdk` → removed (extensions use `ot.*` imports directly)

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how tools are organized and discovered. Tools are auto-discovered from the `src/ot_tools/` directory using AST parsing. Individual tool specifications are defined in separate specs (tool-web-fetch, tool-brave-search, tool-context7, tool-code-search, tool-demo).
+Defines how tools are organized and discovered. Tools are auto-discovered from the `src/ot_tools/` directory using AST parsing. Individual tool specifications are defined in separate specs (tool-web, tool-brave, tool-context7, etc.).
 ## Requirements
 ### Requirement: Tool Auto-Discovery
 

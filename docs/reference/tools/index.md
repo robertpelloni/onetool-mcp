@@ -1,6 +1,6 @@
 # Tool Reference
 
-**16 Packs. 113 Tools.**
+**16 Packs. 117 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -22,7 +22,8 @@ Complete reference of all built-in tool packs and functions.
 | [**package**](package.md) | Package version lookup and security audits. | 5 | MIT | `audit`, `models`, `npm`, `pypi`, `version` |
 | [**ripgrep**](ripgrep.md) | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
 | [**scaffold**](scaffold.md) | Extension scaffolding. | 4 | MIT | `create`, `extensions`, `templates`, `validate` |
+| [**timer**](timer.md) | Named stopwatch timers for performance measurement. | 4 | MIT | `clear`, `elapsed`, `list`, `start` |
 | [**web**](web.md) | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
-| | **Total** | **113** | | |
+| | **Total** | **117** | | |
 
 
