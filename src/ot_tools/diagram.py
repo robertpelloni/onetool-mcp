@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 
 from ot.config import get_tool_config
 from ot.logging import LogSpan
-from ot.paths import get_effective_cwd, get_project_dir
+from ot.paths import get_effective_cwd, get_global_dir, get_project_dir
 from ot.utils import truncate
 
 # ==================== Configuration Classes ====================
@@ -314,11 +314,20 @@ def _resolve_config_path(path_str: str) -> Path:
     p = Path(path_str).expanduser()
     if p.is_absolute():
         return p
-    # Try project-level .onetool first, fall back to cwd
+    # Try project-level .onetool first
     project_ot = get_project_dir()
     if project_ot:
+        candidate = (project_ot / p).resolve()
+        if candidate.exists():
+            return candidate
+    # Try global .onetool dir (OT_GLOBAL_DIR or ~/.onetool)
+    global_ot = get_global_dir()
+    candidate = (global_ot / p).resolve()
+    if candidate.exists():
+        return candidate
+    # Fall back to project .onetool if it existed, else cwd
+    if project_ot:
         return (project_ot / p).resolve()
-    # Fall back to project root if no .onetool dir
     return (get_effective_cwd() / p).resolve()
 
 

@@ -13,15 +13,15 @@ Test out the following packs:
 Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, llm, mem, ot, package, ripgrep, scaffold, web
 
 When testing:
-- convert with files at demo/data
-- db with db at demo/data/northwind.db
-- excel with files at demo/data
-- mem: write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear
+- convert with files at demo/data/files
+- db with db at demo/data/db/northwind.db (25MB, download via `just demo::setup`)
+- excel with files at demo/data/files
+- mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
 - scaffold: templates, validate, extensions
 - web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
-- llm: transform with simple data, transform_file with a demo file
+- llm: transform with simple data, transform_file with a file from demo/data/files
 
 ```
 
@@ -81,7 +81,6 @@ Introspection & Discovery
 - ot.tools(pattern="...") - filter by pattern/prefix
 - ot.packs() - list all packs
 - ot.packs(pattern="...") - filter by pattern
-- ot.aliases() - list configured aliases
 - ot.snippets() - list configured snippets
 - ot.servers() - list MCP proxy servers
 - ot.servers(pattern="...") - filter by pattern
@@ -178,8 +177,8 @@ OneTool is setup correctly with all dependencies and secrets needed.
 ### Parameter naming hints
 
 - **excel tools**: Use `filepath` not `path`, and `sheet_name` not `sheet`
-  - Example: `excel.info(filepath="data.xlsx")` not `excel.info(path="data.xlsx")`
-  - Example: `excel.read(filepath="data.xlsx", sheet_name="Sales")` not `excel.read(path="data.xlsx", sheet="Sales")`
+  - Example: `excel.info(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.info(path="data.xlsx")`
+  - Example: `excel.read(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.read(path="data.xlsx", sheet="Sales")`
   - Use `pattern=` not `search_term=` for excel.search
 - **ground tools**: Use `max_sources` not `count` to limit results
   - Example: `ground.search(query="topic", max_sources=5)` not `ground.search(query="topic", count=5)`
@@ -189,7 +188,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `context7.search(query="react")`
   - Example: `context7.doc(library_key="vercel/next.js", topic="routing")`
 - **convert tools**: Use `pattern=` and `output_dir=`, not `filepath=`
-  - Example: `convert.excel(pattern="data/*.xlsx", output_dir="output/")` not `convert.excel(filepath="...")`
+  - Example: `convert.excel(pattern="demo/data/files/*.xlsx", output_dir="tmp/")` not `convert.excel(filepath="...")`
 - **package tools**: `packages=` requires a list, not a string
   - Example: `package.pypi(packages=["requests", "flask"])` not `package.pypi(packages="requests")`
 - **llm tools**: Use `data=` not `input=`
@@ -200,10 +199,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `ripgrep.files(path=".", file_type="py")` or `ripgrep.files(path=".", glob="*.md")`
 - **ripgrep.search**: Use `limit=` not `max_results=` to limit total results
   - Example: `ripgrep.search(pattern="TODO", path=".", limit=5)`
-- **mem tools**: Use `topic=` for identifying memories, `content=` for body text
-  - Example: `mem.write(topic="test/sanity", content="test data", category="note")`
-  - Example: `mem.read(topic="test/sanity")` - exact topic match
-  - Example: `mem.list(topic="test/")` - list by topic prefix (use `topic=` not `prefix=`)
+- **mem tools**: Use `topic=` for identifying memories, `content=` for body text. Use `tmp/test/` prefix for all sanity test topics.
+  - Example: `mem.write(topic="tmp/test/sanity", content="test data", category="note")`
+  - Example: `mem.read(topic="tmp/test/sanity")` - exact topic match
+  - Example: `mem.list(topic="tmp/test/")` - list by topic prefix (use `topic=` not `prefix=`)
   - Example: `mem.search(query="test", limit=5)` - semantic search (requires embeddings enabled)
   - Example: `mem.toc(topic="...")` - get section index
   - Example: `mem.slice(topic="...", sections=[1, 2])` - extract by section number
@@ -211,7 +210,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `mem.stale()` - check for outdated file-backed memories
   - Example: `mem.stats()` - get memory statistics
   - Example: `mem.cache_clear()` - clear result cache
-  - Use `mem.delete(topic="test/")` to clean up test memories after testing
+  - Clean up: `mem.delete(topic="tmp/", confirm=True)` after testing
 - **diagram tools**: Use `provider=` (not `diagram_type=`) and `source=` for rendering
   - Example: `diagram.list_providers()` - see available providers
   - Example: `diagram.get_template(name="flowchart")` - get a template
@@ -228,8 +227,8 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - `$web` uses `u=` for URLs (pipe-separated for batch)
   - Example: `$rg p="TODO" ft="py"` not `$rg pattern="TODO" file_type="py"`
 - **db tools**: Use SQLite URL format `sqlite:///path/to/db`
-  - Example: `db.tables(db_url="sqlite:///data/northwind.db")`
-  - Example: `db.query(sql="SELECT * FROM users", db_url="sqlite:///data.db")`
+  - Example: `db.tables(db_url="sqlite:///demo/data/db/northwind.db")`
+  - Example: `db.query(sql="SELECT * FROM Customers LIMIT 3", db_url="sqlite:///demo/data/db/northwind.db")`
   - Not just the file path alone
 - **web.fetch**: Use `max_length=` not `max_chars=` to limit output
   - Example: `web.fetch(url="...", max_length=500)`
@@ -247,9 +246,14 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 ### Test data notes
 
-- **demo/data/northwind.db**: Valid SQLite database (25MB) with 13 tables for testing (download via `just demo::setup`)
-- **excel/convert**: Create test files with `excel.create()` or use any local files
-- File access: OneTool sandboxes file access - paths outside cwd may be blocked
+All test data lives under `demo/data/`:
+- **demo/data/db/northwind.db**: SQLite database (25MB) with 13 tables — download via `just demo::setup`, gitignored
+- **demo/data/files/**: Checked-in sample files for excel, convert, and llm testing:
+  - `file_example_XLS_1000.xlsx` — Excel workbook
+  - `file_example_1MB.docx` — Word document
+  - `file_example_PDF_1MB.pdf` — PDF document
+  - `file_example_PPT_1MB.pptx` — PowerPoint presentation
+- File access: OneTool sandboxes file access — paths outside cwd may be blocked
 
 ### MCP Server notes
 
@@ -272,13 +276,13 @@ Test these first for fast coverage (one tool from each category):
 3. `ot.health()` - introspection
 4. `$pkg_pypi packages="requests"` - snippets
 5. `file.tree(path=".", max_depth=1)` - filesystem
-6. `mem.write(topic="test/smoke", content="hello")` then `mem.read(topic="test/smoke")` then `mem.delete(prefix="test/")` - memory
-7. `db.tables(db_url="demo/data/northwind.db")` - database
+6. `mem.write(topic="tmp/test/smoke", content="hello")` then `mem.read(topic="tmp/test/smoke")` then `mem.delete(topic="tmp/", confirm=True)` - memory
+7. `db.tables(db_url="sqlite:///demo/data/db/northwind.db")` - database
 8. `ground.search(query="test", max_sources=2)` - grounded search
 
 If all pass, the core infrastructure is working.
 
 ### Cleanup after testing
 
-- Delete test memories: `mem.delete(prefix="test/")`
+- Delete test memories: `mem.delete(topic="tmp/", confirm=True)`
 - Remove any generated files (diagrams, snapshots, converted output)
