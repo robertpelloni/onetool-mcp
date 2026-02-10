@@ -175,7 +175,7 @@ def get_template_files() -> list[tuple[Path, str]]:
     try:
         templates_dir = get_global_templates_dir()
         result = []
-        for config_file in templates_dir.glob("*.yaml"):
+        for config_file in sorted(templates_dir.glob("*.yaml")) + sorted(templates_dir.glob("*.md")):
             dest_name = config_file.name.replace("-template.yaml", ".yaml")
             result.append((config_file, dest_name))
         return result
@@ -242,14 +242,14 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
         (global_dir / subdir).mkdir(exist_ok=True)
 
     # Copy template config files to config/ subdirectory
-    # Only YAML files are copied from global_templates/
+    # YAML and Markdown files are copied from global_templates/
     # Files named *-template.yaml are copied without the -template suffix
     # (to avoid gitignore patterns on secrets.yaml)
     config_dir = global_dir / CONFIG_SUBDIR
     copied_items: list[str] = []
     try:
         templates_dir = get_global_templates_dir()
-        for config_file in templates_dir.glob("*.yaml"):
+        for config_file in sorted(templates_dir.glob("*.yaml")) + sorted(templates_dir.glob("*.md")):
             # Strip -template suffix if present (e.g., secrets-template.yaml -> secrets.yaml)
             dest_name = config_file.name.replace("-template.yaml", ".yaml")
             dest = config_dir / dest_name

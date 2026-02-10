@@ -27,13 +27,9 @@ import os
 import platform
 import sys
 import time
-from collections.abc import (
-    Callable as _Callable,  # noqa: TC003 - used at runtime in timed()
-)
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
-from typing import TypeVar as _TypeVar
 
 import aiofiles
 import yaml
@@ -43,8 +39,6 @@ from ot.config import get_config
 from ot.logging import LogSpan
 from ot.paths import get_global_dir, get_project_dir, resolve_cwd_path
 from ot.proxy import get_proxy_manager
-
-_T = _TypeVar("_T")
 
 # Track when module was first loaded (OneTool start time)
 _MODULE_LOAD_TIME = time.time()
@@ -99,6 +93,7 @@ DOC_BASE_URL = "https://onetool.beycom.online/reference/tools/"
 
 __all__ = [
     "PACK_NAME",
+    "agent_hints",
     "aliases",
     "config",
     "debug",
@@ -112,7 +107,6 @@ __all__ = [
     "security",
     "snippets",
     "stats",
-    "timed",
     "tools",
     "version",
 ]
@@ -128,6 +122,40 @@ def version() -> str:
         ot.version()
     """
     return __version__
+
+
+def agent_hints() -> str:
+    """Return the OneTool agent hints reference document.
+
+    Provides a project-agnostic quick reference for AI agents with
+    tool usage patterns, parameter names, and common workflows.
+
+    Reads from ~/.onetool/config/agent-hints.md if available,
+    otherwise falls back to the package's built-in template.
+
+    Returns:
+        Markdown content of the agent hints document
+
+    Example:
+        ot.agent_hints()
+    """
+    from ot.paths import get_global_templates_dir
+
+    with log(span="ot.agent_hints") as s:
+        # Try user-editable copy first
+        user_path = resolve_ot_path("config/agent-hints.md")
+        if user_path.is_file():
+            s.add("source", "user")
+            return user_path.read_text()
+
+        # Fall back to package template
+        template_path = get_global_templates_dir() / "agent-hints.md"
+        if template_path.is_file():
+            s.add("source", "package")
+            return template_path.read_text()
+
+        s.add("error", "not_found")
+        return "Error: agent-hints.md not found"
 
 
 def _get_version_info() -> dict[str, Any]:
@@ -366,30 +394,6 @@ def security(*, check: str = "") -> dict[str, Any]:
             return summary
 
 
-def timed(func: _Callable[..., _T], **kwargs: Any) -> dict[str, Any]:
-    """Execute a function and return result with timing info.
-
-    Args:
-        func: The function to call (e.g., brave.search)
-        **kwargs: Keyword arguments to pass to the function
-
-    Returns:
-        Dict with 'ms' (elapsed milliseconds) and 'result' keys
-
-    Example:
-        ot.timed(brave.search, query="AI news")
-        # Returns: {"ms": 234, "result": {...}}
-    """
-    start = time.perf_counter()
-    result = func(**kwargs)
-    elapsed = time.perf_counter() - start
-
-    return {
-        "ms": round(elapsed * 1000),
-        "result": result,
-    }
-
-
 def get_ot_pack_functions() -> dict[str, Any]:
     """Get all ot pack functions for registration.
 
@@ -397,6 +401,7 @@ def get_ot_pack_functions() -> dict[str, Any]:
         Dict mapping function names to callables
     """
     return {
+        "agent_hints": agent_hints,
         "tools": tools,
         "packs": packs,
         "servers": servers,
@@ -411,7 +416,6 @@ def get_ot_pack_functions() -> dict[str, Any]:
         "stats": stats,
         "notify": notify,
         "reload": reload,
-        "timed": timed,
         "version": version,
     }
 

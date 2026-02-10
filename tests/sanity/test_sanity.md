@@ -137,7 +137,10 @@ Large Output Handling
 - ot.result() - query stored large output with pagination
 
 Timing
-- ot.timed(expr) - execute a function and return result with timing info
+- timer.start(name="label") - start a named timer
+- timer.elapsed(name="label") - get elapsed time
+- timer.list() - show all active and stored timers
+- timer.clear() - clear all running timers
 
 Notifications
 - ot.notify(topic="...", message="...") - publish messages to topic files
