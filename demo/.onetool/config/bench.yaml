@@ -12,10 +12,6 @@ favorites:
     path: bench/compare.yaml
     description: Main comparison - base vs 1 MCP vs all MCPs vs OneTool
 
-  - name: Run Features benchmark
-    path: bench/features.yaml
-    description: OneTool features - invocation, proxy, snippets
-
-  - name: Run all tool benchmarks
-    path: bench/tool_*.yaml
-    description: Run all tool tests
+  - name: Run all benchmarks
+    path: bench/*.yaml
+    description: Run all benchmark tests

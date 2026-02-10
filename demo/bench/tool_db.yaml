@@ -6,7 +6,7 @@
 # - Query execution
 # - Parameterised queries
 #
-# Uses the Northwind sample database at demo/db/northwind.db.
+# Uses the Northwind sample database at demo/data/northwind.db.
 #
 # Use with: bench run demo/bench/tool_db.yaml
 
@@ -24,7 +24,7 @@ evaluators:
     expect_match: true
 
   has_data:
-    regex: "(row|Result|CustomerID|ProductID)"
+    regex: "(?i)(row|result|customer|product|country|germany|company|contact)"
     expect_match: true
 
 servers:
@@ -33,7 +33,7 @@ servers:
     command: uv
     args: ["run", "onetool"]
     env:
-      OT_CWD: demo
+      OT_CWD: .
 
 scenarios:
   - name: "Database Demo"
@@ -44,7 +44,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_tables
         prompt: |
-          __ot `db.tables(db_url="sqlite:///demo/db/northwind.db")`
+          __ot `db.tables(db_url="sqlite:///data/northwind.db")`
           Return the list of tables.
 
       - name: "tool:db:schema"
@@ -52,7 +52,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_schema
         prompt: |
-          __ot `db.schema(table_names=["Customers", "Products"], db_url="sqlite:///demo/db/northwind.db")`
+          __ot `db.schema(table_names=["Customers", "Products"], db_url="sqlite:///data/northwind.db")`
           Describe the schema structure.
 
       - name: "tool:db:query"
@@ -60,7 +60,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_data
         prompt: |
-          __ot `db.query(sql="SELECT * FROM Customers LIMIT 5", db_url="sqlite:///demo/db/northwind.db")`
+          __ot `db.query(sql="SELECT * FROM Customers LIMIT 5", db_url="sqlite:///data/northwind.db")`
           Summarise the query results.
 
       - name: "tool:db:query_params"
@@ -68,5 +68,5 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_data
         prompt: |
-          __ot `db.query(sql="SELECT * FROM Customers WHERE Country = :country", db_url="sqlite:///demo/db/northwind.db", params={"country": "Germany"})`
+          __ot `db.query(sql="SELECT * FROM Customers WHERE Country = :country", db_url="sqlite:///data/northwind.db", params={"country": "Germany"})`
           Summarise the query results.

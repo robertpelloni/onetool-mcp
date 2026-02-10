@@ -66,7 +66,7 @@ projects:
   demo:
     path: .
     attrs:
-      db_url: sqlite:///demo/db/northwind.db
+      db_url: sqlite:///demo/data/northwind.db
 ```
 
 ### Supported Databases

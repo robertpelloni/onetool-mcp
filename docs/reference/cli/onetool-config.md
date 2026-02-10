@@ -186,7 +186,7 @@ projects:
   demo:
     path: .
     attrs:
-      db_url: sqlite:///demo/db/northwind.db
+      db_url: sqlite:///demo/data/northwind.db
 ```
 
 ## Secrets Configuration
@@ -317,7 +317,7 @@ include:
 
 snippets:
   custom:
-    body: "demo.foo()"         # Inline overrides included
+    body: "brave.search(query='test')"  # Inline overrides included
 ```
 
 ## Statistics Configuration

@@ -63,8 +63,8 @@ The `ot.config()` function SHALL return key configuration values.
 - **WHEN** `ot.config()` is called
 - **THEN** it SHALL return YAML with:
 ```yaml
-aliases: {ws: brave.web_search, alias_f: demo.foo}
-snippets: {foon: {description: "Get foo() for n items"}, barn: {description: "Get bar() for n items"}}
+aliases: {ws: brave.web_search}
+snippets: {}
 servers: [proxy_package_version]
 ```
 

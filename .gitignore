@@ -99,8 +99,9 @@ plan/
 wip/
 
 # Demo: downloadable assets (see demo/README.md)
-demo/db/northwind.db
-demo/data/*.pdf
+demo/data/northwind.db
+demo/.onetool/stats/
+demo/.onetool/logs/
 demo/tmp/
 
 # Claude Code
@@ -108,6 +109,6 @@ demo/tmp/
 .mcp.json
 .onetool-global/
 
-# Sanity test outputs (local state)
-tests/sanity/test_sanity_status.yaml
-tests/sanity/security-test-results.md
+# Explore test outputs (local state)
+tests/explore/*_status.yaml
+tests/explore/*-results.md

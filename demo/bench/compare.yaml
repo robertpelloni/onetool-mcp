@@ -110,11 +110,13 @@ scenarios:
           ```python
           package.version(registry="npm", packages={"express": "4.0.0"})
           ```
+          Return only the version number.
           ---PROMPT---
           __ot
           ```python
           package.version(registry="pypi", packages={"httpx": "0.20.0"})
           ```
+          Return only the version number.
           ---PROMPT---
           Based on the previous results, state the LATEST versions NOT the current version: "express: [version], httpx: [version]".
 
@@ -125,7 +127,7 @@ servers:
     command: uv
     args: ["run", "onetool"]
     env:
-      OT_CWD: demo
+      OT_CWD: .
 
   package-version:
     type: stdio
@@ -199,7 +201,7 @@ servers:
     command: uvx
     args: ["mcp-alchemy"]
     env:
-      DB_URL: "sqlite:///${OT_CWD}/db/northwind.db"
+      DB_URL: "sqlite:///${OT_CWD}/data/northwind.db"
 
   magic:
     type: stdio

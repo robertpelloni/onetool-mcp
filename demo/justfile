@@ -26,25 +26,15 @@ bench *args:
 # SETUP & CLEANUP
 # ============================================================================
 
-# Download all demo assets (database, code project, PDFs, index)
+# Download demo assets (database only)
 setup:
     @echo "=== Downloading Northwind database ==="
-    @mkdir -p {{ _dir }}/db
-    curl -sL -o {{ _dir }}/db/northwind.db \
-        https://github.com/jpwhite3/northwind-SQLite3/raw/main/dist/northwind.db
-    @echo "=== Downloading benchmark PDFs ==="
     @mkdir -p {{ _dir }}/data
-    curl -sL -o {{ _dir }}/data/gpt3-paper.pdf https://arxiv.org/pdf/2005.14165
-    curl -sL -o {{ _dir }}/data/attention-paper.pdf https://arxiv.org/pdf/1706.03762
+    curl -sL -o {{ _dir }}/data/northwind.db \
+        https://github.com/jpwhite3/northwind-SQLite3/raw/main/dist/northwind.db
     @echo "=== Demo setup complete ==="
 
-# Remove demo assets
+# Remove demo assets and generated files
 clean:
-    rm -rf {{ _dir }}/db/northwind.db
-    rm -rf {{ _dir }}/data/*.pdf
-    rm -rf {{ _dir }}/tmp/*
+    rm -rf {{ _dir }}/data {{ _dir }}/db {{ _dir }}/tmp {{ _dir }}/.onetool/logs
     @echo "Demo assets cleaned"
-
-# Truncate log files
-logs-clean:
-    @for f in {{ _dir }}/logs/*.log; do [ -f "$f" ] && : > "$f" && echo "Truncated $f"; done || echo "No log files found"

@@ -171,8 +171,5 @@ excel.merged_cells(filepath="report.xlsx")
 
 ## Demo Data
 
-A sample spreadsheet is available at `demo/data/sample_sales.xlsx` with:
-- **Sales** sheet: Product data with formulas and a table
-- **Inventory** sheet: Stock levels with conditional formulas
-- **Summary** sheet: Cross-sheet formulas and merged cells
+Create a test spreadsheet with `excel.create()` and `excel.write()` to explore capabilities.
 

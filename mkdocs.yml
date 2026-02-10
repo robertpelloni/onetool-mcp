@@ -172,7 +172,10 @@ nav:
           - Package: reference/tools/package.md
           - Ripgrep: reference/tools/ripgrep.md
           - Scaffold: reference/tools/scaffold.md
+          - Timer: reference/tools/timer.md
           - Web: reference/tools/web.md
+  - Results:
+      - Mem vs File Benchmark: results/mem-vs-file-20260210.md
   - About:
       - about/index.md
       - About OneTool: about/about-onetool.md

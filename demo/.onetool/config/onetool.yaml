@@ -3,14 +3,7 @@
 version: 1
 inherit: bundled  # IMPORTANT: never use global (~/.onetool/) for dev/test consistency
 
-tools_dir:
-  - .onetool/tools/demo/demo_tools.py
-
-# Configuration files (paths relative to config/)
-# secrets_file: secrets.yaml   # default - sibling of this config (gitignored)
-
 log_level: INFO
-# log_dir: logs  # Default - logs go to .onetool/logs/
 
 # Security settings
 security:
@@ -22,6 +15,7 @@ tools:
   transform:
     model: google/gemini-3-flash-preview
     base_url: https://openrouter.ai/api/v1
+
 servers:
   # Package Version MCP Server (stdio)
   # No auth required
@@ -31,43 +25,3 @@ servers:
     command: npx
     args: ["-y", "mcp-package-version@0.1.17"]
     timeout: 30
-
-# Aliases: Short names for common tool functions
-alias:
-  alias_f: demo.foo
-  alias_b: demo.bar
-
-snippets:
-  # foo for multiple items
-  foon:
-    description: Get foo() for n items
-    params:
-      n: { default: 5, description: "Number of items" }
-    body: |
-      results = []
-      for i in range({{ n }}):
-          results.append(demo.foo(text=f"item{i}"))
-      ",".join(results)
-
-  # bar for multiple items
-  barn:
-    description: Get bar() for n items
-    params:
-      n: { default: 5, description: "Number of items" }
-    body: |
-      results = []
-      for i in range({{ n }}):
-          results.append(demo.bar(text=f"item{i}"))
-      ",".join(results)
-
-  # foo + bar combined
-  foobar:
-    description: Get foo and bar for n items
-    params:
-      n: { default: 3, description: "Number of items" }
-    body: |
-      results = []
-      for i in range({{ n }}):
-          key = f"item{i}"
-          results.append(f"{demo.foo(text=key)}-{demo.bar(text=key)}")
-      ",".join(results)
