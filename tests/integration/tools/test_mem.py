@@ -779,3 +779,149 @@ class TestSliceBatch:
         ).fetchall()
         assert counts[0][1] >= 1  # sb-ac/a
         assert counts[1][1] >= 1  # sb-ac/b
+
+
+# ---------------------------------------------------------------------------
+# Grep (regex search)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.tools
+class TestMemGrep:
+    """Test mem.grep() regex search across memory content."""
+
+    def test_basic_regex(self, mem_db):
+        mem_db.write(
+            topic="grep/basic",
+            content="line one\ndef foo(bar):\n    return bar\nline four",
+            category="note",
+        )
+        result = mem_db.grep(pattern=r"def \w+\(")
+        assert "grep/basic" in result
+        assert "1 match" in result
+        assert "> " in result  # match marker
+
+    def test_fixed_strings(self, mem_db):
+        mem_db.write(
+            topic="grep/fixed",
+            content="call foo.bar() here\nother line",
+            category="note",
+        )
+        result = mem_db.grep(pattern="foo.bar()", fixed_strings=True)
+        assert "grep/fixed" in result
+        assert "1 match" in result
+
+    def test_case_insensitive(self, mem_db):
+        mem_db.write(
+            topic="grep/case",
+            content="Some ERROR happened\nanother line",
+            category="note",
+        )
+        result = mem_db.grep(pattern="error", case_sensitive=False)
+        assert "grep/case" in result
+
+    def test_case_sensitive_miss(self, mem_db):
+        mem_db.write(
+            topic="grep/case-miss",
+            content="Some ERROR happened",
+            category="note",
+        )
+        result = mem_db.grep(pattern="error", case_sensitive=True)
+        assert "No matches" in result
+
+    def test_context_lines(self, mem_db):
+        lines = "\n".join(f"line {i}" for i in range(10))
+        mem_db.write(topic="grep/ctx", content=lines, category="note")
+        result = mem_db.grep(pattern="line 5", context=1)
+        assert "line 4" in result
+        assert "line 6" in result
+
+    def test_context_merge(self, mem_db):
+        lines = "\n".join(f"line {i}" for i in range(10))
+        mem_db.write(topic="grep/merge", content=lines, category="note")
+        # Matches on line 3 and line 5 with context=2 should merge
+        result = mem_db.grep(pattern="line [35]", context=2)
+        assert "grep/merge" in result
+        # Should be one contiguous block (no "..." separator between them)
+        blocks = result.split("  ...")
+        # Both matches should be in the same block since they overlap
+        assert "line 3" in result
+        assert "line 5" in result
+
+    def test_topic_filter(self, mem_db):
+        mem_db.write(topic="grep/docs/a", content="auth token", category="note")
+        mem_db.write(topic="grep/other/b", content="auth token", category="note")
+        result = mem_db.grep(pattern="auth", topic="grep/docs/")
+        assert "grep/docs/a" in result
+        assert "grep/other/b" not in result
+
+    def test_category_filter(self, mem_db):
+        mem_db.write(topic="grep/cat/a", content="config value", category="rule")
+        mem_db.write(topic="grep/cat/b", content="config value", category="note")
+        result = mem_db.grep(pattern="config", category="rule")
+        assert "grep/cat/a" in result
+        assert "grep/cat/b" not in result
+
+    def test_tag_filter(self, mem_db):
+        mem_db.write(
+            topic="grep/tag/a", content="tagged content", category="note", tags=["python"]
+        )
+        mem_db.write(
+            topic="grep/tag/b", content="tagged content", category="note", tags=["rust"]
+        )
+        result = mem_db.grep(pattern="tagged", tags=["python"])
+        assert "grep/tag/a" in result
+        assert "grep/tag/b" not in result
+
+    def test_no_matches(self, mem_db):
+        mem_db.write(topic="grep/empty", content="nothing here", category="note")
+        result = mem_db.grep(pattern="zzzznotfound")
+        assert "No matches" in result
+
+    def test_invalid_regex(self, mem_db):
+        result = mem_db.grep(pattern="[invalid")
+        assert "Error" in result
+        assert "regex" in result.lower()
+
+    def test_line_numbers_in_output(self, mem_db):
+        mem_db.write(
+            topic="grep/nums",
+            content="aaa\nbbb\nccc\nddd",
+            category="note",
+        )
+        result = mem_db.grep(pattern="ccc", context=0)
+        assert "3" in result  # line number for "ccc"
+
+    def test_slice_hint_in_output(self, mem_db):
+        mem_db.write(
+            topic="grep/slice",
+            content="aaa\nbbb\nccc",
+            category="note",
+        )
+        result = mem_db.grep(pattern="bbb", context=0)
+        assert "[slice:" in result
+
+    def test_limit(self, mem_db):
+        for i in range(5):
+            mem_db.write(
+                topic=f"grep/lim/{i}", content=f"common word {i}", category="note"
+            )
+        result = mem_db.grep(pattern="common", limit=2)
+        # Should only search 2 memories
+        count = result.count("grep/lim/")
+        assert count <= 2
+
+    def test_max_per_memory(self, mem_db):
+        # Create content with widely spaced matches so they form separate groups
+        lines = []
+        for i in range(50):
+            if i % 10 == 0:
+                lines.append(f"MATCH {i}")
+            else:
+                lines.append(f"filler line {i}")
+        mem_db.write(topic="grep/maxpm", content="\n".join(lines), category="note")
+        result = mem_db.grep(pattern="MATCH", context=0, max_per_memory=2)
+        # Should only have 2 match groups (blocks separated by ...)
+        match_lines = [l for l in result.split("\n") if l.startswith(">")]
+        assert len(match_lines) == 2

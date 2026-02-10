@@ -373,6 +373,7 @@ See [Testing](../../practices/testing.md) for markers, fixtures, and patterns.
 - [ ] Integration tests if external APIs involved
 - [ ] Spec at `openspec/specs/tool-<name>/spec.md` (for non-trivial tools)
 - [ ] Attribution level determined (see [Attribution](attribution.md))
+- [ ] Update `src/ot/config/global_templates/agent-hints.md` if adding user-facing tools
 - [ ] `just check` passes
 
 ---

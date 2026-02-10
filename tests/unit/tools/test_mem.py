@@ -28,6 +28,7 @@ from ot_tools.mem import (
     _read_cache,
     _read_cache_lock,
     _redact,
+    _regexp,
     _serialize_meta,
     _topic_filter,
     _validate_category,
@@ -2981,3 +2982,35 @@ class TestSliceBatch:
 
         assert "'select' is required" in result
         assert "docs/a.md [H1]" in result
+
+
+# ---------------------------------------------------------------------------
+# _regexp SQL UDF tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestRegexp:
+    """Test _regexp SQL function used for REGEXP operator."""
+
+    def test_match_returns_true(self):
+        assert _regexp(r"hello", "hello world") is True
+
+    def test_no_match_returns_false(self):
+        assert _regexp(r"^xyz$", "hello world") is False
+
+    def test_none_text_returns_false(self):
+        assert _regexp(r"hello", None) is False
+
+    def test_invalid_regex_returns_false(self):
+        assert _regexp(r"[invalid", "test") is False
+
+    def test_regex_pattern(self):
+        assert _regexp(r"def \w+\(", "def foo(bar):") is True
+
+    def test_case_sensitive_by_default(self):
+        assert _regexp(r"Hello", "hello") is False
+
+    def test_case_insensitive_with_flag(self):
+        assert _regexp(r"(?i)Hello", "hello") is True

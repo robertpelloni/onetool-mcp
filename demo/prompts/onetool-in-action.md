@@ -3,331 +3,160 @@
 
 ## Compare the Search
 
-```
-Title: Compare the Search
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+```text
+Compare OneTool search tools to Claude Code's built-in WebSearch.
 
-Use onetool ot.help() with info="full" to understand how best to use onetool tools. 
-I want to compare onetool tools and snippets to Claude Code's built-in search.
-Optimise calls to get the best results. Tweak onetool tool parameters for better output: increase count, adjust return format, include links, etc.
+Start with `ot.agent_hints()` to learn available tools and calling conventions.
 
-Test both tools and relevant snippets to answer the questions below.
-Compare and score them (out of 10) based on quality.
+Question: MCP resources vs tools — what's the difference?
 
-Result MUST be in a markdown table with columns:
-Tool | Speed | Quality | Recommended For | Call/Snippet
-Call/Snippet should have all parameters for both Claude and OneTool.
-
-Run searches sequentially.
-DO NOT actually provide the answer for the question.
-
-Tools and snippets to use:
-- OneTool Tools: brave.search, ground.docs, ground.search, context7
-- OneTool Snippets: $brv, $brv_research, $c7, $g, $g_reddit
+Search tools to compare:
+- OneTool: brave.search, ground.docs, ground.search, context7.search, context7.doc
 - Claude: WebSearch
 
-For MCP questions, use library="/websites/modelcontextprotocol_io_specification_2025-11-25" with $c7
+For MCP-specific questions, also try:
+- `context7.doc(library_key="/websites/modelcontextprotocol_io_specification_2025-11-25", topic="resources vs tools")`
+- `web.fetch_batch(urls=["https://modelcontextprotocol.info/docs/concepts/resources/", "https://modelcontextprotocol.info/docs/concepts/tools/"])`
 
-Also test batch_fetch with these URLs for comparison:
-- https://modelcontextprotocol.info/docs/concepts/resources/
-- https://modelcontextprotocol.info/docs/concepts/tools/
+Optimise each call for best results (count, format, links).
+DO NOT answer the question — just run the searches and compare output.
 
-Question:
-- MCP resources vs tools?
+Report as a markdown table:
 
-Provide a simple summary table of the tools at the end
-
-Finally, list all Claude and onetool commands used.
+| Tool | Speed (1-10) | Quality (1-10) | Best For | Call Used |
 ```
 
 ## Build a Wikipedia Tool
 
-```
-Title: Build a Wikipedia Tool
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+```text
+Build a "wiki" tool pack with 3 tools: page, summary, data.
 
-- Learn onetool with `ot.help(info="full")` and `scaffold.templates()`
-- Verify tools_dir is configured using `ot.config()`. If not, add `tools/**/*.py` to the config.
-- Scaffold a "wiki" pack using `scaffold.create(name="wiki", scope="global", template="extension")`
-- Hint: Check `ot.tools(pattern="...", info="full")` for the correct parameter names
+Start with `ot.agent_hints()` then `ot.tools(pattern="scaffold", info="full")`.
 
-- Implement these tools:
-  - `page(slug, size=10)` - Fetch HTML from https://en.wikipedia.org/wiki/{slug}, truncate to size KB
-  - `summary(slug, prompt)` - Use call_tool("llm.transform", ...) to summarize page content
-  - `data(slug)` - Fetch JSON from https://en.wikipedia.org/api/rest_v1/page/summary/{slug}
-
-- Implementation notes:
-  - Use `from ot.logging import LogSpan` for structured logging
-  - Use `from ot.tools import call_tool` for llm.transform only
-  - Use httpx.Client for HTTP requests (bundled, no deps needed)
-  - Return error strings/dicts on failure (no raise)
-
-- Validate with `scaffold.validate(path=...)` and show the output as markdown
-
-- Reload with `ot.reload()` before testing the new tool
-
-- Test all three tools with slugs: Anthropic, OpenAI, Moonshot_AI
-
-Finally, list all onetool commands used.
+Steps:
+1. Check tools_dir is configured: `ot.config()`
+2. Scaffold: `scaffold.create(name="wiki", scope="global", template="extension")`
+3. Implement:
+   - `page(slug, size=10)` — fetch https://en.wikipedia.org/wiki/{slug}, truncate to size KB
+   - `summary(slug, prompt)` — use `call_tool("llm.transform", ...)` to summarize page content
+   - `data(slug)` — fetch JSON from https://en.wikipedia.org/api/rest_v1/page/summary/{slug}
+   - Use httpx.Client for HTTP, LogSpan for logging, return error strings on failure
+4. Validate: `scaffold.validate(path=...)`
+5. Reload: `ot.reload()`
+6. Test all 3 tools with slugs: Anthropic, OpenAI, Moonshot_AI
 ```
 
-## File me away
+## File Search Comparison
 
-```
-Title: Compare File Search & Read Tools
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+```text
+Compare OneTool file/ripgrep tools to Claude Code's built-in Read, Grep, and Glob.
 
-Use onetool ot.help() with info="full" to understand how best to use onetool tools.
-I want to compare onetool file/ripgrep tools to Claude Code's built-in Read, Grep, and Glob tools.
-Optimise calls to get the best results. Tweak onetool tool parameters for better output: adjust context lines, file types, output format, etc.
+Start with `ot.agent_hints()` to learn available tools.
 
-Test both tools for each task below.
-Compare and score them (out of 10) based on quality.
+Run these 5 tasks on the current codebase. Use timer.start/elapsed to measure OneTool calls.
 
-Result MUST be in a markdown table with columns:
-Task | Claude Speed | Claude | OneTool | Recommended For | Call/Snippet
-Call/Snippet should have all parameters for both Claude and OneTool.
+Pattern for each test:
+  timer.start(name="test-N")
+  <run the OneTool call>
+  timer.elapsed(name="test-N")
 
-Run searches sequentially. DO NOT provide the actual answer for each task.
+1. **Count**: Occurrences of "onetool" in Python files
+   - Claude: `Grep(pattern="onetool", type="py", output_mode="count")`
+   - OneTool: `ripgrep.count(pattern="onetool", path="src/", file_type="py")`
 
-Tools to use:
-- OneTool: ripgrep.search, ripgrep.count, ripgrep.files, file.read, file.tree
-- Claude: Read, Grep (with output_mode variants), Glob, Bash (for tree)
+2. **Search + context**: Find "def execute" with 2 lines of context
+   - Claude: `Grep(pattern="def execute", -C=2, output_mode="content")`
+   - OneTool: `ripgrep.search(pattern="def execute", path="src/", context=2)`
 
-Use the current codebase (onetool-mcp) for all tests.
+3. **File discovery**: All Python files under src/
+   - Claude: `Glob(pattern="src/**/*.py")`
+   - OneTool: `ripgrep.files(path="src/", glob="*.py")`
 
-## File Search Tasks
+4. **Directory tree**: Structure of src/ot/ (2 levels)
+   - Claude: `Bash("tree src/ot/ -L 2")`
+   - OneTool: `file.tree(path="src/ot/", max_depth=2)`
 
-1. **Pattern Count**: Count occurrences of "onetool" in Python files
-   - Claude: Grep with output_mode="count"
-   - OneTool: ripgrep.count
+5. **Read with offset**: Lines 100-150 of src/ot/meta.py
+   - Claude: `Read(file_path="src/ot/meta.py", offset=100, limit=50)`
+   - OneTool: `file.read(path="src/ot/meta.py", offset=100, limit=50)`
 
-2. **Pattern Search with Context**: Find all uses of "def execute" with 2 lines of context
-   - Claude: Grep with -C=2, output_mode="content"
-   - OneTool: ripgrep.search with context
+DO NOT provide the actual answers. Just run and compare output quality + speed.
 
-3. **File Discovery**: Find all Python files in src/ directory
-   - Claude: Glob with pattern="src/**/*.py"
-   - OneTool: ripgrep.files with file_type filter
-
-4. **Directory Tree**: Show directory structure of src/ot/ (max 2 levels deep)
-   - Claude: Bash with tree command (or ls -R if tree unavailable)
-   - OneTool: file.tree with max_depth
-
-5. **File Read**: Read the first 30 lines of src/ot/meta.py
-   - Claude: Read tool with limit
-   - OneTool: file.read with limit
-
-6. **Offset Read**: Read lines 100-150 of src/ot/meta.py
-   - Claude: Read with offset and limit
-   - OneTool: file.read with offset and limit
-
-7. **Batch File Read**: Read the first 20 lines of these 3 files in one operation:
-   - src/ot/__init__.py
-   - src/ot/server.py
-   - src/ot/paths.py
-   - Claude: Multiple Read calls (parallel if possible)
-   - OneTool: file.read called 3 times (or explore batch options)
-
-## Comparison Questions
-- Which provides better context formatting?
-- Which handles glob patterns more intuitively?
-- Which is better for batch operations?
-- How do offset semantics differ between tools?
-
-Finally, list all Claude and OneTool commands used with full parameters.
+Report as: | Task | Claude | OneTool ms | Winner | Notes |
 ```
 
+## Draw a Diagram
 
-## Draw me a diagram
+```text
+Use the diagram pack to create and render a flowchart.
 
-```
-Title: Draw me a diagram
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+Start with `ot.agent_hints()` then `ot.tools(pattern="diagram", info="full")`.
 
-- Learn onetool with `ot.help(info="full")` and `ot.tools(pattern="diagram", info="full")`
+Steps:
+1. `diagram.list_providers(focus_only=True)` — see what's available
+2. `diagram.get_diagram_instructions(provider="mermaid")` — learn the syntax
+3. Create a flowchart showing OneTool's request pipeline: Input → Validate → Execute → Format → Return
+4. `diagram.generate_source(source=..., provider="mermaid", name="request-flow")` — save it
+5. `diagram.render_diagram(source_file=...)` — render to SVG
+6. `diagram.get_playground_url(source_file=...)` — get interactive editor link
 
-## Discovery Phase
-
-1. **List Providers**: Use `diagram.list_providers(focus_only=True)` to see supported diagram types
-2. **Get Instructions**: Use `diagram.get_diagram_instructions(provider="mermaid")` for syntax guidance
-3. **Check Policy**: Use `diagram.get_diagram_policy()` to understand usage rules
-4. **Check Config**: Use `diagram.get_output_config()` for output settings
-
-## Creation Phase
-
-5. **Generate Source**: Create a flowchart showing the OneTool diagram workflow itself:
-   - Use `diagram.generate_source()` to save and validate the source
-   - The diagram should show: Discovery → Creation → Render phases
-   - Include these tools: list_providers, get_instructions, generate_source, render_diagram, batch_render
-
-6. **Get Playground URL**: Use `diagram.get_playground_url()` for interactive editing
-
-## Render Phase
-
-7. **Render Diagram**: Use `diagram.render_diagram(source_file=...)` to render the saved source
-8. **Verify Output**: Confirm SVG was generated and note the file path
-
-## Comparison Table
-
-Create a table showing diagram pack capabilities:
-
-Columns:
-Tool | Purpose | Key Parameters | When to Use
-
-Tools to cover:
-- diagram.list_providers
-- diagram.get_diagram_instructions
-- diagram.get_diagram_policy
-- diagram.get_output_config
-- diagram.generate_source
-- diagram.get_playground_url
-- diagram.render_diagram
-- diagram.batch_render
-- diagram.render_directory
-- diagram.get_render_status
-- diagram.get_template
-
-Finally, list all onetool commands used with full parameters.
+Report: table of all diagram tools with purpose and when to use each.
 ```
 
 ## Memory vs File Access Benchmark
 
 ```text
-Title: Memory vs File Access Performance Comparison
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
+Compare mem (OneTool memory) vs file access (OneTool file/ripgrep) — focus on speed.
 
-## Reference: Hints & Gotchas
+Start with `ot.agent_hints()` then `ot.tools(pattern="mem", info="full")` and `ot.tools(pattern="timer", info="full")`.
 
-Read these before starting. They apply across all phases.
+Setup (not part of benchmark):
+- `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True, category="context")`
+- `mem.list(topic="proj/onetool-mcp/dev/", format="tree", depth=3)`
 
-**Mem basics:**
-- Files must be pre-loaded into mem before benchmarking (use mem.write_batch)
-- Memory topics use full path patterns: dev/project/arch/index.md → proj/onetool-mcp/dev/project/arch/index.md
-- toc=True when writing is CRITICAL — without it, section slicing won't work
-- Section names are case-sensitive — use exact headings from mem.toc output
-- mem.read (single) vs mem.read_batch (multiple) vs mem.slice_batch (sections)
-- mem.read mode parameter: "content" (default, content only), "toc" (section index), "meta" (metadata only), "all"
-- meta=True adds a metadata header — omit it for content-only comparison (fairer token count)
-- extract parameter on mem.search provides inline snippets immediately
+Use timer.start/elapsed around each call to measure speed:
+  timer.start(name="test-N-file"); <file call>; timer.elapsed(name="test-N-file")
+  timer.start(name="test-N-mem"); <mem call>; timer.elapsed(name="test-N-mem")
 
-**File basics:**
-- Read tool needs absolute paths: `/Users/.../dev/project/guides/creating-tools.md`
-- Use Glob to find absolute paths: `Glob(pattern="dev/project/guides/*.md")`
-- Call multiple Read tools in parallel for fair batch comparison
-- Grep gives line matches only — full context requires additional Read calls
+### Test 1: Agent Context Loading
+- **File**: `file.read(path="dev/agents/hints.md")`
+- **Mem**: `mem.read(topic="proj/onetool-mcp/dev/agents/hints.md")`
+- **Shortcut**: `ot.agent_hints()`
 
-**Fair comparison rules:**
-- Don't compare Grep (files only) to mem.search (with content) — match capability levels
-- Load files once before benchmarking; loading cost is not part of the benchmark
-- Record actual token counts — do not pre-judge results
+### Test 2: Regex Search (mem.grep vs ripgrep)
+Search for "LogSpan" across all dev docs.
+- **File**: `ripgrep.search(pattern="LogSpan", path="dev/", glob="*.md", context=2)`
+- **Mem**: `mem.grep(pattern="LogSpan", topic="proj/onetool-mcp/dev/", context=2)`
 
-## Phase 1: Discovery (No Token Tracking)
+### Test 3: Batch Read (8 arch docs)
+- **File**: `file.read(path="dev/project/arch/index.md")` (repeat for each file)
+- **Mem**: `mem.read_batch(topic="proj/onetool-mcp/dev/project/arch/")`
 
-1. **Learn OneTool & Mem API**
-   - `ot.help(info="full")` and `ot.tools(pattern="mem", info="full")`
-
-2. **Explore Mem State**
-   - `mem.stats()` — current memory state
-   - `mem.list(format="tree", depth=3)` — indexed content
-   - `mem.toc(topic="...")` — section structure of key documents
-   - If dev/ docs aren't loaded: `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True)`
-
-3. **Identify Test Files**
-   - Check what dev/ documentation exists in mem vs filesystem
-   - Pick representative files: single doc (~9KB), batch (8 arch docs ~19KB), sections from 3+ docs, cross-doc search
-
-## Phase 2: Setup
-
-4. **Load Target Files into Mem** (one-time, not part of benchmark)
-   - `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True, category="context")`
-   - Verify: `mem.list(topic="proj/onetool-mcp/dev/", format="tree", depth=5, limit=100)`
-
-5. **Prepare Baseline File Paths**
-   - Note absolute paths, file sizes, and line counts: `Bash("wc -l dev/**/*.md")`
-
-## Phase 3: Performance Benchmark (TRACK TOKENS FROM HERE)
-
-Record starting token count before beginning tests.
-
-### Test 1: Single Document Access
-- **File**: Read tool on full document
-- **Mem**: `mem.read(topic="proj/onetool-mcp/dev/project/guides/creating-tools.md")`
-- Record: tokens used, perceived speed, content received
-
-### Test 2: Batch Document Access (8 arch docs)
-- **File**: 8 parallel Read calls for dev/project/arch/*.md
-- **Mem**: `mem.read_batch(topic="proj/onetool-mcp/dev/project/arch/", limit=10)`
-- Record: tokens used, perceived speed, number of docs retrieved
-
-### Test 3: Targeted Section Extraction (3 sections from 3 docs)
-- **File**: Read full files with offset/limit, manually locate sections (use mem.toc to find line numbers)
+### Test 4: Section Extraction (3 sections from 3 docs)
+- **File**: 3x `file.read(path="...", offset=X, limit=Y)` — use mem.toc to find line ranges
 - **Mem**: `mem.slice_batch(items=[{"topic": "...", "select": "SectionName"}, ...])`
-- Record: tokens used, precision of extraction
 
-### Test 4: Search + Extract
-- **File**: `Grep(pattern="LogSpan", path="dev/", glob="*.md", output_mode="content", head_limit=10)` + Read calls for context
-- **Mem**: `mem.search(query="LogSpan", mode="pattern", topic="proj/onetool-mcp/dev/", limit=5, extract=500)`
-- Record: tokens used, relevance of results, steps required
+### Test 5: Pattern Search + Context
+- **File**: `ripgrep.search(pattern="def \\w+\\(", path="dev/", glob="*.md", context=1)`
+- **Mem**: `mem.grep(pattern="def \\w+\\(", topic="proj/onetool-mcp/dev/", context=1)`
 
-### Test 5: Load, Use, Delete Lifecycle
-- Load: `mem.write(topic="temp/test/demo", file="demo/prompts/onetool-in-action.md", toc=True, category="note")`
-- Use: `mem.read(topic="temp/test/demo")` and `mem.slice(topic="temp/test/demo", select="...")`
-- Cleanup: `mem.delete(topic="temp/", confirm=True)`
-- Compare to: Read tool on same file
-- Record: tokens saved across multiple accesses
+After all tests, run `timer.list()` to see all results.
 
-## Phase 4: Analysis & Report
+Report to ./tmp/mem-vs-file-{yyyymmdd}.md:
 
-6. **Calculate Metrics**
-   - Token efficiency: (file_tokens - mem_tokens) / file_tokens * 100
-   - Speed perception: subjective 1-5 rating
-   - Use case fit: when to use each method
-
-7. **Write Report to ./tmp/mem-vs-file-{yyyymmdd}.md**
-
-   ```markdown
-   # Memory vs File Access Comparison
-
-   ## Executive Summary
-   - Winner by token efficiency: [File|Mem]
-   - Winner by speed: [File|Mem]
-   - Overall recommendation: [contextual]
-
-   ## Results
-
-   | Use Case | File Method | File Tokens | File Calls | Mem Method | Mem Tokens | Mem Calls | Savings |
-   |----------|------------|-------------|-----------|------------|------------|-----------|---------|
-   | Single document | Read | ? | 1 | mem.read | ? | 1 | ?% |
-   | Batch (8 docs) | 8× Read | ? | 8 | mem.read_batch | ? | 1 | ?% |
-   | Section extraction | 3× Read + offsets | ? | 3 | mem.slice_batch | ? | 1 | ?% |
-   | Search + context | Grep + Read(s) | ? | 2+ | mem.search | ? | 1 | ?% |
-   | Load/use/delete | Read | ? | 1 | mem lifecycle | ? | 3 | ?% |
-
-   Each row compares File vs Memory for the SAME task. Fill with actual measured values.
-
-   ## Use Case Recommendations
-   ### Use File Access When: ...
-   ### Use Mem Access When: ...
-
-   ## Detailed Test Results
-   [Per-test observations and commands used]
-
-   ## Commands Reference
-   [All commands used, grouped by File vs Mem]
-   ```
-
+| Test | File ms | Mem ms | Winner | Notes |
 ```
 
 ## Test a Pack
 
 ```text
-Explain each step so it is easy to follow what you did and why. Use 🧿 to highlight these explanations.
-Learn onetool with `ot.help(info="full")`
-Find defect and suggest improvements.
+Test an OneTool pack — find defects and suggest improvements.
 
-Write the improvements and defects to ./plan/fix/{pack}-fix.md
+Start with `ot.agent_hints()` then `ot.tools(pattern="{pack}", info="full")`.
 
-Test out the following pack:
+Run each tool in the pack with realistic inputs. Note errors, edge cases, and UX issues.
 
+Write findings to ./plan/fix/{pack}-fix.md
+
+Test this pack:
 ```

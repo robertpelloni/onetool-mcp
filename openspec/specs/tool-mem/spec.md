@@ -3,9 +3,7 @@
 ## Purpose
 
 Persistent memory for AI agents with SQLite storage and optional OpenAI embeddings. Provides topic-based memory storage with semantic search, content dedup, secret redaction, and importance decay. Embeddings are opt-in via `embeddings_enabled` config (requires `OPENAI_API_KEY` in secrets.yaml when enabled).
-
 ## Requirements
-
 ### Requirement: Memory Storage
 
 The `mem.write()` function SHALL store memories with topic, content, and metadata.
@@ -666,6 +664,69 @@ The `mem.slice_batch()` function SHALL extract sections from multiple memories i
 #### Scenario: Access count increment
 - **WHEN** `mem.slice_batch()` fetches memories from the database
 - **THEN** it SHALL increment `access_count` and update `last_accessed` for all fetched rows
+
+### Requirement: Regex Search
+
+The `mem.grep()` function SHALL search memory content using regular expressions and return line-level results with context.
+
+Parameters: `pattern` (str, required), `topic` (str|None), `category` (str|None), `tags` (list[str]|None), `context` (int, default 2), `case_sensitive` (bool, default True), `limit` (int, default 50 - max memories to search), `max_per_memory` (int, default 10 - max matches per memory), `fixed_strings` (bool, default False).
+
+#### Scenario: Basic regex search
+- **WHEN** `mem.grep(pattern="def \\w+\\(")` is called
+- **THEN** it SHALL search all memory content for the regex pattern
+- **AND** return matching lines grouped by topic with line numbers
+
+#### Scenario: Fixed string search
+- **WHEN** `mem.grep(pattern="foo.bar()", fixed_strings=True)` is called
+- **THEN** it SHALL escape the pattern and match literally
+
+#### Scenario: Case-insensitive search
+- **WHEN** `mem.grep(pattern="error", case_sensitive=False)` is called
+- **THEN** it SHALL match regardless of case
+
+#### Scenario: Context lines
+- **WHEN** `mem.grep(pattern="TODO", context=3)` is called
+- **THEN** it SHALL include 3 lines before and after each match
+- **AND** merge overlapping context ranges into single blocks
+
+#### Scenario: Topic filtering
+- **WHEN** `mem.grep(pattern="auth", topic="docs/")` is called
+- **THEN** it SHALL only search memories under the topic prefix
+
+#### Scenario: Category and tag filtering
+- **WHEN** `mem.grep(pattern="config", category="rule", tags=["python"])` is called
+- **THEN** it SHALL restrict search to memories matching category and tags
+
+#### Scenario: SQL pre-filtering
+- **GIVEN** a database with many memories
+- **WHEN** `mem.grep()` is called
+- **THEN** it SHALL use a `REGEXP` SQL function to pre-filter memories at the database level before performing line-level matching in Python
+
+#### Scenario: Result limits
+- **GIVEN** more than `limit` memories match
+- **WHEN** `mem.grep(pattern="common", limit=10)` is called
+- **THEN** it SHALL search at most 10 memories
+
+#### Scenario: Per-memory match limit
+- **GIVEN** a memory with many matches
+- **WHEN** `mem.grep(pattern="the", max_per_memory=3)` is called
+- **THEN** it SHALL return at most 3 match groups per memory
+
+#### Scenario: Output format
+- **WHEN** results are returned
+- **THEN** each memory's results SHALL be grouped under a header showing topic and match count
+- **AND** matching lines SHALL be marked with `>`
+- **AND** context lines SHALL be shown without marker
+- **AND** all lines SHALL include line numbers
+- **AND** a `[slice: N-M]` hint SHALL indicate the line range for `slice_batch()` follow-up
+
+#### Scenario: No matches
+- **WHEN** no memories contain matching content
+- **THEN** it SHALL return a message indicating no matches found
+
+#### Scenario: Invalid regex
+- **WHEN** an invalid regex pattern is provided
+- **THEN** it SHALL return an error describing the regex issue
 
 ## Configuration
 
