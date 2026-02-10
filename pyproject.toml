@@ -1,6 +1,6 @@
 [project]
 name = "onetool-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools."
 mcpName = "io.github.beycom/onetool"
 readme = "README.md"

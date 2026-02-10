@@ -179,6 +179,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
 - **excel tools**: Use `filepath` not `path`, and `sheet_name` not `sheet`
   - Example: `excel.info(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.info(path="data.xlsx")`
   - Example: `excel.read(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.read(path="data.xlsx", sheet="Sales")`
+  - `excel.read` uses `start_cell=`/`end_cell=` for range (no `limit=` param). Example: `excel.read(filepath="...", start_cell="A1", end_cell="H4")`
   - Use `pattern=` not `search_term=` for excel.search
 - **ground tools**: Use `max_sources` not `count` to limit results
   - Example: `ground.search(query="topic", max_sources=5)` not `ground.search(query="topic", count=5)`
@@ -193,10 +194,12 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `package.pypi(packages=["requests", "flask"])` not `package.pypi(packages="requests")`
 - **llm tools**: Use `data=` not `input=`
   - Example: `llm.transform(data="text", prompt="...")` not `llm.transform(input="text", ...)`
+  - `llm.transform_file` uses `in_file=`/`out_file=` (not `filepath=`). Only works with text files (not binary like .xlsx).
+  - Example: `llm.transform_file(prompt="translate to Spanish", in_file="README.md", out_file="tmp/output.txt")`
 - **db.schema**: Use `table_names=` as a list
   - Example: `db.schema(db_url="...", table_names=["users"])` not `db.schema(db_url="...", table_names="users")`
-- **ripgrep.files**: Use `glob=` or `file_type=`, not `pattern=`
-  - Example: `ripgrep.files(path=".", file_type="py")` or `ripgrep.files(path=".", glob="*.md")`
+- **ripgrep.files**: Use `glob=` or `file_type=`, not `pattern=`. Has no `limit=` param (lists all matching files).
+  - Example: `ripgrep.files(path="src/", file_type="py", sort="modified")`
 - **ripgrep.search**: Use `limit=` not `max_results=` to limit total results
   - Example: `ripgrep.search(pattern="TODO", path=".", limit=5)`
 - **mem tools**: Use `topic=` for identifying memories, `content=` for body text. Use `tmp/test/` prefix for all sanity test topics.
@@ -205,15 +208,25 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `mem.list(topic="tmp/test/")` - list by topic prefix (use `topic=` not `prefix=`)
   - Example: `mem.search(query="test", limit=5)` - semantic search (requires embeddings enabled)
   - Example: `mem.toc(topic="...")` - get section index
-  - Example: `mem.slice(topic="...", sections=[1, 2])` - extract by section number
-  - Example: `mem.slice_batch(items=[{"topic": "...", "sections": [1]}])` - batch extraction
+  - Example: `mem.slice(topic="...", select=[1, 2])` - extract by section number (use `select=` not `sections=`)
+  - Example: `mem.slice_batch(items=[{"topic": "...", "select": [1]}])` - batch extraction (use `select=` not `sections=`)
+  - Example: `mem.write_batch(topic="tmp/test/batch", glob_pattern="docs/*.md", category="note")` - batch import from files (use `glob_pattern=`, not `items=`)
+  - Example: `mem.read_batch(topic="tmp/test/", meta=True)` - read multiple memories
+  - Example: `mem.update(topic="tmp/test/smoke", content="updated")` - update existing memory
+  - Example: `mem.context(topic="tmp/test/", limit=3)` - load most-accessed memories
+  - Example: `mem.snap(output="tmp/test-snap", topic="tmp/test/")` - snapshot to directory
+  - Example: `mem.restore(input="tmp/test-snap")` - restore from snapshot
+  - Example: `mem.export(topic="tmp/test/smoke")` - export to YAML
+  - Example: `mem.load(file="memories.yaml")` - import from YAML
+  - Example: `mem.refresh(topic="tmp/test/", dry_run=True)` - check for stale file-backed memories
+  - Example: `mem.decay(dry_run=True)` - preview importance decay
   - Example: `mem.stale()` - check for outdated file-backed memories
   - Example: `mem.stats()` - get memory statistics
   - Example: `mem.cache_clear()` - clear result cache
   - Clean up: `mem.delete(topic="tmp/", confirm=True)` after testing
 - **diagram tools**: Use `provider=` (not `diagram_type=`) and `source=` for rendering
   - Example: `diagram.list_providers()` - see available providers
-  - Example: `diagram.get_template(name="flowchart")` - get a template
+  - Example: `diagram.get_template(name="api-flow")` - get a template (valid names: api-flow, microservices, c4-context, state-machine, class-diagram, project-gantt, feature-mindmap)
   - Example: `diagram.generate_source(provider="mermaid", source="graph TD; A-->B", name="test", output_dir="output/")`
   - Example: `diagram.render_diagram(provider="mermaid", source="graph TD; A-->B", name="test")`
 - **scaffold tools**: Use `template=` and `name=` for creating extensions
