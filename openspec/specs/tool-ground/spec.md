@@ -1,4 +1,4 @@
-# tool-grounding-search Specification
+# tool-ground Specification
 
 ## Purpose
 

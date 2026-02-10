@@ -1,4 +1,4 @@
-# tool-web-fetch Specification
+# tool-web Specification
 
 ## Purpose
 

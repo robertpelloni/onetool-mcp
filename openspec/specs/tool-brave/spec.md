@@ -1,4 +1,4 @@
-# tool-brave-search Specification
+# tool-brave Specification
 
 ## Purpose
 

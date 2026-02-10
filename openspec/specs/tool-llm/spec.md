@@ -1,4 +1,4 @@
-# tool-transform Specification
+# tool-llm Specification
 
 ## Purpose
 

@@ -161,3 +161,18 @@ def test_clear_preserves_stored():
     stored = timer.list()
     assert "saved" in stored["stored"]
     assert stored["active"] == {}
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_clear_with_results():
+    timer.start(name="b")
+    timer.elapsed(name="b", store_as="kept")
+    result = timer.clear(results=True)
+
+    assert result["timers_removed"] == 1
+    assert result["results_removed"] == 1
+
+    stored = timer.list()
+    assert stored["stored"] == {}
+    assert stored["active"] == {}

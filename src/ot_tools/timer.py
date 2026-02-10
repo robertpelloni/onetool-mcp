@@ -89,16 +89,22 @@ def list() -> dict[str, Any]:
         return {"stored": dict(_results), "active": active}
 
 
-def clear() -> dict[str, Any]:
-    """Clear all running timers. Stored results are preserved.
+def clear(*, results: bool = False) -> dict[str, Any]:
+    """Clear all running timers and optionally stored results.
+
+    Args:
+        results: If True, also clear stored results. Defaults to False.
 
     Returns:
-        Confirmation with count of timers cleared.
+        Confirmation with count of timers and results cleared.
     """
-    with LogSpan(span="timer.clear"):
-        count = len(_timers)
+    with LogSpan(span="timer.clear", results=results):
+        timer_count = len(_timers)
+        result_count = len(_results) if results else 0
         _timers.clear()
-        return {"status": "cleared", "timers_removed": count}
+        if results:
+            _results.clear()
+        return {"status": "cleared", "timers_removed": timer_count, "results_removed": result_count}
 
 
 def _format_duration(seconds: float) -> str:

@@ -1847,15 +1847,15 @@ def grep(
                 if len(ranges) > max_per_memory:
                     ranges = ranges[:max_per_memory]
 
+                # Convert to set once for O(1) lookups
+                match_set = set(match_line_nums)
+
                 match_count = sum(
                     1 for r_start, r_end in ranges
                     for i in range(r_start, r_end + 1)
-                    if i in match_line_nums
+                    if i in match_set
                 )
                 total_matches += match_count
-
-                # Format output for this memory
-                match_set = set(match_line_nums)
                 blocks: _builtins_list[str] = []
                 for r_start, r_end in ranges:
                     block_lines: _builtins_list[str] = []
