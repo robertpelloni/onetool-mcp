@@ -85,9 +85,12 @@ def _create_pack_proxy(pack_name: str, pack_funcs: dict[str, Any]) -> Any:
 def _create_mcp_proxy_pack(server_name: str) -> Any:
     """Create a pack proxy for an MCP server.
 
-    Allows calling proxied MCP tools using dot notation:
+    Allows calling proxied MCP tools using dot notation with automatic aliasing:
     - context7.resolve_library_id(library_name="next.js")
+    - xero.list_organisation_details()  # matches list-organisation-details
+    - xero.listOrganisationDetails()    # also matches list-organisation-details
 
+    Supports fuzzy matching across naming conventions (snake_case, kebab-case, camelCase, PascalCase).
     Each call is tracked for execution-level stats.
 
     Args:
@@ -96,6 +99,7 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
     Returns:
         Object with __getattr__ that routes to proxy manager.
     """
+    from ot.executor.naming import find_canonical_match, suggest_similar_names
     from ot.proxy import get_proxy_manager
 
     class McpProxyPack:
@@ -104,28 +108,66 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
         def __init__(self) -> None:
             # Cache callable proxies to avoid recreating on each access
             self._function_cache: dict[str, Callable[..., str]] = {}
+            # Cache accessor -> actual tool name mappings
+            self._name_resolution_cache: dict[str, str] = {}
 
-        def __getattr__(self, tool_name: str) -> Any:
-            if tool_name.startswith("_"):
-                raise AttributeError(f"Cannot access private attribute '{tool_name}'")
+        def __getattr__(self, accessor_name: str) -> Any:
+            if accessor_name.startswith("_"):
+                raise AttributeError(f"Cannot access private attribute '{accessor_name}'")
 
-            if tool_name in self._function_cache:
-                return self._function_cache[tool_name]
+            if accessor_name in self._function_cache:
+                return self._function_cache[accessor_name]
+
+            # Resolve accessor to actual tool name using fuzzy matching
+            proxy = get_proxy_manager()
+            available_tools = [t.name for t in proxy.list_tools(server_name)]
+
+            # Check cache first
+            if accessor_name in self._name_resolution_cache:
+                actual_tool_name = self._name_resolution_cache[accessor_name]
+            else:
+                # Find matching tool via canonical normalization
+                try:
+                    match_result = find_canonical_match(accessor_name, available_tools)
+                except ValueError as e:
+                    # Ambiguous match
+                    raise AttributeError(str(e)) from None
+
+                if match_result is None:
+                    # No match found - provide suggestions
+                    suggestions = suggest_similar_names(accessor_name, available_tools)
+                    if suggestions:
+                        suggestion_list = ", ".join(f"'{s}'" for s in suggestions)
+                        raise AttributeError(
+                            f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
+                            f"Did you mean: {suggestion_list}? "
+                            f"Available tools: {len(available_tools)} total."
+                        )
+                    else:
+                        available = ", ".join(f"'{t}'" for t in sorted(available_tools)[:10])
+                        more = f" (and {len(available_tools) - 10} more)" if len(available_tools) > 10 else ""
+                        raise AttributeError(
+                            f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
+                            f"Available: {available}{more}"
+                        )
+
+                # Cache the resolution (match_result is str at this point)
+                actual_tool_name = match_result
+                self._name_resolution_cache[accessor_name] = actual_tool_name
 
             def call_proxy_tool(**kwargs: Any) -> str:
-                tool_full_name = f"{server_name}.{tool_name}"
+                tool_full_name = f"{server_name}.{actual_tool_name}"
 
                 # Resolve abbreviated parameter names (cached lookup)
                 if kwargs:
-                    param_names = get_mcp_tool_param_names(server_name, tool_name)
+                    param_names = get_mcp_tool_param_names(server_name, actual_tool_name)
                     if param_names:
                         kwargs = resolve_kwargs(kwargs, param_names)
 
                 with timed_tool_call(tool_full_name):
-                    proxy = get_proxy_manager()
-                    return proxy.call_tool_sync(server_name, tool_name, kwargs)
+                    return proxy.call_tool_sync(server_name, actual_tool_name, kwargs)
 
-            self._function_cache[tool_name] = call_proxy_tool
+            self._function_cache[accessor_name] = call_proxy_tool
             return call_proxy_tool
 
     return McpProxyPack()

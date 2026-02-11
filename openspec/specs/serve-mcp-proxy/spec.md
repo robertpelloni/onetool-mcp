@@ -60,6 +60,57 @@ The system SHALL expose proxied MCP tools via pack dot-notation.
 - **WHEN** run() receives code with multiple pack calls (e.g., `sites = wix.list_sites(); pages = notion.search(query=sites[0].name)`)
 - **THEN** it SHALL execute both calls and return combined results
 
+### Requirement: Tool Name Aliasing
+
+The system SHALL support automatic aliasing for MCP tools with non-Python-friendly names.
+
+MCP servers may use naming conventions incompatible with Python identifiers (e.g., hyphens in `list-accounts`). The system SHALL transparently resolve Python-friendly accessors to actual tool names via canonical normalization.
+
+#### Scenario: Hyphenated tool access via underscores
+- **GIVEN** MCP server `xero` with tool `list-organisation-details`
+- **WHEN** run() receives `xero.list_organisation_details()`
+- **THEN** it SHALL resolve to tool `list-organisation-details` and call it
+
+#### Scenario: Hyphenated tool access via camelCase
+- **GIVEN** MCP server `xero` with tool `list-organisation-details`
+- **WHEN** run() receives `xero.listOrganisationDetails()`
+- **THEN** it SHALL resolve to tool `list-organisation-details` and call it
+
+#### Scenario: Hyphenated tool access via PascalCase
+- **GIVEN** MCP server `xero` with tool `list-organisation-details`
+- **WHEN** run() receives `xero.ListOrganisationDetails()`
+- **THEN** it SHALL resolve to tool `list-organisation-details` and call it
+
+#### Scenario: Exact match takes precedence
+- **GIVEN** MCP server has both `list_accounts` and `list-accounts`
+- **WHEN** run() receives `xero.list_accounts()`
+- **THEN** it SHALL use exact match `list_accounts` (no fuzzy matching needed)
+
+#### Scenario: Ambiguous match error
+- **GIVEN** MCP server has tools `list-accounts` and `list_accounts` (both normalize to same canonical form)
+- **WHEN** run() receives `xero.listAccounts()`
+- **THEN** it SHALL return an error: "Ambiguous tool name 'listAccounts': matches multiple tools: ['list-accounts', 'list_accounts']"
+
+#### Scenario: No match with suggestions
+- **GIVEN** MCP server `xero` with tool `list-organisation-details`
+- **WHEN** run() receives `xero.list_organisat()`
+- **THEN** it SHALL return an error with suggestions
+- **AND** suggestions SHALL include `list-organisation-details`
+
+#### Scenario: Mixed separators and case
+- **GIVEN** MCP server with tool `get-user-account`
+- **WHEN** run() receives any of: `getUserAccount()`, `get_user_account()`, `GetUserAccount()`, `GET_USER_ACCOUNT()`
+- **THEN** all SHALL resolve to tool `get-user-account`
+
+#### Scenario: Canonical normalization rules
+- **GIVEN** any tool name
+- **WHEN** canonical form is computed
+- **THEN** it SHALL:
+  - Remove all hyphens (`-`)
+  - Remove all underscores (`_`)
+  - Convert to lowercase
+  - Example: `list-Account_Details` → `listaccountdetails`
+
 ### Requirement: Local Tool Precedence
 
 The system SHALL prioritize local tools over proxied tools when names conflict.

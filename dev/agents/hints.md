@@ -126,6 +126,34 @@ openspec/       Specifications and proposals
 
 ---
 
+## MCP Proxy Tools
+
+**Automatic Name Aliasing:**
+MCP servers may use non-Python-friendly naming (hyphens, camelCase). OneTool automatically resolves aliases:
+
+```python
+# All these work for tool "list-organisation-details":
+xero.list_organisation_details()  # Python snake_case ✓
+xero.listOrganisationDetails()    # camelCase ✓
+xero.ListOrganisationDetails()    # PascalCase ✓
+xero.LIST_ORGANISATION_DETAILS()  # SCREAMING_SNAKE ✓
+```
+
+**How it works:**
+- Exact match tried first (fast path)
+- Falls back to canonical matching (remove `_`, `-`, lowercase)
+- Caches resolution for performance
+- Shows suggestions if no match found
+
+**Ambiguous matches:**
+If two tools normalize to same form (e.g., `list-accounts` + `list_accounts`):
+- Error raised with all matching tools listed
+- Use `getattr(pack, "exact-name")()` to disambiguate
+
+**Implementation:** `src/ot/executor/naming.py`, `src/ot/executor/pack_proxy.py`
+
+---
+
 ## When This File Isn't Enough
 
 **For OneTool-specific info:**
