@@ -300,6 +300,121 @@ class TestProxyManagerAuth:
 
 @pytest.mark.unit
 @pytest.mark.core
+class TestProxyManagerStdio:
+    """Tests for stdio client environment variable handling."""
+
+    @patch("ot.proxy.manager.StdioTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_stdio_client_passes_configured_env(
+        self, mock_client: MagicMock, mock_transport: MagicMock
+    ) -> None:
+        """Should pass configured env vars to StdioTransport."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="stdio",
+            command="npx",
+            args=["-y", "some-mcp-server"],
+            env={
+                "XERO_CLIENT_ID": "test_id_123",
+                "XERO_CLIENT_SECRET": "test_secret_456",
+            },
+        )
+
+        manager._create_stdio_client("xero", config)
+
+        mock_transport.assert_called_once()
+        env = mock_transport.call_args[1]["env"]
+        assert env["XERO_CLIENT_ID"] == "test_id_123"
+        assert env["XERO_CLIENT_SECRET"] == "test_secret_456"
+
+    @patch("ot.proxy.manager.StdioTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_stdio_client_clean_env_by_default(
+        self,
+        mock_client: MagicMock,
+        mock_transport: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should NOT inherit parent env by default (clean env)."""
+        from ot.config.models import McpServerConfig
+
+        monkeypatch.setenv("MY_PARENT_VAR", "parent_value")
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="stdio",
+            command="node",
+            args=["server.js"],
+        )
+
+        manager._create_stdio_client("test", config)
+
+        mock_transport.assert_called_once()
+        env = mock_transport.call_args[1]["env"]
+        assert "MY_PARENT_VAR" not in env
+        assert "PATH" in env
+
+    @patch("ot.proxy.manager.StdioTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_stdio_client_inherits_parent_env_when_enabled(
+        self,
+        mock_client: MagicMock,
+        mock_transport: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should inherit parent env when inherit_env is true."""
+        from ot.config.models import McpServerConfig
+
+        monkeypatch.setenv("MY_PARENT_VAR", "parent_value")
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="stdio",
+            command="node",
+            args=["server.js"],
+            inherit_env=True,
+        )
+
+        manager._create_stdio_client("test", config)
+
+        mock_transport.assert_called_once()
+        env = mock_transport.call_args[1]["env"]
+        assert env["MY_PARENT_VAR"] == "parent_value"
+        assert "PATH" in env
+
+    @patch("ot.proxy.manager.StdioTransport")
+    @patch("ot.proxy.manager.Client")
+    def test_stdio_client_config_env_overrides_parent(
+        self,
+        mock_client: MagicMock,
+        mock_transport: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Should let config env override parent env vars when inheriting."""
+        from ot.config.models import McpServerConfig
+
+        monkeypatch.setenv("LOG_LEVEL", "info")
+
+        manager = ProxyManager()
+        config = McpServerConfig(
+            type="stdio",
+            inherit_env=True,
+            command="node",
+            args=["server.js"],
+            env={"LOG_LEVEL": "debug"},
+        )
+
+        manager._create_stdio_client("test", config)
+
+        mock_transport.assert_called_once()
+        env = mock_transport.call_args[1]["env"]
+        assert env["LOG_LEVEL"] == "debug"
+
+
+@pytest.mark.unit
+@pytest.mark.core
 class TestProxyManagerResources:
     """Tests for resource methods."""
 

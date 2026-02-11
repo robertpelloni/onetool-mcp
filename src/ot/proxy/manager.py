@@ -431,8 +431,11 @@ class ProxyManager:
             raise RuntimeError(f"Server {name}: stdio server requires command")
 
         # Build environment variables for subprocess
-        # Order: PATH (from host) -> root env -> server-specific env -> expand secrets
-        env = {"PATH": os.environ.get("PATH", "")}
+        # Default: clean env with only PATH. With inherit_env: true, inherit parent env.
+        if config.inherit_env:
+            env = os.environ.copy()
+        else:
+            env = {"PATH": os.environ.get("PATH", "")}
 
         # Get root-level env from config (if available)
         try:
@@ -442,14 +445,18 @@ class ProxyManager:
         except Exception:
             root_env = {}
 
-        # Merge: root env first, then server-specific env (overrides root)
+        # Merge: root env first, then server-specific env (overrides parent/root)
+        configured_keys: set[str] = set()
         for key, value in root_env.items():
             env[key] = value
+            configured_keys.add(key)
         for key, value in config.env.items():
             env[key] = value
+            configured_keys.add(key)
 
-        # Expand ${VAR} patterns from secrets and env: in all env values
-        for key, value in env.items():
+        # Expand ${VAR} patterns from secrets and config env: in configured values only
+        for key in configured_keys:
+            value = env[key]
             if "${" in value:
                 env[key] = expand_vars(value)
 

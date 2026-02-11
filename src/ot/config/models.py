@@ -470,6 +470,10 @@ class McpServerConfig(BaseModel):
     env: dict[str, str] = Field(
         default_factory=dict, description="Environment variables for stdio servers"
     )
+    inherit_env: bool = Field(
+        default=False,
+        description="Inherit parent process environment variables (stdio servers)",
+    )
     timeout: int = Field(default=30, description="Connection timeout in seconds")
     auth: AuthConfig | None = Field(
         default=None,
