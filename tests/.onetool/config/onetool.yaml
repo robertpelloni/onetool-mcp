@@ -6,7 +6,7 @@ inherit: none
 # Include security config from global template (single source of truth)
 # Path is relative to OT_DIR (tests/.onetool/), resolves to project root's template
 include:
-  - ../../.onetool-global/config/security.yaml
+  - ../../src/ot/config/global_templates/security.yaml
 
 # Use default tools_dir (src/ot_tools/*.py) for testing
 tools_dir:

@@ -4,7 +4,7 @@
 set dotenv-load := true
 
 # Project-local global config base (all versions stored here)
-global_base := justfile_directory() + "/.onetool-global"
+global_base := justfile_directory() + "/global"
 
 # Default: show available commands
 default:

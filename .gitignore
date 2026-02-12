@@ -107,7 +107,7 @@ demo/tmp/
 # Claude Code
 .claude/commands/misc/
 .mcp.json
-.onetool-global/
+global/
 
 # Explore test outputs (local state)
 tests/explore/*_status.yaml

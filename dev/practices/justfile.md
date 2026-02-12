@@ -82,4 +82,4 @@ just release::<task>   # run release tasks
 - All test commands use `uv run pytest` for proper dependency resolution
 - Config caches stored in `tmp/` (.ruff_cache, .mypy_cache, .pytest_cache)
 - Coverage HTML output goes to `tmp/htmlcov/`
-- Dev mode uses `.onetool-global/dev` as the global directory
+
