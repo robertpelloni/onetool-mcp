@@ -34,6 +34,16 @@ Usage: /test-explore <prompt-name> [args]
 3. Follow the instructions in the prompt file
 4. For all prompts, explain what you are doing with a short note
 
+## Output Locations
+
+**Issues**: Save defects and problems to `wip/issues/{issue-name}.md`
+- Use descriptive kebab-case names (e.g., `mem-export-files.md`, `diagram-template-path-resolution.md`)
+- Include issue details, reproduction steps, and expected vs actual behavior
+
+**Test Output**: Save test results and outputs to `wip/test-output/{purpose}.md`
+- Use descriptive names matching the test purpose (e.g., `sanity-check.md`, `brave-search-results.md`)
+- Include test data, tool outputs, performance metrics, or comparison results
+
 ## Error Handling
 
 When errors are encountered, check if they are caused by:

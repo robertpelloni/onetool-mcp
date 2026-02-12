@@ -1169,3 +1169,62 @@ The system SHALL support a root-level `env:` section for shared subprocess envir
 - **WHEN** a stdio server is spawned
 - **THEN** subprocess SHALL receive only `PATH` plus server-specific env
 
+### Requirement: DevTools Server Template Documentation
+
+The `servers.yaml` global template SHALL include comprehensive inline documentation for the Chrome DevTools MCP server entry.
+
+#### Scenario: Connection mode comments
+- **GIVEN** a user reading the DevTools section of `servers.yaml`
+- **WHEN** they inspect the comments
+- **THEN** they find descriptions of isolated mode (default), remote mode (advanced), and autoConnect mode (experimental)
+- **AND** instructions for switching between modes
+
+#### Scenario: Remote mode setup instructions
+- **GIVEN** a user wanting to use remote mode
+- **WHEN** they read the DevTools section comments
+- **THEN** they find platform-specific Chrome launch commands for macOS, Linux, and Windows
+- **AND** a verification command (`curl http://localhost:9222/json/version`)
+- **AND** a note about `--user-data-dir` being required since Chrome 136+
+
+#### Scenario: Element highlighting reference
+- **GIVEN** a user wanting to use element annotations via Chrome DevTools
+- **WHEN** they read the DevTools section comments
+- **THEN** they find a quick reference for `devtools_util` functions (inject, highlight, scan, clear)
+- **AND** a note about Ctrl+I / Cmd+I for manual annotation
+
+### Requirement: Playwright Server Template
+
+The `servers.yaml` global template SHALL include a commented-out Playwright MCP server entry.
+
+#### Scenario: Playwright entry present
+- **GIVEN** a user reading `servers.yaml`
+- **WHEN** they look for browser automation options
+- **THEN** they find a commented-out Playwright MCP server configuration
+- **AND** setup instructions (install command)
+- **AND** a brief comparison of when to use DevTools vs Playwright
+
+#### Scenario: Playwright element highlighting reference
+- **GIVEN** a user wanting to use element annotations via Playwright
+- **WHEN** they read the Playwright section comments
+- **THEN** they find a quick reference for `playwright_util` functions (inject, highlight, scan, clear)
+- **AND** a note that `playwright_util` is the Playwright equivalent of `devtools_util`
+
+### Requirement: DevTools Server Instructions Field
+
+The DevTools server entry SHALL include an `instructions` field summarising capabilities for AI assistants.
+
+#### Scenario: DevTools instructions content
+- **GIVEN** the DevTools server `instructions` field
+- **WHEN** read by an AI assistant
+- **THEN** it includes tool count, `devtools_util` element highlighting API, connection modes, and best-use-case guidance
+
+### Requirement: Playwright Server Instructions Field
+
+The Playwright server entry SHALL include an `instructions` field summarising capabilities for AI assistants.
+
+#### Scenario: Playwright instructions content
+- **GIVEN** the Playwright server `instructions` field
+- **WHEN** read by an AI assistant
+- **THEN** it includes `playwright_util` element highlighting API and best-use-case guidance
+- **AND** it notes that `playwright_util` is independent from `devtools_util` (no fallback between them)
+

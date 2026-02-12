@@ -429,4 +429,60 @@ The project SHALL provide learning materials in `docs/learn/`.
 - **WHEN** checked
 - **THEN** it contains quickstart, installation, configuration, security, explicit-calls, and comparison
 - **AND** extending documentation is in `learn/extending/`
+- **AND** guides are in `learn/guides/`
+
+### Requirement: Guides Subsection
+
+The project SHALL provide task-oriented guides in `docs/learn/guides/`.
+
+#### Scenario: Guides landing page
+- **GIVEN** a user navigating to `docs/learn/guides/index.md`
+- **WHEN** they read it
+- **THEN** they find a brief overview of available guides
+- **AND** links to individual guide pages
+
+### Requirement: Chrome DevTools Guide
+
+The project SHALL provide a comprehensive Chrome DevTools MCP guide at `docs/learn/guides/chrome-devtools.md`.
+
+#### Scenario: Quick start section
+- **GIVEN** a user wanting to try Chrome DevTools MCP
+- **WHEN** they read the Quick Start section
+- **THEN** they find a 3-command example that launches a browser, takes a screenshot, and highlights an element
+- **AND** no prior configuration is required
+
+#### Scenario: Connection modes documented
+- **GIVEN** a user needing to understand connection options
+- **WHEN** they read the Connection Modes section
+- **THEN** they find isolated mode (default), remote mode (advanced), and autoConnect mode (experimental)
+- **AND** a comparison table showing setup complexity, session persistence, bot detection, and security risk
+- **AND** platform-specific setup commands for remote mode (macOS, Linux, Windows)
+
+#### Scenario: Element highlighting documented
+- **GIVEN** a user wanting to use element annotation
+- **WHEN** they read the Element Highlighting section
+- **THEN** they find how to inject the annotation tool
+- **AND** how Claude can highlight elements programmatically
+- **AND** how users can annotate elements manually (Ctrl+I / Cmd+I)
+- **AND** the API reference for `devtools_util` functions (Chrome DevTools)
+- **AND** the API reference for `playwright_util` functions (Playwright)
+- **AND** a note that the two packs are independent — each targets its own MCP server with no fallback between them
+
+#### Scenario: Common tasks documented
+- **GIVEN** a user wanting to accomplish a specific task
+- **WHEN** they read the Common Tasks section
+- **THEN** they find at least 5 task walkthroughs with copy-paste code examples
+- **AND** each task includes goal, prerequisites, steps, and common issues
+
+#### Scenario: Troubleshooting documented
+- **GIVEN** a user experiencing issues
+- **WHEN** they read the Troubleshooting section
+- **THEN** they find issues organised by symptom (not cause)
+- **AND** each issue includes diagnostic commands and solutions
+
+#### Scenario: FAQ documented
+- **GIVEN** a user with common questions
+- **WHEN** they read the FAQ section
+- **THEN** they find answers to at least 8 common questions
+- **AND** answers include code examples where relevant
 

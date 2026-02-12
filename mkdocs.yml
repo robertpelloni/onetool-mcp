@@ -145,6 +145,9 @@ nav:
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
       - Comparison: learn/comparison.md
+      - Guides:
+          - learn/guides/index.md
+          - Chrome DevTools: learn/guides/chrome-devtools.md
       - Extending:
           - learn/extending/index.md
           - Extension Tools: learn/extending/extension-tools.md

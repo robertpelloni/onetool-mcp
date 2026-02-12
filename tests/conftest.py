@@ -225,3 +225,20 @@ def mock_config():
         yield mock
 
 
+@pytest.fixture
+def mock_proxy_manager():
+    """Mock ot.proxy.get_proxy_manager for MCP server tests.
+
+    Usage:
+        def test_mcp_call(mock_proxy_manager):
+            mock_proxy_manager.servers = ["devtools"]
+            mock_proxy_manager.call_tool_sync.return_value = '{"success": true}'
+            # Run test that calls MCP tools
+    """
+    with patch("ot_tools._inject_base.get_proxy_manager") as mock:
+        proxy = MagicMock()
+        proxy.servers = []
+        mock.return_value = proxy
+        yield proxy
+
+

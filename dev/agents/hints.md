@@ -126,6 +126,25 @@ openspec/       Specifications and proposals
 
 ---
 
+## Browser Testing
+
+**Test URL for browser annotation tests:**
+- ✅ Use: `https://en.wikipedia.org/wiki/Anthropic` - Stable, reliable, good variety of selectors
+- ❌ Do NOT use: `example.com` (does not exist), Google (too complex/dynamic)
+
+**Reliable selectors for Wikipedia:**
+- Headings: `"h1"`, `"h2"`, `".mw-headline"`
+- Content: `"p"`, `"a"`, `".mw-content"`
+- Navigation: `".vector-menu"`, `"nav"`
+
+**Browser annotation testing rules:**
+- Do NOT manually interact with browser during automated tests (no CMD-I, no clicking)
+- Always dismiss dialogs before starting: `devtools.handle_dialog(action="dismiss")`
+- Use simple, stable selectors (avoid complex SPAs or dynamic content)
+- Test file: `tests/explore/test-browser.md`
+
+---
+
 ## MCP Proxy Tools
 
 **Automatic Name Aliasing:**

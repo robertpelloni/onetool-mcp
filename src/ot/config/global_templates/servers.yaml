@@ -11,13 +11,40 @@ servers:
   # =============================================================================
   # Browser automation, debugging, and inspection via Chrome DevTools Protocol.
   # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
+  # Guide:  docs/learn/guides/chrome-devtools.md
+  #
+  # CONNECTION MODES:
+  #
+  #   Isolated (default) — temporary profile, cleaned on close.
+  #     args: ["--isolated"]
+  #
+  #   Remote — connect to an existing Chrome with remote debugging enabled.
+  #     args: ["--browserUrl=http://localhost:9222"]
+  #     Requires Chrome launched with:
+  #       macOS:   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
+  #       Linux:   google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
+  #       Windows: chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\temp\chrome-debug
+  #     Verify:  curl http://localhost:9222/json/version
+  #     Note:    --user-data-dir is required since Chrome 136+
+  #
+  #   autoConnect (experimental) — connect to any Chrome with remote debugging.
+  #     args: ["--autoConnect", "--channel=beta"]
+  #     Requires beta channel until M144 reaches stable.
   #
   # OPTIONS (add to args array):
-  #   --autoConnect      Connect to existing Chrome (requires chrome://inspect/#remote-debugging)
+  #   --autoConnect      Connect to existing Chrome
   #   --headless=true    Run without visible browser window
-  #   --isolated         Use temp profile (cleared on close); default persists at ~/.cache/chrome-devtools-mcp/
-  #   --channel=beta     Use Chrome beta channel (needed for autoConnect until M144 stable)
-  #   --browserUrl=URL   Connect to remote Chrome (e.g., Docker: http://192.168.65.254:9222)
+  #   --isolated         Use temp profile (cleared on close)
+  #   --channel=beta     Use Chrome beta channel
+  #   --browserUrl=URL   Connect to remote Chrome (e.g., http://localhost:9222)
+  #   --viewport=WxH     Browser window size (default: 1280x720)
+  #
+  # ELEMENT HIGHLIGHTING (devtools_util pack):
+  #   devtools_util.inject_annotations()                                    # Load inject.js v2.0.0
+  #   devtools_util.highlight_element(selector=".btn", label="Click here")  # Highlight
+  #   devtools_util.scan_annotations()                                      # Read all annotations
+  #   devtools_util.clear_annotations()                                     # Remove all
+  #   Ctrl+I / Cmd+I in browser - prompts for custom annotation name when clicking elements.
   #
   devtools:
     type: stdio
@@ -40,6 +67,19 @@ servers:
       - Network: get_network_request, list_network_requests
       - Debug: evaluate_script, get_console_message, list_console_messages, take_screenshot, take_snapshot
 
+      **Connection modes:**
+      - Isolated (default): temp profile, auto-cleaned. Best for most tasks.
+      - Remote: connect to existing Chrome (--browserUrl). Preserves login sessions.
+      - autoConnect: auto-attach to any Chrome with remote debugging.
+
+      **Element highlighting (devtools_util pack):**
+      - devtools_util.inject_annotations() — load inject.js v2.0.0 into the page
+      - devtools_util.highlight_element(selector=".btn", label="Click") — annotate elements
+      - devtools_util.scan_annotations() — read user/Claude annotations
+      - devtools_util.clear_annotations() — remove all highlights
+      - devtools_util.guide_user(task="...", steps=[...]) — multi-step guidance
+      - Users can annotate manually with Ctrl+I / Cmd+I (prompts for custom annotation name).
+
       **Usage patterns:**
       - Browser launches automatically on first tool use (no manual startup needed)
       - Always use take_screenshot after actions for visual verification
@@ -53,6 +93,49 @@ servers:
       - Don't assume elements exist - use wait_for before interacting
       - Don't skip screenshots - they're essential for debugging failures
       - Don't use multiple fill calls when fill_form would work better
+
+  # =============================================================================
+  # PLAYWRIGHT MCP
+  # =============================================================================
+  # Browser automation via Playwright accessibility tree (no vision needed).
+  # Source: https://github.com/microsoft/playwright-mcp
+  #
+  # OPTIONS (add to args array):
+  #   --headless         Run without visible browser window
+  #   --browser=firefox  Use Firefox or WebKit instead of Chromium
+  #   --viewport=WxH     Set viewport size (e.g., 1280x720)
+  #
+  playwright:
+    type: stdio
+    command: npx
+    args:
+      - "@playwright/mcp@latest"
+    timeout: 120
+    instructions: |
+      Playwright MCP - Browser automation via accessibility snapshots (no vision needed).
+
+      **Key tools:**
+      - Navigation: browser_navigate, browser_back, browser_forward, browser_wait
+      - Interaction: browser_click, browser_type, browser_select_option, browser_press_key
+      - State: browser_snapshot, browser_screenshot, browser_evaluate
+      - Tabs: browser_tab_list, browser_tab_new, browser_tab_select, browser_tab_close
+
+      **Element highlighting (playwright_util pack):**
+      - playwright_util.inject_annotations() — load inject.js into the page
+      - playwright_util.highlight_element(selector=".btn", label="Click") — annotate elements
+      - playwright_util.scan_annotations() — read user/Claude annotations
+      - playwright_util.clear_annotations() — remove all highlights
+      - playwright_util.guide_user(task="...", steps=[...]) — multi-step guidance
+      - Users can annotate manually with Ctrl+I / Cmd+I in the browser.
+
+      **Usage patterns:**
+      - Always take browser_snapshot after actions (preferred over screenshots)
+      - Standard flow: browser_navigate -> browser_snapshot -> browser_click/type -> browser_snapshot
+      - Use browser_evaluate for custom JS execution
+
+      **Common mistakes to avoid:**
+      - Don't assume elements exist - use browser_snapshot first
+      - Don't skip snapshots between actions
 
   # =============================================================================
   # GITHUB MCP (HTTP)

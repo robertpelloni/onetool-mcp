@@ -66,3 +66,4 @@ ot.security(check="pickle.load") # Check qualified call
 
 - **[onetool Configuration](../reference/cli/onetool-config.md)** - Full YAML schema, pack settings, secrets, MCP servers, aliases, snippets, security
 - **[bench Configuration](../reference/cli/bench.md#configuration)** - Benchmark harness settings
+- **[Chrome DevTools Guide](guides/chrome-devtools.md)** - Browser automation, connection modes, and element annotation

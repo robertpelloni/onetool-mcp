@@ -117,6 +117,10 @@ docs-specs:
 build:
     uv build
 
+# Bundle inject.js annotation script (requires npm install in src/ot/assets/)
+build-inject:
+    cd src/ot/assets && npm run build
+
 # Clean build artifacts and caches
 clean:
     rm -rf dist/ build/ *.egg-info tmp/

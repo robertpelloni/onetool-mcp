@@ -163,6 +163,33 @@ context7.doc(library_key="fastapi/fastapi", topic="middleware")
 context7.doc(library_key="pallets/flask", topic="blueprints", mode="code")
 ```
 
+## Browser Annotations (Chrome DevTools)
+
+```python
+devtools_util.inject_annotations()
+devtools_util.highlight_element(selector="button.submit", label="Click here")
+devtools_util.highlight_element(selector=".error", label="Error", color="red")
+devtools_util.scan_annotations()
+devtools_util.clear_annotations()
+devtools_util.guide_user(task="Fill form", steps=[
+    {"selector": "input[name='name']", "label": "Enter name"},
+    {"selector": "button[type='submit']", "label": "Submit"},
+])
+```
+
+## Browser Annotations (Playwright)
+
+```python
+playwright_util.inject_annotations()
+playwright_util.highlight_element(selector="button.submit", label="Click here")
+playwright_util.scan_annotations()
+playwright_util.clear_annotations()
+playwright_util.guide_user(task="Fill form", steps=[
+    {"selector": "input[name='name']", "label": "Enter name"},
+    {"selector": "button[type='submit']", "label": "Submit"},
+])
+```
+
 ## System & Config
 
 ```python
