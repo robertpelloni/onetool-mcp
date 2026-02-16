@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.2] - 2026-02-16
+
+### Highlights
+- add automatic tool name aliasing for non-Python-friendly names
+- add devtools_util and playwright_util browser annotation packs; add chrome devtools guide
+
+### Fixed
+- expand env vars from secrets for stdio MCP servers; add inherit_env option
+
 ## [1.0.1] - 2026-02-10
 
 ### Highlights
