@@ -693,7 +693,6 @@ The `ot.debug()` function SHALL provide comprehensive debug information about th
 - **GIVEN** `env_vars=True` parameter
 - **WHEN** `ot.debug(env_vars=True)` is called
 - **THEN** it SHALL include an `env` section with:
-  - `OT_GLOBAL_DIR`: Global directory override
   - `ONETOOL_CONFIG`: Config file override
   - `OT_CWD`: Working directory override
 

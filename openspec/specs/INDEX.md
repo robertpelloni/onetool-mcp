@@ -63,25 +63,35 @@ The MCP server that exposes tools for LLM code execution.
 |------|---------|
 | [tool-execution](tool-execution/spec.md) | Worker subprocess execution, JSON-RPC |
 
-### Built-in Tools
+### Built-in Tools (core)
 
 | Spec | Purpose |
 |------|---------|
 | [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, notify, version) |
+| [tool-llm](tool-llm/spec.md) | LLM-powered data transformation |
+| [tool-mem](tool-mem/spec.md) | Persistent agent memory with semantic search |
+| [tool-scaffold](tool-scaffold/spec.md) | Extension scaffolding |
+| [tool-timer](tool-timer/spec.md) | Named stopwatch timers |
+
+### Domain Tools (`[util]` extra)
+
+| Spec | Purpose |
+|------|---------|
 | [tool-brave](tool-brave/spec.md) | Brave Search API (web, news, local, image, video) |
-| [tool-context7](tool-context7/spec.md) | Context7 library documentation API |
-| [tool-convert](tool-convert/spec.md) | Format conversion |
-| [tool-db](tool-db/spec.md) | SQL database queries via SQLAlchemy |
-| [tool-diagram](tool-diagram/spec.md) | Diagram generation |
+| [tool-convert](tool-convert/spec.md) | Format conversion (PDF, Word, PowerPoint, Excel) |
 | [tool-excel](tool-excel/spec.md) | Excel workbook operations |
 | [tool-file](tool-file/spec.md) | File operations |
 | [tool-ground](tool-ground/spec.md) | Google grounding via Gemini API |
-| [tool-llm](tool-llm/spec.md) | LLM-powered data transformation |
-| [tool-mem](tool-mem/spec.md) | Persistent agent memory with semantic search |
+
+### Domain Tools (`[dev]` extra)
+
+| Spec | Purpose |
+|------|---------|
+| [tool-context7](tool-context7/spec.md) | Context7 library documentation API |
+| [tool-db](tool-db/spec.md) | SQL database queries via SQLAlchemy |
+| [tool-diagram](tool-diagram/spec.md) | Diagram generation |
 | [tool-package](tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](tool-ripgrep/spec.md) | Text/regex search via ripgrep |
-| [tool-scaffold](tool-scaffold/spec.md) | Extension scaffolding |
-| [tool-timer](tool-timer/spec.md) | Named stopwatch timers |
 | [tool-web](tool-web/spec.md) | Web content extraction via trafilatura |
 
 ---
@@ -111,7 +121,9 @@ CLI for testing and benchmarking MCP servers.
 | onetool CLI | 1 |
 | onetool Core | 8 |
 | Tool Infrastructure | 1 |
-| Built-in Tools | 16 |
+| Built-in Tools (core) | 5 |
+| Domain Tools [util] | 5 |
+| Domain Tools [dev] | 6 |
 | bench | 8 |
 | **Total** | **39** |
 

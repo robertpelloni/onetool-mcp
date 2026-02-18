@@ -91,7 +91,7 @@ The `file.info()` function SHALL return file metadata.
 #### Scenario: File info
 - **GIVEN** a valid file path
 - **WHEN** `file.info(path=path)` is called
-- **THEN** it SHALL return YAML with:
+- **THEN** it SHALL return a dict with:
   - `path`: Relative path (or absolute if `relative_paths=False` or path is outside cwd)
   - `type`: "file", "directory", or "symlink"
   - `size`: Size in bytes

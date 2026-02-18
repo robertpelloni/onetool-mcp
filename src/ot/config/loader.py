@@ -26,7 +26,7 @@ from __future__ import annotations
 import os
 import threading
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, overload
 
 import yaml
 from loguru import logger
@@ -42,14 +42,6 @@ CURRENT_CONFIG_VERSION = 1
 MAX_INCLUDE_DEPTH = 5
 
 T = TypeVar("T", bound=BaseModel)
-
-
-class ConfigNotFoundError(Exception):
-    """Raised when configuration file is not found and no fallback is available.
-
-    This error indicates that OneTool has not been initialized. Users should run
-    `onetool init` to create the global configuration directory.
-    """
 
 
 def _resolve_config_path(config_path: Path | str | None) -> Path | None:
@@ -74,10 +66,10 @@ def _resolve_config_path(config_path: Path | str | None) -> Path | None:
     if env_config:
         return Path(env_config)
 
-    # Global-only: no project config resolution
-    from ot.paths import CONFIG_SUBDIR, get_global_dir
+    # Global-only: flat layout ~/.onetool/onetool.yaml
+    from ot.paths import get_global_dir
 
-    global_config = (get_global_dir() / CONFIG_SUBDIR / "onetool.yaml")
+    global_config = get_global_dir() / "onetool.yaml"
     if global_config.exists():
         return global_config
 
@@ -324,19 +316,22 @@ def _process_includes(
     return result
 
 
-def load_config(config_path: Path | str | None = None) -> OneToolConfig:
+def load_config(
+    config_path: Path | str | None = None,
+    secrets_path: Path | str | None = None,
+) -> OneToolConfig:
     """Load OneTool configuration from YAML file (global-only).
 
     Resolution order (when config_path is None):
         1. ONETOOL_CONFIG env var
-        2. ~/.onetool/config/onetool.yaml (global config only)
-        3. ConfigNotFoundError (requires 'onetool init')
+        2. ~/.onetool/onetool.yaml (global flat layout)
+        3. Returns OneToolConfig() with defaults (graceful start)
 
     No project-level configuration or inheritance is supported in V2.
 
     Example config::
 
-        # ~/.onetool/config/onetool.yaml
+        # ~/.onetool/onetool.yaml
         version: 1
 
         env:
@@ -353,25 +348,25 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
         Validated OneToolConfig
 
     Raises:
-        ConfigNotFoundError: If no config found and OneTool not initialized
         FileNotFoundError: If explicit config path doesn't exist
         ValueError: If YAML is invalid or validation fails
     """
     resolved_path = _resolve_config_path(config_path)
 
     if resolved_path is None:
-        raise ConfigNotFoundError(
-            "No configuration file found. Run 'onetool init' to initialize."
-        )
+        logger.debug("No config file found, using defaults")
+        if secrets_path is not None:
+            get_secrets(secrets_path, reload=True)
+        return OneToolConfig()
 
     logger.debug(f"Loading config from {resolved_path}")
 
     raw_data = _load_yaml_file(resolved_path)
 
     # Process includes before validation (merges external files)
-    # Resolve includes from OT_DIR (.onetool/), not config_dir (.onetool/config/)
+    # Resolve includes from OT_DIR (.onetool/), relative to config file location
     config_dir = resolved_path.parent.resolve()
-    ot_dir = config_dir.parent  # Go up from config/ to .onetool/
+    ot_dir = config_dir  # Flat layout: config is directly in .onetool/
     merged_data = _process_includes(raw_data, ot_dir)
 
     # Flatten nested arrays (compact array format support)
@@ -387,9 +382,9 @@ def load_config(config_path: Path | str | None = None) -> OneToolConfig:
     config._config_dir = config_dir
 
     # Load secrets AFTER config is loaded (secrets_file path now available)
-    # This fixes the chicken-and-egg problem where secrets_file couldn't be expanded
-    secrets_path = config.get_secrets_file_path()
-    get_secrets(secrets_path, reload=True)
+    # Explicit secrets_path (from --secrets flag) takes priority over config default
+    effective_secrets_path = secrets_path or config.get_secrets_file_path()
+    get_secrets(effective_secrets_path, reload=True)
 
     logger.info(f"Config loaded: version {config.version}")
 
@@ -403,7 +398,9 @@ _config_lock = threading.Lock()
 
 
 def get_config(
-    config_path: Path | str | None = None, reload: bool = False
+    config_path: Path | str | None = None,
+    reload: bool = False,
+    secrets_path: Path | str | None = None,
 ) -> OneToolConfig:
     """Get or load the global configuration (singleton pattern).
 
@@ -415,8 +412,8 @@ def get_config(
     Args:
         config_path: Path to config file (only used on first load or reload).
             Ignored after config is cached unless reload=True.
-        reload: Force reload configuration from disk. Use sparingly - primarily
-            intended for testing. In production, restart the process to reload.
+        reload: Force reload configuration from disk.
+        secrets_path: Explicit path to secrets file (threads through to load_config).
 
     Returns:
         OneToolConfig instance (same instance on subsequent calls)
@@ -431,7 +428,7 @@ def get_config(
     with _config_lock:
         # Double-check after acquiring lock (another thread may have loaded it)
         if _config is None or reload:
-            _config = load_config(config_path)
+            _config = load_config(config_path, secrets_path=secrets_path)
         return _config
 
 
@@ -459,6 +456,14 @@ def is_log_verbose() -> bool:
             return _config.log_verbose
 
     return False
+
+
+@overload
+def get_tool_config(pack: str, schema: type[T]) -> T: ...
+
+
+@overload
+def get_tool_config(pack: str, schema: None = None) -> dict[str, Any]: ...
 
 
 def get_tool_config(pack: str, schema: type[T] | None = None) -> T | dict[str, Any]:

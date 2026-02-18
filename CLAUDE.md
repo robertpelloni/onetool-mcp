@@ -1,21 +1,3 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
 
 Read dev/agents/hints.md for quick reference (commands, rules, project structure).
 Read dev/agents/project-map.md for detailed project structure.
@@ -39,6 +21,27 @@ just test     # Run tests
 just lint     # Run linters
 ```
 
+## OpenSpec Workflow
+
+Use `/opsx:new` for changes that define new user-facing behaviour or modify
+existing contracts:
+
+✅ Requires OpenSpec:
+- New tool packs or extras ([dev], [util], [xero])
+- New CLI commands or flags
+- Changes to config format, file locations, or schema
+- Changes to MCP tool interface or server behaviour
+- New registry or tool discovery mechanism
+
+❌ No OpenSpec needed:
+- Bug fixes and correctness improvements
+- Performance improvements
+- Adding or improving tests
+- Internal refactors with no behaviour change
+- Cherry-picking improvements from other branches
+- Documentation and spec updates
+- Build/tooling changes (pyproject.toml, justfile)
+
 ## Tools
 
 ### File Search
@@ -49,5 +52,3 @@ Use OneTool ripgrep (50x faster than find+grep, with line numbers):
 
 ### Tools - Web Search
 - Web search: `$g q=query one|query two|query three`
-
-

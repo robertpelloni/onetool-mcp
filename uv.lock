@@ -1415,36 +1415,49 @@ wheels = [
 
 [[package]]
 name = "onetool-mcp"
-version = "1.0.2"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
     { name = "docstring-parser" },
     { name = "fastmcp" },
-    { name = "google-genai" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "loguru" },
     { name = "mcp" },
     { name = "openai" },
-    { name = "openpyxl" },
-    { name = "pillow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pymupdf" },
-    { name = "python-docx" },
-    { name = "python-pptx" },
     { name = "pyyaml" },
     { name = "questionary" },
     { name = "rich" },
-    { name = "sqlalchemy" },
     { name = "tiktoken" },
-    { name = "trafilatura" },
     { name = "typer" },
 ]
 
 [package.optional-dependencies]
-file = [
+all = [
+    { name = "google-genai" },
+    { name = "openpyxl" },
+    { name = "pillow" },
+    { name = "pymupdf" },
+    { name = "python-docx" },
+    { name = "python-pptx" },
+    { name = "send2trash" },
+    { name = "sqlalchemy" },
+    { name = "trafilatura" },
+]
+dev = [
+    { name = "sqlalchemy" },
+    { name = "trafilatura" },
+]
+util = [
+    { name = "google-genai" },
+    { name = "openpyxl" },
+    { name = "pillow" },
+    { name = "pymupdf" },
+    { name = "python-docx" },
+    { name = "python-pptx" },
     { name = "send2trash" },
 ]
 
@@ -1470,29 +1483,30 @@ requires-dist = [
     { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "docstring-parser", specifier = ">=0.17" },
     { name = "fastmcp", specifier = ">=2.14.4" },
-    { name = "google-genai", specifier = ">=1.60.0" },
+    { name = "google-genai", marker = "extra == 'util'", specifier = ">=1.60.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mcp", specifier = ">=1.26.0" },
+    { name = "onetool-mcp", extras = ["util", "dev", "xero"], marker = "extra == 'all'" },
     { name = "openai", specifier = ">=2.15.0" },
-    { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "pillow", specifier = ">=12.1.0" },
+    { name = "openpyxl", marker = "extra == 'util'", specifier = ">=3.1.5" },
+    { name = "pillow", marker = "extra == 'util'", specifier = ">=12.1.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "pymupdf", specifier = ">=1.26.7" },
-    { name = "python-docx", specifier = ">=1.2.0" },
-    { name = "python-pptx", specifier = ">=1.0.2" },
+    { name = "pymupdf", marker = "extra == 'util'", specifier = ">=1.26.7" },
+    { name = "python-docx", marker = "extra == 'util'", specifier = ">=1.2.0" },
+    { name = "python-pptx", marker = "extra == 'util'", specifier = ">=1.0.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "rich", specifier = ">=14.3.1" },
-    { name = "send2trash", marker = "extra == 'file'", specifier = ">=2.1.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.46" },
+    { name = "send2trash", marker = "extra == 'util'", specifier = ">=2.1.0" },
+    { name = "sqlalchemy", marker = "extra == 'dev'", specifier = ">=2.0.46" },
     { name = "tiktoken", specifier = ">=0.9.0" },
-    { name = "trafilatura", specifier = ">=2.0.0" },
+    { name = "trafilatura", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
-provides-extras = ["file"]
+provides-extras = ["util", "dev", "xero", "all"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -11,6 +11,7 @@ Used by the runner to make tools available during code execution.
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
 from collections import OrderedDict
@@ -37,6 +38,23 @@ def _get_bundled_tools_dir() -> Path | None:
         return Path(ot_tools.__file__).parent
     except (ImportError, AttributeError):
         return None
+
+
+def _get_domain_tool_dirs() -> list[Path]:
+    """Discover tool dirs from installed domain extras. Silently skips if not installed.
+
+    Returns:
+        List of paths to domain tool directories (otdev, otutil, otxero).
+    """
+    dirs = []
+    for pkg in ("otdev.tools", "otutil.tools", "otxero.tools"):
+        try:
+            mod = importlib.import_module(pkg)
+            if mod.__file__:
+                dirs.append(Path(mod.__file__).parent)
+        except ImportError:
+            pass
+    return dirs
 
 
 if TYPE_CHECKING:
@@ -108,6 +126,14 @@ def _get_tool_files(
         # Mark bundled tools as internal (shipped with OneTool)
         internal_files = {f.resolve() for f in bundled_files if f.exists()}
         logger.debug(f"Found {len(bundled_files)} bundled tools from {bundled_dir}")
+
+    # Include domain extra tools (otdev, otutil, otxero) if installed
+    for extra_dir in _get_domain_tool_dirs():
+        if extra_dir.exists():
+            extra_files = [f for f in extra_dir.glob("*.py") if f.name != "__init__.py"]
+            tool_files.extend(extra_files)
+            internal_files |= {f.resolve() for f in extra_files if f.exists()}
+            logger.debug(f"Found {len(extra_files)} domain tools from {extra_dir}")
 
     # Add config-specified tools (these are extension tools, not internal)
     config_tool_files = config.get_tool_files() if config else []
@@ -242,7 +268,8 @@ def _load_inprocess_tools(
 
     for tool_info in inprocess_tools:
         py_file = tool_info.path
-        module_name = f"tools.{py_file.stem}"
+        # Include parent dir to reduce sys.modules key collisions between tool packages
+        module_name = f"ot_tool.{py_file.parent.name}.{py_file.stem}"
 
         try:
             mtimes[str(py_file)] = py_file.stat().st_mtime

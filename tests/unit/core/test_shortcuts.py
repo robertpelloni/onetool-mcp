@@ -198,13 +198,12 @@ def test_include_loads_snippets_library() -> None:
     from ot.shortcuts import expand_snippet, parse_snippet
 
     # Create self-contained test with known snippets (not dependent on external files)
-    # Standard structure: .onetool/config/onetool.yaml with includes relative to OT_DIR
+    # Flat structure: .onetool/onetool.yaml with includes relative to .onetool/
     with tempfile.TemporaryDirectory() as tmpdir:
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create a test snippets file in OT_DIR (includes resolve relative to .onetool/)
+        # Create a test snippets file alongside onetool.yaml
         test_snippets_path = onetool_dir / "test-snippets.yaml"
         test_snippets_path.write_text(
             yaml.dump(
@@ -227,7 +226,7 @@ def test_include_loads_snippets_library() -> None:
             )
         )
 
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
@@ -264,13 +263,12 @@ def test_include_inline_overrides_included() -> None:
     from ot.config.loader import load_config
 
     # Create self-contained test with known snippets (not dependent on external files)
-    # Standard structure: .onetool/config/onetool.yaml with includes relative to OT_DIR
+    # Flat structure: .onetool/onetool.yaml with includes relative to .onetool/
     with tempfile.TemporaryDirectory() as tmpdir:
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create a test snippets file in OT_DIR (includes resolve relative to .onetool/)
+        # Create a test snippets file alongside onetool.yaml
         test_snippets_path = onetool_dir / "test-snippets.yaml"
         test_snippets_path.write_text(
             yaml.dump(
@@ -284,7 +282,7 @@ def test_include_inline_overrides_included() -> None:
         )
 
         # Create config with inline snippet that has same name as one in included lib
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {

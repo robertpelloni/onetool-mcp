@@ -265,17 +265,16 @@ def test_secrets_file_relative_resolution() -> None:
 @pytest.mark.unit
 @pytest.mark.core
 def test_include_single_file() -> None:
-    """include: loads and merges single file (paths relative to OT_DIR)."""
+    """include: loads and merges single file (paths relative to config dir)."""
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create include file in config/ subdirectory
-        servers_file = config_dir / "servers.yaml"
+        # Create include file alongside onetool.yaml
+        servers_file = onetool_dir / "servers.yaml"
         servers_file.write_text(
             yaml.dump(
                 {
@@ -289,13 +288,13 @@ def test_include_single_file() -> None:
             )
         )
 
-        # Create main config with include (paths relative to OT_DIR)
-        config_path = config_dir / "onetool.yaml"
+        # Create main config with include (paths relative to onetool_dir)
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
                     "version": 1,
-                    "include": ["config/servers.yaml"],
+                    "include": ["servers.yaml"],
                 }
             )
         )
@@ -314,12 +313,11 @@ def test_include_multiple_files_merge_order() -> None:
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create first include file in OT_DIR
+        # Create first include file alongside onetool.yaml
         first_file = onetool_dir / "first.yaml"
         first_file.write_text(
             yaml.dump(
@@ -345,8 +343,8 @@ def test_include_multiple_files_merge_order() -> None:
             )
         )
 
-        # Create main config (includes relative to OT_DIR)
-        config_path = config_dir / "onetool.yaml"
+        # Create main config (includes relative to onetool_dir)
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
@@ -373,12 +371,11 @@ def test_include_inline_overrides_included() -> None:
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create include file in OT_DIR
+        # Create include file alongside onetool.yaml
         include_file = onetool_dir / "base.yaml"
         include_file.write_text(
             yaml.dump(
@@ -392,7 +389,7 @@ def test_include_inline_overrides_included() -> None:
         )
 
         # Create main config with inline override
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
@@ -420,12 +417,11 @@ def test_include_nested_dicts_deep_merged() -> None:
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create include file in OT_DIR
+        # Create include file alongside onetool.yaml
         include_file = onetool_dir / "tools.yaml"
         include_file.write_text(
             yaml.dump(
@@ -440,7 +436,7 @@ def test_include_nested_dicts_deep_merged() -> None:
         )
 
         # Create main config with different tool setting
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
@@ -500,12 +496,11 @@ def test_include_with_prompts_section() -> None:
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create prompts file in OT_DIR with prompts: key
+        # Create prompts file alongside onetool.yaml
         prompts_file = onetool_dir / "prompts.yaml"
         prompts_file.write_text(
             yaml.dump(
@@ -519,7 +514,7 @@ def test_include_with_prompts_section() -> None:
 
         # Create main config using include instead of prompts_file
         # Use inherit: none to standalone test config
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
@@ -543,12 +538,11 @@ def test_include_with_snippets_section() -> None:
     from ot.config.loader import load_config
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard structure: .onetool/config/onetool.yaml
+        # Flat structure: .onetool/onetool.yaml
         onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
+        onetool_dir.mkdir(parents=True)
 
-        # Create snippets file in OT_DIR with snippets: key
+        # Create snippets file alongside onetool.yaml
         snippets_file = onetool_dir / "my-snippets.yaml"
         snippets_file.write_text(
             yaml.dump(
@@ -565,7 +559,7 @@ def test_include_with_snippets_section() -> None:
 
         # Create main config using include instead of snippets_dir
         # Use inherit: none to standalone test config
-        config_path = config_dir / "onetool.yaml"
+        config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {

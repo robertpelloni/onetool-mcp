@@ -2,13 +2,22 @@
 
 ## Purpose
 
-OneTool is an MCP server exposing a single `run` tool for AI-assisted development. It addresses MCP's token bloat (~46K tokens for multiple tools, 96% reduction) by moving execution to a cheap LLM.
+OneTool Extras provides domain-specific tool packs for onetool-mcp, packaged as standalone MCP servers. Each extra installs independently alongside the core server, keeping token costs low by exposing only the tools needed for a given workflow.
 
-**Architecture**: `run request` → `LLM codegen` → `Host exec` → `Return` (~2K tokens, 1 call)
+**Architecture**: `onetool-mcp` (core) + `onetool-util` and/or `onetool-dev` (extras, optional)
 
 ## Stack
 
-Python 3.11+, FastMCP, OpenAI SDK (OpenRouter), Typer, Pydantic, YAML config
+Python 3.12+, FastMCP, Pydantic, httpx, SQLAlchemy, Typer, PyYAML
+
+## Packages
+
+| Package | MCP Server | Tool Packs |
+|---------|------------|------------|
+| `otutil` | `onetool-util` | file, excel, brave, convert, ground |
+| `otdev` | `onetool-dev` | ripgrep, web, package, db, diagram, context7 |
+| `otcommon` | (shared) | Registry, tool discovery utilities |
+| `ot` | (shared) | Core framework (executor, config, logging, proxy) |
 
 ## Full Documentation
 
@@ -17,4 +26,4 @@ Python 3.11+, FastMCP, OpenAI SDK (OpenRouter), Typer, Pydantic, YAML config
 
 ---
 
-*Last Updated: 2026-02-09*
+*Last Updated: 2026-02-18*

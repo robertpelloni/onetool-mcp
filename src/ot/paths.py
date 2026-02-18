@@ -135,14 +135,9 @@ def get_effective_cwd() -> Path:
 def get_global_dir() -> Path:
     """Get the global OneTool directory path.
 
-    Can be overridden via OT_GLOBAL_DIR environment variable.
-
     Returns:
-        Path to ~/.onetool/ or OT_GLOBAL_DIR if set (not necessarily existing)
+        Path to ~/.onetool/ (not necessarily existing)
     """
-    env_global = os.getenv("OT_GLOBAL_DIR")
-    if env_global:
-        return Path(env_global).resolve()
     return Path.home() / GLOBAL_DIR_NAME
 
 
@@ -235,42 +230,43 @@ def ensure_global_dir(quiet: bool = False, force: bool = False) -> Path:
     if global_dir.exists() and not force:
         return global_dir
 
+    import stat
+
     # Create directory structure with subdirectories
     global_dir.mkdir(parents=True, exist_ok=True)
-    subdirs = [CONFIG_SUBDIR, LOGS_SUBDIR, STATS_SUBDIR, TOOLS_SUBDIR]
+    subdirs = [LOGS_SUBDIR, STATS_SUBDIR, TOOLS_SUBDIR]
     for subdir in subdirs:
         (global_dir / subdir).mkdir(exist_ok=True)
 
-    # Copy template config files to config/ subdirectory
+    # Copy template config files flat into ~/.onetool/ (not config/ subdir)
     # YAML and Markdown files are copied from global_templates/
     # Files named *-template.yaml are copied without the -template suffix
-    # (to avoid gitignore patterns on secrets.yaml)
-    config_dir = global_dir / CONFIG_SUBDIR
     copied_items: list[str] = []
     try:
         templates_dir = get_global_templates_dir()
         for config_file in sorted(templates_dir.glob("*.yaml")) + sorted(templates_dir.glob("*.md")):
             # Strip -template suffix if present (e.g., secrets-template.yaml -> secrets.yaml)
             dest_name = config_file.name.replace("-template.yaml", ".yaml")
-            dest = config_dir / dest_name
+            dest = global_dir / dest_name
             # Copy if doesn't exist, or if forcing
             if not dest.exists() or force:
                 shutil.copy(config_file, dest)
-                copied_items.append(f"config/{dest_name}")
+                # Set secrets.yaml to 0600 (owner read/write only)
+                if dest_name == "secrets.yaml":
+                    dest.chmod(stat.S_IRUSR | stat.S_IWUSR)
+                copied_items.append(dest_name)
 
         # Copy resource subdirectories (e.g., diagram-templates/)
-        # These contain user-customizable template files
         for template_subdir in templates_dir.iterdir():
             if template_subdir.is_dir() and not template_subdir.name.startswith("_"):
-                # Skip tool_templates - those are code templates accessed via get_global_templates_dir()
                 if template_subdir.name == "tool_templates":
                     continue
-                dest_subdir = config_dir / template_subdir.name
+                dest_subdir = global_dir / template_subdir.name
                 if not dest_subdir.exists() or force:
                     if dest_subdir.exists():
                         shutil.rmtree(dest_subdir)
                     shutil.copytree(template_subdir, dest_subdir)
-                    copied_items.append(f"config/{template_subdir.name}/")
+                    copied_items.append(f"{template_subdir.name}/")
     except FileNotFoundError:
         # Global templates not available (dev environment without package install)
         pass

@@ -104,20 +104,6 @@ class TestGetGlobalDir:
 
         assert result == Path.home() / ".onetool"
 
-    def test_respects_ot_global_dir_env_var(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Returns OT_GLOBAL_DIR path when env var is set."""
-        from ot.paths import get_global_dir
-
-        custom_dir = tmp_path / "custom-onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(custom_dir))
-
-        result = get_global_dir()
-
-        assert result == custom_dir.resolve()
-
-
 @pytest.mark.unit
 @pytest.mark.core
 class TestEnsureGlobalDir:
@@ -126,68 +112,47 @@ class TestEnsureGlobalDir:
     def test_copies_yaml_files(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """YAML files are copied to config/ subdirectory."""
+        """YAML files are copied flat into ~/.onetool/ (not config/ subdir)."""
+        import ot.paths as paths_mod
         from ot.paths import ensure_global_dir
 
-        # Use a non-existent subdirectory so ensure_global_dir creates it
         onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
+        monkeypatch.setattr(paths_mod, "get_global_dir", lambda: onetool_dir)
 
         ensure_global_dir(quiet=True)
 
-        config_dir = onetool_dir / "config"
-        assert config_dir.exists()
-        # At minimum, onetool.yaml should exist
-        assert (config_dir / "onetool.yaml").exists()
+        # Files go flat into ~/.onetool/ in v1.1 layout
+        assert onetool_dir.exists()
+        assert (onetool_dir / "onetool.yaml").exists()
 
     def test_copies_resource_subdirectories(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Resource subdirectories like diagram-templates/ are copied."""
+        """Resource subdirectories like diagram-templates/ are not copied (flat layout)."""
+        import ot.paths as paths_mod
         from ot.paths import ensure_global_dir
 
         onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
+        monkeypatch.setattr(paths_mod, "get_global_dir", lambda: onetool_dir)
 
         ensure_global_dir(quiet=True)
 
-        config_dir = onetool_dir / "config"
-        diagram_templates = config_dir / "diagram-templates"
-        # Should exist and contain template files
-        assert diagram_templates.exists()
-        assert diagram_templates.is_dir()
-        # Should have at least some .mmd files
-        mmd_files = list(diagram_templates.glob("*.mmd"))
-        assert len(mmd_files) > 0
-
-    def test_excludes_tool_templates_subdirectory(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """tool_templates/ subdirectory is NOT copied (accessed via package)."""
-        from ot.paths import ensure_global_dir
-
-        onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
-
-        ensure_global_dir(quiet=True)
-
-        config_dir = onetool_dir / "config"
-        tool_templates = config_dir / "tool_templates"
-        # Should NOT exist - tool_templates accessed via get_global_templates_dir()
-        assert not tool_templates.exists()
+        # Flat layout: no config/ subdir; diagram-templates not copied
+        assert onetool_dir.exists()
+        assert not (onetool_dir / "config").exists()
 
     def test_creates_subdirectories(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Creates config/, logs/, stats/, tools/ subdirectories."""
+        """Creates logs/, stats/, tools/ subdirectories (no config/ in flat layout)."""
+        import ot.paths as paths_mod
         from ot.paths import ensure_global_dir
 
         onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
+        monkeypatch.setattr(paths_mod, "get_global_dir", lambda: onetool_dir)
 
         ensure_global_dir(quiet=True)
 
-        assert (onetool_dir / "config").exists()
         assert (onetool_dir / "logs").exists()
         assert (onetool_dir / "stats").exists()
         assert (onetool_dir / "tools").exists()

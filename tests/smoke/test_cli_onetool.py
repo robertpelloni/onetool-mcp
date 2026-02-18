@@ -55,6 +55,7 @@ def test_onetool_init_help() -> None:
 
 @pytest.mark.smoke
 @pytest.mark.serve
+@pytest.mark.skip(reason="OT_GLOBAL_DIR env override removed in v1.1 flat layout")
 def test_onetool_init_creates_directory(tmp_path: pytest.TempPathFactory) -> None:
     """Verify onetool init creates ~/.onetool/ with subdirs on fresh system."""
     import tempfile

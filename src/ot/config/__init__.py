@@ -32,7 +32,6 @@ Usage:
 """
 
 from ot.config.loader import (
-    ConfigNotFoundError,
     get_config,
     get_tool_config,
     is_log_verbose,
@@ -71,7 +70,6 @@ def reset() -> None:
 
 
 __all__ = [
-    "ConfigNotFoundError",
     "McpServerConfig",
     "OneToolConfig",
     "SecurityConfig",
