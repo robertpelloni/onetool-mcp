@@ -628,8 +628,8 @@ class OneToolConfig(BaseModel):
 
         # Determine OT_DIR for resolving patterns
         if self._config_dir is not None:
-            # _config_dir is the config/ subdirectory, go up to .onetool/
-            ot_dir = self._config_dir.parent
+            # _config_dir is the .onetool/ directory (flat layout: config is directly in .onetool/)
+            ot_dir = self._config_dir
         else:
             # Fallback: global .onetool
             ot_dir = get_global_dir()
@@ -660,7 +660,7 @@ class OneToolConfig(BaseModel):
         Handles:
         - Absolute paths: returned as-is
         - ~ expansion: expanded to home directory
-        - Relative paths: resolved relative to .onetool/ directory (parent of config/)
+        - Relative paths: resolved relative to .onetool/ directory (where config file lives)
 
         Note: Does NOT expand ${VAR} - use ~/path instead of ${HOME}/path.
 
@@ -679,11 +679,9 @@ class OneToolConfig(BaseModel):
         if path.is_absolute():
             return path
 
-        # Resolve relative to .onetool/ directory (parent of config/)
+        # Resolve relative to .onetool/ directory (flat layout: config is directly in .onetool/)
         if self._config_dir is not None:
-            # _config_dir is the config/ subdirectory, go up to .onetool/
-            onetool_dir = self._config_dir.parent
-            return (onetool_dir / path).resolve()
+            return (self._config_dir / path).resolve()
 
         # Fallback: resolve relative to global .onetool/
         return (get_global_dir() / path).resolve()
