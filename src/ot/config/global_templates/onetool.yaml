@@ -1,23 +1,22 @@
-# OneTool Global Configuration
-# User customization for ~/.onetool/onetool.yaml
+# OneTool Configuration
+# ~/.onetool/onetool.yaml — edit to customize your setup
 # Uncomment and modify settings as needed.
 
-version: 1
+version: 2
 
 # Include external config files (merged left-to-right)
-# Paths are relative to OT_DIR (~/.onetool/), with fallback to global config
+# Paths are relative to this file's directory (the .onetool/ directory)
 include:
-  - config/snippets.yaml   # Snippet workflows
-  - config/servers.yaml    # External MCP servers
-  - config/security.yaml   # Security allowlists (builtins, imports, calls)
-  - config/diagram.yaml    # Diagram tool settings and templates
+  - snippets.yaml   # Snippet workflows
+  - servers.yaml    # External MCP servers
+  - security.yaml   # Security allowlists (builtins, imports, calls)
+  - diagram.yaml    # Diagram tool settings and templates
 
-# Glob patterns for custom tool discovery (relative to ~/.onetool/, or absolute)
-# Example: ["tools/*.py"] loads all Python files in ~/.onetool/tools/
+# Glob patterns for custom tool discovery (relative to .onetool/, or absolute)
+# Example: ["tools/*.py"] loads all Python files in .onetool/tools/
 tools_dir: []
 
 # log_level: INFO
-# debug_tracebacks: false  # Set to true for verbose error tracebacks
 
 # Tool-specific configuration
 # tools:

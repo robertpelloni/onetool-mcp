@@ -507,13 +507,15 @@ class ToolsConfig(BaseModel):
 
 
 class OneToolConfig(BaseModel):
-    """Root configuration for OneTool (global-only, V2)."""
+    """Root configuration for OneTool."""
 
-    # Private attribute to track config file location (not serialized)
-    _config_dir: Path | None = PrivateAttr(default=None)
+    model_config = ConfigDict(extra="forbid")
+
+    # Private attribute to track config file location (set by load_config())
+    _config_dir: Path = PrivateAttr()
 
     version: int = Field(
-        default=1,
+        default=2,
         description="Config schema version for migration support",
     )
 
@@ -571,10 +573,6 @@ class OneToolConfig(BaseModel):
         default_factory=lambda: ["tools/*.py"],
         description="Glob patterns for tool discovery (relative to .onetool/, or absolute)",
     )
-    secrets_file: str = Field(
-        default="config/secrets.yaml",
-        description="Path to secrets file (relative to .onetool/, or absolute)",
-    )
     prompts: dict[str, Any] | None = Field(
         default=None,
         description="Inline prompts config (can also be loaded via include:)",
@@ -619,20 +617,18 @@ class OneToolConfig(BaseModel):
 
         Returns:
             List of Path objects for tool files
+
+        Raises:
+            RuntimeError: If _config_dir not set (load_config() not called)
         """
         import glob
 
-        from ot.paths import get_global_dir
-
         tool_files: list[Path] = []
 
-        # Determine OT_DIR for resolving patterns
-        if self._config_dir is not None:
-            # _config_dir is the .onetool/ directory (flat layout: config is directly in .onetool/)
+        try:
             ot_dir = self._config_dir
-        else:
-            # Fallback: global .onetool
-            ot_dir = get_global_dir()
+        except AttributeError as err:
+            raise RuntimeError("_config_dir not set — was load_config() called?") from err
 
         for pattern in self.tools_dir:
             # Expand ~ first
@@ -669,9 +665,10 @@ class OneToolConfig(BaseModel):
 
         Returns:
             Resolved absolute Path
-        """
-        from ot.paths import get_global_dir
 
+        Raises:
+            RuntimeError: If _config_dir not set (load_config() not called)
+        """
         # Only expand ~ (no ${VAR} expansion)
         path = Path(path_str).expanduser()
 
@@ -680,21 +677,10 @@ class OneToolConfig(BaseModel):
             return path
 
         # Resolve relative to .onetool/ directory (flat layout: config is directly in .onetool/)
-        if self._config_dir is not None:
+        try:
             return (self._config_dir / path).resolve()
-
-        # Fallback: resolve relative to global .onetool/
-        return (get_global_dir() / path).resolve()
-
-    def get_secrets_file_path(self) -> Path:
-        """Get the resolved path to the secrets configuration file.
-
-        Path is resolved relative to .onetool/ directory.
-
-        Returns:
-            Absolute Path to secrets file
-        """
-        return self._resolve_onetool_relative_path(self.secrets_file)
+        except AttributeError as err:
+            raise RuntimeError("_config_dir not set — was load_config() called?") from err
 
     def get_log_dir_path(self) -> Path:
         """Get the resolved path to the log directory.

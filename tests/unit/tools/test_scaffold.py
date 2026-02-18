@@ -17,23 +17,18 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def mock_project_dir(tmp_path: Path) -> Generator[Path, None, None]:
-    """Mock project directory to tmp_path."""
-    project_dir = tmp_path / ".onetool"
-    project_dir.mkdir()
+def mock_ot_dir(tmp_path: Path) -> Generator[Path, None, None]:
+    """Mock ot dir (config_path.parent) to tmp_path."""
+    from unittest.mock import MagicMock
 
-    with patch("ot_tools.scaffold.get_project_dir", return_value=project_dir):
-        yield project_dir
+    ot_dir = tmp_path / ".onetool"
+    ot_dir.mkdir()
 
+    mock_config = MagicMock()
+    mock_config._config_dir = ot_dir
 
-@pytest.fixture
-def mock_global_dir(tmp_path: Path) -> Generator[Path, None, None]:
-    """Mock global directory to tmp_path."""
-    global_dir = tmp_path / "global_onetool"
-    global_dir.mkdir()
-
-    with patch("ot_tools.scaffold.get_global_dir", return_value=global_dir):
-        yield global_dir
+    with patch("ot.config.loader.get_config", return_value=mock_config):
+        yield ot_dir
 
 
 # =============================================================================
@@ -98,7 +93,7 @@ def test_templates_missing_dir(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
-def test_create_extension_project_scope(mock_project_dir: Path) -> None:
+def test_create_extension_project_scope(mock_ot_dir: Path) -> None:
     """Verify create() creates extension in project scope."""
     from ot_tools.scaffold import create
 
@@ -109,7 +104,7 @@ def test_create_extension_project_scope(mock_project_dir: Path) -> None:
     assert "Next steps:" in result
 
     # Verify file was created
-    ext_file = mock_project_dir / "tools" / "my_tool" / "my_tool.py"
+    ext_file = mock_ot_dir / "tools" / "my_tool" / "my_tool.py"
     assert ext_file.exists()
 
     content = ext_file.read_text()
@@ -121,22 +116,7 @@ def test_create_extension_project_scope(mock_project_dir: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
-def test_create_extension_global_scope(mock_global_dir: Path) -> None:
-    """Verify create() creates extension in global scope."""
-    from ot_tools.scaffold import create
-
-    result = create(name="global_tool", scope="global")
-
-    assert "Created extension:" in result
-
-    # Verify file was created in global dir
-    ext_file = mock_global_dir / "tools" / "global_tool" / "global_tool.py"
-    assert ext_file.exists()
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-def test_create_custom_pack_name(mock_project_dir: Path) -> None:
+def test_create_custom_pack_name(mock_ot_dir: Path) -> None:
     """Verify create() uses custom pack_name."""
     from ot_tools.scaffold import create
 
@@ -144,7 +124,7 @@ def test_create_custom_pack_name(mock_project_dir: Path) -> None:
 
     assert "Created extension:" in result
 
-    ext_file = mock_project_dir / "tools" / "my_tool" / "my_tool.py"
+    ext_file = mock_ot_dir / "tools" / "my_tool" / "my_tool.py"
     content = ext_file.read_text()
     assert 'pack = "custom_pack"' in content
 
@@ -167,7 +147,7 @@ def test_create_invalid_name() -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
-def test_create_already_exists(mock_project_dir: Path) -> None:
+def test_create_already_exists(mock_ot_dir: Path) -> None:
     """Verify create() returns error if extension exists."""
     from ot_tools.scaffold import create
 
@@ -183,7 +163,7 @@ def test_create_already_exists(mock_project_dir: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
-def test_create_invalid_template(mock_project_dir: Path) -> None:
+def test_create_invalid_template(mock_ot_dir: Path) -> None:
     """Verify create() returns error for invalid template."""
     from ot_tools.scaffold import create
 

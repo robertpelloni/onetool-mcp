@@ -10,7 +10,7 @@ from pathlib import Path
 import yaml
 
 from ot.logging import LogSpan
-from ot.paths import get_effective_cwd, get_global_dir
+from ot.paths import get_effective_cwd
 
 # Cached bench secrets
 _bench_secrets: dict[str, str] | None = None
@@ -20,29 +20,17 @@ def _find_bench_secrets_file() -> Path | None:
     """Find bench-secrets.yaml file.
 
     Resolution order:
-    1. .onetool/config/bench-secrets.yaml (project-level, preferred)
-    2. .onetool/bench-secrets.yaml (project-level, legacy)
-    3. ~/.onetool/bench-secrets.yaml (global)
+    1. .onetool/bench-secrets.yaml (cwd-relative)
 
     Returns:
         Path to bench-secrets.yaml if found, None otherwise
     """
     cwd = get_effective_cwd()
 
-    # Project-level (preferred location)
-    project_config_path = cwd / ".onetool" / "config" / "bench-secrets.yaml"
-    if project_config_path.exists():
-        return project_config_path
-
-    # Project-level (legacy location)
-    project_path = cwd / ".onetool" / "bench-secrets.yaml"
-    if project_path.exists():
-        return project_path
-
-    # Global
-    global_path = get_global_dir() / "bench-secrets.yaml"
-    if global_path.exists():
-        return global_path
+    # CWD-relative
+    bench_secrets_path = cwd / ".onetool" / "bench-secrets.yaml"
+    if bench_secrets_path.exists():
+        return bench_secrets_path
 
     return None
 

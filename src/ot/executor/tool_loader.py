@@ -359,8 +359,7 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
         list(current_files), internal_files
     )
 
-    secrets_path = config.get_secrets_file_path() if config else None
-    secrets = get_secrets(secrets_path)
+    secrets = get_secrets()
     config_dict = config.model_dump() if config else {}
 
     # Inject path context for isolated worker tools

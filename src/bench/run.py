@@ -20,7 +20,7 @@ from bench.reporter import ConsoleReporter
 from bench.utils import run_async
 from ot._tui import ask_select
 from ot.logging import LogSpan, configure_logging
-from ot.paths import get_effective_cwd, get_global_dir
+from ot.paths import get_effective_cwd
 from ot.support import get_support_banner, get_version
 
 # Exit codes
@@ -58,10 +58,8 @@ def load_bench_config(config_path: Path | str | None = None) -> BenchConfig:
 
     Resolution order (when config_path is None):
     1. BENCH_CONFIG env var
-    2. cwd/.onetool/config/bench.yaml
-    3. cwd/.onetool/bench.yaml
-    4. ~/.onetool/bench.yaml
-    5. Built-in defaults
+    2. cwd/.onetool/bench.yaml
+    3. Built-in defaults
     """
     if config_path is None:
         # Check BENCH_CONFIG env var first
@@ -70,23 +68,13 @@ def load_bench_config(config_path: Path | str | None = None) -> BenchConfig:
             config_path = Path(env_config)
         else:
             cwd = get_effective_cwd()
-            # Try project config: cwd/.onetool/config/bench.yaml (preferred)
-            project_config = cwd / ".onetool" / "config" / "bench.yaml"
-            if project_config.exists():
-                config_path = project_config
+            # Try cwd-relative bench config
+            bench_config = cwd / ".onetool" / "bench.yaml"
+            if bench_config.exists():
+                config_path = bench_config
             else:
-                # Try legacy location: cwd/.onetool/bench.yaml
-                legacy_config = cwd / ".onetool" / "bench.yaml"
-                if legacy_config.exists():
-                    config_path = legacy_config
-                else:
-                    # Try global config: ~/.onetool/bench.yaml
-                    global_config = get_global_dir() / "bench.yaml"
-                    if global_config.exists():
-                        config_path = global_config
-                    else:
-                        # No config found, use defaults
-                        return BenchConfig()
+                # No config found, use defaults
+                return BenchConfig()
     else:
         config_path = Path(config_path)
 

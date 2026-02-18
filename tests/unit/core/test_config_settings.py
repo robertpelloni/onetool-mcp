@@ -9,9 +9,9 @@ import pytest
 @pytest.mark.core
 def test_config_has_required_logging_fields() -> None:
     """Verify OneToolConfig has all required logging fields with defaults."""
-    from ot.config import load_config
+    from ot.config import OneToolConfig
 
-    config = load_config()
+    config = OneToolConfig()
 
     # Check fields have expected defaults (migrated from Settings)
     assert config.log_level == "INFO"

@@ -230,8 +230,7 @@ def test_include_loads_snippets_library() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
-                    "inherit": "none",  # Disable inheritance for isolated test
+                    "version": 2,
                     "include": ["test-snippets.yaml"],
                 }
             )
@@ -286,8 +285,7 @@ def test_include_inline_overrides_included() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
-                    "inherit": "none",  # Disable inheritance for isolated test
+                    "version": 2,
                     "include": ["test-snippets.yaml"],
                     "snippets": {
                         "shared_snippet": {"body": "custom.override()"},

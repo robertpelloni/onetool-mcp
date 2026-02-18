@@ -319,8 +319,7 @@ def _get_db_path() -> Path:
     """Get the memory database path, resolving relative to .onetool/ directory.
 
     Uses resolve_ot_path (not expand_path) so the default "mem.db" resolves
-    against project .onetool/ first, then get_global_dir() which honours
-    OT_GLOBAL_DIR. See dev/project/guides/configuration.md "Path Resolution".
+    against config._config_dir (config_path.parent).
     """
     from ot.meta import resolve_ot_path
 

@@ -13,17 +13,16 @@ import yaml
 @pytest.mark.unit
 @pytest.mark.core
 def test_load_config_defaults() -> None:
-    """Config loads with defaults when file missing."""
+    """Config model has correct defaults."""
     from ot.config import OneToolConfig
 
     config = OneToolConfig()
 
     # Check defaults
-    assert config.version == 1
+    assert config.version == 2
     assert config.log_level == "INFO"
     assert config.security.validate_code is True
     assert config.tools_dir == ["tools/*.py"]
-    assert config.secrets_file == "config/secrets.yaml"
 
 
 @pytest.mark.unit
@@ -33,7 +32,7 @@ def test_load_config_from_yaml(write_config) -> None:
     from ot.config.loader import load_config
 
     config_path = write_config(
-        {"version": 1, "log_level": "DEBUG", "security": {"validate_code": False}}
+        {"version": 2, "log_level": "DEBUG", "security": {"validate_code": False}}
     )
 
     config = load_config(config_path)
@@ -55,7 +54,7 @@ def test_compact_array_format() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "security": {
                         "builtins": {
                             "allow": [
@@ -84,6 +83,20 @@ def test_compact_array_format() -> None:
 # NOTE: Variable expansion tests removed - expansion now happens at runtime
 # in get_tool_config(), not during load_config(). This fixes the chicken-and-egg
 # problem where secrets_file couldn't be expanded because secrets weren't loaded yet.
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_version_1_rejected() -> None:
+    """Version 1 configs are rejected with migration message."""
+    from ot.config.loader import load_config
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        config_path = Path(tmpdir) / "test-config.yaml"
+        config_path.write_text(yaml.dump({"version": 1}))
+
+        with pytest.raises(ValueError, match="version 1 is not supported"):
+            load_config(config_path)
 
 
 @pytest.mark.unit
@@ -140,7 +153,7 @@ def test_tools_config_partial() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "tools": {
                         "brave": {"timeout": 120.0},
                         "ground": {"model": "gemini-2.0-flash"},
@@ -168,7 +181,7 @@ def test_tools_config_accepts_any_tool() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "tools": {
                         "brave": {"timeout": 0.5},  # Would fail old validation
                         "custom_tool": {"my_setting": "value"},  # Unknown tool
@@ -187,35 +200,43 @@ def test_tools_config_accepts_any_tool() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_get_config_singleton() -> None:
+def test_get_config_singleton(tmp_path: Path) -> None:
     """get_config returns singleton instance."""
-    # Reset global config
     import ot.config.loader
     from ot.config.loader import get_config
 
+    config_path = tmp_path / "onetool.yaml"
+    config_path.write_text(yaml.dump({"version": 2}))
+
     ot.config.loader._config = None
+    try:
+        config1 = get_config(config_path)
+        config2 = get_config()  # No path - returns cached
 
-    config1 = get_config()
-    config2 = get_config()
-
-    assert config1 is config2
+        assert config1 is config2
+    finally:
+        ot.config.loader._config = None
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_get_config_reload() -> None:
+def test_get_config_reload(tmp_path: Path) -> None:
     """get_config with reload=True reloads config."""
-    # Reset global config
     import ot.config.loader
     from ot.config.loader import get_config
 
+    config_path = tmp_path / "onetool.yaml"
+    config_path.write_text(yaml.dump({"version": 2}))
+
     ot.config.loader._config = None
+    try:
+        config1 = get_config(config_path)
+        config2 = get_config(config_path, reload=True)
 
-    config1 = get_config()
-    config2 = get_config(reload=True)
-
-    # Should be different instances after reload
-    assert config1 is not config2
+        # Should be different instances after reload
+        assert config1 is not config2
+    finally:
+        ot.config.loader._config = None
 
 
 @pytest.mark.unit
@@ -228,35 +249,12 @@ def test_config_dir_tracking() -> None:
         config_dir = Path(tmpdir) / ".onetool"
         config_dir.mkdir()
         config_path = config_dir / "onetool.yaml"
-        config_path.write_text(yaml.dump({"version": 1}))
+        config_path.write_text(yaml.dump({"version": 2}))
 
         config = load_config(config_path)
 
-        # _config_dir should be set to the config file's parent
-        assert config._config_dir == config_dir.resolve()
-
-
-@pytest.mark.unit
-@pytest.mark.core
-def test_secrets_file_relative_resolution() -> None:
-    """secrets_file resolves relative to OT_DIR (.onetool/)."""
-    from ot.config.loader import load_config
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Standard directory structure: .onetool/config/onetool.yaml
-        onetool_dir = Path(tmpdir) / ".onetool"
-        config_dir = onetool_dir / "config"
-        config_dir.mkdir(parents=True)
-        config_path = config_dir / "onetool.yaml"
-        config_path.write_text(
-            yaml.dump({"version": 1, "secrets_file": "config/secrets.yaml"})
-        )
-
-        config = load_config(config_path)
-
-        # secrets_file should resolve relative to OT_DIR (.onetool/)
-        expected = (onetool_dir / "config" / "secrets.yaml").resolve()
-        assert config.get_secrets_file_path() == expected
+        # _config_dir should be set to the config file's parent (not resolved)
+        assert config._config_dir == config_dir
 
 
 # ==================== include: Tests ====================
@@ -293,7 +291,7 @@ def test_include_single_file() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "include": ["servers.yaml"],
                 }
             )
@@ -348,7 +346,7 @@ def test_include_multiple_files_merge_order() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "include": ["first.yaml", "second.yaml"],
                 }
             )
@@ -393,7 +391,7 @@ def test_include_inline_overrides_included() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "include": ["base.yaml"],
                     "alias": {
                         "a": "inline.a",
@@ -440,7 +438,7 @@ def test_include_nested_dicts_deep_merged() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "include": ["tools.yaml"],
                     "tools": {
                         "context7": {
@@ -475,7 +473,7 @@ def test_include_missing_file_logs_warning() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "include": ["nonexistent.yaml"],
                     "log_level": "DEBUG",
                 }
@@ -513,13 +511,11 @@ def test_include_with_prompts_section() -> None:
         )
 
         # Create main config using include instead of prompts_file
-        # Use inherit: none to standalone test config
         config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
-                    "inherit": "none",
+                    "version": 2,
                     "include": ["prompts.yaml"],
                 }
             )
@@ -558,13 +554,11 @@ def test_include_with_snippets_section() -> None:
         )
 
         # Create main config using include instead of snippets_dir
-        # Use inherit: none to standalone test config
         config_path = onetool_dir / "onetool.yaml"
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
-                    "inherit": "none",
+                    "version": 2,
                     "include": ["my-snippets.yaml"],
                 }
             )
@@ -694,8 +688,7 @@ def test_inherit_deep_merges_tools() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
-                    "inherit": "none",
+                    "version": 2,
                     "tools": {
                         "brave": {"timeout": 120.0},
                     },
@@ -732,7 +725,7 @@ def test_get_tool_config_expands_vars_at_runtime() -> None:
         config_path.write_text(
             yaml.dump(
                 {
-                    "version": 1,
+                    "version": 2,
                     "tools": {
                         "mypack": {
                             "api_url": "https://api.example.com/${API_VERSION}",
@@ -750,8 +743,8 @@ def test_get_tool_config_expands_vars_at_runtime() -> None:
         secrets_path = config_dir / "secrets.yaml"
         secrets_path.write_text('API_VERSION: "v2"')
 
-        # Load and cache config - ${VAR} should NOT be expanded yet
-        config = get_config(config_path)
+        # Load and cache config with explicit secrets path
+        config = get_config(config_path, secrets_path=secrets_path)
 
         # Raw config should still have ${VAR} patterns
         raw_url = config.tools.model_extra.get("mypack", {}).get("api_url")

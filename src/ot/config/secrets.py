@@ -1,12 +1,10 @@
-"""Secrets loading for OneTool V2 (global-only).
+"""Secrets loading for OneTool.
 
 Loads secrets from secrets.yaml (gitignored) separate from committed configuration.
 Secrets are passed to workers via JSON-RPC, not exposed as environment variables.
 
-The secrets file path is resolved in order:
-1. Explicit path passed to load_secrets()
-2. OT_SECRETS_FILE environment variable
-3. Global location: ~/.onetool/config/secrets.yaml
+Pass the secrets file explicitly via ``--secrets <file>``.
+If --secrets is not provided, no secrets are loaded.
 
 Example secrets.yaml:
 
@@ -99,49 +97,16 @@ def load_secrets(
     return secrets
 
 
-def _resolve_secrets_path(secrets_path: Path | str | None) -> Path | str | None:
-    """Resolve secrets path from explicit path, env var, or global location.
-
-    Resolution order (first match wins):
-    1. Explicit secrets_path argument
-    2. OT_SECRETS_FILE environment variable
-    3. Global location (~/.onetool/config/secrets.yaml)
-
-    Args:
-        secrets_path: Explicit path to secrets file (may be None).
-
-    Returns:
-        Resolved path or None if no secrets file found.
-    """
-    if secrets_path is not None:
-        return secrets_path
-
-    env_path = os.getenv("OT_SECRETS_FILE")
-    if env_path:
-        return env_path
-
-    # Check global default location (flat layout)
-    from ot.paths import get_global_dir
-
-    global_path = get_global_dir() / "secrets.yaml"
-    if global_path.exists():
-        return global_path
-
-    return None
-
-
 def get_secrets(
     secrets_path: Path | str | None = None, reload: bool = False
 ) -> dict[str, str]:
     """Get or load the cached secrets.
 
-    Resolution order (first match wins):
-    1. Explicit secrets_path argument
-    2. OT_SECRETS_FILE environment variable
-    3. Global location (~/.onetool/secrets.yaml)
+    If secrets_path is None (i.e. --secrets not passed), returns {}.
 
     Args:
         secrets_path: Path to secrets file (only used on first load or reload).
+            If None, returns empty dict — no secrets are loaded.
         reload: Force reload secrets from disk.
 
     Returns:
@@ -154,8 +119,7 @@ def get_secrets(
 
     with _secrets_lock:
         if _secrets is None or reload:
-            resolved_path = _resolve_secrets_path(secrets_path)
-            _secrets = load_secrets(resolved_path)
+            _secrets = load_secrets(secrets_path)
     return _secrets
 
 

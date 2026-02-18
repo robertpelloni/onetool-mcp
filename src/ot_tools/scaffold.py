@@ -14,7 +14,6 @@ import re
 from pathlib import Path
 
 from ot.logging import LogSpan
-from ot.paths import get_global_dir, get_project_dir
 
 # Pack for dot notation: scaffold.create(), scaffold.templates(), scaffold.list()
 pack = "scaffold"
@@ -92,12 +91,10 @@ def create(
     description: str = "My extension tool",
     function_description: str = "Execute the tool function",
     api_key: str = "MY_API_KEY",
-    scope: str = "project",
 ) -> str:
     """Create a new extension tool from a template.
 
-    Creates a new extension in .onetool/tools/{name}/{name}.py or
-    ~/.onetool/tools/{name}/{name}.py depending on scope.
+    Creates a new extension in .onetool/tools/{name}/{name}.py.
 
     Args:
         name: Extension name (will be used as directory and file name)
@@ -107,7 +104,6 @@ def create(
         description: Module description
         function_description: Function docstring description
         api_key: API key secret name (for optional API configuration)
-        scope: Where to create - "project" (default) or "global"
 
     Returns:
         Success message with instructions, or error message
@@ -129,16 +125,10 @@ def create(
             available = [f.stem for f in templates_dir.glob("*.py") if not f.name.startswith("_")]
             return f"Error: Template '{template}' not found. Available: {', '.join(available)}"
 
-        # Determine output directory
-        if scope == "global":
-            base_dir = get_global_dir() / "tools"
-        else:
-            project_dir = get_project_dir()
-            if not project_dir:
-                # Create .onetool if it doesn't exist
-                from ot.paths import ensure_project_dir
-                project_dir = ensure_project_dir(quiet=True)
-            base_dir = project_dir / "tools"
+        # Determine output directory (always uses ot dir from loaded config)
+        from ot.config.loader import get_config
+        ot_dir = get_config()._config_dir
+        base_dir = ot_dir / "tools"
 
         ext_dir = base_dir / name
         ext_file = ext_dir / f"{name}.py"
@@ -167,7 +157,7 @@ def create(
         ext_dir.mkdir(parents=True, exist_ok=True)
         ext_file.write_text(content)
 
-        s.add(path=str(ext_file), scope=scope)
+        s.add(path=str(ext_file))
 
         # Build helpful output with next steps
         lines = [

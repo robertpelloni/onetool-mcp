@@ -21,9 +21,9 @@ install:
 # Run all quality checks (lint, typecheck, test)
 check: lint typecheck test
 
-# Run the MCP server in development mode (uses dev global dir)
+# Run the MCP server in development mode (uses dev config)
 dev *args:
-    OT_GLOBAL_DIR={{ global_base }}/dev uv run onetool {{ args }}
+    uv run onetool --config {{ global_base }}/dev/onetool.yaml {{ args }}
 
 # ============================================================================
 # TESTING
@@ -171,14 +171,14 @@ ot-inspector:
 # ============================================================================
 
 # Run onetool (local dev by default)
-#   --v VERSION   use published version (e.g., 1.0.0rc2)
-#   --dir PATH    use custom global directory
+#   --v VERSION      use published version (e.g., 1.0.0rc2)
+#   --config PATH    use custom config file path
 # Example: just ot --v 1.0.0rc2 init validate
 [arg("v", long)]
-[arg("dir", long)]
-ot v="" dir="" *args:
-    OT_GLOBAL_DIR={{ if dir == "" { global_base + "/.onetool" } else { dir } }} \
-        {{ if v == "" { "uv run onetool" } else { "uvx --from onetool-mcp==" + v + " onetool" } }} \
+[arg("config", long)]
+ot v="" config="" *args:
+    {{ if v == "" { "uv run onetool" } else { "uvx --from onetool-mcp==" + v + " onetool" } }} \
+        --config {{ if config == "" { global_base + "/.onetool/onetool.yaml" } else { config } }} \
         {{ args }}
 
 # Install as global uv tool

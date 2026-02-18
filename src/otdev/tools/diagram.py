@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 
 from ot.config import get_tool_config
 from ot.logging import LogSpan
-from ot.paths import get_effective_cwd, get_global_dir, get_project_dir
+from ot.paths import get_effective_cwd
 from ot.utils import truncate
 
 # ==================== Configuration Classes ====================
@@ -299,11 +299,9 @@ def _resolve_project_path(path_str: str) -> Path:
 
 
 def _resolve_config_path(path_str: str) -> Path:
-    """Resolve a path relative to the config directory (.onetool/).
+    """Resolve a path relative to the config directory (config_path.parent).
 
-    Checks project .onetool/ first, falls back to cwd. This is correct for
-    diagram templates (project-specific assets). For persistent data paths
-    use resolve_ot_path() instead - see dev/project/guides/configuration.md "Path Resolution".
+    Checks config._config_dir first, falls back to cwd.
 
     Args:
         path_str: Path string (relative, absolute, or with ~)
@@ -314,20 +312,17 @@ def _resolve_config_path(path_str: str) -> Path:
     p = Path(path_str).expanduser()
     if p.is_absolute():
         return p
-    # Try project-level .onetool first
-    project_ot = get_project_dir()
-    if project_ot:
-        candidate = (project_ot / p).resolve()
+    # Try config dir (config_path.parent)
+    try:
+        from ot.config.loader import get_config
+
+        config_dir = get_config()._config_dir
+        candidate = (config_dir / p).resolve()
         if candidate.exists():
             return candidate
-    # Try global .onetool dir (OT_GLOBAL_DIR or ~/.onetool)
-    global_ot = get_global_dir()
-    candidate = (global_ot / p).resolve()
-    if candidate.exists():
         return candidate
-    # Fall back to project .onetool if it existed, else cwd
-    if project_ot:
-        return (project_ot / p).resolve()
+    except (RuntimeError, AttributeError):
+        pass
     return (get_effective_cwd() / p).resolve()
 
 

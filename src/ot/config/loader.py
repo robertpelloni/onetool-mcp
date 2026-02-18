@@ -1,10 +1,11 @@
-"""YAML configuration loading for OneTool V2 (global-only).
+"""YAML configuration loading for OneTool.
 
-Loads onetool.yaml with tool discovery patterns and settings from global config only.
+Loads onetool.yaml with tool discovery patterns and settings.
+Config path is always explicit — pass ``--config <file>`` to every command.
 
 Example onetool.yaml:
 
-    version: 1
+    version: 2
 
     include:
       - prompts.yaml    # prompts: section
@@ -36,44 +37,12 @@ from ot.config.models import OneToolConfig
 from ot.config.secrets import expand_vars, get_secrets
 
 # Current config schema version
-CURRENT_CONFIG_VERSION = 1
+CURRENT_CONFIG_VERSION = 2
 
 # Maximum include depth to prevent infinite loops
 MAX_INCLUDE_DEPTH = 5
 
 T = TypeVar("T", bound=BaseModel)
-
-
-def _resolve_config_path(config_path: Path | str | None) -> Path | None:
-    """Resolve config path from explicit path, env var, or global location only.
-
-    Resolution order:
-    1. Explicit config_path if provided
-    2. ONETOOL_CONFIG env var
-    3. ~/.onetool/config/onetool.yaml (global only)
-    4. None (config not found)
-
-    Args:
-        config_path: Explicit path to config file (may be None).
-
-    Returns:
-        Resolved Path or None if no config file found.
-    """
-    if config_path is not None:
-        return Path(config_path)
-
-    env_config = os.getenv("ONETOOL_CONFIG")
-    if env_config:
-        return Path(env_config)
-
-    # Global-only: flat layout ~/.onetool/onetool.yaml
-    from ot.paths import get_global_dir
-
-    global_config = get_global_dir() / "onetool.yaml"
-    if global_config.exists():
-        return global_config
-
-    return None
 
 
 def _load_yaml_file(config_path: Path) -> dict[str, Any]:
@@ -149,7 +118,7 @@ def _flatten_arrays_recursive(data: Any) -> Any:
 
 
 def _validate_version(data: dict[str, Any]) -> None:
-    """Validate config version and set default if missing.
+    """Validate config version.
 
     Args:
         data: Config data dict (modified in place).
@@ -159,8 +128,14 @@ def _validate_version(data: dict[str, Any]) -> None:
     """
     config_version = data.get("version")
     if config_version is None:
-        data["version"] = 1
-        config_version = 1
+        data["version"] = CURRENT_CONFIG_VERSION
+        config_version = CURRENT_CONFIG_VERSION
+
+    if config_version == 1:
+        raise ValueError(
+            "Config version 1 is not supported. "
+            "Migrate to version 2: remove secrets_file field and set version: 2"
+        )
 
     if config_version > CURRENT_CONFIG_VERSION:
         raise ValueError(
@@ -317,22 +292,17 @@ def _process_includes(
 
 
 def load_config(
-    config_path: Path | str | None = None,
+    config_path: Path,
     secrets_path: Path | str | None = None,
 ) -> OneToolConfig:
-    """Load OneTool configuration from YAML file (global-only).
+    """Load OneTool configuration from YAML file.
 
-    Resolution order (when config_path is None):
-        1. ONETOOL_CONFIG env var
-        2. ~/.onetool/onetool.yaml (global flat layout)
-        3. Returns OneToolConfig() with defaults (graceful start)
-
-    No project-level configuration or inheritance is supported in V2.
+    config_path is required. Raises FileNotFoundError immediately if not found.
 
     Example config::
 
-        # ~/.onetool/onetool.yaml
-        version: 1
+        # .onetool/onetool.yaml
+        version: 2
 
         env:
           HOME: /home/user
@@ -342,31 +312,26 @@ def load_config(
           - tools/*.py
 
     Args:
-        config_path: Path to config file (overrides resolution)
+        config_path: Path to config file. Must exist.
+        secrets_path: Path to secrets file (from --secrets flag). If None, no secrets loaded.
 
     Returns:
         Validated OneToolConfig
 
     Raises:
-        FileNotFoundError: If explicit config path doesn't exist
-        ValueError: If YAML is invalid or validation fails
+        FileNotFoundError: If config_path does not exist
+        ValueError: If YAML is invalid, version unsupported, or validation fails
     """
-    resolved_path = _resolve_config_path(config_path)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    if resolved_path is None:
-        logger.debug("No config file found, using defaults")
-        if secrets_path is not None:
-            get_secrets(secrets_path, reload=True)
-        return OneToolConfig()
+    logger.debug(f"Loading config from {config_path}")
 
-    logger.debug(f"Loading config from {resolved_path}")
-
-    raw_data = _load_yaml_file(resolved_path)
+    raw_data = _load_yaml_file(config_path)
 
     # Process includes before validation (merges external files)
-    # Resolve includes from OT_DIR (.onetool/), relative to config file location
-    config_dir = resolved_path.parent.resolve()
-    ot_dir = config_dir  # Flat layout: config is directly in .onetool/
+    # Resolve includes relative to ot dir (config_path.parent)
+    ot_dir = config_path.parent
     merged_data = _process_includes(raw_data, ot_dir)
 
     # Flatten nested arrays (compact array format support)
@@ -377,14 +342,12 @@ def load_config(
     try:
         config = OneToolConfig.model_validate(flattened_data)
     except Exception as e:
-        raise ValueError(f"Invalid configuration in {resolved_path}: {e}") from e
+        raise ValueError(f"Invalid configuration in {config_path}: {e}") from e
 
-    config._config_dir = config_dir
+    config._config_dir = config_path.parent
 
-    # Load secrets AFTER config is loaded (secrets_file path now available)
-    # Explicit secrets_path (from --secrets flag) takes priority over config default
-    effective_secrets_path = secrets_path or config.get_secrets_file_path()
-    get_secrets(effective_secrets_path, reload=True)
+    # Load secrets if --secrets path provided
+    get_secrets(secrets_path, reload=True)
 
     logger.info(f"Config loaded: version {config.version}")
 
@@ -394,11 +357,12 @@ def load_config(
 # Global config instance (singleton pattern)
 # Thread-safety: Protected by _config_lock for safe concurrent access.
 _config: OneToolConfig | None = None
+_config_path: Path | None = None  # Last-loaded config file path (used by reload)
 _config_lock = threading.Lock()
 
 
 def get_config(
-    config_path: Path | str | None = None,
+    config_path: Path | None = None,
     reload: bool = False,
     secrets_path: Path | str | None = None,
 ) -> OneToolConfig:
@@ -412,13 +376,17 @@ def get_config(
     Args:
         config_path: Path to config file (only used on first load or reload).
             Ignored after config is cached unless reload=True.
+            If None and no config is cached, raises RuntimeError.
         reload: Force reload configuration from disk.
         secrets_path: Explicit path to secrets file (threads through to load_config).
 
     Returns:
         OneToolConfig instance (same instance on subsequent calls)
+
+    Raises:
+        RuntimeError: If no config_path provided and config not yet loaded
     """
-    global _config
+    global _config, _config_path
 
     # Fast path: return cached config without acquiring lock
     if _config is not None and not reload:
@@ -428,7 +396,13 @@ def get_config(
     with _config_lock:
         # Double-check after acquiring lock (another thread may have loaded it)
         if _config is None or reload:
-            _config = load_config(config_path, secrets_path=secrets_path)
+            resolved_path = config_path or _config_path
+            if resolved_path is None:
+                raise RuntimeError(
+                    "No config loaded. Pass --config <file> to load configuration."
+                )
+            _config_path = resolved_path
+            _config = load_config(resolved_path, secrets_path=secrets_path)
         return _config
 
 
@@ -557,8 +531,9 @@ def _get_raw_config(pack: str) -> dict[str, Any]:
 def reset() -> None:
     """Clear config cache for reload.
 
-    Use this as part of the config reload flow to force config to be
-    reloaded from disk on next access.
+    Clears _config so the next get_config() call reloads from disk.
+    Preserves _config_path so get_config() can reload without being
+    passed a path again (used by ot.reload()).
     """
     global _config
     with _config_lock:
