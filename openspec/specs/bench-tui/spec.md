@@ -58,7 +58,7 @@ The harness CLI SHALL support a configuration file for CLI settings including fa
 #### Scenario: Config file location
 
 - **WHEN** no config path specified
-- **THEN** looks for bench.yaml in `config/` directory
+- **THEN** looks for `bench.yaml` in `.onetool/` directory (project), then `~/.onetool/` (global)
 - **OR** uses BENCH_CONFIG environment variable
 
 #### Scenario: Favorites configuration

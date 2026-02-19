@@ -450,12 +450,7 @@ class ConsoleReporter:
         else:
             # Scored evaluation - show numeric score
             score = eval_result.score
-            if score >= 80:
-                score_style = "bold green"
-            elif score >= 50:
-                score_style = "bold yellow"
-            else:
-                score_style = "bold red"
+            score_style = self._score_style(score)
 
             self.console.print(
                 f"    [{score_style}]evaluation[/{score_style}]: "
@@ -482,6 +477,15 @@ class ConsoleReporter:
         else:
             return str(eval_result.score)
 
+    @staticmethod
+    def _score_style(score: int) -> str:
+        """Return Rich style string for a numeric score (0-100)."""
+        if score >= 80:
+            return "bold green"
+        if score >= 50:
+            return "bold yellow"
+        return "bold red"
+
     def _style_eval_result(self, task_result: Any) -> str:
         """Get style for evaluation result based on pass/fail or score."""
         if not task_result.evaluation:
@@ -491,13 +495,7 @@ class ConsoleReporter:
         if eval_result.eval_type == "pass_fail":
             return "bold green" if eval_result.passed else "bold red"
         else:
-            score = eval_result.score
-            if score >= 80:
-                return "bold green"
-            elif score >= 50:
-                return "bold yellow"
-            else:
-                return "bold red"
+            return self._score_style(eval_result.score)
 
     def print_results_table(
         self, scenario_result: Any, *, show_header: bool = False
@@ -542,13 +540,10 @@ class ConsoleReporter:
                 str(task_result.input_tokens),
                 str(task_result.output_tokens),
                 str(task_result.tool_calls),
-            ]
-
-            row.extend([
                 f"{task_result.duration_seconds:.0f}s",
                 f"{cost_cents:.2f}¢",
                 eval_display,
-            ])
+            ]
 
             table.add_row(*row)
 
@@ -596,12 +591,7 @@ class ConsoleReporter:
 
         if "avg_score" in totals:
             avg = totals["avg_score"]
-            if avg >= 80:
-                style = "bold green"
-            elif avg >= 50:
-                style = "bold yellow"
-            else:
-                style = "bold red"
+            style = self._score_style(int(avg))
             totals_parts.append(f"[{style}]avgScore={avg}[/{style}]")
 
         self.console.print(f"\n  totals: {', '.join(totals_parts)}")

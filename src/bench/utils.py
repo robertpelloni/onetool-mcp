@@ -13,4 +13,4 @@ T = TypeVar("T")
 
 def run_async(coro: Coroutine[Any, Any, T]) -> T:
     """Run an async coroutine synchronously."""
-    return asyncio.new_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)

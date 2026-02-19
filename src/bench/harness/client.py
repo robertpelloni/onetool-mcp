@@ -327,7 +327,7 @@ async def connect_to_server(
                     var_name = match.group(1)
                     raise RuntimeError(
                         f"Server {name}: Unexpanded variable ${{{var_name}}} in header. "
-                        f"Add {var_name} to .onetool/config/bench-secrets.yaml"
+                        f"Add {var_name} to .onetool/bench-secrets.yaml"
                     )
             headers[key] = value
 
@@ -418,11 +418,14 @@ async def connect_to_server(
             raise RuntimeError(f"Server {name}: stdio server requires command")
 
         # Build environment: PATH only + explicit config.env
-        from bench.harness.config import expand_subprocess_env
+        from ot.config.secrets import expand_vars
 
         env = {"PATH": os.environ.get("PATH", "")}
         for key, value in config.env.items():
-            env[key] = expand_subprocess_env(value)
+            try:
+                env[key] = expand_vars(value)
+            except ValueError:
+                env[key] = ""
 
         server_params = StdioServerParameters(
             command=config.command,
@@ -598,13 +601,7 @@ class MultiServerContextManager:
                 self._contexts.append(ctx)
                 return (name, conn)
             except BaseExceptionGroup as eg:
-                leaf_errors: list[str] = []
-                for exc in eg.exceptions:
-                    if isinstance(exc, BaseExceptionGroup):
-                        for inner in exc.exceptions:
-                            leaf_errors.append(str(inner))
-                    else:
-                        leaf_errors.append(str(exc))
+                leaf_errors = [str(e) for e in flatten_exception_group(eg)]
                 return (
                     name,
                     Exception("; ".join(leaf_errors) if leaf_errors else str(eg)),
@@ -647,14 +644,7 @@ class MultiServerContextManager:
             try:
                 await ctx.__aexit__(exc_type, exc_val, exc_tb)
             except BaseExceptionGroup as eg:
-                # Extract leaf errors from nested TaskGroups
-                leaf_errors: list[str] = []
-                for exc in eg.exceptions:
-                    if isinstance(exc, BaseExceptionGroup):
-                        for inner in exc.exceptions:
-                            leaf_errors.append(str(inner))
-                    else:
-                        leaf_errors.append(str(exc))
+                leaf_errors = [str(e) for e in flatten_exception_group(eg)]
                 error_msg = "; ".join(leaf_errors) if leaf_errors else str(eg)
                 logger.debug(f"Connection cleanup: {error_msg}")
             except Exception as e:

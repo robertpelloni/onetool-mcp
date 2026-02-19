@@ -8,6 +8,9 @@ import json
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 
+if TYPE_CHECKING:
+    from bench.harness.config import HarnessConfig, TaskConfig
+
 from loguru import logger
 from openai import OpenAI
 
@@ -25,7 +28,7 @@ from bench.harness.metrics import (
     TaskResult,
     calculate_cost,
 )
-from bench.secrets import get_bench_secret
+from ot.config.secrets import get_secret
 from ot.logging import LogSpan
 from ot.utils import flatten_exception_group
 
@@ -52,10 +55,6 @@ def split_prompts(prompt: str) -> list[str]:
         return [""]
     parts = prompt.split(PROMPT_DELIMITER)
     return [p.strip() for p in parts if p.strip()]
-
-if TYPE_CHECKING:
-    from bench.harness.config import HarnessConfig, TaskConfig
-
 
 class ProgressCallback(Protocol):
     """Protocol for progress callbacks."""
@@ -124,8 +123,8 @@ class AgenticRunner:
         # Partial results accumulated during run (for interrupt handling)
         self.partial_results: list[ScenarioResult] = []
         self.client = OpenAI(
-            api_key=get_bench_secret("OPENAI_API_KEY"),
-            base_url=get_bench_secret("OPENAI_BASE_URL"),
+            api_key=get_secret("OPENAI_API_KEY"),
+            base_url=get_secret("OPENAI_BASE_URL") or None,
         )
 
     def _emit(
@@ -200,6 +199,31 @@ class AgenticRunner:
         if isinstance(server, list):
             return server
         return [server]
+
+    def _make_error_result(
+        self,
+        task: TaskConfig,
+        model_display: str,
+        prompt_display: str,
+        error_msg: str,
+    ) -> TaskResult:
+        """Create a zero-metrics TaskResult for a crashed or cancelled task."""
+        return TaskResult(
+            name=task.name,
+            server=task.server,
+            model=model_display,
+            prompt=prompt_display,
+            response="",
+            input_tokens=0,
+            output_tokens=0,
+            llm_calls=0,
+            tool_calls=0,
+            tools_used=[],
+            duration_seconds=0.0,
+            cost_usd=0.0,
+            error=error_msg,
+            tags=task.tags,
+        )
 
     async def run_task(
         self,
@@ -621,33 +645,33 @@ class AgenticRunner:
                                         )
 
                                     if not session:
-                                        result = f"Error: Tool '{prefixed_name}' not found in any server"
-                                        logger.error(f"[{task.name}] {result}")
+                                        tool_response = f"Error: Tool '{prefixed_name}' not found in any server"
+                                        logger.error(f"[{task.name}] {tool_response}")
                                     else:
                                         try:
                                             # Call with original (unprefixed) tool name
-                                            result = await call_tool(
+                                            tool_response = await call_tool(
                                                 session,
                                                 original_tool_name,
                                                 tool_args,
                                                 timeout=timeout,
                                             )
                                         except TimeoutError:
-                                            result = f"Error: Tool '{prefixed_name}' timed out after {timeout}s"
+                                            tool_response = f"Error: Tool '{prefixed_name}' timed out after {timeout}s"
                                             logger.error(
                                                 f"[{task.name}] Tool timeout | "
                                                 f"tool={prefixed_name} | timeout={timeout}s"
                                             )
                                         except RuntimeError as e:
                                             # Tool returned an error - pass to LLM
-                                            result = str(e)
+                                            tool_response = str(e)
                                             logger.warning(
                                                 f"[{task.name}] Tool error | "
                                                 f"tool={prefixed_name} | error={str(e)[:200]}"
                                             )
                                         except Exception as e:
                                             # Unexpected error - log and pass to LLM
-                                            result = (
+                                            tool_response = (
                                                 f"Error: Tool '{prefixed_name}' failed: {e}"
                                             )
                                             logger.error(
@@ -660,17 +684,17 @@ class AgenticRunner:
                                         "tool_response",
                                         task=task.name,
                                         tool_name=prefixed_name,
-                                        tool_result=result,
+                                        tool_result=tool_response,
                                     )
 
                                     # Capture tool result for evaluation
-                                    tool_results.append(result)
+                                    tool_results.append(tool_response)
 
                                     messages.append(
                                         {
                                             "role": "tool",
                                             "tool_call_id": tc.id,
-                                            "content": result,
+                                            "content": tool_response,
                                         }
                                     )
 
@@ -772,66 +796,17 @@ class AgenticRunner:
                 try:
                     result = await self.run_task(task, default_model, default_timeout)
                 except asyncio.CancelledError:
-                    # Task was cancelled (e.g., timeout) - create error result
-                    # Note: CancelledError is BaseException, must come before Exception
                     logger.error(f"Task {task.name} was cancelled (timeout)")
-                    result = TaskResult(
-                        name=task.name,
-                        server=task.server,
-                        model=model_display,
-                        prompt=prompt_display,
-                        response="",
-                        input_tokens=0,
-                        output_tokens=0,
-                        llm_calls=0,
-                        tool_calls=0,
-                        tools_used=[],
-                        duration_seconds=0.0,
-                        cost_usd=0.0,
-                        error="Task timed out",
-                        tags=task.tags,
-                    )
+                    result = self._make_error_result(task, model_display, prompt_display, "Task timed out")
                 except BaseExceptionGroup as eg:
-                    # Task crashed with exception group - create error result
                     leaf_exceptions = flatten_exception_group(eg)
                     error_msg = "; ".join(str(e) for e in leaf_exceptions)
                     logger.error(f"Task {task.name} crashed: {error_msg}")
-                    result = TaskResult(
-                        name=task.name,
-                        server=task.server,
-                        model=model_display,
-                        prompt=prompt_display,
-                        response="",
-                        input_tokens=0,
-                        output_tokens=0,
-                        llm_calls=0,
-                        tool_calls=0,
-                        tools_used=[],
-                        duration_seconds=0.0,
-                        cost_usd=0.0,
-                        error=f"Task crashed: {error_msg}",
-                        tags=task.tags,
-                    )
+                    result = self._make_error_result(task, model_display, prompt_display, f"Task crashed: {error_msg}")
                 except Exception as e:
-                    # Task crashed with regular exception - create error result
                     error_msg = str(e)
                     logger.error(f"Task {task.name} crashed: {error_msg}")
-                    result = TaskResult(
-                        name=task.name,
-                        server=task.server,
-                        model=model_display,
-                        prompt=prompt_display,
-                        response="",
-                        input_tokens=0,
-                        output_tokens=0,
-                        llm_calls=0,
-                        tool_calls=0,
-                        tools_used=[],
-                        duration_seconds=0.0,
-                        cost_usd=0.0,
-                        error=f"Task crashed: {error_msg}",
-                        tags=task.tags,
-                    )
+                    result = self._make_error_result(task, model_display, prompt_display, f"Task crashed: {error_msg}")
                 task_results.append(result)
                 # Update partial results with current scenario's progress
                 self._update_partial_results(
@@ -855,7 +830,7 @@ class AgenticRunner:
                             if eval_config and eval_config.expect_error:
                                 # Use error message as response for evaluation
                                 result.response = result.error
-                                evaluation = evaluate_task(result, task, self.config)
+                                evaluation = evaluate_task(result, task, self.config, client=self.client)
                                 if evaluation:
                                     result.evaluation = evaluation
                                     eval_span.add(
@@ -871,7 +846,7 @@ class AgenticRunner:
                                 )
                                 eval_span.add(skipped=True, error=result.error)
                         else:
-                            evaluation = evaluate_task(result, task, self.config)
+                            evaluation = evaluate_task(result, task, self.config, client=self.client)
                             if evaluation:
                                 result.evaluation = evaluation
                                 eval_span.add(
