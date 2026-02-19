@@ -28,9 +28,9 @@ class ToolRegistry:
         """Initialize the registry.
 
         Args:
-            tools_path: Path to tools directory. Defaults to 'src/ot_tools/'.
+            tools_path: Path to tools directory. Defaults to 'src/ottools/'.
         """
-        self._tools_path = tools_path or Path("src/ot_tools")
+        self._tools_path = tools_path or Path("src/ottools")
         self._tools: dict[str, ToolInfo] = {}
 
     @property

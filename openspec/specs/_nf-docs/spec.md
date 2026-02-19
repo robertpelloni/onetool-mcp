@@ -142,7 +142,7 @@ The project SHALL provide contributor docs at `dev/`.
 #### Scenario: Internal tool creation
 - **GIVEN** a contributor creating a bundled tool
 - **WHEN** they read `dev/project/guides/creating-tools.md`
-- **THEN** they find the guide for tools in `src/ot_tools/`
+- **THEN** they find the guide for tools in `src/ottools/`
 
 #### Scenario: Testing and logging
 - **GIVEN** a contributor debugging or writing tests

@@ -19,7 +19,7 @@ def mem_db(tmp_path):
     Patches config to use tmp_path database and mocks embedding generation
     to return deterministic vectors.
     """
-    import ot_tools.mem as mem_module
+    import ottools.mem as mem_module
 
     db_path = tmp_path / "test_mem.sqlite"
 

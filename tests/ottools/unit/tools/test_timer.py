@@ -9,7 +9,7 @@ from time import sleep
 
 import pytest
 
-from ot_tools import timer
+from ottools import timer
 
 
 @pytest.fixture(autouse=True)

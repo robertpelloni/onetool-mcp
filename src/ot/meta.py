@@ -81,7 +81,6 @@ DOC_SLUGS: dict[str, str] = {
     "brave": "brave-search",
     "db": "database",
     "ground": "grounding-search",
-    "llm": "transform",
     "web": "web-fetch",
 }
 

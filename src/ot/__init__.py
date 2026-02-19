@@ -2,7 +2,7 @@
 
 Features:
 - Single 'run' tool for Python code execution
-- Tool discovery from src/ot_tools/ directory
+- Tool discovery from src/ottools/ directory
 - Configurable prompts and instructions
 - Namespaces, aliases, and snippets for shortcuts
 

@@ -1,13 +1,13 @@
 # Creating Tools
 
-Guide for creating tools bundled with OneTool in `src/ot_tools/`.
+Guide for creating tools bundled with OneTool in `src/ottools/`.
 
 ---
 
 ## File Location
 
 ```
-src/ot_tools/<name>.py
+src/ottools/<name>.py
 ```
 
 One file per pack. The filename doesn't need to match the pack name (e.g., `brave_search.py` declares `pack = "brave"`).
@@ -339,7 +339,7 @@ See [Tool Configuration](tool-configuration.md) for detailed configuration patte
 ```python
 # tests/unit/test_mytool.py
 import pytest
-from ot_tools.mytool import search
+from ottools.mytool import search
 
 @pytest.mark.unit
 @pytest.mark.tools
@@ -355,7 +355,7 @@ See [Testing](../../practices/testing.md) for markers, fixtures, and patterns.
 
 ## Checklist
 
-- [ ] File at `src/ot_tools/<name>.py`
+- [ ] File at `src/ottools/<name>.py`
 - [ ] Module docstring with description
 - [ ] `pack = "..."` before imports
 - [ ] `__all__ = [...]` listing exports

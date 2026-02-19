@@ -40,7 +40,7 @@ def mock_ot_dir(tmp_path: Path) -> Generator[Path, None, None]:
 @pytest.mark.tools
 def test_pack_is_scaffold() -> None:
     """Verify pack is correctly set."""
-    from ot_tools.scaffold import pack
+    from ottools.scaffold import pack
 
     assert pack == "scaffold"
 
@@ -49,7 +49,7 @@ def test_pack_is_scaffold() -> None:
 @pytest.mark.tools
 def test_all_exports() -> None:
     """Verify __all__ contains the expected public functions."""
-    from ot_tools.scaffold import __all__
+    from ottools.scaffold import __all__
 
     expected = {"create", "extensions", "templates", "validate"}
     assert set(__all__) == expected
@@ -64,7 +64,7 @@ def test_all_exports() -> None:
 @pytest.mark.tools
 def test_templates_lists_available() -> None:
     """Verify templates() returns available templates."""
-    from ot_tools.scaffold import templates
+    from ottools.scaffold import templates
 
     result = templates()
 
@@ -77,9 +77,9 @@ def test_templates_lists_available() -> None:
 @pytest.mark.tools
 def test_templates_missing_dir(tmp_path: Path) -> None:
     """Verify templates() handles missing directory."""
-    from ot_tools.scaffold import templates
+    from ottools.scaffold import templates
 
-    with patch("ot_tools.scaffold._get_templates_dir", return_value=tmp_path / "nonexistent"):
+    with patch("ottools.scaffold._get_templates_dir", return_value=tmp_path / "nonexistent"):
         result = templates()
 
     assert "Error" in result
@@ -95,7 +95,7 @@ def test_templates_missing_dir(tmp_path: Path) -> None:
 @pytest.mark.tools
 def test_create_extension_project_scope(mock_ot_dir: Path) -> None:
     """Verify create() creates extension in project scope."""
-    from ot_tools.scaffold import create
+    from ottools.scaffold import create
 
     result = create(name="my_tool", function="search")
 
@@ -118,7 +118,7 @@ def test_create_extension_project_scope(mock_ot_dir: Path) -> None:
 @pytest.mark.tools
 def test_create_custom_pack_name(mock_ot_dir: Path) -> None:
     """Verify create() uses custom pack_name."""
-    from ot_tools.scaffold import create
+    from ottools.scaffold import create
 
     result = create(name="my_tool", pack_name="custom_pack")
 
@@ -133,7 +133,7 @@ def test_create_custom_pack_name(mock_ot_dir: Path) -> None:
 @pytest.mark.tools
 def test_create_invalid_name() -> None:
     """Verify create() rejects invalid names."""
-    from ot_tools.scaffold import create
+    from ottools.scaffold import create
 
     # Uppercase not allowed
     result = create(name="MyTool")
@@ -149,7 +149,7 @@ def test_create_invalid_name() -> None:
 @pytest.mark.tools
 def test_create_already_exists(mock_ot_dir: Path) -> None:
     """Verify create() returns error if extension exists."""
-    from ot_tools.scaffold import create
+    from ottools.scaffold import create
 
     # Create first time
     create(name="existing_tool")
@@ -165,7 +165,7 @@ def test_create_already_exists(mock_ot_dir: Path) -> None:
 @pytest.mark.tools
 def test_create_invalid_template(mock_ot_dir: Path) -> None:
     """Verify create() returns error for invalid template."""
-    from ot_tools.scaffold import create
+    from ottools.scaffold import create
 
     result = create(name="my_tool", template="nonexistent_template")
 
@@ -182,7 +182,7 @@ def test_create_invalid_template(mock_ot_dir: Path) -> None:
 @pytest.mark.tools
 def test_validate_extension_tool(tmp_path: Path) -> None:
     """Verify validate() passes for extension tool using ot.* imports."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "valid_tool.py"
     ext_file.write_text('''"""My tool description."""
@@ -224,7 +224,7 @@ def run(*, input: str) -> str:
 @pytest.mark.tools
 def test_validate_missing_pack(tmp_path: Path) -> None:
     """Verify validate() fails for missing pack."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "no_pack.py"
     ext_file.write_text('''"""My tool."""
@@ -245,7 +245,7 @@ def run(*, input: str) -> str:
 @pytest.mark.tools
 def test_validate_missing_all(tmp_path: Path) -> None:
     """Verify validate() fails for missing __all__."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "no_all.py"
     ext_file.write_text('''"""My tool."""
@@ -266,7 +266,7 @@ def run(*, input: str) -> str:
 @pytest.mark.tools
 def test_validate_syntax_error(tmp_path: Path) -> None:
     """Verify validate() catches syntax errors."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "syntax_error.py"
     ext_file.write_text('''"""My tool."""
@@ -287,7 +287,7 @@ def run(*, input: str) -> str
 @pytest.mark.tools
 def test_validate_missing_json_rpc_loop_with_pep723(tmp_path: Path) -> None:
     """Verify validate() fails when PEP 723 deps present but no JSON-RPC loop."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "no_loop.py"
     ext_file.write_text('''# /// script
@@ -313,7 +313,7 @@ def run(*, input: str) -> str:
 @pytest.mark.tools
 def test_validate_warns_ot_sdk_deprecated(tmp_path: Path) -> None:
     """Verify validate() warns about deprecated ot_sdk imports."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "old_style.py"
     ext_file.write_text('''"""My tool using deprecated SDK."""
@@ -355,7 +355,7 @@ if __name__ == "__main__":
 @pytest.mark.tools
 def test_validate_file_not_found() -> None:
     """Verify validate() handles missing file."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     result = validate(path="/nonexistent/path/tool.py")
 
@@ -367,7 +367,7 @@ def test_validate_file_not_found() -> None:
 @pytest.mark.tools
 def test_validate_not_python_file(tmp_path: Path) -> None:
     """Verify validate() rejects non-Python files."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     txt_file = tmp_path / "file.txt"
     txt_file.write_text("not python")
@@ -382,7 +382,7 @@ def test_validate_not_python_file(tmp_path: Path) -> None:
 @pytest.mark.tools
 def test_validate_best_practices_warnings(tmp_path: Path) -> None:
     """Verify validate() shows warnings for best practice violations."""
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "missing_practices.py"
     # Missing docstring, future annotations, logging
@@ -409,7 +409,7 @@ def run(input: str) -> str:  # Missing keyword-only args
 @pytest.mark.tools
 def test_extensions_no_config() -> None:
     """Verify extensions() handles no config."""
-    from ot_tools.scaffold import extensions
+    from ottools.scaffold import extensions
 
     with patch("ot.config.loader.get_config", return_value=None):
         result = extensions()
@@ -423,7 +423,7 @@ def test_extensions_no_extensions_loaded() -> None:
     """Verify extensions() handles empty tools_dir."""
     from unittest.mock import MagicMock
 
-    from ot_tools.scaffold import extensions
+    from ottools.scaffold import extensions
 
     mock_config = MagicMock()
     mock_config.get_tool_files.return_value = []
@@ -441,7 +441,7 @@ def test_extensions_lists_loaded(tmp_path: Path) -> None:
     """Verify extensions() lists loaded extension files."""
     from unittest.mock import MagicMock
 
-    from ot_tools.scaffold import extensions
+    from ottools.scaffold import extensions
 
     mock_config = MagicMock()
     mock_config.get_tool_files.return_value = [
@@ -467,7 +467,7 @@ def test_extensions_lists_loaded(tmp_path: Path) -> None:
 @pytest.mark.tools
 def test_has_pep723_deps_true() -> None:
     """Verify _has_pep723_deps detects PEP 723 dependencies."""
-    from ot_tools.scaffold import _has_pep723_deps
+    from ottools.scaffold import _has_pep723_deps
 
     content = '''# /// script
 # requires-python = ">=3.11"
@@ -482,7 +482,7 @@ def test_has_pep723_deps_true() -> None:
 @pytest.mark.tools
 def test_has_pep723_deps_false_no_deps() -> None:
     """Verify _has_pep723_deps returns False without dependencies."""
-    from ot_tools.scaffold import _has_pep723_deps
+    from ottools.scaffold import _has_pep723_deps
 
     content = '''# /// script
 # requires-python = ">=3.11"
@@ -496,7 +496,7 @@ def test_has_pep723_deps_false_no_deps() -> None:
 @pytest.mark.tools
 def test_has_pep723_deps_false_no_script() -> None:
     """Verify _has_pep723_deps returns False without script block."""
-    from ot_tools.scaffold import _has_pep723_deps
+    from ottools.scaffold import _has_pep723_deps
 
     content = '''"""Tool without PEP 723."""
 
@@ -513,7 +513,7 @@ def test_validate_isolated_tool_no_logging_warning(tmp_path: Path) -> None:
     Isolated tools cannot use onetool logging (LogSpan/log()) since they
     run in a subprocess without access to onetool internals.
     """
-    from ot_tools.scaffold import validate
+    from ottools.scaffold import validate
 
     ext_file = tmp_path / "isolated_tool.py"
     ext_file.write_text('''# /// script

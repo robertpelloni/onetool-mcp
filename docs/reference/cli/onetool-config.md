@@ -85,7 +85,7 @@ include:                      # External config files to merge
   - servers.yaml
 
 tools_dir:                    # Tool discovery patterns
-  - src/ot_tools/*.py
+  - src/ottools/*.py
 
 log_level: INFO               # DEBUG, INFO, WARNING, ERROR
 
@@ -492,7 +492,7 @@ ValueError: Invalid configuration in config/onetool.yaml:
 ```yaml
 version: 1
 tools_dir:
-  - src/ot_tools/*.py
+  - src/ottools/*.py
 ```
 
 ### Production
@@ -501,7 +501,7 @@ tools_dir:
 version: 1
 
 tools_dir:
-  - src/ot_tools/*.py
+  - src/ottools/*.py
 
 log_level: WARNING
 

@@ -49,7 +49,7 @@ Extension tools SHALL declare dependencies using PEP 723 inline script metadata.
 Internal tools (shipped with onetool, without PEP 723 headers) SHALL execute in-process within onetool with direct access to bundled dependencies.
 
 #### Scenario: Internal tool detection
-- **WHEN** a tool file in `src/ot_tools/` does NOT contain PEP 723 metadata
+- **WHEN** a tool file in `src/ottools/` does NOT contain PEP 723 metadata
 - **THEN** the system loads and executes it in-process
 - **AND** it has direct access to onetool state
 
@@ -82,7 +82,7 @@ Extension tools SHALL be discovered from the `.onetool/tools/` directory structu
 The system SHALL distinguish between internal and extension tools based on file location and PEP 723 headers.
 
 #### Scenario: Internal tool identification
-- **WHEN** a tool file is in `src/ot_tools/`
+- **WHEN** a tool file is in `src/ottools/`
 - **AND** has no PEP 723 header
 - **THEN** it is loaded as an internal tool (in-process)
 

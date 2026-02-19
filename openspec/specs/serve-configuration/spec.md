@@ -186,15 +186,15 @@ OneTool SHALL discover tools from configurable glob patterns with sensible defau
 #### Scenario: Default tool discovery
 - **GIVEN** no tools_dir in config
 - **WHEN** OneTool loads configuration
-- **THEN** it SHALL load tools from `src/ot_tools/*.py`
+- **THEN** it SHALL load tools from `src/ottools/*.py`
 
 #### Scenario: Custom tool sources
-- **GIVEN** config with `tools.sources: ["src/ot_tools/*.py", "custom/**/*.py"]`
+- **GIVEN** config with `tools.sources: ["src/ottools/*.py", "custom/**/*.py"]`
 - **WHEN** OneTool loads configuration
 - **THEN** it SHALL load tools from both patterns
 
 #### Scenario: Tool exclusion patterns
-- **GIVEN** config with `tools.sources: ["src/ot_tools/*.py", "!src/ot_tools/_*.py"]`
+- **GIVEN** config with `tools.sources: ["src/ottools/*.py", "!src/ottools/_*.py"]`
 - **WHEN** OneTool loads configuration
 - **THEN** it SHALL exclude files starting with underscore
 
@@ -440,7 +440,7 @@ Configuration files SHALL include a schema version for migration support.
 Tools SHALL declare their dependencies for verification by `onetool check`.
 
 #### Scenario: Dependency declaration
-- **GIVEN** a tool module in `src/ot_tools/`
+- **GIVEN** a tool module in `src/ottools/`
 - **WHEN** the tool has external dependencies
 - **THEN** it SHALL declare them via `__onetool_requires__` module attribute
 

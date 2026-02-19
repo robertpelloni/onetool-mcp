@@ -8,9 +8,9 @@ inherit: none
 include:
   - ../../src/ot/config/global_templates/security.yaml
 
-# Use default tools_dir (src/ot_tools/*.py) for testing
+# Use default tools_dir (src/ottools/*.py) for testing
 tools_dir:
-  - src/ot_tools/*.py
+  - src/ottools/*.py
 
 log_level: INFO
 

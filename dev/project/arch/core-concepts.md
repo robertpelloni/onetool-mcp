@@ -5,7 +5,7 @@
 A **pack** is a namespace grouping related tool functions. Each tool file declares a `pack` variable and exports public functions:
 
 ```python
-# src/ot_tools/brave_search.py
+# src/ottools/brave_search.py
 pack = "brave"
 __all__ = ["search", "news", "search_batch"]
 

@@ -76,17 +76,17 @@ The transform() function SHALL use OpenAI-compatible API configuration.
 - **THEN** it SHALL return "Error: Transform tool not available. Set OPENAI_API_KEY in secrets.yaml."
 
 #### Scenario: Missing base URL
-- **GIVEN** no transform.base_url in config
+- **GIVEN** no llm.base_url in config
 - **WHEN** transform() is called
-- **THEN** it SHALL return "Error: Transform tool not available. Set transform.base_url in config."
+- **THEN** it SHALL return "Error: Transform tool not available. Set llm.base_url in config."
 
 #### Scenario: Timeout configuration
-- **GIVEN** transform.timeout in config (default: 30 seconds)
+- **GIVEN** llm.timeout in config (default: 30 seconds)
 - **WHEN** OpenAI client is created
 - **THEN** it SHALL use the configured timeout
 
 #### Scenario: Max tokens configuration
-- **GIVEN** transform.max_tokens in config
+- **GIVEN** llm.max_tokens in config
 - **WHEN** transform() is called
 - **THEN** it SHALL pass max_tokens to the API call
 - **NOTE** If None (default), max_tokens is not sent
@@ -98,7 +98,7 @@ The transform() function SHALL support model selection.
 #### Scenario: Default model
 - **GIVEN** no model parameter
 - **WHEN** transform() is called
-- **THEN** it SHALL use the default model from transform.model config
+- **THEN** it SHALL use the default model from llm.model config
 
 #### Scenario: Model override
 - **GIVEN** model parameter specified
@@ -106,9 +106,9 @@ The transform() function SHALL support model selection.
 - **THEN** it SHALL use the specified model
 
 #### Scenario: Missing model
-- **GIVEN** no model parameter and no transform.model config
+- **GIVEN** no model parameter and no llm.model config
 - **WHEN** transform() is called
-- **THEN** it SHALL return "Error: Transform tool not available. Set transform.model in config."
+- **THEN** it SHALL return "Error: Transform tool not available. Set llm.model in config."
 
 ### Requirement: System Prompt
 

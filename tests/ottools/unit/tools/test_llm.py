@@ -19,10 +19,10 @@ import pytest
 class TestGetApiConfig:
     """Test _get_api_config function."""
 
-    @patch("ot_tools.transform.get_tool_config")
-    @patch("ot_tools.transform.get_secret")
+    @patch("ottools.llm.get_tool_config")
+    @patch("ottools.llm.get_secret")
     def test_returns_all_config(self, mock_secret, mock_get_tool_config):
-        from ot_tools.transform import Config, _get_api_config
+        from ottools.llm import Config, _get_api_config
 
         mock_secret.return_value = "sk-test-key"
         mock_get_tool_config.return_value = Config(
@@ -40,10 +40,10 @@ class TestGetApiConfig:
         assert config.timeout == 60
         assert config.max_tokens == 1000
 
-    @patch("ot_tools.transform.get_tool_config")
-    @patch("ot_tools.transform.get_secret")
+    @patch("ottools.llm.get_tool_config")
+    @patch("ottools.llm.get_secret")
     def test_returns_none_for_missing(self, mock_secret, mock_get_tool_config):
-        from ot_tools.transform import Config, _get_api_config
+        from ottools.llm import Config, _get_api_config
 
         mock_secret.return_value = None
         mock_get_tool_config.return_value = Config(base_url="", model="")
@@ -64,7 +64,7 @@ class TestGetApiConfig:
 
 def _make_config(timeout: int = 30, max_tokens: int | None = None):
     """Helper to create Config for tests."""
-    from ot_tools.transform import Config
+    from ottools.llm import Config
 
     return Config(
         base_url="https://api.openai.com/v1",
@@ -95,7 +95,7 @@ class TestTransformValidation:
     """Test input validation for transform function."""
 
     def test_empty_prompt_returns_error(self):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         result = transform(data="test data", prompt="")
 
@@ -104,7 +104,7 @@ class TestTransformValidation:
         assert "empty" in result
 
     def test_whitespace_prompt_returns_error(self):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         result = transform(data="test data", prompt="   ")
 
@@ -113,7 +113,7 @@ class TestTransformValidation:
         assert "empty" in result
 
     def test_empty_data_returns_error(self):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         result = transform(data="", prompt="transform this")
 
@@ -122,7 +122,7 @@ class TestTransformValidation:
         assert "empty" in result
 
     def test_whitespace_data_returns_error(self):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         result = transform(data="   ", prompt="transform this")
 
@@ -136,10 +136,10 @@ class TestTransformValidation:
 class TestTransform:
     """Test transform function with mocked OpenAI client."""
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_successful_transform(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -159,9 +159,9 @@ class TestTransform:
         assert result == "Transformed result"
         mock_client.chat.completions.create.assert_called_once()
 
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm._get_api_config")
     def test_missing_api_key(self, mock_config):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             None,
@@ -175,9 +175,9 @@ class TestTransform:
         assert "Error" in result
         assert "OPENAI_API_KEY" in result
 
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm._get_api_config")
     def test_missing_base_url(self, mock_config):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = ("sk-test", None, "gpt-4", _make_config())
 
@@ -186,10 +186,10 @@ class TestTransform:
         assert "Error" in result
         assert "base_url" in result
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_missing_model(self, mock_config, _mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -203,10 +203,10 @@ class TestTransform:
         assert "Error" in result
         assert "model" in result
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_custom_model_override(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -224,10 +224,10 @@ class TestTransform:
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["model"] == "custom-model"
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_handles_api_error(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -247,10 +247,10 @@ class TestTransform:
         assert "Error" in result
         assert "rate limit" in result
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_converts_input_to_string(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -270,10 +270,10 @@ class TestTransform:
         user_message = next(m for m in messages if m["role"] == "user")
         assert "{'key': 'value'}" in user_message["content"]
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_handles_empty_response(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -292,10 +292,10 @@ class TestTransform:
 
         assert result == ""
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_message_format(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -320,10 +320,10 @@ class TestTransform:
         assert "my data" in user_msg["content"]
         assert "my prompt" in user_msg["content"]
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_uses_low_temperature(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -347,10 +347,10 @@ class TestTransform:
 class TestTransformConfig:
     """Test transform configuration options."""
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_timeout_passed_to_client(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -371,10 +371,10 @@ class TestTransformConfig:
             timeout=60,
         )
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_max_tokens_passed_to_api(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -392,10 +392,10 @@ class TestTransformConfig:
         call_args = mock_client.chat.completions.create.call_args
         assert call_args.kwargs["max_tokens"] == 1000
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_max_tokens_not_set_when_none(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -419,10 +419,10 @@ class TestTransformConfig:
 class TestTransformJsonMode:
     """Test JSON mode functionality."""
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_json_mode_sets_response_format(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -443,10 +443,10 @@ class TestTransformJsonMode:
         assert call_args.kwargs["response_format"] == {"type": "json_object"}
         assert result == '{"key": "value"}'
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_json_mode_false_no_response_format(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -470,10 +470,10 @@ class TestTransformJsonMode:
 class TestTransformErrorSanitization:
     """Test error message sanitization."""
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_sanitizes_api_key_in_error(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -495,10 +495,10 @@ class TestTransformErrorSanitization:
         assert "sk-abc123xyz" not in result
         assert "Authentication error" in result
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_sanitizes_sk_prefix_in_error(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -520,10 +520,10 @@ class TestTransformErrorSanitization:
         assert "sk-proj-abc123" not in result
         assert "Authentication error" in result
 
-    @patch("ot_tools.transform.OpenAI")
-    @patch("ot_tools.transform._get_api_config")
+    @patch("ottools.llm.OpenAI")
+    @patch("ottools.llm._get_api_config")
     def test_non_sensitive_errors_passed_through(self, mock_config, mock_openai):
-        from ot_tools.transform import transform
+        from ottools.llm import transform
 
         mock_config.return_value = (
             "sk-test",
@@ -553,7 +553,7 @@ class TestTransformErrorSanitization:
 def mock_cwd_path(tmp_path):
     """Mock resolve_cwd_path to use tmp_path as base directory."""
     with patch(
-        "ot_tools.transform.resolve_cwd_path", side_effect=lambda p: tmp_path / p
+        "ottools.llm.resolve_cwd_path", side_effect=lambda p: tmp_path / p
     ):
         yield tmp_path
 
@@ -564,7 +564,7 @@ class TestTransformFileValidation:
     """Test input validation for transform_file function."""
 
     def test_empty_prompt_returns_error(self, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("test content")
@@ -576,7 +576,7 @@ class TestTransformFileValidation:
         assert "empty" in result
 
     def test_input_file_not_found(self, mock_cwd_path):  # noqa: ARG002
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         result = transform_file(
             prompt="transform this", in_file="nonexistent.txt", out_file="output.txt"
@@ -586,7 +586,7 @@ class TestTransformFileValidation:
         assert "not found" in result
 
     def test_input_path_is_directory(self, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_dir = mock_cwd_path / "inputdir"
         input_dir.mkdir()
@@ -599,7 +599,7 @@ class TestTransformFileValidation:
         assert "not a file" in result
 
     def test_empty_input_file(self, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("")
@@ -617,9 +617,9 @@ class TestTransformFileValidation:
 class TestTransformFile:
     """Test transform_file function with mocked transform."""
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_successful_transform_file(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("original content")
@@ -643,9 +643,9 @@ class TestTransformFile:
             json_mode=False,
         )
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_passes_model_parameter(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("content")
@@ -666,9 +666,9 @@ class TestTransformFile:
             json_mode=False,
         )
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_passes_json_mode(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("content")
@@ -689,9 +689,9 @@ class TestTransformFile:
             json_mode=True,
         )
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_transform_error_propagates(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("content")
@@ -707,9 +707,9 @@ class TestTransformFile:
         assert "rate limit" in result
         assert not output_file.exists()
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_creates_parent_directories(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("content")
@@ -727,9 +727,9 @@ class TestTransformFile:
         assert output_file.exists()
         assert output_file.read_text() == "result"
 
-    @patch("ot_tools.transform.transform")
+    @patch("ottools.llm.transform")
     def test_reports_bytes_written(self, mock_transform, mock_cwd_path):
-        from ot_tools.transform import transform_file
+        from ottools.llm import transform_file
 
         input_file = mock_cwd_path / "input.txt"
         input_file.write_text("content")

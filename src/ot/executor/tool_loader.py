@@ -27,15 +27,15 @@ from ot.paths import get_effective_cwd
 
 
 def _get_bundled_tools_dir() -> Path | None:
-    """Get the bundled tools directory from the ot_tools package.
+    """Get the bundled tools directory from the ottools package.
 
     Returns:
-        Path to ot_tools package directory, or None if not found.
+        Path to ottools package directory, or None if not found.
     """
     try:
-        import ot_tools
+        import ottools
 
-        return Path(ot_tools.__file__).parent
+        return Path(ottools.__file__).parent
     except (ImportError, AttributeError):
         return None
 
@@ -105,7 +105,7 @@ def _get_tool_files(
 ) -> tuple[set[Path], set[Path], Path]:
     """Resolve tool files from config, bundled package, or directory.
 
-    Always includes bundled tools from ot_tools package, plus any
+    Always includes bundled tools from ottools package, plus any
     additional tools from config or explicit tools_dir.
 
     Args:
@@ -118,7 +118,7 @@ def _get_tool_files(
     tool_files: list[Path] = []
     internal_files: set[Path] = set()
 
-    # Always include bundled tools from ot_tools package
+    # Always include bundled tools from ottools package
     bundled_dir = _get_bundled_tools_dir()
     if bundled_dir and bundled_dir.exists():
         bundled_files = [f for f in bundled_dir.glob("*.py") if f.name != "__init__.py"]
@@ -318,7 +318,7 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
     Reads `pack` module variable from each tool file to group functions.
 
     Tool loading strategy:
-    - Internal tools (bundled with OneTool from ot_tools package): Run in-process
+    - Internal tools (bundled with OneTool from ottools package): Run in-process
       via importlib. These tools have no PEP 723 headers and use ot.* imports.
     - Extension tools (user-created without PEP 723 headers): Run in-process
       with full ot.* access (logging, config, inter-tool calling).

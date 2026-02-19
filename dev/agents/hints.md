@@ -24,7 +24,7 @@
 ```
 src/
   ot/           Core framework (executor, config, logging, registry)
-  ot_tools/     Built-in tool packs (15+ packs, 100+ tools)
+  ottools/     Built-in tool packs (15+ packs, 100+ tools)
   onetool/      MCP server CLI
   bench/        Benchmark harness CLI
   otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
@@ -45,7 +45,7 @@ openspec/       Specifications and proposals
 | **Config** | `pyproject.toml` | Deps, scripts, ruff/mypy/pytest config |
 | **Config** | `justfile` | All dev commands |
 | **Rules** | `dev/agents/hints.md` | This file - quick reference |
-| **Tools** | `src/ot_tools/*.py` | Built-in tool packs |
+| **Tools** | `src/ottools/*.py` | Built-in tool packs |
 | **Core** | `src/ot/executor/runner.py` | Main execution engine |
 | **Server** | `src/onetool/server.py` | MCP server |
 | **Tests** | `tests/{smoke,unit,integration}/` | Test organization |
@@ -103,7 +103,7 @@ openspec/       Specifications and proposals
 ### Common Tasks
 
 **Create a new tool:**
-1. Add file: `src/ot_tools/mypack.py`
+1. Add file: `src/ottools/mypack.py`
 2. Declare: `pack = "mypack"` and `__all__ = ["func1", "func2"]`
 3. Functions: Keyword-only args, type hints, docstrings, LogSpan
 4. Test: `tests/unit/tools/test_mypack.py` with markers

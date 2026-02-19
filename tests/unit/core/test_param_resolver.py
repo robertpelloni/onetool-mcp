@@ -129,7 +129,7 @@ class TestOtToolRegistration:
         ot.executor.param_resolver.get_tool_param_names.cache_clear()
         yield
 
-    def test_ot_tools_registered_in_registry(self):
+    def test_ottools_registered_in_registry(self):
         """ot pack tools are registered in the global registry."""
         from ot.registry import get_registry
 
@@ -142,7 +142,7 @@ class TestOtToolRegistration:
         assert registry.get_tool("ot.aliases") is not None
         assert registry.get_tool("ot.snippets") is not None
 
-    def test_ot_tools_have_correct_args(self):
+    def test_ottools_have_correct_args(self):
         """ot tools have their parameters extracted correctly."""
         from ot.registry import get_registry
 
@@ -162,7 +162,7 @@ class TestOtToolRegistration:
         assert "pattern" in param_names
         assert "info" in param_names
 
-    def test_ot_tools_param_shorthand_resolves(self):
+    def test_ottools_param_shorthand_resolves(self):
         """Parameter shorthand works for ot tools."""
         from ot.executor.param_resolver import get_tool_param_names, resolve_kwargs
 

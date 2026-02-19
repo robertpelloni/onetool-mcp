@@ -2,24 +2,24 @@
 
 ## Purpose
 
-Defines how tools are organized and discovered. Tools are auto-discovered from the `src/ot_tools/` directory using AST parsing. Individual tool specifications are defined in separate specs (tool-web, tool-brave, tool-context7, etc.).
+Defines how tools are organized and discovered. Tools are auto-discovered from the `src/ottools/` directory using AST parsing. Individual tool specifications are defined in separate specs (tool-web, tool-brave, tool-context7, etc.).
 ## Requirements
 ### Requirement: Tool Auto-Discovery
 
-OneTool SHALL auto-discover tools from Python files in the `src/ot_tools/` directory.
+OneTool SHALL auto-discover tools from Python files in the `src/ottools/` directory.
 
 #### Scenario: Tool discovery on startup
-- **GIVEN** Python files in the `src/ot_tools/` directory
+- **GIVEN** Python files in the `src/ottools/` directory
 - **WHEN** the server starts
 - **THEN** it SHALL scan all `.py` files for public functions with docstrings
 
 #### Scenario: New tool detection
-- **GIVEN** a new `.py` file added to `src/ot_tools/`
+- **GIVEN** a new `.py` file added to `src/ottools/`
 - **WHEN** a tool call is made or registry is rescanned
 - **THEN** the new tool SHALL be discovered and available
 
 #### Scenario: Tool removal
-- **GIVEN** a `.py` file removed from `src/ot_tools/`
+- **GIVEN** a `.py` file removed from `src/ottools/`
 - **WHEN** the registry is rescanned
 - **THEN** the tool SHALL no longer be available
 

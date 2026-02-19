@@ -155,9 +155,9 @@ def test_tools_pattern_with_full_info() -> None:
     assert len(result) >= 1
 
     # Find ot.tools in results
-    ot_tools = [t for t in result if isinstance(t, dict) and t["name"] == "ot.tools"]
-    assert len(ot_tools) == 1
-    tool = ot_tools[0]
+    ottools = [t for t in result if isinstance(t, dict) and t["name"] == "ot.tools"]
+    assert len(ottools) == 1
+    tool = ottools[0]
     assert "signature" in tool
     assert "source" in tool
 

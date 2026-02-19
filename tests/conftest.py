@@ -127,7 +127,7 @@ def executor() -> Callable[[str], str]:
     from ot.executor.runner import execute_python_code
     from ot.executor.tool_loader import load_tool_functions
 
-    tools_dir = Path(__file__).parent.parent / "src" / "ot_tools"
+    tools_dir = Path(__file__).parent.parent / "src" / "ottools"
     tool_funcs: dict[str, Any] = load_tool_functions(tools_dir)
 
     def run(code: str) -> str:
@@ -231,7 +231,7 @@ def mock_proxy_manager():
             mock_proxy_manager.call_tool_sync.return_value = '{"success": true}'
             # Run test that calls MCP tools
     """
-    with patch("ot_tools._inject_base.get_proxy_manager") as mock:
+    with patch("ottools._inject_base.get_proxy_manager") as mock:
         proxy = MagicMock()
         proxy.servers = []
         mock.return_value = proxy

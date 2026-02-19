@@ -19,7 +19,7 @@ Core execution engine, configuration, logging, and inter-tool API.
 | `meta/` | Metadata and paths | `paths.py`, `version.py` |
 | `proxy/` | External MCP server support | `client.py`, `server.py` |
 
-### Tool Packs (`src/ot_tools/`)
+### Tool Packs (`src/ottools/`)
 
 Built-in tool packs (15+ packs, 100+ tools).
 
@@ -144,7 +144,7 @@ Tool packs for document and file utilities. Installed via `pip install onetool-m
 ## Quick Navigation
 
 **Need to modify:**
-- Tool pack → `src/ot_tools/<pack>.py`
+- Tool pack → `src/ottools/<pack>.py`
 - Core executor → `src/ot/executor/runner.py`
 - MCP server → `src/onetool/server.py`
 - Tests → `tests/{smoke,unit,integration}/`

@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ot_tools import devtools_util, playwright_util
-from ot_tools._inject_base import _check_server, _exec_js, _extract_result
+from ottools import devtools_util, playwright_util
+from ottools._inject_base import _check_server, _exec_js, _extract_result
 
 
 # =============================================================================
@@ -157,7 +157,7 @@ class TestInjectAnnotations:
         ready = json.dumps({"ready": True, "version": "2.0.0"})
         mock_proxy_manager.servers = ["devtools"]
         mock_proxy_manager.call_tool_sync.side_effect = [not_ready, "undefined", ready]
-        with patch("ot_tools._inject_base.get_inject_script", return_value="// inject.js"):
+        with patch("ottools._inject_base.get_inject_script", return_value="// inject.js"):
             result = devtools_util.inject_annotations()
             assert result["success"] is True
             assert result["version"] == "2.0.0"

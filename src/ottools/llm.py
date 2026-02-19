@@ -12,8 +12,8 @@ Supports OpenAI API and OpenRouter (OpenAI-compatible).
 
 **Requires configuration:**
 - OPENAI_API_KEY in secrets.yaml
-- transform.base_url in onetool.yaml (e.g., https://openrouter.ai/api/v1)
-- transform.model in onetool.yaml (e.g., openai/gpt-5-mini)
+- llm.base_url in onetool.yaml (e.g., https://openrouter.ai/api/v1)
+- llm.model in onetool.yaml (e.g., openai/gpt-5-mini)
 
 Tool is not available until all three are configured.
 """
@@ -64,7 +64,7 @@ class Config(BaseModel):
 
 def _get_config() -> Config:
     """Get transform pack configuration."""
-    return get_tool_config("transform", Config)
+    return get_tool_config("llm", Config)
 
 
 def _get_api_config() -> tuple[str | None, str | None, str | None, Config]:
@@ -96,7 +96,7 @@ def transform(
     Args:
         data: Data to transform (will be converted to string if not already)
         prompt: Instructions for how to transform/process the data
-        model: AI model to use (uses transform.model from config if not specified)
+        model: AI model to use (uses llm.model from config if not specified)
         json_mode: If True, request JSON output format from the model
 
     Returns:
@@ -152,7 +152,7 @@ def transform(
         if not base_url:
             s.add(error="no_base_url")
             return (
-                "Error: Transform tool not available. Set transform.base_url in config."
+                "Error: Transform tool not available. Set llm.base_url in config."
             )
 
         # Create client with timeout
@@ -168,7 +168,7 @@ Instructions:
         used_model = model or default_model
         if not used_model:
             s.add(error="no_model")
-            return "Error: Transform tool not available. Set transform.model in config."
+            return "Error: Transform tool not available. Set llm.model in config."
 
         s.add(model=used_model, jsonMode=json_mode)
 
@@ -231,7 +231,7 @@ def transform_file(
         prompt: Instructions for how to transform/process the content
         in_file: Path to input file (relative to cwd or absolute)
         out_file: Path to output file (relative to cwd or absolute)
-        model: AI model to use (uses transform.model from config if not specified)
+        model: AI model to use (uses llm.model from config if not specified)
         json_mode: If True, request JSON output format from the model
 
     Returns:

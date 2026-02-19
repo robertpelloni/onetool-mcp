@@ -8,7 +8,7 @@ include:
 
 # Tools dir: relative to this file's parent (tests/.onetool/)
 tools_dir:
-  - ../../src/ot_tools/*.py
+  - ../../src/ottools/*.py
 
 log_level: INFO
 

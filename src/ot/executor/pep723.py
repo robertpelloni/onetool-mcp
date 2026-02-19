@@ -56,7 +56,7 @@ class ToolFileInfo:
         pack: Pack name (e.g., "brave" for brave.search).
         functions: List of public function names.
         is_worker: True if tool uses worker subprocess (PEP 723 with deps).
-        is_internal: True if tool is bundled with OneTool (from ot_tools package).
+        is_internal: True if tool is bundled with OneTool (from ottools package).
         metadata: Parsed PEP 723 metadata if present.
         config_class_source: Source code of Config class if present.
     """
@@ -266,7 +266,7 @@ def categorize_tools(
 
     Args:
         tool_files: List of tool file paths.
-        internal_paths: Set of paths that are internal tools (from ot_tools package).
+        internal_paths: Set of paths that are internal tools (from ottools package).
             If provided, tools in this set are marked as is_internal=True.
 
     Returns:

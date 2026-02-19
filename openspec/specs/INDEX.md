@@ -68,10 +68,17 @@ The MCP server that exposes tools for LLM code execution.
 | Spec | Purpose |
 |------|---------|
 | [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, notify, version) |
-| [tool-llm](tool-llm/spec.md) | LLM-powered data transformation |
-| [tool-mem](tool-mem/spec.md) | Persistent agent memory with semantic search |
-| [tool-scaffold](tool-scaffold/spec.md) | Extension scaffolding |
-| [tool-timer](tool-timer/spec.md) | Named stopwatch timers |
+
+### Built-in Tools (`ottools`)
+
+| Spec | Purpose |
+|------|---------|
+| [tool-devtools-annotation](ottools/tool-devtools-annotation/spec.md) | Chrome DevTools inject.js annotation system |
+| [tool-devtools-util](ottools/tool-devtools-util/spec.md) | Chrome DevTools automation utilities |
+| [tool-llm](ottools/tool-llm/spec.md) | LLM-powered data transformation |
+| [tool-mem](ottools/tool-mem/spec.md) | Persistent agent memory with semantic search |
+| [tool-scaffold](ottools/tool-scaffold/spec.md) | Extension scaffolding |
+| [tool-timer](ottools/tool-timer/spec.md) | Named stopwatch timers |
 
 ### Domain Tools (`[util]` extra)
 
@@ -121,11 +128,12 @@ CLI for testing and benchmarking MCP servers.
 | onetool CLI | 1 |
 | onetool Core | 8 |
 | Tool Infrastructure | 1 |
-| Built-in Tools (core) | 5 |
+| Built-in Tools (core) | 1 |
+| Built-in Tools (ottools) | 6 |
 | Domain Tools [util] | 5 |
 | Domain Tools [dev] | 6 |
 | bench | 8 |
-| **Total** | **39** |
+| **Total** | **41** |
 
 ---
 
@@ -145,7 +153,7 @@ Specs that have been consolidated into other specs:
 - `docs` → renamed to [_nf-docs](_nf-docs/spec.md)
 - `tool-brave-search` → renamed to [tool-brave](otutil/tool-brave/spec.md)
 - `tool-grounding-search` → renamed to [tool-ground](otutil/tool-ground/spec.md)
-- `tool-transform` → renamed to [tool-llm](tool-llm/spec.md)
+- `tool-transform` → renamed to [tool-llm](ottools/tool-llm/spec.md)
 - `tool-web-fetch` → renamed to [tool-web](otdev/tool-web/spec.md)
 - `tool-notify` → consolidated into [tool-ot](tool-ot/spec.md)
 - `tool-sdk` → removed (extensions use `ot.*` imports directly)

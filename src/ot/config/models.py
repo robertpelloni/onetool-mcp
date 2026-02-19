@@ -37,11 +37,11 @@ class SnippetDef(BaseModel):
     )
 
 
-# ==================== Transform Configuration ====================
+# ==================== LLM Configuration ====================
 
 
-class TransformConfig(BaseModel):
-    """Configuration for the transform() tool."""
+class LlmConfig(BaseModel):
+    """Configuration for the llm (transform) tools."""
 
     model: str = Field(default="", description="Model for code generation")
     base_url: str = Field(default="", description="Base URL for OpenAI-compatible API")
@@ -530,8 +530,8 @@ class OneToolConfig(BaseModel):
         description="Shared environment variables for all MCP servers",
     )
 
-    transform: TransformConfig = Field(
-        default_factory=TransformConfig, description="transform() tool configuration"
+    llm: LlmConfig = Field(
+        default_factory=LlmConfig, description="llm tool configuration"
     )
 
     alias: dict[str, str] = Field(

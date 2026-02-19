@@ -15,7 +15,7 @@ import yaml
 
 import ot.config.secrets as _secrets_module
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 _SECRETS_FILE = _PROJECT_ROOT / "secrets.yaml"
 
 _secrets: dict[str, str] = {}

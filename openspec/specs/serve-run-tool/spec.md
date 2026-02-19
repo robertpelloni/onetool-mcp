@@ -285,7 +285,7 @@ The system SHALL resolve abbreviated parameter names to full parameter names usi
 Parameter prefix matching SHALL apply to all tool execution paths.
 
 #### Scenario: Internal tool prefix matching
-- **GIVEN** an internal tool (in-process, from `src/ot_tools/`)
+- **GIVEN** an internal tool (in-process, from `src/ottools/`)
 - **WHEN** called with abbreviated parameter names
 - **THEN** prefix matching SHALL be applied
 

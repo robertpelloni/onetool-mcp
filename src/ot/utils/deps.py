@@ -253,11 +253,11 @@ def check_deps(
     else:
         files = []
 
-        # Always include bundled tools from ot_tools package
+        # Always include bundled tools from ottools package
         try:
-            import ot_tools
+            import ottools
 
-            bundled_dir = Path(ot_tools.__file__).parent
+            bundled_dir = Path(ottools.__file__).parent
             bundled_files = [
                 f for f in bundled_dir.glob("*.py") if f.name != "__init__.py"
             ]
