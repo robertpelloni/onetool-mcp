@@ -241,6 +241,42 @@ def test_get_config_reload(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
+def test_get_config_reload_preserves_secrets_path(tmp_path: Path) -> None:
+    """Secrets are still available after reload (secrets_path preserved)."""
+    import ot.config.loader
+    import ot.config.secrets as secrets_module
+    from ot.config.loader import get_config
+    from ot.config.secrets import get_secret
+
+    config_path = tmp_path / "onetool.yaml"
+    config_path.write_text(yaml.dump({"version": 2}))
+
+    secrets_path = tmp_path / "secrets.yaml"
+    secrets_path.write_text('GEMINI_API_KEY: "test-key-123"')
+
+    ot.config.loader._config = None
+    ot.config.loader._secrets_path = None
+    secrets_module._secrets = None
+    try:
+        # Initial load with secrets
+        get_config(config_path, secrets_path=secrets_path)
+        assert get_secret("GEMINI_API_KEY") == "test-key-123"
+
+        # Simulate ot.reload(): clear both caches (no paths passed)
+        ot.config.loader._config = None
+        secrets_module._secrets = None
+
+        # Reload without passing secrets_path — should reuse stored _secrets_path
+        get_config()
+        assert get_secret("GEMINI_API_KEY") == "test-key-123"
+    finally:
+        ot.config.loader._config = None
+        ot.config.loader._secrets_path = None
+        secrets_module._secrets = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
 def test_config_dir_tracking() -> None:
     """Config directory is tracked when loading from file."""
     from ot.config.loader import load_config

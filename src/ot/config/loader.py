@@ -358,6 +358,7 @@ def load_config(
 # Thread-safety: Protected by _config_lock for safe concurrent access.
 _config: OneToolConfig | None = None
 _config_path: Path | None = None  # Last-loaded config file path (used by reload)
+_secrets_path: Path | str | None = None  # Last-loaded secrets file path (used by reload)
 _config_lock = threading.Lock()
 
 
@@ -379,6 +380,7 @@ def get_config(
             If None and no config is cached, raises RuntimeError.
         reload: Force reload configuration from disk.
         secrets_path: Explicit path to secrets file (threads through to load_config).
+            Preserved across reloads so secrets survive ot.reload() calls.
 
     Returns:
         OneToolConfig instance (same instance on subsequent calls)
@@ -386,7 +388,7 @@ def get_config(
     Raises:
         RuntimeError: If no config_path provided and config not yet loaded
     """
-    global _config, _config_path
+    global _config, _config_path, _secrets_path
 
     # Fast path: return cached config without acquiring lock
     if _config is not None and not reload:
@@ -402,7 +404,9 @@ def get_config(
                     "No config loaded. Pass --config <file> to load configuration."
                 )
             _config_path = resolved_path
-            _config = load_config(resolved_path, secrets_path=secrets_path)
+            if secrets_path is not None:
+                _secrets_path = secrets_path
+            _config = load_config(resolved_path, secrets_path=_secrets_path)
         return _config
 
 
