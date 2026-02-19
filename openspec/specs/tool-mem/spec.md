@@ -32,9 +32,10 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 
 #### Scenario: Write with table of contents
 - **GIVEN** markdown content with headings
-- **WHEN** `mem.write(topic="spec", file="spec.md", toc=True)` is called
+- **WHEN** `mem.write(topic="spec", file="spec.md")` is called (toc defaults to True)
 - **THEN** it SHALL parse headings (H1-H3 by default) and store a section index in `meta['sections']`
 - **AND** store `section_count` in meta
+- **AND** callers MAY pass `toc=False` to skip section indexing
 
 #### Scenario: Relevance validation
 - **GIVEN** a relevance value outside 1-10
@@ -54,9 +55,10 @@ The `mem.write()` function SHALL store memories with topic, content, and metadat
 - **AND** auto-populate `source`, `source_mtime`, and `content_type` in meta for each file
 
 #### Scenario: Batch write with toc
-- **GIVEN** a glob pattern and `toc=True`
-- **WHEN** `mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)` is called
+- **GIVEN** a glob pattern
+- **WHEN** `mem.write_batch(topic="specs", glob_pattern="specs/**/*.md")` is called (toc defaults to True)
 - **THEN** each file SHALL have its headings parsed and section index stored in meta
+- **AND** callers MAY pass `toc=False` to skip section indexing
 
 ### Requirement: Memory Retrieval
 
@@ -132,7 +134,7 @@ The `mem.read()` and `mem.read_batch()` functions SHALL support a `mode` paramet
 The `mem.toc()` function SHALL display a numbered section index with staleness detection.
 
 #### Scenario: Display TOC
-- **GIVEN** a memory written with `toc=True`
+- **GIVEN** a memory written with toc enabled (the default)
 - **WHEN** `mem.toc(topic="spec")` is called
 - **THEN** it SHALL return a numbered list of sections with line ranges
 

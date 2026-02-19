@@ -383,6 +383,13 @@ Set `embeddings_enabled: true` to enable.
 class TestMemNavigation:
     """Test section navigation: write with toc, toc(), slice(), read modes."""
 
+    def test_write_with_toc_default(self, mem_db):
+        """toc=True is the default; headings are parsed without explicit arg."""
+        result = mem_db.write(topic="nav/spec-default", content=SAMPLE_NAV_MD)
+        assert "Stored memory" in result
+        assert "toc:" in result
+        assert "4 sections" in result
+
     def test_write_with_toc(self, mem_db):
         result = mem_db.write(topic="nav/spec", content=SAMPLE_NAV_MD, toc=True)
         assert "Stored memory" in result
@@ -398,6 +405,7 @@ class TestMemNavigation:
         assert "4 sections" in result
 
     def test_toc_no_sections(self, mem_db):
+        """Content with no headings produces no section index regardless of toc default."""
         mem_db.write(topic="nav/plain", content="no headings here")
         result = mem_db.toc(topic="nav/plain")
         assert "No sections found" in result

@@ -927,7 +927,7 @@ def write(
     tags: list[str] | None = None,
     relevance: int = 5,
     file: str | None = None,
-    toc: bool = False,
+    toc: bool = True,
 ) -> str:
     """Store a memory with topic, content, and optional metadata.
 
@@ -943,7 +943,7 @@ def write(
         tags: Optional list of tags for categorisation
         relevance: Importance score 1-10 (default: 5)
         file: Path to file to read content from (mutually exclusive with content)
-        toc: If True, parse markdown headings and store section index in meta
+        toc: Parse markdown headings and store section index in meta (default: True); pass False to skip
 
     Returns:
         Confirmation message with memory ID, or error message.
@@ -952,7 +952,7 @@ def write(
         mem.write(topic="projects/onetool/rules", content="Always use keyword-only args")
         mem.write(topic="learnings/python", content="Use __future__ annotations", category="discovery")
         mem.write(topic="config", file="~/.onetool/config/onetool.yaml")
-        mem.write(topic="spec", file="spec.md", toc=True)
+        mem.write(topic="spec", file="spec.md", toc=False)
     """
     with LogSpan(span="mem.write", topic=topic, category=category) as s:
         try:
@@ -1044,7 +1044,7 @@ def write_batch(
     category: str = "note",
     tags: list[str] | None = None,
     relevance: int = 5,
-    toc: bool = False,
+    toc: bool = True,
 ) -> str:
     """Store multiple memories from files matching a glob pattern.
 
@@ -1057,14 +1057,14 @@ def write_batch(
         category: Category for all memories
         tags: Tags applied to all memories
         relevance: Relevance score for all memories
-        toc: If True, parse markdown headings and store section index per file
+        toc: Parse markdown headings and store section index per file (default: True); pass False to skip
 
     Returns:
         Summary of stored memories.
 
     Example:
         mem.write_batch(topic="docs", glob_pattern="docs/**/*.md", category="context")
-        mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=True)
+        mem.write_batch(topic="specs", glob_pattern="specs/**/*.md", toc=False)
     """
     from ot.paths import get_effective_cwd
 
