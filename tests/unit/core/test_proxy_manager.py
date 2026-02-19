@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -22,6 +24,7 @@ class TestProxyManager:
         assert manager._tools_by_server == {}
         assert manager._initialized is False
         assert manager._loop is None
+        assert manager._connect_task is None
 
     def test_servers_returns_client_keys(self) -> None:
         """Should return list of connected server names."""
@@ -537,3 +540,111 @@ class TestProxyManagerPrompts:
         content = await manager.get_prompt("test_server", "summarize", {"text": "test"})
 
         assert content == "Summarize this text"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestProxyManagerBackgroundConnect:
+    """Tests for background proxy connection (connect_background / is_connecting)."""
+
+    def test_is_connecting_false_when_no_task(self) -> None:
+        """Should return False when no background task exists."""
+        manager = ProxyManager()
+        assert manager.is_connecting is False
+
+    @pytest.mark.asyncio
+    async def test_is_connecting_true_while_task_pending(self) -> None:
+        """Should return True while a background task is still running."""
+        manager = ProxyManager()
+
+        # Create a long-running task to simulate an in-progress connection
+        task = asyncio.create_task(asyncio.sleep(100))
+        manager._connect_task = task
+
+        assert manager.is_connecting is True
+
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_is_connecting_false_after_task_completes(self) -> None:
+        """Should return False after the background task finishes."""
+        manager = ProxyManager()
+
+        task = asyncio.create_task(asyncio.sleep(0))
+        manager._connect_task = task
+        await task
+
+        assert manager.is_connecting is False
+
+    @pytest.mark.asyncio
+    async def test_connect_background_creates_task(self) -> None:
+        """Should schedule connect() as a background task and return it."""
+        manager = ProxyManager()
+
+        with patch.object(manager, "connect", new_callable=AsyncMock) as mock_connect:
+            task = manager.connect_background({})
+
+            assert task is manager._connect_task
+            assert manager.is_connecting is True
+
+            await task
+
+            mock_connect.assert_awaited_once_with({})
+
+    @pytest.mark.asyncio
+    async def test_connect_background_sets_loop(self) -> None:
+        """Should capture the running event loop."""
+        manager = ProxyManager()
+
+        with patch.object(manager, "connect", new_callable=AsyncMock):
+            task = manager.connect_background({})
+            await task
+
+        assert manager._loop is asyncio.get_event_loop()
+
+    @pytest.mark.asyncio
+    async def test_call_tool_still_connecting_error(self) -> None:
+        """Should raise informative error when server not yet connected but task is running."""
+        manager = ProxyManager()
+
+        task = asyncio.create_task(asyncio.sleep(100))
+        manager._connect_task = task
+
+        with pytest.raises(ValueError, match="still connecting"):
+            await manager.call_tool("devtools", "some_tool")
+
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    @pytest.mark.asyncio
+    async def test_call_tool_not_connected_error_when_idle(self) -> None:
+        """Should raise 'not connected' error when no task is running."""
+        manager = ProxyManager()
+
+        with pytest.raises(ValueError, match="not connected"):
+            await manager.call_tool("devtools", "some_tool")
+
+    @pytest.mark.asyncio
+    async def test_shutdown_cancels_background_task(self) -> None:
+        """Should cancel the background connect task on shutdown."""
+        manager = ProxyManager()
+
+        task = asyncio.create_task(asyncio.sleep(100))
+        manager._connect_task = task
+
+        await manager.shutdown()
+
+        assert task.cancelled()
+        assert manager._connect_task is None
+
+    def test_reset_state_clears_connect_task(self) -> None:
+        """Should clear _connect_task on reset."""
+        manager = ProxyManager()
+        manager._connect_task = MagicMock()  # type: ignore[assignment]
+
+        manager._reset_state()
+
+        assert manager._connect_task is None

@@ -50,11 +50,17 @@ class ProxyManager:
         self._errors: dict[str, str] = {}  # server name -> last error message
         self._initialized = False
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._connect_task: asyncio.Task[None] | None = None
 
     @property
     def servers(self) -> list[str]:
         """List of connected server names."""
         return list(self._clients.keys())
+
+    @property
+    def is_connecting(self) -> bool:
+        """True if a background connection task is still in progress."""
+        return self._connect_task is not None and not self._connect_task.done()
 
     @property
     def tool_count(self) -> int:
@@ -130,6 +136,10 @@ class ProxyManager:
         """
         client = self._clients.get(server)
         if not client:
+            if self.is_connecting:
+                raise ValueError(
+                    f"Server '{server}' is still connecting. Please try again in a moment."
+                )
             available = ", ".join(self._clients.keys()) or "none"
             raise ValueError(f"Server '{server}' not connected. Available: {available}")
 
@@ -360,6 +370,23 @@ class ProxyManager:
 
         self._initialized = True
 
+    def connect_background(self, configs: dict[str, McpServerConfig]) -> asyncio.Task[None]:
+        """Start connecting to proxy servers in the background.
+
+        Returns immediately after scheduling the connection task. The MCP server
+        can begin handling requests right away; proxy tools return a "still connecting"
+        error until their server is ready.
+
+        Args:
+            configs: Dictionary of server name -> configuration.
+
+        Returns:
+            The asyncio Task driving the connection.
+        """
+        self._loop = asyncio.get_running_loop()
+        self._connect_task = asyncio.create_task(self.connect(configs))
+        return self._connect_task
+
     async def _connect_server(self, name: str, config: McpServerConfig) -> None:
         """Connect to a single MCP server using FastMCP Client."""
         with LogSpan(span="proxy.connect", server=name, type=config.type) as span:
@@ -484,9 +511,17 @@ class ProxyManager:
         self._tools_by_server.clear()
         self._errors.clear()
         self._initialized = False
+        self._connect_task = None
 
     async def shutdown(self) -> None:
         """Disconnect from all MCP servers."""
+        # Cancel background connect task if still running
+        if self._connect_task is not None and not self._connect_task.done():
+            self._connect_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._connect_task
+        self._connect_task = None
+
         if not self._clients:
             return
 

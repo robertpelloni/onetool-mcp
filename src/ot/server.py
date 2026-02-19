@@ -93,11 +93,11 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
     global _stats_writer
 
     with LogSpan(span="mcp.server.start") as start_span:
-        # Startup: connect to proxy MCP servers
+        # Startup: connect to proxy MCP servers in the background so FastMCP
+        # can begin handling MCP protocol messages immediately.
         proxy = get_proxy_manager()
         if _config.servers:
-            with LogSpan(span="server.startup.proxy", serverCount=len(_config.servers)):
-                await proxy.connect(_config.servers)
+            proxy.connect_background(_config.servers)
             start_span.add("proxyCount", len(_config.servers))
 
         # Log tool count from registry
@@ -131,11 +131,12 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
             set_stats_writer(None)
             stop_span.add("statsStopped", True)
 
-        # Shutdown: disconnect from proxy MCP servers
-        if proxy.servers:
-            with LogSpan(span="server.shutdown.proxy", serverCount=len(proxy.servers)):
+        # Shutdown: disconnect from proxy MCP servers (cancels background task if still running)
+        if proxy.servers or proxy.is_connecting:
+            count = len(proxy.servers)
+            with LogSpan(span="server.shutdown.proxy", serverCount=count):
                 await proxy.shutdown()
-            stop_span.add("proxyCount", len(proxy.servers))
+            stop_span.add("proxyCount", count)
 
 
 mcp = FastMCP(
