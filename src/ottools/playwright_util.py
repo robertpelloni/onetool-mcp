@@ -3,7 +3,7 @@
 Provides high-level functions to interact with the inject.js v2.0 annotation
 system via the Playwright MCP server (``playwright.evaluate``).
 
-For Chrome DevTools, use the ``devtools_util`` pack instead.
+For Chrome DevTools, use the ``chrome_devtools_util`` pack instead.
 """
 
 from __future__ import annotations

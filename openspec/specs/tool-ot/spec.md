@@ -298,7 +298,7 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
-- **WHEN** `ot.servers(pattern="devtools", info="full")` is called
+- **WHEN** `ot.servers(pattern="chrome-devtools", info="full")` is called
 - **THEN** it SHALL return detailed server info including:
   - Server name as heading
   - Type (MCP Proxy Server with stdio/http)
@@ -328,7 +328,7 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
 
 #### Scenario: Server with instructions
 - **GIVEN** a server has `instructions` configured in servers.yaml
-- **WHEN** `ot.servers(pattern="devtools", info="full")` is called
+- **WHEN** `ot.servers(pattern="chrome-devtools", info="full")` is called
 - **THEN** it SHALL include the configured instructions text
 
 #### Scenario: Disconnected server
@@ -452,8 +452,8 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - Documentation URL
 
 #### Scenario: Exact server lookup
-- **GIVEN** a query matching an MCP server name exactly (e.g., `devtools`)
-- **WHEN** `ot.help(query="devtools")` is called
+- **GIVEN** a query matching an MCP server name exactly (e.g., `chrome-devtools`)
+- **WHEN** `ot.help(query="chrome-devtools")` is called
 - **THEN** it SHALL return server help including:
   - Server name as heading
   - Type (MCP Proxy Server)

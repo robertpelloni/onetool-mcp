@@ -271,14 +271,28 @@ All test data lives under `demo/data/`:
 ### MCP Server notes
 
 - **devtools** (26 tools): Browser automation via Chrome DevTools Protocol
-  - Automatically launches browser on first tool use
-  - Use specific Wikipedia article URLs for testing (e.g., `/wiki/Python_(programming_language)`)
+  - **Current config uses Remote mode** (`--browserUrl=http://127.0.0.1:9222`) — Chrome must be
+    pre-launched with `--remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug` before testing
+  - To use auto-launch instead, switch config to `--isolated` (no `--browserUrl` arg)
+  - Verify Chrome is reachable: `curl http://127.0.0.1:9222/json/version`
   - Key tools: list_pages, navigate_page, take_snapshot, wait_for, list_console_messages
   - `devtools.wait_for()` requires `text=` parameter (not `selector=`). Example: `devtools.wait_for(text="Python")`
 - **github** (37 tools): GitHub API integration
   - Requires authentication via MCP proxy
   - Key tools: search_repositories, get_me, list_commits, get_file_contents
   - Works with both personal and organizational repositories
+
+### Test ordering to avoid reload side effects
+
+- **Test context7 and ground BEFORE calling `$ot_reload`** — `ot.reload()` clears
+  env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
+  tools to fail in the same session. These tools only work on fresh server startup.
+- **`$brv_research` and `$web_summary`/`$web_data`** require `llm.transform`, which
+  depends on `OPENAI_API_KEY`. Skip or expect failure if that key is not configured.
+- **`$ot_notify`** returns "SKIP: no matching topic" when no subscriber is configured — this is expected, not a bug.
+- **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index
+  is only built during write. Calling `mem.write(content="# Heading\n...", toc=True)` is
+  required before `mem.toc()` or `mem.slice()` will return results.
 
 ### Quick smoke test order
 

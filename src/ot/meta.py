@@ -1160,7 +1160,7 @@ def servers(
         ot.servers(pattern="github")
         ot.servers(info="full")
         ot.servers(info="resources")
-        ot.servers(pattern="devtools", info="prompts")
+        ot.servers(pattern="chrome-devtools", info="prompts")
     """
     proxy = get_proxy_manager()
     cfg = get_config()
