@@ -147,7 +147,14 @@ The `convert.excel()` function SHALL convert XLSX spreadsheets to markdown.
 #### Scenario: Formula extraction
 - **GIVEN** an Excel file with formulas
 - **WHEN** `include_formulas=True` is specified
-- **THEN** cell formulas SHALL be included as comments
+- **THEN** cell formulas SHALL be included as a **Formulas** code block after the table
+
+#### Scenario: Formula computation
+- **GIVEN** an Excel file where formula cells have no cached values
+- **WHEN** `compute_formulas=True` is specified
+- **THEN** formulas SHALL be evaluated using the `formulas` library
+- **AND** computed values SHALL appear as cell content in the markdown table
+- **NOTE** requires `pip install formulas`; if the library is absent an ImportError is raised
 
 ---
 
@@ -363,7 +370,7 @@ All converters SHALL write consistent output structure.
 The convert tool SHALL follow OneTool tool conventions.
 
 #### Scenario: Follows tool-conventions
-- **GIVEN** implementation in `src/ot_tools/convert.py`
+- **GIVEN** implementation in `src/otutil/tools/convert.py`
 - **WHEN** the tool is used
 - **THEN** it SHALL follow all requirements in `tool-conventions` spec
 - **INCLUDING** keyword-only arguments, LogSpan logging, string error returns

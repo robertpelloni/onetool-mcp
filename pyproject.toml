@@ -134,7 +134,8 @@ known-first-party = ["ot", "ot_tools", "onetool", "bench", "otdev", "otutil"]
 "src/ot_tools/*.py" = ["E402"]
 "src/otdev/tools/*.py" = ["E402"]
 "src/otutil/tools/*.py" = ["E402"]
-# Executor modules use Path/Callable at runtime for tool loading and worker management
+# Path used at runtime for function signatures (not just type hints)
+"src/otutil/tools/_convert/*.py" = ["TC003"]
 "src/ot/executor/*.py" = ["TC003"]
 
 [tool.mypy]

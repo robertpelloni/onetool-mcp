@@ -27,6 +27,8 @@ src/
   ot_tools/     Built-in tool packs (15+ packs, 100+ tools)
   onetool/      MCP server CLI
   bench/        Benchmark harness CLI
+  otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
+  otutil/       [util] extra: brave, convert, excel, file, ground
 
 tests/          All tests (smoke, unit, integration)
 dev/            Developer documentation (THIS folder)

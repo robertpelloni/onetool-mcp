@@ -16,7 +16,11 @@ import ot.config.secrets as _secrets_module
 
 # tests/otutil/integration/tools/conftest.py → 5 parents to reach project root
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-_SECRETS_FILE = _PROJECT_ROOT / "secrets.yaml"
+_SECRETS_FILE = (
+    _PROJECT_ROOT / "secrets.yaml"
+    if (_PROJECT_ROOT / "secrets.yaml").exists()
+    else _PROJECT_ROOT / ".onetool" / "secrets.yaml"
+)
 
 _secrets: dict[str, str] = {}
 if _SECRETS_FILE.exists():

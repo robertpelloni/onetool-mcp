@@ -57,6 +57,31 @@ Performance benchmarking CLI.
 | `runner.py` | Benchmark execution |
 | `reporters.py` | Results reporting |
 
+### Dev Extras (`src/otdev/`) — optional `[dev]`
+
+Tool packs for developer-focused features. Installed via `pip install onetool-mcp[dev]`.
+
+| Pack | Description |
+|------|-------------|
+| `tools/context7.py` | Context7 documentation lookup |
+| `tools/db.py` | Database operations (SQLAlchemy) |
+| `tools/diagram.py` | Diagram generation (Kroki) |
+| `tools/package.py` | Package version checking |
+| `tools/ripgrep.py` | Fast code search |
+| `tools/web.py` | Web scraping (trafilatura) |
+
+### Util Extras (`src/otutil/`) — optional `[util]`
+
+Tool packs for document and file utilities. Installed via `pip install onetool-mcp[util]`.
+
+| Pack | Description |
+|------|-------------|
+| `tools/brave.py` | Brave web search |
+| `tools/convert.py` | Document conversion (PDF/DOCX/PPTX→MD) |
+| `tools/excel.py` | Excel file handling |
+| `tools/file.py` | File operations |
+| `tools/ground.py` | Gemini grounding search |
+
 ---
 
 ## Configuration Files

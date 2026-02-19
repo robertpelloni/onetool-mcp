@@ -14,9 +14,9 @@ default:
 # QUICK START
 # ============================================================================
 
-# Install all dependencies
+# Install all dependencies (including optional extras: util, dev)
 install:
-    uv sync --group dev
+    uv sync --group dev --all-extras
 
 # Run all quality checks (lint, typecheck, test)
 check: lint typecheck test
