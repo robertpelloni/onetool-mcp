@@ -69,6 +69,7 @@ Tool packs for developer-focused features. Installed via `pip install onetool-mc
 | `tools/package.py` | Package version checking |
 | `tools/ripgrep.py` | Fast code search |
 | `tools/web.py` | Web scraping (trafilatura) |
+| `tools/worktree.py` | Git worktree management for parallel agents |
 
 ### Util Extras (`src/otutil/`) — optional `[util]`
 
@@ -96,14 +97,28 @@ Tool packs for document and file utilities. Installed via `pip install onetool-m
 
 ## Tests
 
-| Directory | Test Type | Markers |
-|-----------|-----------|---------|
-| `tests/smoke/` | Fast sanity checks | `@pytest.mark.smoke` |
-| `tests/unit/` | Unit tests | `@pytest.mark.unit` |
-| `tests/integration/` | Integration tests | `@pytest.mark.integration` |
-| `tests/slow/` | Slow tests | `@pytest.mark.slow` |
+Tests mirror the source package structure:
+
+| Source package | Test root |
+|----------------|-----------|
+| `src/ot/`, `src/onetool/`, `src/bench/` | `tests/` |
+| `src/ottools/` | `tests/ottools/` |
+| `src/otdev/` | `tests/otdev/` |
+| `src/otutil/` | `tests/otutil/` |
+
+Each test root has the same layout:
+
+| Sub-directory | Test Type | Markers |
+|---------------|-----------|---------|
+| `smoke/` | Fast sanity checks | `@pytest.mark.smoke` |
+| `unit/` | Unit tests | `@pytest.mark.unit` |
+| `integration/` | Integration tests | `@pytest.mark.integration` |
+| `slow/` | Long-running tests | `@pytest.mark.slow` |
 
 **Component markers:** `core`, `bench`, `serve`, `tools`
+
+**Rule:** Always place tests under the root that matches the source package.
+A test for `src/otdev/tools/worktree.py` → `tests/otdev/unit/tools/test_worktree.py`.
 
 ---
 
@@ -147,7 +162,7 @@ Tool packs for document and file utilities. Installed via `pip install onetool-m
 - Tool pack → `src/ottools/<pack>.py`
 - Core executor → `src/ot/executor/runner.py`
 - MCP server → `src/onetool/server.py`
-- Tests → `tests/{smoke,unit,integration}/`
+- Tests → `tests/otdev/`, `tests/ottools/`, `tests/otutil/`, or `tests/` (match source package)
 - Specs → `openspec/specs/<feature>/spec.md`
 
 **Need to understand:**

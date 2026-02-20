@@ -11,6 +11,7 @@ include:
   - servers.yaml    # External MCP servers
   - security.yaml   # Security allowlists (builtins, imports, calls)
   - diagram.yaml    # Diagram tool settings and templates
+  - worktree.yaml   # Worktree tool settings (worktree.init, worktree.add, etc.)
 
 # Glob patterns for custom tool discovery (relative to .onetool/, or absolute)
 # Example: ["tools/*.py"] loads all Python files in .onetool/tools/

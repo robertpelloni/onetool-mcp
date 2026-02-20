@@ -56,6 +56,7 @@ util = [
     "send2trash>=2.1.0",
 ]
 dev = [
+    "filelock>=3.12.0",
     "sqlalchemy>=2.0.46",
     "trafilatura>=2.0.0",
 ]
