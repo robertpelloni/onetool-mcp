@@ -55,7 +55,7 @@ Every test SHALL have exactly two required markers: a speed tier and a component
 - **GIVEN** a test needs a component tag
 - **WHEN** selecting a marker
 - **THEN** it SHALL be one of:
-  - `tools` - Tool implementations (`ot_tools`)
+  - `tools` - Tool implementations (`ottools`)
   - `core` - Core library (`ot`)
   - `serve` - MCP server (`onetool`)
   - `bench` - Benchmark harness (`bench`)
@@ -200,7 +200,7 @@ Tests requiring Python code execution SHALL use the `executor` fixture.
 - **THEN** it SHALL:
   - Import `execute_python_code` from `ot.executor.runner`
   - Import `load_tool_functions` from `ot.executor.tool_loader`
-  - Load tool functions from `src/ot_tools/`
+  - Load tool functions from `src/ottools/`
   - Return a callable that executes code and returns results
 - **AND** NOT require LLM or API calls
 

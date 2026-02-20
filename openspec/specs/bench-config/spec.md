@@ -8,6 +8,28 @@ Defines the YAML configuration schema for the bench harness, including server co
 
 ## Requirements
 
+### Requirement: CLI Configuration Flags
+
+The `bench run` command SHALL accept flags to override the default config and secrets file locations.
+
+#### Scenario: Custom config path
+- **GIVEN** user runs `bench run file.yaml --config /path/to/onetool.yaml`
+- **WHEN** the command starts
+- **THEN** it SHALL load onetool configuration from the specified path
+- **AND** ignore the auto-detected `.onetool/onetool.yaml`
+
+#### Scenario: Custom secrets path
+- **GIVEN** user runs `bench run file.yaml --secrets /path/to/bench-secrets.yaml`
+- **WHEN** the command starts
+- **THEN** it SHALL load secrets from the specified file
+- **AND** make those secrets available for `${VAR}` expansion
+
+#### Scenario: Default config auto-detection
+- **GIVEN** no `--config` flag is provided
+- **WHEN** the command starts
+- **THEN** it SHALL look for `.onetool/onetool.yaml` relative to cwd
+- **AND** silently skip if not found
+
 ### Requirement: YAML Configuration File
 
 The harness SHALL load benchmark configuration from a YAML file.
@@ -37,9 +59,10 @@ The harness SHALL load benchmark configuration from a YAML file.
 #### Scenario: Variable expansion from secrets
 - **GIVEN** a configuration containing `${VAR_NAME}` patterns
 - **WHEN** the configuration is loaded
-- **THEN** it SHALL expand variables using bench-secrets.yaml only
+- **THEN** it SHALL expand variables using the configured secrets file (--secrets)
+- **AND** fall back to os.environ if not in secrets
 - **AND** support `${VAR_NAME:-default}` syntax for defaults
-- **AND** error if variable not found without default
+- **AND** error if variable not found in secrets, os.environ, or as a default
 
 ### Requirement: Defaults Configuration
 
@@ -88,31 +111,35 @@ The harness SHALL support multiple server connection types.
 - **WHEN** the subprocess is spawned
 - **THEN** it SHALL inherit only `PATH` from host
 - **AND** add explicit env values from config
-- **AND** `${VAR}` in env values expands from bench-secrets.yaml first, then os.environ
+- **AND** `${VAR}` in env values expands using the standard resolution order (secrets → os.environ → default)
 
-### Requirement: Secrets-Only Variable Expansion
+### Requirement: Variable Expansion
 
-The harness SHALL expand `${VAR}` patterns in configuration using bench-secrets.yaml only.
+The harness SHALL expand `${VAR}` patterns in configuration using the standard `expand_vars()` resolution order.
 
 #### Scenario: Variable in secrets
 - **GIVEN** `${API_KEY}` in a config value
-- **AND** `API_KEY: "secret123"` in bench-secrets.yaml
+- **AND** `API_KEY: "secret123"` in the configured secrets file
 - **WHEN** configuration is loaded
 - **THEN** the value SHALL be expanded to "secret123"
 
-#### Scenario: Variable not in secrets
-- **GIVEN** `${UNKNOWN_VAR}` in a config value
-- **AND** UNKNOWN_VAR not in bench-secrets.yaml
+#### Scenario: Variable in os.environ
+- **GIVEN** `${MY_VAR}` in a config value
+- **AND** MY_VAR not in the secrets file but set in os.environ
 - **WHEN** configuration is loaded
-- **THEN** it SHALL raise an error
-- **AND** message SHALL indicate the missing variable and suggest bench-secrets.yaml
+- **THEN** the os.environ value SHALL be used
 
-#### Scenario: No os.environ fallback
-- **GIVEN** `${MY_VAR}` in a header or url
-- **AND** MY_VAR set in os.environ but NOT in bench-secrets.yaml
+#### Scenario: Variable with default
+- **GIVEN** `${OPTIONAL_VAR:-fallback}` in a config value
+- **AND** OPTIONAL_VAR not in secrets or os.environ
 - **WHEN** configuration is loaded
-- **THEN** os.environ value SHALL NOT be used
-- **AND** error SHALL be raised
+- **THEN** the value SHALL expand to "fallback"
+
+#### Scenario: Variable not found
+- **GIVEN** `${UNKNOWN_VAR}` in a config value
+- **AND** UNKNOWN_VAR not in secrets, os.environ, or provided with a default
+- **WHEN** configuration is loaded
+- **THEN** it SHALL raise a ValueError
 
 ### Requirement: Header Validation
 
@@ -123,10 +150,10 @@ The harness SHALL validate that all headers are fully expanded before use.
 - **WHEN** the harness prepares the HTTP request
 - **THEN** it SHALL raise an error
 - **AND** message SHALL indicate the unexpanded variable
-- **AND** suggest adding to bench-secrets.yaml
+- **AND** suggest adding to the secrets file (e.g. `.onetool/bench-secrets.yaml`)
 
 #### Scenario: All headers expanded
-- **GIVEN** all `${VAR}` patterns resolved from bench-secrets.yaml
+- **GIVEN** all `${VAR}` patterns resolved via the secrets file or os.environ
 - **WHEN** the harness prepares the HTTP request
 - **THEN** headers SHALL be used normally
 
@@ -154,5 +181,5 @@ The harness SHALL restrict subprocess environment inheritance.
 #### Scenario: Pass-through variables
 - **GIVEN** stdio server with `env: { HOME: ${HOME} }`
 - **WHEN** the subprocess is spawned
-- **THEN** `${HOME}` SHALL read from bench-secrets.yaml first
+- **THEN** `${HOME}` SHALL read from the secrets file first
 - **AND** fall back to os.environ for pass-through

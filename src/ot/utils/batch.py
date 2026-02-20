@@ -30,7 +30,7 @@ R = TypeVar("R")
 
 
 def normalize_items(
-    items: list[str] | list[tuple[str, str]],
+    items: list[str] | list[tuple[str, str]] | list[str | tuple[str, str]],
 ) -> list[tuple[str, str]]:
     """Normalize a list of items to (value, label) tuples.
 

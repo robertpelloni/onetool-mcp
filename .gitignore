@@ -99,6 +99,11 @@ plan/
 wip/
 openspec/changes/
 openspec/consult/
+global/
+.onetool/
+!tests/.onetool/
+tests/.onetool/logs/
+tests/.onetool/stats/
 
 # Demo: downloadable assets (see demo/README.md)
 demo/data/db/
@@ -109,7 +114,10 @@ demo/tmp/
 # Claude Code
 .claude/
 .mcp.json
-global/
+
+# Worktree state files
+.gitworktree.json
+
 
 # Explore test outputs (local state)
 tests/explore/*_status.yaml

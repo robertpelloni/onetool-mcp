@@ -142,7 +142,7 @@ The project SHALL provide contributor docs at `dev/`.
 #### Scenario: Internal tool creation
 - **GIVEN** a contributor creating a bundled tool
 - **WHEN** they read `dev/project/guides/creating-tools.md`
-- **THEN** they find the guide for tools in `src/ot_tools/`
+- **THEN** they find the guide for tools in `src/ottools/`
 
 #### Scenario: Testing and logging
 - **GIVEN** a contributor debugging or writing tests
@@ -464,7 +464,7 @@ The project SHALL provide a comprehensive Chrome DevTools MCP guide at `docs/lea
 - **THEN** they find how to inject the annotation tool
 - **AND** how Claude can highlight elements programmatically
 - **AND** how users can annotate elements manually (Ctrl+I / Cmd+I)
-- **AND** the API reference for `devtools_util` functions (Chrome DevTools)
+- **AND** the API reference for `chrome_devtools_util` functions (Chrome DevTools)
 - **AND** the API reference for `playwright_util` functions (Playwright)
 - **AND** a note that the two packs are independent — each targets its own MCP server with no fallback between them
 

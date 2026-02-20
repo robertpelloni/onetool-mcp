@@ -19,7 +19,6 @@ from bench.harness.config import (
     ServerConfig,
     TaskConfig,
     load_config,
-    load_harness_config,
 )
 from bench.harness.csv_writer import write_results_csv
 from bench.harness.evaluate import (
@@ -57,7 +56,6 @@ __all__ = [
     "evaluate_regex",
     "evaluate_task",
     "load_config",
-    "load_harness_config",
     "mcp_tools_to_openai",
     "multi_server_tools_to_openai",
     "resolve_evaluator",

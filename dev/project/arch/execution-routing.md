@@ -24,7 +24,7 @@ sequenceDiagram
     participant E as External MCP
 
     R->>L: load_tools(registry)
-    L->>L: Scan bundled ot_tools/*.py
+    L->>L: Scan bundled ottools/*.py
     L->>L: Scan config tools_dir globs
     L->>L: Detect PEP 723 metadata
     L-->>R: LoadedTools

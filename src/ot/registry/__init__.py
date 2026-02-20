@@ -1,6 +1,6 @@
 """Tool registry package with auto-discovery for user-defined Python tools.
 
-The registry scans the `src/ot_tools/` directory, extracts function signatures and
+The registry scans the `src/ottools/` directory, extracts function signatures and
 docstrings using AST parsing, and provides formatted context for LLM code generation.
 """
 
@@ -128,7 +128,7 @@ def get_registry(tools_path: Path | None = None, rescan: bool = False) -> ToolRe
     """Get or create the global tool registry.
 
     Uses config's tools_dir glob patterns if available, otherwise falls back
-    to the provided tools_path or default 'src/ot_tools/' directory.
+    to the provided tools_path or default 'src/ottools/' directory.
 
     Args:
         tools_path: Path to tools directory (fallback if no config).

@@ -186,15 +186,15 @@ OneTool SHALL discover tools from configurable glob patterns with sensible defau
 #### Scenario: Default tool discovery
 - **GIVEN** no tools_dir in config
 - **WHEN** OneTool loads configuration
-- **THEN** it SHALL load tools from `src/ot_tools/*.py`
+- **THEN** it SHALL load tools from `src/ottools/*.py`
 
 #### Scenario: Custom tool sources
-- **GIVEN** config with `tools.sources: ["src/ot_tools/*.py", "custom/**/*.py"]`
+- **GIVEN** config with `tools.sources: ["src/ottools/*.py", "custom/**/*.py"]`
 - **WHEN** OneTool loads configuration
 - **THEN** it SHALL load tools from both patterns
 
 #### Scenario: Tool exclusion patterns
-- **GIVEN** config with `tools.sources: ["src/ot_tools/*.py", "!src/ot_tools/_*.py"]`
+- **GIVEN** config with `tools.sources: ["src/ottools/*.py", "!src/ottools/_*.py"]`
 - **WHEN** OneTool loads configuration
 - **THEN** it SHALL exclude files starting with underscore
 
@@ -440,7 +440,7 @@ Configuration files SHALL include a schema version for migration support.
 Tools SHALL declare their dependencies for verification by `onetool check`.
 
 #### Scenario: Dependency declaration
-- **GIVEN** a tool module in `src/ot_tools/`
+- **GIVEN** a tool module in `src/ottools/`
 - **WHEN** the tool has external dependencies
 - **THEN** it SHALL declare them via `__onetool_requires__` module attribute
 
@@ -1189,7 +1189,7 @@ The `servers.yaml` global template SHALL include comprehensive inline documentat
 #### Scenario: Element highlighting reference
 - **GIVEN** a user wanting to use element annotations via Chrome DevTools
 - **WHEN** they read the DevTools section comments
-- **THEN** they find a quick reference for `devtools_util` functions (inject, highlight, scan, clear)
+- **THEN** they find a quick reference for `chrome_devtools_util` functions (inject, highlight, scan, clear)
 - **AND** a note about Ctrl+I / Cmd+I for manual annotation
 
 ### Requirement: Playwright Server Template
@@ -1207,7 +1207,7 @@ The `servers.yaml` global template SHALL include a commented-out Playwright MCP 
 - **GIVEN** a user wanting to use element annotations via Playwright
 - **WHEN** they read the Playwright section comments
 - **THEN** they find a quick reference for `playwright_util` functions (inject, highlight, scan, clear)
-- **AND** a note that `playwright_util` is the Playwright equivalent of `devtools_util`
+- **AND** a note that `playwright_util` is the Playwright equivalent of `chrome_devtools_util`
 
 ### Requirement: DevTools Server Instructions Field
 
@@ -1216,7 +1216,7 @@ The DevTools server entry SHALL include an `instructions` field summarising capa
 #### Scenario: DevTools instructions content
 - **GIVEN** the DevTools server `instructions` field
 - **WHEN** read by an AI assistant
-- **THEN** it includes tool count, `devtools_util` element highlighting API, connection modes, and best-use-case guidance
+- **THEN** it includes tool count, `chrome_devtools_util` element highlighting API, connection modes, and best-use-case guidance
 
 ### Requirement: Playwright Server Instructions Field
 
@@ -1226,5 +1226,5 @@ The Playwright server entry SHALL include an `instructions` field summarising ca
 - **GIVEN** the Playwright server `instructions` field
 - **WHEN** read by an AI assistant
 - **THEN** it includes `playwright_util` element highlighting API and best-use-case guidance
-- **AND** it notes that `playwright_util` is independent from `devtools_util` (no fallback between them)
+- **AND** it notes that `playwright_util` is independent from `chrome_devtools_util` (no fallback between them)
 

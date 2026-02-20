@@ -37,23 +37,7 @@ def main(
     External client testing:
         Use `just client` to test with OpenCode or Claude Code.
     """
-    import sys
-
-    # Allow --help without requiring global config
-    if any(arg in sys.argv for arg in ("--help", "-h")):
-        return
-
-    # Require global config directory (created by onetool)
-    from ot.paths import get_global_dir
-
-    global_dir = get_global_dir()
-    if not global_dir.exists():
-        print(
-            f"Error: {global_dir} not found.\n"
-            "Run 'onetool init' to initialize OneTool configuration.",
-            file=sys.stderr,
-        )
-        raise typer.Exit(1)
+    pass
 
 
 # Import subcommands to register them

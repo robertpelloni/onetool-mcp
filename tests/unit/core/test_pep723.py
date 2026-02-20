@@ -258,9 +258,9 @@ class TestExtensionToolDependencies:
         """All PEP 723 extension tools must declare their third-party imports."""
         from pathlib import Path
 
-        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ot_tools"
+        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ottools"
         if not tools_dir.exists():
-            pytest.skip("ot_tools directory not found")
+            pytest.skip("ottools directory not found")
 
         errors: list[str] = []
 

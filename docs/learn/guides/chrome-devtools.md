@@ -14,8 +14,8 @@ devtools.navigate_page(url="https://example.com")
 devtools.take_screenshot()
 
 # 3. Highlight an element
-devtools_util.inject_annotations()
-devtools_util.highlight_element(selector="h1", label="Main heading")
+chrome_devtools_util.inject_annotations()
+chrome_devtools_util.highlight_element(selector="h1", label="Main heading")
 ```
 
 That's it. The DevTools MCP server is pre-configured in OneTool's `servers.yaml` template.
@@ -40,7 +40,7 @@ Chrome DevTools MCP connects OneTool to a Chrome browser via the [Chrome DevTool
 | Browser | Chrome only | Chrome, Firefox, WebKit |
 | Setup | Zero config (pre-configured) | Requires `npx @playwright/mcp` |
 | Bot detection | Low (uses real Chrome profile) | Higher (automation flags) |
-| Element annotation | `devtools_util` pack | `playwright_util` pack |
+| Element annotation | `chrome_devtools_util` pack | `playwright_util` pack |
 
 Both support the inject.js annotation system through their respective utility packs.
 
@@ -144,7 +144,7 @@ devtools:
 
 OneTool includes inject.js v2.0, a visual annotation system that overlays labels and coloured borders on page elements. Two independent tool packs provide Python access:
 
-- **`devtools_util`** — for the Chrome DevTools MCP server
+- **`chrome_devtools_util`** — for the Chrome DevTools MCP server
 - **`playwright_util`** — for the Playwright MCP server
 
 !!! important
@@ -155,7 +155,7 @@ OneTool includes inject.js v2.0, a visual annotation system that overlays labels
 Before highlighting, inject the annotation script into the page:
 
 ```python
-devtools_util.inject_annotations()
+chrome_devtools_util.inject_annotations()
 # Returns: {"success": True, "ready": True, "version": "2.0.0"}
 ```
 
@@ -167,11 +167,11 @@ Highlight elements to show the user what to interact with:
 
 ```python
 # Highlight a button
-devtools_util.highlight_element(selector="button.submit", label="Click here")
+chrome_devtools_util.highlight_element(selector="button.submit", label="Click here")
 
 # Use colour to indicate meaning
-devtools_util.highlight_element(selector=".error", label="Error field", color="red")
-devtools_util.highlight_element(selector=".success", label="Done", color="green")
+chrome_devtools_util.highlight_element(selector=".error", label="Error field", color="red")
+chrome_devtools_util.highlight_element(selector=".success", label="Done", color="green")
 ```
 
 Available colours: `orange` (default), `red`, `blue`, `green`.
@@ -187,7 +187,7 @@ Users can annotate elements directly in the browser:
 Claude can then read what the user selected:
 
 ```python
-annotations = devtools_util.scan_annotations()
+annotations = chrome_devtools_util.scan_annotations()
 # Returns: [{"id": "sel-1", "label": "button", "selector": ".submit-btn", ...}]
 ```
 
@@ -196,7 +196,7 @@ annotations = devtools_util.scan_annotations()
 Remove all annotations when done:
 
 ```python
-devtools_util.clear_annotations()
+chrome_devtools_util.clear_annotations()
 # Returns: {"success": True, "cleared": 3}
 ```
 
@@ -205,7 +205,7 @@ devtools_util.clear_annotations()
 Highlight multiple elements at once to walk the user through a task:
 
 ```python
-devtools_util.guide_user(
+chrome_devtools_util.guide_user(
     task="Complete checkout",
     steps=[
         {"selector": "input[name='email']", "label": "1. Enter email"},
@@ -227,7 +227,7 @@ Both packs expose the same 5 functions:
 | `clear_annotations()` | Remove all annotations |
 | `guide_user(task, steps)` | Highlight a sequence of elements |
 
-For Chrome DevTools, use `devtools_util.*`. For Playwright, use `playwright_util.*`.
+For Chrome DevTools, use `chrome_devtools_util.*`. For Playwright, use `playwright_util.*`.
 
 ## Common Tasks
 
@@ -304,8 +304,8 @@ devtools.performance_analyze_insight()
 **Prerequisites:** inject.js loaded on the page.
 
 ```python
-devtools_util.inject_annotations()
-devtools_util.guide_user(
+chrome_devtools_util.inject_annotations()
+chrome_devtools_util.guide_user(
     task="Update profile",
     steps=[
         {"selector": "a[href='/settings']", "label": "1. Open Settings"},
@@ -374,7 +374,7 @@ devtools.evaluate_script(expression="document.querySelectorAll('.my-selector').l
 
 **Diagnostic:**
 ```python
-devtools_util.scan_annotations()
+chrome_devtools_util.scan_annotations()
 ```
 
 **Solutions:**
@@ -425,13 +425,13 @@ Use `devtools.handle_dialog(action="accept")` or `action="dismiss"`. Set this up
 
 Yes. Use `devtools.upload_file(selector="input[type='file']", paths=["/path/to/file.pdf"])`.
 
-**Q: What's the difference between `devtools_util` and `playwright_util`?**
+**Q: What's the difference between `chrome_devtools_util` and `playwright_util`?**
 
-They provide the same 5 annotation functions but target different MCP servers. `devtools_util` uses Chrome DevTools (`devtools.evaluate_script`), `playwright_util` uses Playwright (`playwright.evaluate`). They are completely independent — there is no fallback between them. Use whichever matches your connected server.
+They provide the same 5 annotation functions but target different MCP servers. `chrome_devtools_util` uses Chrome DevTools (`chrome-devtools.evaluate_script`), `playwright_util` uses Playwright (`playwright.evaluate`). They are completely independent — there is no fallback between them. Use whichever matches your connected server.
 
 **Q: Can I use both DevTools and Playwright at the same time?**
 
-Yes, if both servers are configured and connected. They control separate browser instances. Use `devtools_util.*` for the DevTools browser and `playwright_util.*` for the Playwright browser.
+Yes, if both servers are configured and connected. They control separate browser instances. Use `chrome_devtools_util.*` for the DevTools browser and `playwright_util.*` for the Playwright browser.
 
 **Q: How do I resize the browser window?**
 

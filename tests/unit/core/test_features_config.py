@@ -30,7 +30,7 @@ class TestConfigLoading:
         config = OneToolConfig()
 
         # Essential fields exist
-        assert config.version == 1
+        assert config.version == 2
         assert config.log_level in ["INFO", "DEBUG", "WARNING", "ERROR"]
         assert isinstance(config.tools_dir, list)
         assert isinstance(config.alias, dict)  # Note: singular 'alias'
@@ -45,7 +45,7 @@ class TestConfigLoading:
             config_path.write_text(
                 yaml.dump(
                     {
-                        "version": 1,
+                        "version": 2,
                         "log_level": "DEBUG",
                         "alias": {"test_alias": "demo.foo"},  # Note: singular 'alias'
                     }
@@ -95,7 +95,7 @@ class TestConfigValidation:
             config_path.write_text(
                 yaml.dump(
                     {
-                        "version": 1,
+                        "version": 2,
                         "tools": {
                             "brave": {"timeout": 0.5},  # Below minimum
                         },
@@ -109,51 +109,3 @@ class TestConfigValidation:
             assert config.tools.model_extra.get("brave", {}).get("timeout") == 0.5
 
 
-@pytest.mark.unit
-@pytest.mark.core
-class TestConfigVariableExpansion:
-    """Test variable expansion in config values."""
-
-    def test_variable_with_default(self) -> None:
-        """${VAR:-default} not expanded during load - happens at runtime."""
-        from ot.config.loader import load_config
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".onetool" / "config"
-            config_dir.mkdir(parents=True)
-            config_path = config_dir / "onetool.yaml"
-            config_path.write_text(
-                yaml.dump(
-                    {
-                        "version": 1,
-                        "secrets_file": "${NONEXISTENT_VAR:-/default}/secrets.yaml",
-                    }
-                )
-            )
-
-            # Config loads successfully - no expansion during load
-            config = load_config(config_path)
-            # Raw value still has ${VAR}
-            assert "${NONEXISTENT_VAR" in config.secrets_file
-
-    def test_missing_variable_error(self) -> None:
-        """${VAR} without default is stored as-is during load."""
-        from ot.config.loader import load_config
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_dir = Path(tmpdir) / ".onetool" / "config"
-            config_dir.mkdir(parents=True)
-            config_path = config_dir / "onetool.yaml"
-            config_path.write_text(
-                yaml.dump(
-                    {
-                        "version": 1,
-                        "secrets_file": "${MISSING_VAR}/secrets.yaml",
-                    }
-                )
-            )
-
-            # Config loads successfully - expansion happens at runtime, not load time
-            config = load_config(config_path)
-            # Raw value still has ${VAR}
-            assert "${MISSING_VAR}" in config.secrets_file

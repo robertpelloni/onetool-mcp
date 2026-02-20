@@ -55,7 +55,6 @@ def get_openrouter_pricing() -> dict[str, tuple[float, float]]:
         return pricing
     except Exception as e:
         logger.warning(f"Failed to fetch OpenRouter pricing: {e}")
-        _openrouter_pricing = {}
         return {}
 
 
@@ -144,7 +143,6 @@ class TaskResult:
     evaluation: EvaluationResult | None = None
     error: str | None = None
     timestamp: datetime = field(default_factory=_utc_now)
-    executor: str = "simple"
     # Tool results for evaluation (actual output from tools)
     tool_results: list[str] = field(default_factory=list)
     # Tags from task config
@@ -191,7 +189,6 @@ class TaskResult:
                 "tools_used": self.tools_used,
                 "duration_seconds": round(self.duration_seconds, 2),
                 "cost_usd": round(self.cost_usd, 6),
-                "executor": self.executor,
             },
             "response": self.response,
         }

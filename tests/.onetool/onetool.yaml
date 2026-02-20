@@ -1,0 +1,18 @@
+# OneTool Test Configuration
+# Isolated config for pytest — uses flat layout (version 2)
+version: 2
+
+# Include security config from project template (path relative to this file's parent)
+include:
+  - ../../src/ot/config/global_templates/security.yaml
+
+# Tools dir: relative to this file's parent (tests/.onetool/)
+tools_dir:
+  - ../../src/ottools/*.py
+
+log_level: INFO
+
+# Override: disable sanitization for tests (test_sanitize.py tests it explicitly)
+security:
+  sanitize:
+    enabled: false

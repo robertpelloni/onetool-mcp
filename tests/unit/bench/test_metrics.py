@@ -1,8 +1,13 @@
 """Unit tests for benchmark metrics module."""
 
+import csv
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 
-from bench.harness.metrics import LLMCallMetrics, TaskResult
+from bench.harness.csv_writer import write_results_csv
+from bench.harness.metrics import LLMCallMetrics, ScenarioResult, TaskResult, get_openrouter_pricing
 from bench.harness.runner import split_prompts
 
 # =============================================================================
@@ -262,3 +267,127 @@ Return values."""
         assert "```python" in result[0]
         assert "npm = check_npm()" in result[0]
         assert "other = check_other()" in result[1]
+
+
+# =============================================================================
+# Context metrics + CSV integration tests (moved from integration/)
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.bench
+class TestContextMetricsUnit:
+    """Unit tests for context metrics and CSV export."""
+
+    def test_task_result_with_metrics_to_csv(self, tmp_path: Path) -> None:
+        """Verify CSV export includes base_context and context_growth_avg."""
+        onetool_metrics = [
+            LLMCallMetrics(call_number=1, input_tokens=5000, output_tokens=500,
+                           tool_calls_made=1, cumulative_input=5000, latency_ms=1200),
+            LLMCallMetrics(call_number=2, input_tokens=6000, output_tokens=200,
+                           tool_calls_made=0, cumulative_input=11000, latency_ms=800),
+        ]
+        mcp_metrics = [
+            LLMCallMetrics(call_number=1, input_tokens=5000, output_tokens=300,
+                           tool_calls_made=1, cumulative_input=5000, latency_ms=600),
+            LLMCallMetrics(call_number=2, input_tokens=5800, output_tokens=250,
+                           tool_calls_made=1, cumulative_input=10800, latency_ms=500),
+            LLMCallMetrics(call_number=3, input_tokens=6500, output_tokens=200,
+                           tool_calls_made=1, cumulative_input=17300, latency_ms=400),
+            LLMCallMetrics(call_number=4, input_tokens=7200, output_tokens=150,
+                           tool_calls_made=0, cumulative_input=24500, latency_ms=350),
+        ]
+        onetool_task = TaskResult(
+            name="version-check-onetool", server="onetool", model="test-model",
+            prompt="Check npm versions", response="express: 5.0.0",
+            input_tokens=11000, output_tokens=700, llm_calls=2, tool_calls=1,
+            tools_used=["run"], duration_seconds=3.5, cost_usd=0.015,
+            llm_call_metrics=onetool_metrics,
+        )
+        mcp_task = TaskResult(
+            name="version-check-mcp", server="multiple-mcp", model="test-model",
+            prompt="Check npm versions", response="express: 5.0.0",
+            input_tokens=24500, output_tokens=900, llm_calls=4, tool_calls=3,
+            tools_used=["check_npm", "check_pypi", "check_go"],
+            duration_seconds=8.2, cost_usd=0.035, llm_call_metrics=mcp_metrics,
+        )
+        scenario = ScenarioResult(name="compare", model="test-model",
+                                  tasks=[onetool_task, mcp_task])
+        csv_path = write_results_csv([scenario], output_dir=tmp_path)
+
+        with csv_path.open() as f:
+            rows = list(csv.DictReader(f))
+
+        assert len(rows) == 2
+        assert rows[0]["base_context"] == "5000"
+        assert int(rows[0]["llm_calls"]) == 2
+        assert rows[1]["base_context"] == "5000"
+        assert int(rows[1]["llm_calls"]) == 4
+        assert 900 <= float(rows[0]["context_growth_avg"]) <= 1100
+        assert 600 <= float(rows[1]["context_growth_avg"]) <= 850
+
+    def test_context_efficiency_calculation(self) -> None:
+        """base_context and context_growth_avg are calculated correctly."""
+        metrics = [
+            LLMCallMetrics(call_number=1, input_tokens=1000, output_tokens=100,
+                           tool_calls_made=1, cumulative_input=1000, latency_ms=200),
+            LLMCallMetrics(call_number=2, input_tokens=1200, output_tokens=100,
+                           tool_calls_made=1, cumulative_input=2200, latency_ms=200),
+            LLMCallMetrics(call_number=3, input_tokens=1400, output_tokens=100,
+                           tool_calls_made=0, cumulative_input=3600, latency_ms=200),
+        ]
+        task = TaskResult(
+            name="test", server="test", model="test", prompt="test", response="test",
+            input_tokens=3600, output_tokens=300, llm_calls=3, tool_calls=2,
+            tools_used=["tool1"], duration_seconds=1.0, cost_usd=0.01,
+            llm_call_metrics=metrics,
+        )
+        assert task.base_context == 1000
+        # average of (1200-1000, 1400-1200) = 200
+        assert task.context_growth_avg == 200.0
+
+
+# =============================================================================
+# Pricing cache tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.bench
+class TestPricing:
+    """Tests for get_openrouter_pricing caching behaviour."""
+
+    def test_failed_fetch_does_not_poison_cache(self) -> None:
+        """A transient fetch failure leaves the cache as None so the next call retries."""
+        import bench.harness.metrics as m
+
+        original = m._openrouter_pricing
+        m._openrouter_pricing = None
+        try:
+            with patch("bench.harness.metrics.httpx.get", side_effect=Exception("network error")):
+                result = get_openrouter_pricing()
+            assert result == {}
+            assert m._openrouter_pricing is None  # cache not poisoned
+        finally:
+            m._openrouter_pricing = original
+
+    def test_successful_fetch_populates_cache(self) -> None:
+        """A successful fetch populates and returns the cache."""
+        import bench.harness.metrics as m
+
+        original = m._openrouter_pricing
+        m._openrouter_pricing = None
+        try:
+            mock_response = patch("bench.harness.metrics.httpx.get")
+            with mock_response as mock_get:
+                mock_get.return_value.raise_for_status.return_value = None
+                mock_get.return_value.json.return_value = {
+                    "data": [
+                        {"id": "test/model", "pricing": {"prompt": "0.000001", "completion": "0.000002"}},
+                    ]
+                }
+                result = get_openrouter_pricing()
+            assert "test/model" in result
+            assert m._openrouter_pricing is not None
+        finally:
+            m._openrouter_pricing = original

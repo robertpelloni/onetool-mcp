@@ -24,9 +24,11 @@
 ```
 src/
   ot/           Core framework (executor, config, logging, registry)
-  ot_tools/     Built-in tool packs (15+ packs, 100+ tools)
+  ottools/     Built-in tool packs (15+ packs, 100+ tools)
   onetool/      MCP server CLI
   bench/        Benchmark harness CLI
+  otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
+  otutil/       [util] extra: brave, convert, excel, file, ground
 
 tests/          All tests (smoke, unit, integration)
 dev/            Developer documentation (THIS folder)
@@ -43,7 +45,7 @@ openspec/       Specifications and proposals
 | **Config** | `pyproject.toml` | Deps, scripts, ruff/mypy/pytest config |
 | **Config** | `justfile` | All dev commands |
 | **Rules** | `dev/agents/hints.md` | This file - quick reference |
-| **Tools** | `src/ot_tools/*.py` | Built-in tool packs |
+| **Tools** | `src/ottools/*.py` | Built-in tool packs |
 | **Core** | `src/ot/executor/runner.py` | Main execution engine |
 | **Server** | `src/onetool/server.py` | MCP server |
 | **Tests** | `tests/{smoke,unit,integration}/` | Test organization |
@@ -62,6 +64,7 @@ openspec/       Specifications and proposals
 - ✅ Two markers required: speed (`smoke`|`unit`|`integration`|`slow`) + component (`core`|`bench`|`serve`|`tools`)
 - ✅ Run with: `uv run pytest` (never bare `pytest`)
 - ✅ Fixtures: Use shared fixtures from `conftest.py`
+- ✅ Test location mirrors source package: `src/otdev/` → `tests/otdev/`, `src/ottools/` → `tests/ottools/`, `src/otutil/` → `tests/otutil/`, core → `tests/`
 
 ### Paths
 - ✅ `.onetool/` paths: Use `resolve_ot_path()` from `ot.meta`
@@ -101,10 +104,10 @@ openspec/       Specifications and proposals
 ### Common Tasks
 
 **Create a new tool:**
-1. Add file: `src/ot_tools/mypack.py`
+1. Add file: `src/ottools/mypack.py` (or `src/otdev/tools/`, `src/otutil/tools/`)
 2. Declare: `pack = "mypack"` and `__all__ = ["func1", "func2"]`
 3. Functions: Keyword-only args, type hints, docstrings, LogSpan
-4. Test: `tests/unit/tools/test_mypack.py` with markers
+4. Test: mirror source under `tests/` — e.g. `src/otdev/tools/foo.py` → `tests/otdev/unit/tools/test_foo.py`
 5. Details: `mem.search(query="create tool pack")` or `dev/project/guides/creating-tools.md`
 
 **Run tests for my changes:**

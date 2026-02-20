@@ -145,7 +145,7 @@ servers:
   #
   # SETUP:
   #   1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens
-  #   2. Add to ~/.onetool/config/secrets.yaml:
+  #   2. Add to ~/.onetool/secrets.yaml:
   #      GITHUB_TOKEN: ghp_your_token_here
   #   3. Uncomment the github server config below
   #

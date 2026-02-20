@@ -22,6 +22,9 @@ import json
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 from loguru import logger
 
 from ot.logging.entry import LogEntry
@@ -33,6 +36,7 @@ if TYPE_CHECKING:
 
 # FastMCP Context is Any since it's an optional dependency with dynamic methods
 Context = Any  # FastMCP context with log_info, log_error, etc.
+LogCallback = "Callable[[str, str], None]"  # (level, message) -> None
 
 
 def _format_for_output(entry: LogEntry) -> str:
@@ -64,6 +68,7 @@ class LogSpan:
         self,
         level: str = "INFO",
         ctx: Context | None = None,
+        log_callback: Callable[[str, str], None] | None = None,
         **initial_fields: Any,
     ) -> None:
         """Initialize a log span.
@@ -71,11 +76,14 @@ class LogSpan:
         Args:
             level: Default log level for successful completion (default: INFO)
             ctx: Optional FastMCP Context for async logging
+            log_callback: Optional callback called on span exit with (level, message).
+                Useful for external telemetry or testing.
             **initial_fields: Initial fields for the underlying LogEntry
         """
         self._level = level.upper()
         self._entry = LogEntry(**initial_fields)
         self._ctx = ctx
+        self._log_callback = log_callback
 
     def add(self, key: str | None = None, value: Any = None, **kwargs: Any) -> LogSpan:
         """Add one or more fields to the span.
@@ -184,13 +192,19 @@ class LogSpan:
                 self._entry.failure(
                     error_type=type(exc_val).__name__, error_message=str(exc_val)
                 )
+            formatted = _format_for_output(self._entry)
             # depth=1 makes loguru report the caller's location, not span.py
-            logger.opt(depth=1).error(_format_for_output(self._entry))
+            logger.opt(depth=1).error(formatted)
+            if self._log_callback is not None:
+                self._log_callback("ERROR", formatted)
         else:
             # Success - log at configured level
             self._entry.success()
+            formatted = _format_for_output(self._entry)
             # depth=1 makes loguru report the caller's location, not span.py
-            logger.opt(depth=1).log(self._level, _format_for_output(self._entry))
+            logger.opt(depth=1).log(self._level, formatted)
+            if self._log_callback is not None:
+                self._log_callback(self._level, formatted)
 
     # -------------------------------------------------------------------------
     # Async logging methods

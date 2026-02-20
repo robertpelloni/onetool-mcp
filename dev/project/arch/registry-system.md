@@ -24,7 +24,7 @@ sequenceDiagram
     R->>R: Check cache (mtime-based)
 
     alt Cache miss or stale
-        R->>R: scan_directory(ot_tools/)
+        R->>R: scan_directory(ottools/)
         loop Each *.py file
             R->>A: Parse file with ast.parse()
             A-->>R: AST tree

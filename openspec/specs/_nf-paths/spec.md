@@ -406,12 +406,7 @@ The SDK paths module SHALL provide functions to get directory paths.
 - **THEN** it SHALL return `~/.onetool/`
 
 #### Scenario: get_global_dir returns global
-- **GIVEN** no `OT_GLOBAL_DIR` environment variable
+- **GIVEN** no override
 - **WHEN** `get_global_dir()` is called
 - **THEN** it SHALL return `~/.onetool/`
-
-#### Scenario: get_global_dir with OT_GLOBAL_DIR override
-- **GIVEN** `OT_GLOBAL_DIR=/custom/path` environment variable
-- **WHEN** `get_global_dir()` is called
-- **THEN** it SHALL return `/custom/path` (resolved)
 

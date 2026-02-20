@@ -93,101 +93,51 @@ class TestCreateBackup:
 
 @pytest.mark.unit
 @pytest.mark.core
-class TestGetGlobalDir:
-    """Tests for get_global_dir()."""
+class TestEnsureOtDir:
+    """Tests for ensure_ot_dir()."""
 
-    def test_returns_home_onetool_by_default(self) -> None:
-        """Returns ~/.onetool/ when no env var set."""
-        from ot.paths import get_global_dir
+    def test_creates_directory(self, tmp_path: Path) -> None:
+        """Creates ot dir at config_path.parent."""
+        from ot.paths import ensure_ot_dir
 
-        result = get_global_dir()
+        config_path = tmp_path / ".onetool" / "onetool.yaml"
+        result = ensure_ot_dir(config_path, quiet=True)
 
-        assert result == Path.home() / ".onetool"
+        assert result == tmp_path / ".onetool"
+        assert result.exists()
 
-    def test_respects_ot_global_dir_env_var(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Returns OT_GLOBAL_DIR path when env var is set."""
-        from ot.paths import get_global_dir
+    def test_creates_subdirectories(self, tmp_path: Path) -> None:
+        """Creates logs/, stats/, tools/ subdirectories."""
+        from ot.paths import ensure_ot_dir
 
-        custom_dir = tmp_path / "custom-onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(custom_dir))
+        config_path = tmp_path / ".onetool" / "onetool.yaml"
+        ensure_ot_dir(config_path, quiet=True)
 
-        result = get_global_dir()
+        ot_dir = tmp_path / ".onetool"
+        assert (ot_dir / "logs").exists()
+        assert (ot_dir / "stats").exists()
+        assert (ot_dir / "tools").exists()
 
-        assert result == custom_dir.resolve()
+    def test_copies_yaml_files(self, tmp_path: Path) -> None:
+        """Copies YAML template files flat into ot dir."""
+        from ot.paths import ensure_ot_dir
 
+        config_path = tmp_path / ".onetool" / "onetool.yaml"
+        ensure_ot_dir(config_path, quiet=True)
 
-@pytest.mark.unit
-@pytest.mark.core
-class TestEnsureGlobalDir:
-    """Tests for ensure_global_dir()."""
+        ot_dir = tmp_path / ".onetool"
+        assert (ot_dir / "onetool.yaml").exists()
 
-    def test_copies_yaml_files(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """YAML files are copied to config/ subdirectory."""
-        from ot.paths import ensure_global_dir
+    def test_existing_dir_not_recreated(self, tmp_path: Path) -> None:
+        """Existing directory is not recreated when force=False."""
+        from ot.paths import ensure_ot_dir
 
-        # Use a non-existent subdirectory so ensure_global_dir creates it
-        onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
+        ot_dir = tmp_path / ".onetool"
+        ot_dir.mkdir()
+        marker = ot_dir / "marker.txt"
+        marker.write_text("existing")
 
-        ensure_global_dir(quiet=True)
+        config_path = ot_dir / "onetool.yaml"
+        ensure_ot_dir(config_path, quiet=True, force=False)
 
-        config_dir = onetool_dir / "config"
-        assert config_dir.exists()
-        # At minimum, onetool.yaml should exist
-        assert (config_dir / "onetool.yaml").exists()
-
-    def test_copies_resource_subdirectories(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Resource subdirectories like diagram-templates/ are copied."""
-        from ot.paths import ensure_global_dir
-
-        onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
-
-        ensure_global_dir(quiet=True)
-
-        config_dir = onetool_dir / "config"
-        diagram_templates = config_dir / "diagram-templates"
-        # Should exist and contain template files
-        assert diagram_templates.exists()
-        assert diagram_templates.is_dir()
-        # Should have at least some .mmd files
-        mmd_files = list(diagram_templates.glob("*.mmd"))
-        assert len(mmd_files) > 0
-
-    def test_excludes_tool_templates_subdirectory(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """tool_templates/ subdirectory is NOT copied (accessed via package)."""
-        from ot.paths import ensure_global_dir
-
-        onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
-
-        ensure_global_dir(quiet=True)
-
-        config_dir = onetool_dir / "config"
-        tool_templates = config_dir / "tool_templates"
-        # Should NOT exist - tool_templates accessed via get_global_templates_dir()
-        assert not tool_templates.exists()
-
-    def test_creates_subdirectories(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Creates config/, logs/, stats/, tools/ subdirectories."""
-        from ot.paths import ensure_global_dir
-
-        onetool_dir = tmp_path / ".onetool"
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(onetool_dir))
-
-        ensure_global_dir(quiet=True)
-
-        assert (onetool_dir / "config").exists()
-        assert (onetool_dir / "logs").exists()
-        assert (onetool_dir / "stats").exists()
-        assert (onetool_dir / "tools").exists()
+        assert marker.exists()

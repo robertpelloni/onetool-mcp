@@ -9,7 +9,7 @@ Defines common conventions and patterns that ALL tool implementations must follo
 All tool files SHALL follow a standard structure.
 
 #### Scenario: Module header
-- **GIVEN** a tool file in `src/ot_tools/`
+- **GIVEN** a tool file in `src/ottools/`
 - **WHEN** the file is created
 - **THEN** it SHALL include in order:
   1. Module docstring (description, requirements, references)

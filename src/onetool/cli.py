@@ -5,7 +5,6 @@ from __future__ import annotations
 import atexit
 import os
 import signal
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,61 +12,6 @@ import typer
 
 if TYPE_CHECKING:
     from rich.console import Console
-
-
-def _is_initialized() -> bool:
-    """Check if OneTool is initialized (global config exists).
-
-    Returns:
-        True if ~/.onetool/config/onetool.yaml exists
-    """
-    from ot.paths import CONFIG_SUBDIR, get_global_dir
-
-    global_config = get_global_dir() / CONFIG_SUBDIR / "onetool.yaml"
-    return global_config.exists()
-
-
-def _check_first_run(console: Console) -> None:
-    """Check for first-run state and prompt for initialization.
-
-    If OneTool is not initialized:
-    - Interactive (TTY): Prompt user to initialize, then exit
-    - Non-interactive: Print error and exit
-
-    After first-run init, exits so user can review config before starting server.
-
-    Args:
-        console: Rich console for output
-
-    Raises:
-        typer.Exit: Always exits if not initialized (after init or on decline)
-    """
-    if _is_initialized():
-        return
-
-    # Check if stdin is a TTY (interactive mode)
-    is_interactive = sys.stdin.isatty()
-
-    if not is_interactive:
-        console.print("[red]OneTool not initialized.[/red] Run: onetool init")
-        raise typer.Exit(1)
-
-    # Interactive mode - prompt for initialization
-    console.print("[yellow]OneTool is not initialized.[/yellow]")
-    do_init = typer.confirm("Initialize now?", default=True)
-
-    if not do_init:
-        console.print("Run 'onetool init' when ready.")
-        raise typer.Exit(1)
-
-    # Initialize
-    from ot.paths import ensure_global_dir
-
-    ensure_global_dir(quiet=False, force=False)
-
-    # Exit after first-run init so user can configure their MCP client
-    console.print("\n[green]OneTool initialized. Configure your MCP client to run OneTool.[/green]")
-    raise typer.Exit(0)
 
 
 def _suppress_shutdown_warnings() -> None:
@@ -124,68 +68,85 @@ def _setup_signal_handlers() -> None:
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-# Init subcommand group - manage global configuration
+# Init subcommand group - manage OneTool configuration directory
 init_app = typer.Typer(
     name="init",
-    help="Initialize and manage global configuration in ~/.onetool/config/",
+    help="Initialize and manage the OneTool configuration directory.",
     invoke_without_command=True,
 )
 app.add_typer(init_app)
 
 
 @init_app.callback()
-def init_callback(ctx: typer.Context) -> None:
-    """Initialize and manage global configuration in ~/.onetool/config/.
+def init_callback(
+    ctx: typer.Context,
+    config: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to onetool.yaml to initialise (directory will be created).",
+    ),
+) -> None:
+    """Initialize and manage OneTool configuration directory.
 
-    Run without subcommand to initialize global config directory.
+    Run without subcommand to initialise: onetool init --config /path/to/.onetool/onetool.yaml
     """
     if ctx.invoked_subcommand is None:
-        # No subcommand = run init
-        init_create()
+        if config is None:
+            console.print("[red]Error: Missing option '--config' / '-c'[/red]")
+            console.print("Usage: onetool init --config /path/to/.onetool/onetool.yaml")
+            raise typer.Exit(1)
+        from ot.paths import ensure_ot_dir
+        ensure_ot_dir(config, quiet=False, force=False)
 
 
 @init_app.command("create", hidden=True)
-def init_create() -> None:
-    """Initialize global config directory (~/.onetool/).
+def init_create(
+    config: Path = typer.Option(
+        ...,
+        "--config",
+        "-c",
+        help="Path to onetool.yaml to create (directory will be initialised).",
+    ),
+) -> None:
+    """Initialize OneTool configuration directory.
 
-    Creates the global config directory and copies template files if they
-    don't already exist. Existing files are preserved.
-
-    This is the default action when running 'onetool init' without a subcommand.
+    Creates the directory at config file's parent and copies template files.
+    Existing files are preserved.
     """
-    from ot.paths import ensure_global_dir, get_global_dir
+    from ot.paths import ensure_ot_dir
 
-    global_dir = get_global_dir()
-    if global_dir.exists():
-        console.print(f"Global config already exists at {global_dir}/")
-        console.print("Use 'onetool init reset' to reinstall templates.")
+    ot_dir = config.parent
+    if ot_dir.exists():
+        console.print(f"Config directory already exists at {ot_dir}/")
+        console.print("Use 'onetool init reset --config ...' to reinstall templates.")
         return
 
-    ensure_global_dir(quiet=False, force=False)
+    ensure_ot_dir(config, quiet=False, force=False)
 
 
 @init_app.command("reset")
-def init_reset() -> None:
-    """Reset global config to default templates.
+def init_reset(
+    config: Path = typer.Option(
+        ...,
+        "--config",
+        "-c",
+        help="Path to onetool.yaml (directory contains files to reset).",
+    ),
+) -> None:
+    """Reset config directory to default templates.
 
     Prompts for each file before overwriting. For existing files, offers to
     create a backup first. Backups are named file.bak, file.bak.1, etc.
     """
     import shutil
 
-    from ot.paths import (
-        CONFIG_SUBDIR,
-        create_backup,
-        get_global_dir,
-        get_template_files,
-    )
+    from ot.paths import create_backup, get_template_files
 
-    global_dir = get_global_dir()
-    config_dir = global_dir / CONFIG_SUBDIR
+    ot_dir = config.parent
 
-    # Ensure directories exist
-    global_dir.mkdir(parents=True, exist_ok=True)
-    config_dir.mkdir(exist_ok=True)
+    # Ensure directory exists
+    ot_dir.mkdir(parents=True, exist_ok=True)
 
     template_files = get_template_files()
     if not template_files:
@@ -197,12 +158,12 @@ def init_reset() -> None:
     skipped_files: list[str] = []
 
     for source_path, dest_name in template_files:
-        dest_path = config_dir / dest_name
+        dest_path = ot_dir / dest_name
         exists = dest_path.exists()
 
         if exists:
             # Prompt for overwrite
-            console.print(f"\nconfig/{dest_name} already exists.")
+            console.print(f"\n{dest_name} already exists.")
             do_overwrite = typer.confirm("Overwrite?", default=True)
 
             if not do_overwrite:
@@ -210,7 +171,7 @@ def init_reset() -> None:
                 continue
 
             # Prompt for backup
-            do_backup = typer.confirm(f"Create backup of config/{dest_name}?", default=True)
+            do_backup = typer.confirm(f"Create backup of {dest_name}?", default=True)
 
             if do_backup:
                 backup_path = create_backup(dest_path)
@@ -222,23 +183,38 @@ def init_reset() -> None:
     # Summary
     console.print()
     if copied_files:
-        console.print(f"Reset files in {config_dir}/:")
+        console.print(f"Reset files in {ot_dir}/:")
         for name in copied_files:
             console.print(f"  + {name}")
 
     if backed_up_files:
         console.print("\nBackups created:")
         for name, backup_path in backed_up_files:
-            console.print(f"  config/{name} -> {backup_path.name}")
+            console.print(f"  {name} -> {backup_path.name}")
 
     if skipped_files:
         console.print("\nSkipped:")
         for name in skipped_files:
-            console.print(f"  - config/{name}")
+            console.print(f"  - {name}")
 
 
 @init_app.command("validate")
-def init_validate() -> None:
+def init_validate(
+    config: Path = typer.Option(
+        ...,
+        "--config",
+        "-c",
+        exists=True,
+        readable=True,
+        help="Path to onetool.yaml to validate.",
+    ),
+    secrets: Path | None = typer.Option(
+        None,
+        "--secrets",
+        "-s",
+        help="Path to secrets file.",
+    ),
+) -> None:
     """Validate configuration and show status.
 
     Checks config files for errors, then displays packs, secrets (names only),
@@ -250,7 +226,6 @@ def init_validate() -> None:
     from ot.config.loader import get_config, load_config
     from ot.config.secrets import load_secrets
     from ot.executor.tool_loader import load_tool_registry
-    from ot.paths import CONFIG_SUBDIR, get_global_dir, get_project_dir
 
     # Suppress DEBUG logs from config loader
     logger.remove()
@@ -258,41 +233,22 @@ def init_validate() -> None:
     errors: list[str] = []
     validated: list[str] = []
 
-    # Check global config
-    global_dir = get_global_dir()
-    global_config = global_dir / CONFIG_SUBDIR / "onetool.yaml"
-    if global_config.exists():
-        try:
-            load_config(global_config)
-            validated.append(str(global_config))
-        except Exception as e:
-            errors.append(f"{global_config}: {e}")
-
-    # Check project config
-    project_dir = get_project_dir()
-    if project_dir:
-        project_config = project_dir / CONFIG_SUBDIR / "onetool.yaml"
-        if project_config.exists():
-            try:
-                load_config(project_config)
-                validated.append(str(project_config))
-            except Exception as e:
-                errors.append(f"{project_config}: {e}")
+    try:
+        load_config(config, secrets_path=secrets)
+        validated.append(str(config))
+    except Exception as e:
+        errors.append(f"{config}: {e}")
 
     # Report validation results
     console.print("Configuration\n")
     console.print(f"Version: [cyan]{__version__}[/cyan]\n")
 
-    console.print("Directories:")
-    global_exists = global_dir.exists()
-    if global_exists:
-        console.print(f"  Global:  {global_dir}/ - [green]OK[/green]")
+    console.print("Config directory:")
+    ot_dir = config.parent
+    if ot_dir.exists():
+        console.print(f"  {ot_dir}/ - [green]OK[/green]")
     else:
-        console.print(f"  Global:  {global_dir}/ - [red]missing[/red]")
-    if project_dir:
-        console.print(f"  Project: {project_dir}/ - [green]OK[/green]")
-    else:
-        console.print("  Project: (none)")
+        console.print(f"  {ot_dir}/ - [red]missing[/red]")
 
     if validated:
         console.print("\nConfig files:")
@@ -307,12 +263,11 @@ def init_validate() -> None:
 
     if not validated and not errors:
         console.print("\nNo configuration files found.")
-        console.print(f"Checked: {global_config}, .onetool/config/onetool.yaml")
         return
 
     # Load merged config for status display
     try:
-        config = get_config()
+        cfg = get_config()
     except Exception as e:
         console.print(f"\n[red]Config error:[/red] {e}")
         return
@@ -343,12 +298,11 @@ def init_validate() -> None:
         console.print("\nPacks:")
         console.print(f"  [red]Error loading tools:[/red] {e}")
 
-    # Secrets (names only) - use config's secrets_file path
+    # Secrets (names only) - use explicit --secrets path only
     try:
-        secrets_path = config.get_secrets_file_path() if config else None
-        secrets = load_secrets(secrets_path)
-        if secrets:
-            sorted_keys = sorted(secrets.keys())
+        secrets_data = load_secrets(secrets)
+        if secrets_data:
+            sorted_keys = sorted(secrets_data.keys())
             console.print(f"\nSecrets ({len(sorted_keys)}):")
             for key in sorted_keys:
                 console.print(f"  {key} - [green]set[/green]")
@@ -360,8 +314,8 @@ def init_validate() -> None:
         console.print(f"  [red]Error:[/red] {e}")
 
     # Snippets
-    if config and config.snippets:
-        sorted_snippets = sorted(config.snippets.keys())
+    if cfg and cfg.snippets:
+        sorted_snippets = sorted(cfg.snippets.keys())
         console.print(f"\nSnippets ({len(sorted_snippets)}):")
         console.print(f"  {', '.join(sorted_snippets)}")
     else:
@@ -369,8 +323,8 @@ def init_validate() -> None:
         console.print("  (none)")
 
     # Aliases
-    if config and config.alias:
-        sorted_aliases = sorted(config.alias.items())
+    if cfg and cfg.alias:
+        sorted_aliases = sorted(cfg.alias.items())
         console.print(f"\nAliases ({len(sorted_aliases)}):")
         alias_items = [f"{name} -> {target}" for name, target in sorted_aliases]
         console.print(f"  {', '.join(alias_items)}")
@@ -379,8 +333,8 @@ def init_validate() -> None:
         console.print("  (none)")
 
     # Servers
-    if config and config.servers:
-        sorted_servers = sorted(config.servers.keys())
+    if cfg and cfg.servers:
+        sorted_servers = sorted(cfg.servers.keys())
         console.print(f"\nMCP Servers ({len(sorted_servers)}):")
         console.print(f"  {', '.join(sorted_servers)}")
     else:
@@ -404,8 +358,12 @@ def serve(
         "--config",
         "-c",
         help="Path to onetool.yaml configuration file.",
-        exists=True,
-        readable=True,
+    ),
+    secrets: Path | None = typer.Option(
+        None,
+        "--secrets",
+        "-s",
+        help="Path to secrets file. If omitted, no secrets are loaded.",
     ),
 ) -> None:
     """Run the OneTool MCP server over stdio transport.
@@ -414,22 +372,25 @@ def serve(
     The server communicates via stdio and is typically invoked by MCP clients.
 
     Examples:
-        onetool
-        onetool --config config/onetool.yaml
+        onetool --config /path/to/.onetool/onetool.yaml
+        onetool --config /path/to/.onetool/onetool.yaml --secrets /path/to/.onetool/secrets.yaml
     """
-    # Check for first-run initialization (skip for 'init' subcommand)
-    if ctx.invoked_subcommand != "init":
-        _check_first_run(console)
-
     # Only run if no subcommand was invoked (handles --help automatically)
     if ctx.invoked_subcommand is not None:
         return
 
-    # Load config if specified
-    if config:
-        from ot.config.loader import get_config
+    if config is None:
+        console.print("[red]Error: Missing option '--config' / '-c'.[/red]")
+        console.print("Usage: onetool --config /path/to/.onetool/onetool.yaml")
+        raise typer.Exit(1)
+    if not config.exists():
+        console.print(f"[red]Error: Config file not found: {config}[/red]")
+        raise typer.Exit(1)
 
-        get_config(config)
+    # Load config (secrets threaded through load_config)
+    from ot.config.loader import get_config
+
+    get_config(config, secrets_path=secrets)
 
     # Set up signal handlers for clean exit (before starting server)
     _setup_signal_handlers()

@@ -70,7 +70,7 @@ Every test must have **two markers** - a speed tier and a component:
 |--------|-----------|
 | `core` | Core library (`ot`) - executor, config, registry |
 | `serve` | MCP server (`onetool`) |
-| `tools` | Tool implementations (`ot_tools`) |
+| `tools` | Tool implementations (`ottools`) |
 | `bench` | Benchmark harness (`bench`) |
 | `pkg` | Package management |
 | `spec` | OpenSpec tooling |
@@ -160,13 +160,13 @@ class TestCleanVersion:
 class TestNpm:
     """Test npm function with mocked HTTP."""
 
-    @patch("ot_tools.package._fetch")
+    @patch("ottools.package._fetch")
     def test_fetches_single_package(self, mock_fetch):
         mock_fetch.return_value = (True, {"dist-tags": {"latest": "18.2.0"}})
         result = npm(packages=["react"])
         assert "18.2.0" in result
 
-    @patch("ot_tools.package._fetch")
+    @patch("ottools.package._fetch")
     def test_handles_unknown_package(self, mock_fetch):
         mock_fetch.return_value = (False, "Not found")
         result = npm(packages=["nonexistent-package-xyz"])
@@ -195,7 +195,7 @@ class TestPackageLive:
     """Live integration tests for package version tool."""
 
     def test_npm_live(self):
-        from ot_tools.package import npm
+        from ottools.package import npm
         result = npm(packages=["lodash"])
         assert "lodash" in result
         assert "unknown" not in result.lower()

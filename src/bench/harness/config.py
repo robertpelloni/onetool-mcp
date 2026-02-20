@@ -1,7 +1,7 @@
 """YAML configuration loading for harness scenarios and tasks.
 
 Loads ot-dev.yaml with test scenarios and harness configuration.
-Supports variable expansion from bench-secrets.yaml in the format ${VAR_NAME}.
+Supports variable expansion from secrets.yaml in the format ${VAR_NAME}.
 
 Example ot-dev.yaml:
 
@@ -24,124 +24,30 @@ Example ot-dev.yaml:
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-from bench.secrets import get_bench_secret
+from ot.config.secrets import expand_vars
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-def expand_secrets(value: str) -> str:
-    """Expand variables in a string using bench-secrets.yaml only.
-
-    Supports ${VAR_NAME} and ${VAR_NAME:-default} syntax.
-    Reads from bench-secrets.yaml only - does NOT read from os.environ.
-    Raises error if variable not found and no default provided.
-
-    Args:
-        value: String potentially containing ${VAR} patterns.
-
-    Returns:
-        String with variables expanded from bench secrets.
-
-    Raises:
-        ValueError: If variable not found in secrets and no default.
-    """
-    pattern = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
-    missing_vars: list[str] = []
-
-    def replace(match: re.Match[str]) -> str:
-        var_name = match.group(1)
-        default_value = match.group(2)
-        # Read from bench secrets only - no os.environ
-        secret_value = get_bench_secret(var_name)
-        if secret_value:
-            return secret_value
-        if default_value is not None:
-            return default_value
-        missing_vars.append(var_name)
-        return match.group(0)
-
-    result = pattern.sub(replace, value)
-
-    if missing_vars:
-        raise ValueError(
-            f"Missing variables in bench-secrets.yaml: {', '.join(missing_vars)}. "
-            f"Add them to .onetool/config/bench-secrets.yaml or use ${{VAR:-default}} syntax."
-        )
-
-    return result
-
-
-def expand_subprocess_env(value: str) -> str:
-    """Expand ${VAR} for subprocess environment values.
-
-    Reads from bench secrets first, then os.environ for pass-through.
-    This is the ONLY place where reading os.environ is allowed for bench,
-    enabling explicit env var pass-through to subprocesses.
-
-    Args:
-        value: String potentially containing ${VAR} patterns.
-
-    Returns:
-        String with variables expanded. Empty string if not found.
-    """
-    import os
-
-    pattern = re.compile(r"\$\{([^}:]+)(?::-([^}]*))?\}")
-
-    def replace(match: re.Match[str]) -> str:
-        var_name = match.group(1)
-        default_value = match.group(2)
-        # Bench secrets first
-        secret_value = get_bench_secret(var_name)
-        if secret_value:
-            return secret_value
-        # Then os.environ (for pass-through like ${HOME})
-        env_val = os.environ.get(var_name)
-        if env_val is not None:
-            return env_val
-        # Use default if provided
-        if default_value is not None:
-            return default_value
-        # Empty string if not found
-        return ""
-
-    return pattern.sub(replace, value)
-
-
-def expand_secrets_in_dict(data: Any, skip_keys: set[str] | None = None) -> Any:
-    """Recursively expand secrets in a dict/list structure.
-
-    Args:
-        data: Dict, list, or scalar value.
-        skip_keys: Set of dict keys whose values should not be expanded.
-            Used to skip 'env' values which are expanded later by subprocess.
-
-    Returns:
-        Structure with all string values expanded.
-    """
+def _expand_vars_in_dict(data: Any, skip_keys: set[str] | None = None) -> Any:
+    """Recursively expand ${VAR} patterns in a dict/list structure."""
     if skip_keys is None:
         skip_keys = {"env"}
-
     if isinstance(data, dict):
-        result = {}
-        for k, v in data.items():
-            if k in skip_keys:
-                # Don't expand these - they're handled by expand_subprocess_env later
-                result[k] = v
-            else:
-                result[k] = expand_secrets_in_dict(v, skip_keys)
-        return result
-    elif isinstance(data, list):
-        return [expand_secrets_in_dict(v, skip_keys) for v in data]
-    elif isinstance(data, str):
-        return expand_secrets(data)
+        return {
+            k: v if k in skip_keys else _expand_vars_in_dict(v, skip_keys)
+            for k, v in data.items()
+        }
+    if isinstance(data, list):
+        return [_expand_vars_in_dict(v, skip_keys) for v in data]
+    if isinstance(data, str):
+        return expand_vars(data)
     return data
 
 
@@ -166,11 +72,11 @@ class ServerConfig(BaseModel):
 
     @field_validator("url", "command", mode="before")
     @classmethod
-    def expand_secrets_validator(cls, v: str | None) -> str | None:
-        """Expand secrets in URL and command."""
+    def expand_vars_validator(cls, v: str | None) -> str | None:
+        """Expand variables in URL and command."""
         if v is None:
             return None
-        return expand_secrets(v)
+        return expand_vars(v)
 
 
 class EvaluateConfig(BaseModel):
@@ -309,34 +215,6 @@ class HarnessConfig(BaseModel):
     scenarios: list[ScenarioConfig] = Field(default_factory=list)
 
 
-def load_harness_config(path: Path) -> HarnessConfig:
-    """Load and validate a harness YAML configuration.
-
-    Args:
-        path: Path to the YAML file.
-
-    Returns:
-        Validated HarnessConfig.
-
-    Raises:
-        FileNotFoundError: If the file doesn't exist.
-        ValueError: If the YAML is invalid.
-    """
-    if not path.exists():
-        raise FileNotFoundError(f"Config file not found: {path}")
-
-    with path.open() as f:
-        raw_data = yaml.safe_load(f)
-
-    if raw_data is None:
-        raw_data = {}
-
-    # Expand secrets
-    data = expand_secrets_in_dict(raw_data)
-
-    return HarnessConfig.model_validate(data)
-
-
 def _convert_legacy_tools_config(data: dict[str, Any]) -> dict[str, Any]:
     """Convert legacy tools config to unified format.
 
@@ -388,8 +266,8 @@ def load_config(path: Path) -> HarnessConfig:
     if raw_data is None:
         raw_data = {}
 
-    # Expand secrets
-    data = expand_secrets_in_dict(raw_data)
+    # Expand variables
+    data = _expand_vars_in_dict(raw_data)
 
     # Convert legacy tools config format if needed
     data = _convert_legacy_tools_config(data)

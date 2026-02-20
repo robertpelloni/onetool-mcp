@@ -125,26 +125,18 @@ DEBUG: true
 class TestGetSecrets:
     """Tests for get_secrets caching function."""
 
-    def test_caches_secrets(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_caches_secrets(self, tmp_path: Path) -> None:
         """Should cache secrets after first load."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('API_KEY: "cached-key"')
 
-        # Reset the module's cache
         import ot.config.secrets as secrets_module
 
         secrets_module._secrets = None
 
-        # Prevent default location lookup from finding dev environment secrets
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
-        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
-
-        # First call loads
-        result1 = get_secrets()
-        # Second call uses cache
+        # First call loads with explicit path
+        result1 = get_secrets(secrets_file)
+        # Second call uses cache (no path needed)
         result2 = get_secrets()
 
         assert result1 is result2
@@ -153,9 +145,7 @@ class TestGetSecrets:
         # Cleanup
         secrets_module._secrets = None
 
-    def test_reload_forces_fresh_load(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_reload_forces_fresh_load(self, tmp_path: Path) -> None:
         """Should reload when reload=True."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('API_KEY: "original-key"')
@@ -164,12 +154,7 @@ class TestGetSecrets:
 
         secrets_module._secrets = None
 
-        # Prevent default location lookup from finding dev environment secrets
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
-        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
-
-        result1 = get_secrets()
+        result1 = get_secrets(secrets_file)
         assert result1["API_KEY"] == "original-key"
 
         # Modify the file
@@ -179,11 +164,22 @@ class TestGetSecrets:
         result2 = get_secrets()
         assert result2["API_KEY"] == "original-key"
 
-        # With reload, should get new value
-        result3 = get_secrets(reload=True)
+        # With reload and explicit path, should get new value
+        result3 = get_secrets(secrets_file, reload=True)
         assert result3["API_KEY"] == "updated-key"
 
         # Cleanup
+        secrets_module._secrets = None
+
+    def test_none_path_returns_empty(self) -> None:
+        """get_secrets(None) returns empty dict when no cache."""
+        import ot.config.secrets as secrets_module
+
+        secrets_module._secrets = None
+
+        result = get_secrets(None)
+        assert result == {}
+
         secrets_module._secrets = None
 
 
@@ -192,9 +188,7 @@ class TestGetSecrets:
 class TestGetSecret:
     """Tests for get_secret convenience function."""
 
-    def test_returns_secret_value(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_secret_value(self, tmp_path: Path) -> None:
         """Should return secret value by name."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('MY_SECRET: "secret-value"')
@@ -202,11 +196,7 @@ class TestGetSecret:
         import ot.config.secrets as secrets_module
 
         secrets_module._secrets = None
-
-        # Prevent default location lookup from finding dev environment secrets
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
-        monkeypatch.setenv("OT_CWD", str(tmp_path / "empty-cwd"))
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+        get_secrets(secrets_file)
 
         result = get_secret("MY_SECRET")
         assert result == "secret-value"
@@ -214,9 +204,7 @@ class TestGetSecret:
         # Cleanup
         secrets_module._secrets = None
 
-    def test_returns_none_for_missing_secret(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_returns_none_for_missing_secret(self, tmp_path: Path) -> None:
         """Should return None for non-existent secret."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('OTHER_KEY: "value"')
@@ -224,8 +212,7 @@ class TestGetSecret:
         import ot.config.secrets as secrets_module
 
         secrets_module._secrets = None
-
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+        get_secrets(secrets_file)
 
         result = get_secret("NONEXISTENT")
         assert result is None
@@ -239,9 +226,7 @@ class TestGetSecret:
 class TestExpandVars:
     """Tests for expand_vars function (secrets + env expansion)."""
 
-    def test_expands_from_secrets_first(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_expands_from_secrets_first(self, tmp_path: Path) -> None:
         """Should expand ${VAR} from secrets.yaml first."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('API_KEY: "secret-key-123"')
@@ -249,7 +234,7 @@ class TestExpandVars:
         import ot.config.secrets as secrets_module
 
         secrets_module._secrets = None
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+        get_secrets(secrets_file)
 
         result = expand_vars("${API_KEY}")
         assert result == "secret-key-123"
@@ -257,9 +242,7 @@ class TestExpandVars:
         # Cleanup
         secrets_module._secrets = None
 
-    def test_expands_from_config_env_second(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_expands_from_config_env_second(self, tmp_path: Path) -> None:
         """Should expand ${VAR} from config env: section if not in secrets."""
         import ot.config.loader as loader_module
         import ot.config.secrets as secrets_module
@@ -267,16 +250,13 @@ class TestExpandVars:
         secrets_module._secrets = {}  # Empty secrets - won't find DATA_DIR here
         loader_module._config = None
 
-        # Prevent loading from default locations
-        monkeypatch.setenv("OT_GLOBAL_DIR", str(tmp_path / "empty-global"))
-
         # Create a config with env section
-        config_dir = tmp_path / ".onetool" / "config"
+        config_dir = tmp_path / ".onetool"
         config_dir.mkdir(parents=True)
         config_path = config_dir / "onetool.yaml"
         config_path.write_text(
             """
-version: 1
+version: 2
 env:
   DATA_DIR: /data/onetool
   CACHE_DIR: /tmp/cache
@@ -297,7 +277,7 @@ env:
         loader_module._config = None
 
     def test_secrets_take_precedence_over_env(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
         """Should use secrets.yaml value when variable exists in both."""
         import ot.config.loader as loader_module
@@ -306,19 +286,13 @@ env:
         secrets_module._secrets = None
         loader_module._config = None
 
-        # Create config directory and secrets file
-        config_dir = tmp_path / ".onetool" / "config"
-        config_dir.mkdir(parents=True)
-
-        # Create secrets with API_KEY in the expected location
-        secrets_file = config_dir / "secrets.yaml"
+        secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text('API_KEY: "from-secrets"')
 
-        # Create config with same variable in env
-        config_path = config_dir / "onetool.yaml"
+        config_path = tmp_path / "onetool.yaml"
         config_path.write_text(
             """
-version: 1
+version: 2
 env:
   API_KEY: from-env
 """
@@ -327,6 +301,7 @@ env:
         from ot.config.loader import get_config
 
         get_config(config_path)
+        get_secrets(secrets_file, reload=True)  # force-reload: load_config cleared secrets
 
         # Should use secrets value (higher precedence)
         result = expand_vars("${API_KEY}")
@@ -360,9 +335,7 @@ env:
         # Cleanup
         secrets_module._secrets = None
 
-    def test_expands_multiple_vars(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_expands_multiple_vars(self, tmp_path: Path) -> None:
         """Should expand multiple ${VAR} patterns in one string."""
         secrets_file = tmp_path / "secrets.yaml"
         secrets_file.write_text(
@@ -375,7 +348,7 @@ API_SECRET: "secret456"
         import ot.config.secrets as secrets_module
 
         secrets_module._secrets = None
-        monkeypatch.setenv("OT_SECRETS_FILE", str(secrets_file))
+        get_secrets(secrets_file)
 
         result = expand_vars("key=${API_KEY}&secret=${API_SECRET}")
         assert result == "key=key123&secret=secret456"

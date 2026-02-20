@@ -107,7 +107,7 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
 
         def __init__(self) -> None:
             # Cache callable proxies to avoid recreating on each access
-            self._function_cache: dict[str, Callable[..., str]] = {}
+            self._function_cache: dict[str, Callable[..., Any]] = {}
             # Cache accessor -> actual tool name mappings
             self._name_resolution_cache: dict[str, str] = {}
 
@@ -155,7 +155,7 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
                 actual_tool_name = match_result
                 self._name_resolution_cache[accessor_name] = actual_tool_name
 
-            def call_proxy_tool(**kwargs: Any) -> str:
+            def call_proxy_tool(**kwargs: Any) -> str | dict[str, Any] | list[Any]:
                 tool_full_name = f"{server_name}.{actual_tool_name}"
 
                 # Resolve abbreviated parameter names (cached lookup)

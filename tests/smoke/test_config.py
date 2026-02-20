@@ -21,10 +21,9 @@ def test_config_imports() -> None:
 @pytest.mark.core
 def test_config_has_logging_settings() -> None:
     """Verify OneToolConfig has logging settings with defaults."""
-    from ot.config import load_config
+    from ot.config import OneToolConfig
 
-    # Load default config
-    config = load_config()
+    config = OneToolConfig()
     assert config is not None
     # Check logging settings exist (migrated from Settings)
     assert hasattr(config, "log_level")
@@ -34,10 +33,12 @@ def test_config_has_logging_settings() -> None:
 
 @pytest.mark.smoke
 @pytest.mark.core
-def test_load_config_default() -> None:
-    """Verify config loading works (uses defaults if no file found)."""
+def test_load_config_default(tmp_path: pytest.TempPath) -> None:
+    """Verify config loading works when a config file is provided."""
     from ot.config import load_config
 
-    # Should not raise even if no config file exists
-    config = load_config()
+    config_path = tmp_path / "onetool.yaml"
+    config_path.write_text("version: 2\n")
+
+    config = load_config(config_path)
     assert config is not None

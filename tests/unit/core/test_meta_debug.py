@@ -28,7 +28,6 @@ def test_debug_basic():
 
     # Verify paths section
     assert "install" in result["paths"]
-    assert "global_dir" in result["paths"]
     assert "cwd" in result["paths"]
     assert "python" in result["paths"]
 
@@ -85,8 +84,6 @@ def test_debug_env_vars():
 
     # Should include env section
     assert "env" in result
-    assert "OT_GLOBAL_DIR" in result["env"]
-    assert "ONETOOL_CONFIG" in result["env"]
     assert "OT_CWD" in result["env"]
 
 

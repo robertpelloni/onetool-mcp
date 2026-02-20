@@ -23,7 +23,6 @@ from loguru import logger
 from openai import OpenAI
 
 from bench.harness.metrics import EvaluationResult, TaskResult
-from bench.secrets import get_bench_secret
 
 if TYPE_CHECKING:
     from bench.harness.config import EvaluateConfig, HarnessConfig, TaskConfig
@@ -275,6 +274,8 @@ def evaluate_llm(
     response: str,
     config: EvaluateConfig,
     expected: Any = None,
+    *,
+    client: OpenAI | None = None,
 ) -> EvaluationResult:
     """Evaluate response using LLM-as-judge.
 
@@ -300,10 +301,12 @@ def evaluate_llm(
             eval_type="scored",
         )
 
-    client = OpenAI(
-        api_key=get_bench_secret("OPENAI_API_KEY"),
-        base_url=get_bench_secret("OPENAI_BASE_URL"),
-    )
+    if client is None:
+        from ot.config.secrets import get_secret
+        client = OpenAI(
+            api_key=get_secret("OPENAI_API_KEY"),
+            base_url=get_secret("OPENAI_BASE_URL") or None,
+        )
 
     # Format the evaluation prompt
     prompt = config.prompt.replace("{response}", response)
@@ -472,6 +475,8 @@ def evaluate_task(
     task_result: TaskResult,
     task: TaskConfig,
     harness_config: HarnessConfig,
+    *,
+    client: OpenAI | None = None,
 ) -> EvaluationResult | None:
     """Evaluate a task result.
 
@@ -506,7 +511,7 @@ def evaluate_task(
 
     # LLM evaluation if prompt is set
     if eval_config.prompt:
-        return evaluate_llm(task_result.response, eval_config)
+        return evaluate_llm(task_result.response, eval_config, client=client)
 
     # No evaluation method configured
     return None

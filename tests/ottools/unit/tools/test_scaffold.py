@@ -1,0 +1,564 @@
+"""Unit tests for Scaffold tool.
+
+Tests scaffold.create(), scaffold.validate(), scaffold.extensions(), scaffold.templates().
+Uses tmp_path fixture for isolated test files.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+from unittest.mock import patch
+
+import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from pathlib import Path
+
+
+@pytest.fixture
+def mock_ot_dir(tmp_path: Path) -> Generator[Path, None, None]:
+    """Mock ot dir (config_path.parent) to tmp_path."""
+    from unittest.mock import MagicMock
+
+    ot_dir = tmp_path / ".onetool"
+    ot_dir.mkdir()
+
+    mock_config = MagicMock()
+    mock_config._config_dir = ot_dir
+
+    with patch("ot.config.loader.get_config", return_value=mock_config):
+        yield ot_dir
+
+
+# =============================================================================
+# Module Structure Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_pack_is_scaffold() -> None:
+    """Verify pack is correctly set."""
+    from ottools.scaffold import pack
+
+    assert pack == "scaffold"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_all_exports() -> None:
+    """Verify __all__ contains the expected public functions."""
+    from ottools.scaffold import __all__
+
+    expected = {"create", "extensions", "templates", "validate"}
+    assert set(__all__) == expected
+
+
+# =============================================================================
+# templates() Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_templates_lists_available() -> None:
+    """Verify templates() returns available templates."""
+    from ottools.scaffold import templates
+
+    result = templates()
+
+    assert "Available extension templates:" in result
+    assert "extension" in result
+    assert "scaffold.create()" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_templates_missing_dir(tmp_path: Path) -> None:
+    """Verify templates() handles missing directory."""
+    from ottools.scaffold import templates
+
+    with patch("ottools.scaffold._get_templates_dir", return_value=tmp_path / "nonexistent"):
+        result = templates()
+
+    assert "Error" in result
+    assert "not found" in result
+
+
+# =============================================================================
+# create() Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_create_extension_project_scope(mock_ot_dir: Path) -> None:
+    """Verify create() creates extension in project scope."""
+    from ottools.scaffold import create
+
+    result = create(name="my_tool", function="search")
+
+    assert "Created extension:" in result
+    assert "my_tool" in result
+    assert "Next steps:" in result
+
+    # Verify file was created
+    ext_file = mock_ot_dir / "tools" / "my_tool" / "my_tool.py"
+    assert ext_file.exists()
+
+    content = ext_file.read_text()
+    assert 'pack = "my_tool"' in content
+    assert 'def search(' in content
+    # Extension template (default) is in-process, no worker_main needed
+    assert "LogSpan" in content
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_create_custom_pack_name(mock_ot_dir: Path) -> None:
+    """Verify create() uses custom pack_name."""
+    from ottools.scaffold import create
+
+    result = create(name="my_tool", pack_name="custom_pack")
+
+    assert "Created extension:" in result
+
+    ext_file = mock_ot_dir / "tools" / "my_tool" / "my_tool.py"
+    content = ext_file.read_text()
+    assert 'pack = "custom_pack"' in content
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_create_invalid_name() -> None:
+    """Verify create() rejects invalid names."""
+    from ottools.scaffold import create
+
+    # Uppercase not allowed
+    result = create(name="MyTool")
+    assert "Error" in result
+    assert "lowercase" in result
+
+    # Starting with number not allowed
+    result = create(name="1tool")
+    assert "Error" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_create_already_exists(mock_ot_dir: Path) -> None:
+    """Verify create() returns error if extension exists."""
+    from ottools.scaffold import create
+
+    # Create first time
+    create(name="existing_tool")
+
+    # Try to create again
+    result = create(name="existing_tool")
+
+    assert "Error" in result
+    assert "already exists" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_create_invalid_template(mock_ot_dir: Path) -> None:
+    """Verify create() returns error for invalid template."""
+    from ottools.scaffold import create
+
+    result = create(name="my_tool", template="nonexistent_template")
+
+    assert "Error" in result
+    assert "not found" in result
+
+
+# =============================================================================
+# validate() Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_extension_tool(tmp_path: Path) -> None:
+    """Verify validate() passes for extension tool using ot.* imports."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "valid_tool.py"
+    ext_file.write_text('''"""My tool description."""
+
+from __future__ import annotations
+
+pack = "mytool"
+
+__all__ = ["run"]
+
+from ot.logging import LogSpan
+
+
+def run(*, input: str) -> str:
+    """Run the tool.
+
+    Args:
+        input: Input string
+
+    Returns:
+        Result string
+
+    Example:
+        mytool.run(input="test")
+    """
+    with LogSpan(span="mytool.run") as s:
+        return f"Result: {input}"
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Validation PASSED" in result
+    assert "[x] pack" in result
+    assert "[x] __all__" in result
+    assert "[x] Python syntax valid" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_missing_pack(tmp_path: Path) -> None:
+    """Verify validate() fails for missing pack."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "no_pack.py"
+    ext_file.write_text('''"""My tool."""
+
+__all__ = ["run"]
+
+def run(*, input: str) -> str:
+    return input
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Validation FAILED" in result
+    assert "pack" in result.lower()
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_missing_all(tmp_path: Path) -> None:
+    """Verify validate() fails for missing __all__."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "no_all.py"
+    ext_file.write_text('''"""My tool."""
+
+pack = "mytool"
+
+def run(*, input: str) -> str:
+    return input
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Validation FAILED" in result
+    assert "__all__" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_syntax_error(tmp_path: Path) -> None:
+    """Verify validate() catches syntax errors."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "syntax_error.py"
+    ext_file.write_text('''"""My tool."""
+
+pack = "mytool"
+__all__ = ["run"]
+
+def run(*, input: str) -> str
+    return input  # Missing colon above
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Syntax error" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_missing_json_rpc_loop_with_pep723(tmp_path: Path) -> None:
+    """Verify validate() fails when PEP 723 deps present but no JSON-RPC loop."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "no_loop.py"
+    ext_file.write_text('''# /// script
+# requires-python = ">=3.11"
+# dependencies = ["httpx>=0.27.0"]
+# ///
+"""My tool."""
+
+pack = "mytool"
+__all__ = ["run"]
+
+def run(*, input: str) -> str:
+    return input
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Validation FAILED" in result
+    assert "JSON-RPC loop" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_warns_ot_sdk_deprecated(tmp_path: Path) -> None:
+    """Verify validate() warns about deprecated ot_sdk imports."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "old_style.py"
+    ext_file.write_text('''"""My tool using deprecated SDK."""
+
+from __future__ import annotations
+
+pack = "mytool"
+__all__ = ["run"]
+
+from ot_sdk import log, worker_main
+
+def run(*, input: str) -> str:
+    """Run the tool.
+
+    Args:
+        input: The input
+
+    Returns:
+        The result
+
+    Example:
+        mytool.run(input="test")
+    """
+    with log("mytool.run"):
+        return input
+
+if __name__ == "__main__":
+    worker_main()
+''')
+
+    result = validate(path=str(ext_file))
+
+    # Should pass but with deprecation warning
+    assert "DEPRECATED" in result
+    assert "ot_sdk" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_file_not_found() -> None:
+    """Verify validate() handles missing file."""
+    from ottools.scaffold import validate
+
+    result = validate(path="/nonexistent/path/tool.py")
+
+    assert "Error" in result
+    assert "not found" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_not_python_file(tmp_path: Path) -> None:
+    """Verify validate() rejects non-Python files."""
+    from ottools.scaffold import validate
+
+    txt_file = tmp_path / "file.txt"
+    txt_file.write_text("not python")
+
+    result = validate(path=str(txt_file))
+
+    assert "Error" in result
+    assert "Not a Python file" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_best_practices_warnings(tmp_path: Path) -> None:
+    """Verify validate() shows warnings for best practice violations."""
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "missing_practices.py"
+    # Missing docstring, future annotations, logging
+    ext_file.write_text('''pack = "mytool"
+__all__ = ["run"]
+
+def run(input: str) -> str:  # Missing keyword-only args
+    return input
+''')
+
+    result = validate(path=str(ext_file))
+
+    # Should pass but with warnings
+    assert "Validation PASSED" in result
+    assert "Warnings:" in result
+
+
+# =============================================================================
+# extensions() Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_extensions_no_config() -> None:
+    """Verify extensions() handles no config."""
+    from ottools.scaffold import extensions
+
+    with patch("ot.config.loader.get_config", return_value=None):
+        result = extensions()
+
+    assert "No configuration" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_extensions_no_extensions_loaded() -> None:
+    """Verify extensions() handles empty tools_dir."""
+    from unittest.mock import MagicMock
+
+    from ottools.scaffold import extensions
+
+    mock_config = MagicMock()
+    mock_config.get_tool_files.return_value = []
+
+    with patch("ot.config.loader.get_config", return_value=mock_config):
+        result = extensions()
+
+    assert "No extensions loaded" in result
+    assert "scaffold.create()" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_extensions_lists_loaded(tmp_path: Path) -> None:
+    """Verify extensions() lists loaded extension files."""
+    from unittest.mock import MagicMock
+
+    from ottools.scaffold import extensions
+
+    mock_config = MagicMock()
+    mock_config.get_tool_files.return_value = [
+        tmp_path / "tool1.py",
+        tmp_path / "tool2.py",
+    ]
+
+    with patch("ot.config.loader.get_config", return_value=mock_config):
+        result = extensions()
+
+    assert "Loaded extensions:" in result
+    assert "tool1.py" in result
+    assert "tool2.py" in result
+    assert "Total: 2 files" in result
+
+
+# =============================================================================
+# Helper Function Tests
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_has_pep723_deps_true() -> None:
+    """Verify _has_pep723_deps detects PEP 723 dependencies."""
+    from ottools.scaffold import _has_pep723_deps
+
+    content = '''# /// script
+# requires-python = ">=3.11"
+# dependencies = ["httpx>=0.27.0"]
+# ///
+"""Tool."""
+'''
+    assert _has_pep723_deps(content) is True
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_has_pep723_deps_false_no_deps() -> None:
+    """Verify _has_pep723_deps returns False without dependencies."""
+    from ottools.scaffold import _has_pep723_deps
+
+    content = '''# /// script
+# requires-python = ">=3.11"
+# ///
+"""Tool."""
+'''
+    assert _has_pep723_deps(content) is False
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_has_pep723_deps_false_no_script() -> None:
+    """Verify _has_pep723_deps returns False without script block."""
+    from ottools.scaffold import _has_pep723_deps
+
+    content = '''"""Tool without PEP 723."""
+
+pack = "mytool"
+'''
+    assert _has_pep723_deps(content) is False
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_validate_isolated_tool_no_logging_warning(tmp_path: Path) -> None:
+    """Verify validate() does not warn about logging for isolated tools.
+
+    Isolated tools cannot use onetool logging (LogSpan/log()) since they
+    run in a subprocess without access to onetool internals.
+    """
+    from ottools.scaffold import validate
+
+    ext_file = tmp_path / "isolated_tool.py"
+    ext_file.write_text('''# /// script
+# requires-python = ">=3.11"
+# dependencies = ["httpx>=0.28.0"]
+# ///
+"""My isolated tool."""
+
+from __future__ import annotations
+
+pack = "mytool"
+
+import json
+import sys
+
+__all__ = ["run"]
+
+
+def run(*, input: str) -> str:
+    """Run the tool.
+
+    Args:
+        input: Input string
+
+    Returns:
+        Result string
+
+    Example:
+        mytool.run(input="test")
+    """
+    return f"Result: {input}"
+
+
+if __name__ == "__main__":
+    for line in sys.stdin:
+        request = json.loads(line)
+        result = run(**request.get("kwargs", {}))
+        print(json.dumps({"result": result}), flush=True)
+''')
+
+    result = validate(path=str(ext_file))
+
+    assert "Validation PASSED" in result
+    # Should NOT have logging warning for isolated tools
+    assert "LogSpan" not in result
+    assert "observability" not in result
+    # Should still show logging check as passed (N/A)
+    assert "[x] logging usage" in result

@@ -22,6 +22,8 @@ bench run FILE [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| `-c, --config PATH` | Path to `onetool.yaml` configuration file |
+| `-s, --secrets PATH` | Path to secrets file (LLM API keys) |
 | `--tui` | Interactive TUI for selecting benchmark files |
 | `--csv` | Export results to CSV in `tmp/result-YYYYMMDD-HHMM.csv` |
 | `-o, --output PATH` | Write results to YAML file |
@@ -113,8 +115,8 @@ Use `---PROMPT---` delimiter to split a task into sequential prompts. Each promp
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `bench.yaml` | `.onetool/config/bench.yaml` or `~/.onetool/config/bench.yaml` | Benchmark harness config |
-| `bench-secrets.yaml` | `.onetool/config/bench-secrets.yaml` or `~/.onetool/config/bench-secrets.yaml` | LLM API keys (OPENAI_API_KEY, etc.) |
+| `bench.yaml` | `.onetool/bench.yaml` or `~/.onetool/bench.yaml` | Benchmark harness config |
+| `bench-secrets.yaml` | `.onetool/bench-secrets.yaml` or `~/.onetool/bench-secrets.yaml` | LLM API keys (OPENAI_API_KEY, etc.) |
 
 **Resolution:** `BENCH_CONFIG` env var → project → global
 
@@ -137,9 +139,9 @@ The `demo/` folder provides sample configurations and data for testing.
 ```
 demo/
   .onetool/
-    config/
-      onetool.yaml    # MCP server config
-      bench.yaml      # Benchmark harness config
+    onetool.yaml      # MCP server config
+    bench.yaml        # Benchmark harness config
+    bench-secrets.yaml  # LLM API keys for benchmarks
   bench/              # Benchmark YAML files
   data/               # Sample data (northwind.db, downloaded via setup)
 ```
@@ -151,7 +153,8 @@ demo/
 bench run demo/bench/compare.yaml
 
 # Or use justfile
-just demo::bench       # TUI picker for demo benchmarks
+just demo::bench bench/compare.yaml   # run with CSV output
+just demo::bench --tui                # interactive TUI picker
 ```
 
 ### Benchmark Files

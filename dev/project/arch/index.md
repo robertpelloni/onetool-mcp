@@ -74,7 +74,7 @@ src/
     stats/                   #   Execution statistics (JSONL)
     utils/                   #   Format, sanitise, validation helpers
 
-  ot_tools/                  # Built-in tool packs (15+ packs, 100+ tools)
+  ottools/                  # Built-in tool packs (15+ packs, 100+ tools)
     brave_search.py          #   Web/news/image search
     context7.py              #   Library documentation
     convert.py               #   Document conversion (PDF, DOCX, PPTX)

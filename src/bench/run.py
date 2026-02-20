@@ -20,7 +20,7 @@ from bench.reporter import ConsoleReporter
 from bench.utils import run_async
 from ot._tui import ask_select
 from ot.logging import LogSpan, configure_logging
-from ot.paths import get_effective_cwd, get_global_dir
+from ot.paths import get_effective_cwd
 from ot.support import get_support_banner, get_version
 
 # Exit codes
@@ -58,10 +58,8 @@ def load_bench_config(config_path: Path | str | None = None) -> BenchConfig:
 
     Resolution order (when config_path is None):
     1. BENCH_CONFIG env var
-    2. cwd/.onetool/config/bench.yaml
-    3. cwd/.onetool/bench.yaml
-    4. ~/.onetool/bench.yaml
-    5. Built-in defaults
+    2. cwd/.onetool/bench.yaml
+    3. Built-in defaults
     """
     if config_path is None:
         # Check BENCH_CONFIG env var first
@@ -70,23 +68,13 @@ def load_bench_config(config_path: Path | str | None = None) -> BenchConfig:
             config_path = Path(env_config)
         else:
             cwd = get_effective_cwd()
-            # Try project config: cwd/.onetool/config/bench.yaml (preferred)
-            project_config = cwd / ".onetool" / "config" / "bench.yaml"
-            if project_config.exists():
-                config_path = project_config
+            # Try cwd-relative bench config
+            bench_config = cwd / ".onetool" / "bench.yaml"
+            if bench_config.exists():
+                config_path = bench_config
             else:
-                # Try legacy location: cwd/.onetool/bench.yaml
-                legacy_config = cwd / ".onetool" / "bench.yaml"
-                if legacy_config.exists():
-                    config_path = legacy_config
-                else:
-                    # Try global config: ~/.onetool/bench.yaml
-                    global_config = get_global_dir() / "bench.yaml"
-                    if global_config.exists():
-                        config_path = global_config
-                    else:
-                        # No config found, use defaults
-                        return BenchConfig()
+                # No config found, use defaults
+                return BenchConfig()
     else:
         config_path = Path(config_path)
 
@@ -137,7 +125,7 @@ def run_tui_picker(console: Console) -> list[Path] | None:
 
     if not bench_config.favorites:
         console.print("[dim]No favorites configured[/dim]")
-        console.print("[dim]Add favorites to .onetool/config/bench.yaml[/dim]")
+        console.print("[dim]Add favorites to .onetool/bench.yaml[/dim]")
         return None
 
     async def pick_favorite() -> list[Path] | None:
@@ -317,10 +305,21 @@ def run(
         None,
         help="Path(s) to YAML config file(s). Supports glob patterns (e.g., *.yaml).",
     ),
+    config: Path | None = typer.Option(
+        None,
+        "--config",
+        "-c",
+        help="Path to onetool.yaml configuration file.",
+    ),
+    secrets: Path | None = typer.Option(
+        None,
+        "--secrets",
+        "-s",
+        help="Path to secrets file. If omitted, no secrets are loaded.",
+    ),
     scenario: str | None = typer.Option(
         None,
         "--scenario",
-        "-s",
         help="Run only scenarios matching this pattern (supports wildcards).",
     ),
     task: str | None = typer.Option(
@@ -383,6 +382,7 @@ def run(
         bench run examples/bench/*.yaml
         bench run file1.yaml file2.yaml
         bench run config.yaml --scenario "Tool Tests"
+        bench run config.yaml --config .onetool/onetool.yaml --secrets .onetool/secrets.yaml
         bench run config.yaml --task "direct*"
         bench run config.yaml --tag focus
         bench run config.yaml --verbose --trace
@@ -392,6 +392,15 @@ def run(
     """
     # Initialize console with no_color option and no auto-highlighting
     console = Console(no_color=no_color, force_terminal=not no_color, highlight=False)
+
+    # Load onetool config (required by configure_logging for log_dir and log_level)
+    from ot.config.loader import get_config
+    from ot.paths import get_effective_cwd
+    if config is None:
+        auto_config = get_effective_cwd() / ".onetool" / "onetool.yaml"
+        if auto_config.exists():
+            config = auto_config
+    get_config(config, secrets_path=secrets)
 
     # Initialize logging inside command to avoid module-level side effects
     configure_logging(log_name="bench")

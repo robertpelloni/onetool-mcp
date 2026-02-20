@@ -11,6 +11,7 @@ Used by the runner to make tools available during code execution.
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
 from collections import OrderedDict
@@ -26,17 +27,34 @@ from ot.paths import get_effective_cwd
 
 
 def _get_bundled_tools_dir() -> Path | None:
-    """Get the bundled tools directory from the ot_tools package.
+    """Get the bundled tools directory from the ottools package.
 
     Returns:
-        Path to ot_tools package directory, or None if not found.
+        Path to ottools package directory, or None if not found.
     """
     try:
-        import ot_tools
+        import ottools
 
-        return Path(ot_tools.__file__).parent
+        return Path(ottools.__file__).parent
     except (ImportError, AttributeError):
         return None
+
+
+def _get_domain_tool_dirs() -> list[Path]:
+    """Discover tool dirs from installed domain extras. Silently skips if not installed.
+
+    Returns:
+        List of paths to domain tool directories (otdev, otutil, otxero).
+    """
+    dirs = []
+    for pkg in ("otdev.tools", "otutil.tools", "otxero.tools"):
+        try:
+            mod = importlib.import_module(pkg)
+            if mod.__file__:
+                dirs.append(Path(mod.__file__).parent)
+        except ImportError:
+            pass
+    return dirs
 
 
 if TYPE_CHECKING:
@@ -87,7 +105,7 @@ def _get_tool_files(
 ) -> tuple[set[Path], set[Path], Path]:
     """Resolve tool files from config, bundled package, or directory.
 
-    Always includes bundled tools from ot_tools package, plus any
+    Always includes bundled tools from ottools package, plus any
     additional tools from config or explicit tools_dir.
 
     Args:
@@ -100,7 +118,7 @@ def _get_tool_files(
     tool_files: list[Path] = []
     internal_files: set[Path] = set()
 
-    # Always include bundled tools from ot_tools package
+    # Always include bundled tools from ottools package
     bundled_dir = _get_bundled_tools_dir()
     if bundled_dir and bundled_dir.exists():
         bundled_files = [f for f in bundled_dir.glob("*.py") if f.name != "__init__.py"]
@@ -108,6 +126,14 @@ def _get_tool_files(
         # Mark bundled tools as internal (shipped with OneTool)
         internal_files = {f.resolve() for f in bundled_files if f.exists()}
         logger.debug(f"Found {len(bundled_files)} bundled tools from {bundled_dir}")
+
+    # Include domain extra tools (otdev, otutil, otxero) if installed
+    for extra_dir in _get_domain_tool_dirs():
+        if extra_dir.exists():
+            extra_files = [f for f in extra_dir.glob("*.py") if f.name != "__init__.py"]
+            tool_files.extend(extra_files)
+            internal_files |= {f.resolve() for f in extra_files if f.exists()}
+            logger.debug(f"Found {len(extra_files)} domain tools from {extra_dir}")
 
     # Add config-specified tools (these are extension tools, not internal)
     config_tool_files = config.get_tool_files() if config else []
@@ -242,7 +268,8 @@ def _load_inprocess_tools(
 
     for tool_info in inprocess_tools:
         py_file = tool_info.path
-        module_name = f"tools.{py_file.stem}"
+        # Include parent dir to reduce sys.modules key collisions between tool packages
+        module_name = f"ot_tool.{py_file.parent.name}.{py_file.stem}"
 
         try:
             mtimes[str(py_file)] = py_file.stat().st_mtime
@@ -291,7 +318,7 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
     Reads `pack` module variable from each tool file to group functions.
 
     Tool loading strategy:
-    - Internal tools (bundled with OneTool from ot_tools package): Run in-process
+    - Internal tools (bundled with OneTool from ottools package): Run in-process
       via importlib. These tools have no PEP 723 headers and use ot.* imports.
     - Extension tools (user-created without PEP 723 headers): Run in-process
       with full ot.* access (logging, config, inter-tool calling).
@@ -332,8 +359,7 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
         list(current_files), internal_files
     )
 
-    secrets_path = config.get_secrets_file_path() if config else None
-    secrets = get_secrets(secrets_path)
+    secrets = get_secrets()
     config_dict = config.model_dump() if config else {}
 
     # Inject path context for isolated worker tools

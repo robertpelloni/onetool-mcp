@@ -1,6 +1,6 @@
 [project]
 name = "onetool-mcp"
-version = "1.0.2"
+version = "1.1.0"
 description = "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools."
 mcpName = "io.github.beycom/onetool"
 readme = "README.md"
@@ -36,17 +36,6 @@ dependencies = [
     # === LLM & Search ===
     "openai>=2.15.0",             # mem embeddings, LLM tools
     "tiktoken>=0.9.0",            # Token counting for embedding truncation
-    "google-genai>=1.60.0",       # grounding_search (Gemini)
-    # === Database ===
-    "sqlalchemy>=2.0.46",         # db tool
-    # === Web ===
-    "trafilatura>=2.0.0",         # web_fetch content extraction
-    # === Documents ===
-    "openpyxl>=3.1.5",            # excel, convert (Excel files)
-    "pillow>=12.1.0",             # convert (PDF image handling)
-    "pymupdf>=1.26.7",            # convert (PDF)
-    "python-docx>=1.2.0",         # convert (Word)
-    "python-pptx>=1.0.2"          # convert (PowerPoint)
 
 ]
 
@@ -57,8 +46,22 @@ Documentation = "https://onetool.beycom.online"
 Issues = "https://github.com/beycom/onetool/issues"
 
 [project.optional-dependencies]
-# File tool safe deletion (moves to trash instead of permanent delete)
-file = ["send2trash>=2.1.0"]
+util = [
+    "openpyxl>=3.1.5",
+    "pymupdf>=1.26.7",
+    "python-docx>=1.2.0",
+    "python-pptx>=1.0.2",
+    "pillow>=12.1.0",
+    "google-genai>=1.60.0",
+    "send2trash>=2.1.0",
+]
+dev = [
+    "filelock>=3.12.0",
+    "sqlalchemy>=2.0.46",
+    "trafilatura>=2.0.0",
+]
+xero = []
+all = ["onetool-mcp[util,dev,xero]"]
 
 [project.scripts]
 onetool = "onetool.cli:cli"
@@ -69,7 +72,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ot", "src/ot_tools", "src/onetool", "src/bench"]
+packages = ["src/ot", "src/ottools", "src/onetool", "src/bench", "src/otdev", "src/otutil"]
 
 [dependency-groups]
 docs = [
@@ -121,7 +124,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ot", "ot_tools", "onetool", "bench"]
+known-first-party = ["ot", "ottools", "onetool", "bench", "otdev", "otutil"]
 
 [tool.ruff.lint.per-file-ignores]
 # CLI files need Path and CaseResult at runtime for typer type annotations and callbacks
@@ -129,8 +132,11 @@ known-first-party = ["ot", "ot_tools", "onetool", "bench"]
 "src/onetool/*.py" = ["TC001", "TCH003", "E402"]
 "src/bench/*.py" = ["TC001", "TCH003"]
 # Tools use namespace declarations before imports for tool discovery
-"src/ot_tools/*.py" = ["E402"]
-# Executor modules use Path/Callable at runtime for tool loading and worker management
+"src/ottools/*.py" = ["E402"]
+"src/otdev/tools/*.py" = ["E402"]
+"src/otutil/tools/*.py" = ["E402"]
+# Path used at runtime for function signatures (not just type hints)
+"src/otutil/tools/_convert/*.py" = ["TC003"]
 "src/ot/executor/*.py" = ["TC003"]
 
 [tool.mypy]
@@ -180,7 +186,7 @@ markers = [
 
 [tool.deptry]
 # Ignore internal packages (DEP001) - these are first-party, not external deps
-per_rule_ignores = { DEP001 = ["ot", "ot_tools", "bench", "onetool", "anyio"] }
+per_rule_ignores = { DEP001 = ["ot", "ottools", "bench", "onetool", "otdev", "otutil", "anyio"] }
 # Map package names where import name differs
 [tool.deptry.package_module_name_map]
 pyyaml = "yaml"

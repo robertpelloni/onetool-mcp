@@ -128,40 +128,40 @@ tools:
         provider: mermaid
         diagram_type: sequence
         description: REST API request/response flow
-        file: config/diagram-templates/api-flow.mmd
+        file: diagram-templates/api-flow.mmd
 
       microservices:
         provider: d2
         diagram_type: architecture
         description: Microservices architecture layout
-        file: config/diagram-templates/microservices.d2
+        file: diagram-templates/microservices.d2
 
       c4-context:
         provider: plantuml
         diagram_type: c4
         description: C4 system context diagram
-        file: config/diagram-templates/c4-context.puml
+        file: diagram-templates/c4-context.puml
 
       state-machine:
         provider: mermaid
         diagram_type: state
         description: State machine diagram
-        file: config/diagram-templates/state-machine.mmd
+        file: diagram-templates/state-machine.mmd
 
       class-diagram:
         provider: mermaid
         diagram_type: class
         description: Class/data model diagram
-        file: config/diagram-templates/class-diagram.mmd
+        file: diagram-templates/class-diagram.mmd
 
       project-gantt:
         provider: mermaid
         diagram_type: gantt
         description: Project timeline Gantt chart
-        file: config/diagram-templates/project-gantt.mmd
+        file: diagram-templates/project-gantt.mmd
 
       feature-mindmap:
         provider: mermaid
         diagram_type: mindmap
         description: Feature brainstorming mindmap
-        file: config/diagram-templates/feature-mindmap.mmd
+        file: diagram-templates/feature-mindmap.mmd

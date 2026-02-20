@@ -89,7 +89,7 @@ onetool init validate  # Check for errors
 
 ## How It Works
 
-1. Loads tools from `src/ot_tools/` via AST-based discovery
+1. Loads tools from `src/ottools/` via AST-based discovery
 2. Exposes a single `run` tool that executes Python code
 3. Communicates via stdio using the MCP protocol
 
@@ -99,7 +99,7 @@ Tools are discovered statically from `tools_dir` patterns in config:
 
 ```yaml
 tools_dir:
-  - src/ot_tools/*.py
+  - src/ottools/*.py
 ```
 
 Benefits:

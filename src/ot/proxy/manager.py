@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -49,11 +50,17 @@ class ProxyManager:
         self._errors: dict[str, str] = {}  # server name -> last error message
         self._initialized = False
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._connect_task: asyncio.Task[None] | None = None
 
     @property
     def servers(self) -> list[str]:
         """List of connected server names."""
         return list(self._clients.keys())
+
+    @property
+    def is_connecting(self) -> bool:
+        """True if a background connection task is still in progress."""
+        return self._connect_task is not None and not self._connect_task.done()
 
     @property
     def tool_count(self) -> int:
@@ -110,7 +117,7 @@ class ProxyManager:
         tool: str,
         arguments: dict[str, Any] | None = None,
         timeout: float = 30.0,
-    ) -> str:
+    ) -> str | dict[str, Any] | list[Any]:
         """Call a tool on a proxied MCP server.
 
         Args:
@@ -120,7 +127,7 @@ class ProxyManager:
             timeout: Timeout for the call in seconds.
 
         Returns:
-            Text result from the tool.
+            Parsed result: dict/list for JSON responses, str for text, str for empty.
 
         Raises:
             ValueError: If server is not connected.
@@ -129,6 +136,10 @@ class ProxyManager:
         """
         client = self._clients.get(server)
         if not client:
+            if self.is_connecting:
+                raise ValueError(
+                    f"Server '{server}' is still connecting. Please try again in a moment."
+                )
             available = ", ".join(self._clients.keys()) or "none"
             raise ValueError(f"Server '{server}' not connected. Available: {available}")
 
@@ -148,7 +159,7 @@ class ProxyManager:
                     f"Tool {server}.{tool} timed out after {timeout}s"
                 ) from None
 
-            # Extract text from result
+            # Extract and auto-parse text from result
             text_parts: list[str] = []
             for content in result.content:
                 if isinstance(content, types.TextContent):
@@ -156,11 +167,20 @@ class ProxyManager:
                 elif hasattr(content, "data"):
                     text_parts.append(f"[Binary content: {type(content).__name__}]")
 
-            result_text = (
-                "\n".join(text_parts) if text_parts else "Tool returned empty response."
-            )
-            span.add("resultLength", len(result_text))
-            return result_text
+            if not text_parts:
+                result_value: str | dict[str, Any] | list[Any] = "Tool returned empty response."
+            elif len(text_parts) == 1:
+                # Single text part: try to parse as JSON for structured return
+                try:
+                    result_value = json.loads(text_parts[0])
+                except (json.JSONDecodeError, ValueError):
+                    result_value = text_parts[0]
+            else:
+                # Multi-part: concatenate as string
+                result_value = "\n".join(text_parts)
+
+            span.add("resultLength", len(str(result_value)))
+            return result_value
 
     def call_tool_sync(
         self,
@@ -168,7 +188,7 @@ class ProxyManager:
         tool: str,
         arguments: dict[str, Any] | None = None,
         timeout: float = 30.0,
-    ) -> str:
+    ) -> str | dict[str, Any] | list[Any]:
         """Synchronously call a tool on a proxied MCP server.
 
         This is a blocking wrapper around the async call_tool method,
@@ -350,6 +370,23 @@ class ProxyManager:
 
         self._initialized = True
 
+    def connect_background(self, configs: dict[str, McpServerConfig]) -> asyncio.Task[None]:
+        """Start connecting to proxy servers in the background.
+
+        Returns immediately after scheduling the connection task. The MCP server
+        can begin handling requests right away; proxy tools return a "still connecting"
+        error until their server is ready.
+
+        Args:
+            configs: Dictionary of server name -> configuration.
+
+        Returns:
+            The asyncio Task driving the connection.
+        """
+        self._loop = asyncio.get_running_loop()
+        self._connect_task = asyncio.create_task(self.connect(configs))
+        return self._connect_task
+
     async def _connect_server(self, name: str, config: McpServerConfig) -> None:
         """Connect to a single MCP server using FastMCP Client."""
         with LogSpan(span="proxy.connect", server=name, type=config.type) as span:
@@ -468,8 +505,23 @@ class ProxyManager:
 
         return Client(transport, timeout=float(config.timeout))
 
+    def _reset_state(self) -> None:
+        """Reset all connection state without disconnecting (for cases where loop is unavailable)."""
+        self._clients.clear()
+        self._tools_by_server.clear()
+        self._errors.clear()
+        self._initialized = False
+        self._connect_task = None
+
     async def shutdown(self) -> None:
         """Disconnect from all MCP servers."""
+        # Cancel background connect task if still running
+        if self._connect_task is not None and not self._connect_task.done():
+            self._connect_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._connect_task
+        self._connect_task = None
+
         if not self._clients:
             return
 
@@ -516,10 +568,7 @@ class ProxyManager:
         # If loop exists but isn't running, we can't await the coroutine
         if loop is None or not loop.is_running():
             # No running event loop available - just reset state, connect will happen on next use
-            self._clients.clear()
-            self._tools_by_server.clear()
-            self._errors.clear()
-            self._initialized = False
+            self._reset_state()
             return
 
         future = asyncio.run_coroutine_threadsafe(
@@ -568,8 +617,4 @@ def reconnect_proxy_manager() -> None:
     if cfg.servers:
         proxy.reconnect_sync(cfg.servers)
     else:
-        # No servers configured - just reset state
-        proxy._clients.clear()
-        proxy._tools_by_server.clear()
-        proxy._errors.clear()
-        proxy._initialized = False
+        proxy._reset_state()

@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.1.0] - 2026-02-18
+
+### Added
+- `[util]` extra: file, excel, convert, brave, ground tool packs
+- `[dev]` extra: db, ripgrep, web, diagram, package, context7 tool packs
+- `[xero]` extra: placeholder for future accounting tools
+- `[all]` convenience extra
+- `--secrets` flag on `onetool serve`
+- AST-based ToolRegistry with change detection
+- `log_callback` on LogSpan for external telemetry
+- JSON auto-parsing for proxy tool responses
+- `file` tool: dry_run, symlinks, include_hidden, recursive delete, encoding
+
+### Changed
+- Global config location: `~/.onetool/onetool.yaml` (was `~/.onetool/config/onetool.yaml`)
+- Server starts with defaults if no config found — `onetool init` no longer required
+
+### Removed
+- `ConfigNotFoundError` — replaced by graceful defaults
+- `OT_GLOBAL_DIR` env override — single config location
+- `[file]` standalone extra — folded into `[util]`
+
 ## [1.0.2] - 2026-02-16
 
 ### Highlights

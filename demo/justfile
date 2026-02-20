@@ -18,9 +18,14 @@ default:
 serve *args:
     OT_CWD={{ _dir }} uv run onetool {{ args }}
 
-# Run benchmark scenarios (TUI picker)
+# Run benchmark scenarios
+#   Pass a file to run directly: just demo::bench bench/compare.yaml
+#   Pass --tui for interactive picker: just demo::bench --tui
 bench *args:
-    OT_CWD={{ _dir }} uv run bench run --tui --csv {{ args }}
+    OT_CWD={{ _dir }} DEMO_DIR={{ _dir }} uv run bench run \
+        --config {{ _dir }}/.onetool/onetool.yaml \
+        --secrets {{ _dir }}/.onetool/bench-secrets.yaml \
+        --csv {{ args }}
 
 # ============================================================================
 # SETUP & CLEANUP

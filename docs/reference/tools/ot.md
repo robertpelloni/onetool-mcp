@@ -51,7 +51,7 @@ ot.help(query="brave.search")
 ot.help(query="brave")
 
 # Exact server lookup (MCP proxy servers)
-ot.help(query="devtools")
+ot.help(query="chrome-devtools")
 ot.help(query="github")
 
 # Snippet lookup (prefix with $)
@@ -124,7 +124,7 @@ ot.packs(info="list")
 ot.packs(pattern="brave", info="full")
 
 # MCP server packs show source="mcp"
-ot.packs(pattern="devtools")
+ot.packs(pattern="chrome-devtools")
 ```
 
 Returns a list of pack names (info="list") or pack summaries/details. MCP proxy servers appear as packs with `source: "mcp"`.
@@ -144,7 +144,7 @@ ot.servers(pattern="git")
 ot.servers(info="list")
 
 # Full details (type, status, instructions, tools)
-ot.servers(pattern="devtools", info="full")
+ot.servers(pattern="chrome-devtools", info="full")
 ```
 
 Returns server configuration including:

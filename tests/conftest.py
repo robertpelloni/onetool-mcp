@@ -12,7 +12,6 @@ By default, tests with missing requirements will error (fail fast).
 
 from __future__ import annotations
 
-import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -78,32 +77,29 @@ COMPONENT_MARKERS = {"serve", "bench", "pkg", "core", "spec", "tools"}
 def reset_config_cache():
     """Reset config cache before each test to ensure test isolation.
 
-    This prevents user's global config (~/.onetool/config/onetool.yaml) from
-    affecting unit tests. Tests use tests/.onetool/config/onetool.yaml
-    which has inherit: none to prevent global config inheritance.
+    Loads the test config (tests/.onetool/onetool.yaml) so that tests
+    which call get_config() without a path get the test config.
+    Tests that load their own config will override this.
     """
     import ot.config.loader as loader
+    from ot.config.loader import get_config
     from ot.executor import tool_loader
 
-    # Reset config cache
+    # Reset caches
     loader._config = None
-
-    # Reset tool loader cache
+    loader._config_path = None
     tool_loader._module_cache.clear()
 
-    # Set ONETOOL_CONFIG to test config that uses inherit: none
-    test_config = _project_root / "tests" / ".onetool" / "config" / "onetool.yaml"
-    old_config_env = os.environ.get("ONETOOL_CONFIG")
-    os.environ["ONETOOL_CONFIG"] = str(test_config)
+    # Pre-load test config so get_config() works without an explicit path
+    test_config = _project_root / "tests" / ".onetool" / "onetool.yaml"
+    if test_config.exists():
+        get_config(test_config)
 
     yield
 
-    # Restore original env and clean up
-    if old_config_env is not None:
-        os.environ["ONETOOL_CONFIG"] = old_config_env
-    else:
-        os.environ.pop("ONETOOL_CONFIG", None)
+    # Clean up after test
     loader._config = None
+    loader._config_path = None
     tool_loader._module_cache.clear()
 
 
@@ -131,7 +127,7 @@ def executor() -> Callable[[str], str]:
     from ot.executor.runner import execute_python_code
     from ot.executor.tool_loader import load_tool_functions
 
-    tools_dir = Path(__file__).parent.parent / "src" / "ot_tools"
+    tools_dir = Path(__file__).parent.parent / "src" / "ottools"
     tool_funcs: dict[str, Any] = load_tool_functions(tools_dir)
 
     def run(code: str) -> str:
@@ -231,11 +227,11 @@ def mock_proxy_manager():
 
     Usage:
         def test_mcp_call(mock_proxy_manager):
-            mock_proxy_manager.servers = ["devtools"]
+            mock_proxy_manager.servers = ["chrome-devtools"]
             mock_proxy_manager.call_tool_sync.return_value = '{"success": true}'
             # Run test that calls MCP tools
     """
-    with patch("ot_tools._inject_base.get_proxy_manager") as mock:
+    with patch("ottools._inject_base.get_proxy_manager") as mock:
         proxy = MagicMock()
         proxy.servers = []
         mock.return_value = proxy

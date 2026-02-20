@@ -255,7 +255,7 @@ class TestSanitizeMagicVariable:
             )
         )
 
-        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ot_tools"
+        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ottools"
         tool_funcs = load_tool_functions(tools_dir)
 
         with patch("ot.executor.runner.get_config", return_value=mock_config):
@@ -281,7 +281,7 @@ class TestSanitizeMagicVariable:
         from ot.executor.runner import execute_python_code
         from ot.executor.tool_loader import load_tool_functions
 
-        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ot_tools"
+        tools_dir = Path(__file__).parent.parent.parent.parent / "src" / "ottools"
         tool_funcs = load_tool_functions(tools_dir)
 
         code = f'''__sanitize__ = {sanitize_val}

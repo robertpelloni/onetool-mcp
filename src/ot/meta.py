@@ -37,7 +37,7 @@ import yaml
 from ot import __version__
 from ot.config import get_config
 from ot.logging import LogSpan
-from ot.paths import get_global_dir, get_project_dir, resolve_cwd_path
+from ot.paths import resolve_cwd_path
 from ot.proxy import get_proxy_manager
 
 # Track when module was first loaded (OneTool start time)
@@ -48,12 +48,11 @@ log = LogSpan
 
 
 def resolve_ot_path(path: str) -> Path:
-    """Resolve a path relative to the OT_DIR (.onetool/ directory).
+    """Resolve a path relative to the OT_DIR (config_path.parent).
 
     Resolution priority:
     1. If absolute or ~ path: use as-is
-    2. If project .onetool/ exists: resolve relative to it
-    3. Fall back to global ~/.onetool/
+    2. Resolve relative to config._config_dir
 
     Args:
         path: Path string (relative, absolute, or with ~)
@@ -65,13 +64,10 @@ def resolve_ot_path(path: str) -> Path:
     if p.is_absolute():
         return p.resolve()
 
-    # Try project .onetool/ first
-    project_dir = get_project_dir()
-    if project_dir:
-        return (project_dir / p).resolve()
+    from ot.config.loader import get_config
 
-    # Fall back to global
-    return (get_global_dir() / p).resolve()
+    config_dir = get_config()._config_dir
+    return (config_dir / p).resolve()
 
 # Info level type for discovery functions
 InfoLevel = Literal["list", "min", "full"]
@@ -85,7 +81,6 @@ DOC_SLUGS: dict[str, str] = {
     "brave": "brave-search",
     "db": "database",
     "ground": "grounding-search",
-    "llm": "transform",
     "web": "web-fetch",
 }
 
@@ -130,7 +125,7 @@ def agent_hints() -> str:
     Provides a project-agnostic quick reference for AI agents with
     tool usage patterns, parameter names, and common workflows.
 
-    Reads from ~/.onetool/config/agent-hints.md if available,
+    Reads from agent-hints.md in the ot dir if available,
     otherwise falls back to the package's built-in template.
 
     Returns:
@@ -142,8 +137,8 @@ def agent_hints() -> str:
     from ot.paths import get_global_templates_dir
 
     with log(span="ot.agent_hints") as s:
-        # Try user-editable copy first
-        user_path = resolve_ot_path("config/agent-hints.md")
+        # Try user-editable copy first (flat layout: agent-hints.md in ot dir)
+        user_path = resolve_ot_path("agent-hints.md")
         if user_path.is_file():
             s.add("source", "user")
             return user_path.read_text()
@@ -166,19 +161,19 @@ def _get_version_info() -> dict[str, Any]:
 def _get_paths_info() -> dict[str, Any]:
     """Get all relevant path information."""
     install_path = Path(__file__).parent.parent.resolve()
-    global_dir = get_global_dir()
     cfg = get_config()
 
     paths: dict[str, Any] = {
         "install": str(install_path),
-        "global_dir": str(global_dir),
         "cwd": str(resolve_cwd_path(".")),
         "python": sys.executable,
     }
 
-    if cfg._config_dir:
+    try:
         paths["config_file"] = str(cfg._config_dir / "onetool.yaml")
         paths["config_dir"] = str(cfg._config_dir)
+    except AttributeError:
+        pass
 
     paths["log_dir"] = str(cfg.get_log_dir_path())
 
@@ -331,8 +326,6 @@ def debug(
         if env_vars:
             # Include relevant environment variables
             result["env"] = {
-                "OT_GLOBAL_DIR": os.getenv("OT_GLOBAL_DIR"),
-                "ONETOOL_CONFIG": os.getenv("ONETOOL_CONFIG"),
                 "OT_CWD": os.getenv("OT_CWD"),
             }
 
@@ -1167,7 +1160,7 @@ def servers(
         ot.servers(pattern="github")
         ot.servers(info="full")
         ot.servers(info="resources")
-        ot.servers(pattern="devtools", info="prompts")
+        ot.servers(pattern="chrome-devtools", info="prompts")
     """
     proxy = get_proxy_manager()
     cfg = get_config()

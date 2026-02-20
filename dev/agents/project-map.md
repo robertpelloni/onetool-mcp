@@ -19,7 +19,7 @@ Core execution engine, configuration, logging, and inter-tool API.
 | `meta/` | Metadata and paths | `paths.py`, `version.py` |
 | `proxy/` | External MCP server support | `client.py`, `server.py` |
 
-### Tool Packs (`src/ot_tools/`)
+### Tool Packs (`src/ottools/`)
 
 Built-in tool packs (15+ packs, 100+ tools).
 
@@ -57,6 +57,32 @@ Performance benchmarking CLI.
 | `runner.py` | Benchmark execution |
 | `reporters.py` | Results reporting |
 
+### Dev Extras (`src/otdev/`) — optional `[dev]`
+
+Tool packs for developer-focused features. Installed via `pip install onetool-mcp[dev]`.
+
+| Pack | Description |
+|------|-------------|
+| `tools/context7.py` | Context7 documentation lookup |
+| `tools/db.py` | Database operations (SQLAlchemy) |
+| `tools/diagram.py` | Diagram generation (Kroki) |
+| `tools/package.py` | Package version checking |
+| `tools/ripgrep.py` | Fast code search |
+| `tools/web.py` | Web scraping (trafilatura) |
+| `tools/worktree.py` | Git worktree management for parallel agents |
+
+### Util Extras (`src/otutil/`) — optional `[util]`
+
+Tool packs for document and file utilities. Installed via `pip install onetool-mcp[util]`.
+
+| Pack | Description |
+|------|-------------|
+| `tools/brave.py` | Brave web search |
+| `tools/convert.py` | Document conversion (PDF/DOCX/PPTX→MD) |
+| `tools/excel.py` | Excel file handling |
+| `tools/file.py` | File operations |
+| `tools/ground.py` | Gemini grounding search |
+
 ---
 
 ## Configuration Files
@@ -71,14 +97,28 @@ Performance benchmarking CLI.
 
 ## Tests
 
-| Directory | Test Type | Markers |
-|-----------|-----------|---------|
-| `tests/smoke/` | Fast sanity checks | `@pytest.mark.smoke` |
-| `tests/unit/` | Unit tests | `@pytest.mark.unit` |
-| `tests/integration/` | Integration tests | `@pytest.mark.integration` |
-| `tests/slow/` | Slow tests | `@pytest.mark.slow` |
+Tests mirror the source package structure:
+
+| Source package | Test root |
+|----------------|-----------|
+| `src/ot/`, `src/onetool/`, `src/bench/` | `tests/` |
+| `src/ottools/` | `tests/ottools/` |
+| `src/otdev/` | `tests/otdev/` |
+| `src/otutil/` | `tests/otutil/` |
+
+Each test root has the same layout:
+
+| Sub-directory | Test Type | Markers |
+|---------------|-----------|---------|
+| `smoke/` | Fast sanity checks | `@pytest.mark.smoke` |
+| `unit/` | Unit tests | `@pytest.mark.unit` |
+| `integration/` | Integration tests | `@pytest.mark.integration` |
+| `slow/` | Long-running tests | `@pytest.mark.slow` |
 
 **Component markers:** `core`, `bench`, `serve`, `tools`
+
+**Rule:** Always place tests under the root that matches the source package.
+A test for `src/otdev/tools/worktree.py` → `tests/otdev/unit/tools/test_worktree.py`.
 
 ---
 
@@ -119,10 +159,10 @@ Performance benchmarking CLI.
 ## Quick Navigation
 
 **Need to modify:**
-- Tool pack → `src/ot_tools/<pack>.py`
+- Tool pack → `src/ottools/<pack>.py`
 - Core executor → `src/ot/executor/runner.py`
 - MCP server → `src/onetool/server.py`
-- Tests → `tests/{smoke,unit,integration}/`
+- Tests → `tests/otdev/`, `tests/ottools/`, `tests/otutil/`, or `tests/` (match source package)
 - Specs → `openspec/specs/<feature>/spec.md`
 
 **Need to understand:**
