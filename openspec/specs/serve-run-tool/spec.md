@@ -373,15 +373,21 @@ The system SHALL support a `__sanitize__` magic variable to control output sanit
 The system SHALL intercept tool outputs exceeding a configurable size threshold and store them to disk.
 
 #### Scenario: Output below threshold
-- **GIVEN** `output.max_inline_size` is configured to 50000 bytes
-- **WHEN** a tool returns output of 10000 bytes
+- **GIVEN** `output.max_inline_size` is configured to 5000 bytes
+- **WHEN** a tool returns output of 1000 bytes
 - **THEN** the output SHALL be returned inline unchanged
 
 #### Scenario: Output exceeds threshold
-- **GIVEN** `output.max_inline_size` is configured to 50000 bytes
-- **WHEN** a tool returns output of 100000 bytes
+- **GIVEN** `output.max_inline_size` is configured to 5000 bytes
+- **WHEN** a tool returns output of 20000 bytes
 - **THEN** the output SHALL be stored to `.onetool/tmp/`
 - **AND** a summary dict SHALL be returned instead of full content
+
+#### Scenario: ot.result is exempt from large output gate
+- **GIVEN** `output.max_inline_size` is configured to any positive value
+- **WHEN** the tool being executed is `ot.result`
+- **THEN** the output SHALL be returned inline regardless of size
+- **AND** the output SHALL NOT be stored or re-wrapped into a second handle
 
 #### Scenario: Summary response format
 - **GIVEN** a large output is stored

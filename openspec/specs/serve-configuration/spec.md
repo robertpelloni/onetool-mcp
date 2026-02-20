@@ -1130,7 +1130,7 @@ The system SHALL support configuration for large output handling in the `output`
 - **GIVEN** no `output:` section in config
 - **WHEN** configuration is loaded
 - **THEN** defaults SHALL be:
-  - `max_inline_size`: 50000 (bytes)
+  - `max_inline_size`: 5000 (bytes)
   - `result_store_dir`: `tmp` (relative to `.onetool/`)
   - `result_ttl`: 3600 (seconds)
   - `preview_lines`: 10

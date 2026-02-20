@@ -485,7 +485,7 @@ async def execute_command(
             max_size = config.output.max_inline_size
             result_size = len(text_result.encode("utf-8"))
 
-            if max_size > 0 and result_size > max_size:
+            if tool_name != "ot.result" and max_size > 0 and result_size > max_size:
                 # Store large output and return summary
                 store = get_result_store()
                 stored = store.store(text_result, tool=stripped[:50])

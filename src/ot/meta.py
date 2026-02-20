@@ -1866,36 +1866,45 @@ def result(
     limit: int = 100,
     search: str = "",
     fuzzy: bool = False,
+    tail: int = 0,
+    context: int = 0,
 ) -> dict[str, Any]:
-    """Query stored large output results with pagination.
+    """Query stored large output results with pagination and filtering.
 
-    When tool outputs exceed max_inline_size, they are stored to disk
-    and a handle is returned. Use this function to retrieve the content
-    with offset/limit semantics matching Claude's Read tool.
+    When tool outputs exceed max_inline_size, they are stored to disk and a
+    handle is returned. Use this function to retrieve the content. You do NOT
+    need to page through everything — use search or tail to target what you need.
 
     Args:
         handle: The result handle from a stored output
         offset: Starting line number (1-indexed, like Claude's Read tool)
         limit: Maximum lines to return (default 100)
-        search: Regex pattern to filter lines (optional)
+        search: Regex pattern to filter lines — avoids full pagination
         fuzzy: Use fuzzy matching instead of regex (optional)
+        tail: Return last N lines — useful for logs/output without knowing total
+        context: Lines of context before/after each search match (like grep -C)
 
     Returns:
         Dict with:
         - lines: List of matching lines
-        - total_lines: Total lines in stored result
-        - returned: Number of lines returned
+        - total_lines: Total lines in stored result (after search filter)
+        - returned: Number of lines returned in this chunk
         - offset: Starting offset used
-        - has_more: Boolean indicating if more lines exist
+        - has_more: True if more lines exist after this chunk
+        - progress: Human-readable position e.g. "lines 1-50 of 343 (15%)"
+        - total_size_bytes: Full size of stored result in bytes
+        - next_query: Exact call to fetch next chunk (omitted when has_more=False)
 
     Raises:
         ValueError: If handle not found or expired
 
     Example:
-        ot.result(handle="abc123")
-        ot.result(handle="abc123", offset=101, limit=50)
-        ot.result(handle="abc123", search="error")
+        ot.result(handle="abc123")                          # first 100 lines
+        ot.result(handle="abc123", offset=101, limit=50)    # next page
+        ot.result(handle="abc123", search="error")          # only error lines
+        ot.result(handle="abc123", search="fail", context=3)# matches + 3 lines around each
         ot.result(handle="abc123", search="config", fuzzy=True)
+        ot.result(handle="abc123", tail=20)                 # last 20 lines
     """
     from ot.executor.result_store import get_result_store
 
@@ -1911,6 +1920,8 @@ def result(
         offset=offset,
         limit=limit,
         search=search if search else None,
+        tail=tail if tail > 0 else None,
+        context=context if context > 0 else None,
     ) as s:
         store = get_result_store()
 
@@ -1921,6 +1932,8 @@ def result(
                 limit=limit,
                 search=search,
                 fuzzy=fuzzy,
+                tail=tail,
+                context=context,
             )
             s.add("returned", query_result.returned)
             s.add("totalLines", query_result.total_lines)

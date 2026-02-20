@@ -542,7 +542,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
 
 ### Requirement: Query Stored Results
 
-The `ot.result()` function SHALL query stored large outputs with offset/limit semantics.
+The `ot.result()` function SHALL query stored large outputs with pagination, filtering, and navigation hints.
 
 #### Scenario: Basic query with defaults
 - **GIVEN** a stored result with handle `abc123`
@@ -566,6 +566,18 @@ The `ot.result()` function SHALL query stored large outputs with offset/limit se
 - **THEN** it SHALL use fuzzy matching to find similar content
 - **AND** results SHALL be sorted by match score
 
+#### Scenario: Query with tail
+- **GIVEN** a stored result with N lines
+- **WHEN** `ot.result(handle="abc123", tail=20)` is called
+- **THEN** it SHALL return the last 20 lines without requiring total_lines to be known first
+- **AND** if tail > total_lines, all lines SHALL be returned
+
+#### Scenario: Query with context
+- **GIVEN** a stored result with search matches
+- **WHEN** `ot.result(handle="abc123", search="TARGET", context=2)` is called
+- **THEN** it SHALL return matching lines plus 2 lines before and after each match
+- **AND** non-contiguous groups SHALL be separated by `---`
+
 #### Scenario: Invalid handle
 - **GIVEN** handle "nonexistent" does not exist
 - **WHEN** `ot.result(handle="nonexistent")` is called
@@ -581,10 +593,14 @@ The `ot.result()` function SHALL query stored large outputs with offset/limit se
 - **WHEN** results are returned
 - **THEN** response SHALL include:
   - `lines`: List of matching lines
-  - `total_lines`: Total lines in stored result
-  - `returned`: Number of lines returned
+  - `total_lines`: Total lines in stored result (after search filter)
+  - `returned`: Number of lines returned in this chunk
   - `offset`: Starting offset used
-  - `has_more`: Boolean indicating if more lines exist
+  - `has_more`: Boolean indicating if more lines exist after this chunk
+  - `progress`: Human-readable position e.g. "lines 1-50 of 343 (15%)"
+  - `total_size_bytes`: Full size of stored result in bytes
+- **AND** when `has_more` is True, response SHALL also include:
+  - `next_query`: Exact `ot.result()` call to fetch the next chunk
 
 #### Scenario: 1-indexed offset
 - **GIVEN** a stored result
@@ -603,6 +619,23 @@ The `ot.result()` function SHALL query stored large outputs with offset/limit se
 
 ---
 
+### Requirement: Stored Result Usage Hints
+
+When large output is stored, the returned summary SHALL include navigation hints.
+
+#### Scenario: Usage hints format
+- **GIVEN** a tool output is stored
+- **WHEN** the `StoredResult` summary is returned
+- **THEN** it SHALL include a `usage` dict (not `query` string) with keys:
+  - `page`: fetch first page
+  - `search`: filter by pattern
+  - `fuzzy`: fuzzy search
+  - `slice`: fetch a specific slice
+  - `tail`: fetch last N lines
+- **AND** each value SHALL be a ready-to-run `ot.result()` call containing the handle
+
+---
+
 ### Requirement: Result Query Logging
 
 The `ot.result()` function SHALL follow logging conventions.
@@ -611,7 +644,7 @@ The `ot.result()` function SHALL follow logging conventions.
 - **GIVEN** `ot.result()` is called
 - **WHEN** LogSpan is created
 - **THEN** span name SHALL be `ot.result`
-- **AND** span SHALL include: `handle`, `offset`, `limit`, `search` (if provided)
+- **AND** span SHALL include: `handle`, `offset`, `limit`, `search` (if provided), `tail` (if > 0), `context` (if > 0)
 
 ---
 

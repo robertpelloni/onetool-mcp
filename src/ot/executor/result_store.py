@@ -64,7 +64,7 @@ class StoredResult:
     size_bytes: int
     summary: str
     preview: list[str]
-    query: str
+    usage: dict[str, str]
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to summary dictionary for MCP response."""
@@ -74,7 +74,7 @@ class StoredResult:
             "size_bytes": self.size_bytes,
             "summary": self.summary,
             "preview": self.preview,
-            "query": self.query,
+            "usage": self.usage,
         }
 
 
@@ -87,16 +87,29 @@ class QueryResult:
     returned: int
     offset: int
     has_more: bool
+    handle: str = ""
+    limit: int = 100
+    total_size_bytes: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for MCP response."""
-        return {
+        end = self.offset + self.returned - 1
+        pct = int((end / self.total_lines) * 100) if self.total_lines > 0 else 100
+        result: dict[str, Any] = {
             "lines": self.lines,
             "total_lines": self.total_lines,
             "returned": self.returned,
             "offset": self.offset,
             "has_more": self.has_more,
+            "progress": f"lines {self.offset}-{end} of {self.total_lines} ({pct}%)",
+            "total_size_bytes": self.total_size_bytes,
         }
+        if self.has_more and self.handle:
+            next_offset = self.offset + self.returned
+            result["next_query"] = (
+                f"ot.result(handle='{self.handle}', offset={next_offset}, limit={self.limit})"
+            )
+        return result
 
 
 @dataclass
@@ -175,7 +188,13 @@ class ResultStore:
             size_bytes=size_bytes,
             summary=summary,
             preview=preview,
-            query=f"ot.result(handle='{handle}', offset=1, limit=50)",
+            usage={
+                "page":   f"ot.result(handle='{handle}', offset=1, limit=50)",
+                "search": f"ot.result(handle='{handle}', search='pattern')",
+                "fuzzy":  f"ot.result(handle='{handle}', search='term', fuzzy=True)",
+                "slice":  f"ot.result(handle='{handle}', offset=100, limit=20)",
+                "tail":   f"ot.result(handle='{handle}', tail=20)",
+            },
         )
 
     def query(
@@ -186,6 +205,8 @@ class ResultStore:
         limit: int = 100,
         search: str = "",
         fuzzy: bool = False,
+        tail: int = 0,
+        context: int = 0,
     ) -> QueryResult:
         """Query stored result with pagination and optional filtering.
 
@@ -195,6 +216,8 @@ class ResultStore:
             limit: Maximum lines to return
             search: Regex pattern to filter lines (optional)
             fuzzy: Use fuzzy matching instead of regex (optional)
+            tail: Return last N lines, overriding offset (optional)
+            context: Lines of context before/after each search match (optional)
 
         Returns:
             QueryResult with matching lines
@@ -232,11 +255,19 @@ class ResultStore:
             else:
                 try:
                     pattern = re.compile(search, re.IGNORECASE)
-                    lines = [line for line in lines if pattern.search(line)]
+                    if context > 0:
+                        lines = self._filter_with_context(lines, pattern, context)
+                    else:
+                        lines = [line for line in lines if pattern.search(line)]
                 except re.error as e:
                     raise ValueError(f"Invalid search pattern: {e}") from e
 
         total_lines = len(lines)
+
+        # tail: fetch last N lines, overriding offset
+        if tail > 0:
+            offset = max(1, total_lines - tail + 1)
+            limit = tail
 
         # Apply offset/limit (1-indexed)
         start_idx = offset - 1
@@ -249,6 +280,9 @@ class ResultStore:
             returned=len(result_lines),
             offset=offset,
             has_more=end_idx < total_lines,
+            handle=handle,
+            limit=limit,
+            total_size_bytes=meta.size_bytes,
         )
 
     def cleanup(self) -> int:
@@ -349,6 +383,36 @@ class ResultStore:
         scored.sort(key=lambda x: x[0], reverse=True)
 
         return [line for _, line in scored]
+
+    def _filter_with_context(
+        self, lines: list[str], pattern: re.Pattern[str], context: int
+    ) -> list[str]:
+        """Return matching lines plus N lines of surrounding context.
+
+        Deduplicates overlapping context windows. Preserves original order.
+        Inserts a '---' separator between non-contiguous groups.
+        """
+        total = len(lines)
+        include: set[int] = set()
+
+        for i, line in enumerate(lines):
+            if pattern.search(line):
+                for j in range(max(0, i - context), min(total, i + context + 1)):
+                    include.add(j)
+
+        if not include:
+            return []
+
+        result: list[str] = []
+        prev_idx: int | None = None
+
+        for idx in sorted(include):
+            if prev_idx is not None and idx > prev_idx + 1:
+                result.append("---")
+            result.append(lines[idx])
+            prev_idx = idx
+
+        return result
 
 
 def _get_default_store_dir() -> Path:

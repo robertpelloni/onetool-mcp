@@ -63,7 +63,7 @@ class TestStore:
         assert len(result.handle) == 12
         assert result.total_lines == 3
         assert result.size_bytes == len(content.encode())
-        assert "ot.result" in result.query
+        assert "ot.result" in result.usage["page"]
 
     def test_store_creates_files(
         self,
@@ -438,7 +438,7 @@ class TestRunnerIntegration:
 
                 assert result.handle
                 assert result.size_bytes == 200
-                assert "ot.result" in result.query
+                assert "ot.result" in result.usage["page"]
 
     def test_small_output_not_stored(self, mock_config) -> None:  # noqa: ARG002
         """Small output is returned inline, not stored."""
@@ -558,3 +558,245 @@ class TestOtResult:
 
         with pytest.raises(ValueError, match="limit must be >= 1"):
             result(handle="abc123", limit=-1)
+
+
+# =============================================================================
+# DOUBLE-WRAP PREVENTION
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestDoubleWrapPrevention:
+    """Test that ot.result() output is never re-wrapped into a StoredResult."""
+
+    def test_ot_result_not_rewrapped(self) -> None:
+        """ot.result() with output > max_inline_size returns QueryResult, not StoredResult."""
+        import asyncio
+        from unittest.mock import MagicMock, patch
+
+        # Very low threshold — any other tool's output of > 100 bytes would be stored
+        mock_cfg = MagicMock()
+        mock_cfg.output.max_inline_size = 100
+        mock_cfg.output.preview_lines = 5
+        mock_cfg.output.result_ttl = 3600
+        mock_cfg.security.sanitize.enabled = True
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store_dir = Path(tmpdir) / "store"
+            store_dir.mkdir()
+
+            store = ResultStore(store_dir=store_dir)
+
+            # Store content that produces > 100 bytes when queried
+            lines = [f"line{i:04d}" for i in range(300)]
+            content = "\n".join(lines)
+            stored = store.store(content)
+
+            # Build a minimal ot proxy so ot.result(handle=...) works in exec
+            from ot.meta import result as _result_fn
+
+            class _OtProxy:
+                result = staticmethod(_result_fn)
+
+            with (
+                patch("ot.executor.runner.get_config", return_value=mock_cfg),
+                patch("ot.executor.result_store.get_config", return_value=mock_cfg),
+                patch("ot.executor.result_store.get_result_store", return_value=store),
+                patch("ot.proxy.get_proxy_manager") as mock_proxy_mgr,
+                patch("ot.executor.runner.load_tool_registry"),
+                patch(
+                    "ot.executor.runner.build_execution_namespace",
+                    return_value={"ot": _OtProxy()},
+                ),
+            ):
+                mock_proxy_mgr.return_value.servers = {}
+
+                cmd = f'ot.result(handle="{stored.handle}", limit=200)'
+                result = asyncio.run(
+                    __import__("ot.executor.runner", fromlist=["execute_command"]).execute_command(
+                        cmd,
+                        registry=MagicMock(),
+                        executor=MagicMock(),
+                    )
+                )
+
+                assert result.success, f"Command failed: {result.result}"
+                raw = result.raw
+                # Must be a QueryResult (has "lines", "total_lines"), NOT a StoredResult (has "handle", "preview")
+                assert raw is not None
+                assert "lines" in raw, f"Expected QueryResult dict, got: {list(raw.keys())}"
+                assert "total_lines" in raw
+                assert "handle" not in raw, "ot.result() was re-wrapped into a StoredResult"
+
+
+# =============================================================================
+# CHUNK METADATA
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestQueryResultMetadata:
+    """Test new metadata fields on QueryResult chunks."""
+
+    def test_chunk_has_progress(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(100)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, offset=1, limit=50)
+        d = result.to_dict()
+        assert "progress" in d
+        assert "lines 1" in d["progress"]
+        assert "of 100" in d["progress"]
+
+    def test_chunk_has_total_size_bytes(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        content = "line1\nline2\nline3"
+        stored = result_store.store(content)
+        result = result_store.query(stored.handle)
+        d = result.to_dict()
+        assert d["total_size_bytes"] == stored.size_bytes
+
+    def test_chunk_has_next_query_when_more(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(100)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, offset=1, limit=50)
+        d = result.to_dict()
+        assert "next_query" in d
+        assert "offset=51" in d["next_query"]
+        assert stored.handle in d["next_query"]
+
+    def test_chunk_no_next_query_on_final_page(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(20)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, offset=1, limit=100)
+        d = result.to_dict()
+        assert not d.get("next_query")
+
+    def test_progress_percentage(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(100)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, offset=51, limit=50)
+        d = result.to_dict()
+        assert "100%" in d["progress"]
+
+
+# =============================================================================
+# STORED RESULT USAGE
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestStoredResultUsage:
+    """Test that StoredResult.usage replaces the old single query hint."""
+
+    def test_usage_is_dict(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        stored = result_store.store("line1\nline2")
+        d = stored.to_dict()
+        assert isinstance(d["usage"], dict)
+        assert "page" in d["usage"]
+        assert "search" in d["usage"]
+        assert "fuzzy" in d["usage"]
+        assert "slice" in d["usage"]
+        assert "tail" in d["usage"]
+
+    def test_usage_contains_handle(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        stored = result_store.store("line1\nline2")
+        d = stored.to_dict()
+        for key, val in d["usage"].items():
+            assert stored.handle in val, f"usage['{key}'] missing handle"
+
+    def test_no_query_field(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        stored = result_store.store("line1\nline2")
+        d = stored.to_dict()
+        assert "query" not in d
+
+
+# =============================================================================
+# TAIL
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestTail:
+    """Test tail parameter."""
+
+    def test_tail_returns_last_n_lines(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(20)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, tail=5)
+        assert result.returned == 5
+        assert result.lines[0] == "line15"
+        assert result.lines[-1] == "line19"
+
+    def test_tail_larger_than_total(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = ["a", "b", "c"]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, tail=10)
+        assert result.returned == 3
+        assert result.lines == ["a", "b", "c"]
+
+    def test_tail_with_search(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        """tail applies after search filter."""
+        lines = ["error: one", "info: ok", "error: two", "error: three"]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, search="error", tail=2)
+        assert result.returned == 2
+        assert "error: two" in result.lines
+        assert "error: three" in result.lines
+
+
+# =============================================================================
+# CONTEXT
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestContext:
+    """Test context parameter for search with surrounding lines."""
+
+    def test_context_returns_surrounding_lines(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = ["a", "b", "TARGET", "d", "e"]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, search="TARGET", context=1)
+        assert "b" in result.lines
+        assert "TARGET" in result.lines
+        assert "d" in result.lines
+
+    def test_context_separator_between_groups(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = ["a", "TARGET1", "c", "d", "e", "f", "TARGET2", "h"]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, search="TARGET", context=1)
+        assert "---" in result.lines
+
+    def test_context_no_effect_without_search(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = [f"line{i}" for i in range(10)]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, context=2)
+        assert result.total_lines == 10
+
+    def test_context_clamps_to_boundaries(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+        lines = ["TARGET", "b", "c"]
+        stored = result_store.store("\n".join(lines))
+        result = result_store.query(stored.handle, search="TARGET", context=5)
+        assert "TARGET" in result.lines
+
+
+# =============================================================================
+# CONFIG DEFAULTS
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestOutputConfigDefaults:
+    """Test OutputConfig default values."""
+
+    def test_max_inline_size_default(self) -> None:
+        """OutputConfig.max_inline_size defaults to 5000."""
+        from ot.config.models import OutputConfig
+
+        cfg = OutputConfig()
+        assert cfg.max_inline_size == 5000
