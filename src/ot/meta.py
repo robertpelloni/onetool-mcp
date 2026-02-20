@@ -100,6 +100,9 @@ __all__ = [
     "reload",
     "result",
     "security",
+    "server",
+    "servers",
+    "skills",
     "snippets",
     "stats",
     "tools",
@@ -387,6 +390,68 @@ def security(*, check: str = "") -> dict[str, Any]:
             return summary
 
 
+def server(
+    *,
+    status: str | None = None,
+    enable: str | None = None,
+    disable: str | None = None,
+    restart: str | None = None,
+) -> str:
+    """List or manage runtime proxy server state.
+
+    Without arguments, lists all configured servers with their status.
+    Accepts one action at a time: status, enable, disable, or restart.
+
+    All changes are in-memory only — state resets when OneTool restarts.
+
+    Args:
+        status: Show detailed status for a named server
+        enable: Enable a disabled server and connect it
+        disable: Disable an enabled server and disconnect it
+        restart: Disconnect and reconnect a server
+
+    Returns:
+        Status report or action confirmation message
+
+    Example:
+        ot.server()                           # list all servers
+        ot.server(status="devtools")          # show status for devtools
+        ot.server(enable="devtools-auto")     # enable devtools-auto
+        ot.server(disable="devtools")         # disable devtools
+        ot.server(restart="playwright")       # reconnect playwright
+    """
+    from ottools.server import server as _server
+
+    return _server(status=status, enable=enable, disable=disable, restart=restart)
+
+
+def skills(
+    *,
+    name: str | None = None,
+    pattern: str | None = None,
+    info: str = "min",
+) -> str:
+    """List available bundled skills or retrieve a skill's body content.
+
+    Args:
+        name: Skill name to retrieve body for (e.g., "onetool-discover")
+        pattern: Filter skills by substring match on name
+        info: Detail level — "list" (names only), "min" (+ description, default), "full" (everything)
+
+    Returns:
+        Skill body if name= provided; formatted list of skills otherwise
+
+    Example:
+        ot.skills()                          # list all
+        ot.skills(pattern="devtools")        # filter by pattern
+        ot.skills(name="devtools-guide")     # retrieve body
+        ot.skills(info="full")               # full info for each skill
+    """
+    from ottools.skills import skills as _skills
+
+    return _skills(name=name, pattern=pattern, info=info)
+
+
 def get_ot_pack_functions() -> dict[str, Any]:
     """Get all ot pack functions for registration.
 
@@ -397,9 +462,11 @@ def get_ot_pack_functions() -> dict[str, Any]:
         "agent_hints": agent_hints,
         "tools": tools,
         "packs": packs,
+        "server": server,
         "servers": servers,
         "aliases": aliases,
         "snippets": snippets,
+        "skills": skills,
         "config": config,
         "debug": debug,
         "health": health,
@@ -1592,6 +1659,8 @@ def reload() -> str:
     - Secrets (secrets.yaml)
     - Tool registry (tool files from tools_dir)
     - Prompts
+    - Skills index (bundled skill content)
+    - Execution namespace cache (pack proxies)
     - MCP proxy connections
     - Parameter resolution caches
     - Security validation caches
@@ -1610,19 +1679,23 @@ def reload() -> str:
     with log(span="ot.reload") as s:
         # Import modules
         import ot.config
+        import ot.executor.pack_proxy
         import ot.executor.param_resolver
         import ot.executor.tool_loader
         import ot.executor.validator
         import ot.prompts
         import ot.proxy
         import ot.registry
+        from ot.utils.cache import cache as _ot_cache
 
         # Clear in dependency order (config first, others depend on it)
         ot.config.reset()  # Clears both config and secrets
         ot.prompts.reset()
+        _ot_cache.clear()  # Clears skills index and other TTL-cached data
         ot.registry.reset()
         ot.executor.tool_loader.reset()
         ot.executor.validator.reset()
+        ot.executor.pack_proxy.reset()  # Releases stale namespace/proxy references
 
         # Clear param resolver cache
         ot.executor.param_resolver.get_tool_param_names.cache_clear()

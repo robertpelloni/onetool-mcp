@@ -37,6 +37,20 @@ class SnippetDef(BaseModel):
     )
 
 
+# ==================== Skill Models ====================
+
+
+class SkillDef(BaseModel):
+    """Definition of a user-defined skill."""
+
+    description: str = Field(
+        default="", description="One-line description of what this skill does"
+    )
+    body: str = Field(
+        ..., description="Skill content (Markdown) returned by ot.skills(name=...)"
+    )
+
+
 # ==================== LLM Configuration ====================
 
 
@@ -542,6 +556,11 @@ class OneToolConfig(BaseModel):
     snippets: dict[str, SnippetDef] = Field(
         default_factory=dict,
         description="Reusable snippet templates with Jinja2 variable substitution",
+    )
+
+    skills: dict[str, SkillDef] = Field(
+        default_factory=dict,
+        description="User-defined skills available via ot.skills(). Merged with bundled skills.",
     )
 
     servers: dict[str, McpServerConfig] = Field(

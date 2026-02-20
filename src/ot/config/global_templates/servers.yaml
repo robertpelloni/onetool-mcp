@@ -3,6 +3,11 @@
 #
 # These are common MCP server configurations that can be included
 # in project-specific onetool.yaml files.
+#
+# Server usage guides are available as on-demand skills:
+#   __ot ot.skills(name="devtools-guide")
+#   __ot ot.skills(name="playwright-guide")
+#   __ot ot.skills(name="github-guide")
 
 servers:
 
@@ -11,7 +16,7 @@ servers:
   # =============================================================================
   # Browser automation, debugging, and inspection via Chrome DevTools Protocol.
   # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
-  # Guide:  docs/learn/guides/chrome-devtools.md
+  # Guide:  __ot ot.skills(name="devtools-guide")
   #
   # CONNECTION MODES:
   #
@@ -40,7 +45,7 @@ servers:
   #   --viewport=WxH     Browser window size (default: 1280x720)
   #
   # ELEMENT HIGHLIGHTING (devtools_util pack):
-  #   devtools_util.inject_annotations()                                    # Load inject.js v2.0.0
+  #   devtools_util.inject_annotations()                                    # Load inject.js
   #   devtools_util.highlight_element(selector=".btn", label="Click here")  # Highlight
   #   devtools_util.scan_annotations()                                      # Read all annotations
   #   devtools_util.clear_annotations()                                     # Remove all
@@ -56,49 +61,13 @@ servers:
       - "--viewport=1280x720"  # Consistent window size
       - "--no-usage-statistics" # Disable Data Collection
     timeout: 120               # Browser launch can be slow
-    instructions: |
-      Chrome DevTools MCP - Browser automation and debugging via Chrome DevTools Protocol.
-
-      **Tools (26 total):**
-      - Input: click, drag, fill, fill_form, handle_dialog, hover, press_key, upload_file
-      - Navigation: close_page, list_pages, navigate_page, new_page, select_page, wait_for
-      - Emulation: emulate, resize_page
-      - Performance: performance_start_trace, performance_stop_trace, performance_analyze_insight
-      - Network: get_network_request, list_network_requests
-      - Debug: evaluate_script, get_console_message, list_console_messages, take_screenshot, take_snapshot
-
-      **Connection modes:**
-      - Isolated (default): temp profile, auto-cleaned. Best for most tasks.
-      - Remote: connect to existing Chrome (--browserUrl). Preserves login sessions.
-      - autoConnect: auto-attach to any Chrome with remote debugging.
-
-      **Element highlighting (devtools_util pack):**
-      - devtools_util.inject_annotations() — load inject.js v2.0.0 into the page
-      - devtools_util.highlight_element(selector=".btn", label="Click") — annotate elements
-      - devtools_util.scan_annotations() — read user/Claude annotations
-      - devtools_util.clear_annotations() — remove all highlights
-      - devtools_util.guide_user(task="...", steps=[...]) — multi-step guidance
-      - Users can annotate manually with Ctrl+I / Cmd+I (prompts for custom annotation name).
-
-      **Usage patterns:**
-      - Browser launches automatically on first tool use (no manual startup needed)
-      - Always use take_screenshot after actions for visual verification
-      - Standard flow: navigate_page -> wait_for -> click/fill -> take_screenshot
-      - For forms: fill_form is more reliable than multiple fill calls
-      - Debug JS errors: list_console_messages after page interactions
-      - Performance analysis: performance_start_trace -> actions -> performance_stop_trace -> performance_analyze_insight
-      - Network debugging: list_network_requests after page load to inspect API calls
-
-      **Common mistakes to avoid:**
-      - Don't assume elements exist - use wait_for before interacting
-      - Don't skip screenshots - they're essential for debugging failures
-      - Don't use multiple fill calls when fill_form would work better
 
   # =============================================================================
   # PLAYWRIGHT MCP
   # =============================================================================
   # Browser automation via Playwright accessibility tree (no vision needed).
   # Source: https://github.com/microsoft/playwright-mcp
+  # Guide:  __ot ot.skills(name="playwright-guide")
   #
   # OPTIONS (add to args array):
   #   --headless         Run without visible browser window
@@ -111,37 +80,13 @@ servers:
     args:
       - "@playwright/mcp@latest"
     timeout: 120
-    instructions: |
-      Playwright MCP - Browser automation via accessibility snapshots (no vision needed).
-
-      **Key tools:**
-      - Navigation: browser_navigate, browser_back, browser_forward, browser_wait
-      - Interaction: browser_click, browser_type, browser_select_option, browser_press_key
-      - State: browser_snapshot, browser_screenshot, browser_evaluate
-      - Tabs: browser_tab_list, browser_tab_new, browser_tab_select, browser_tab_close
-
-      **Element highlighting (playwright_util pack):**
-      - playwright_util.inject_annotations() — load inject.js into the page
-      - playwright_util.highlight_element(selector=".btn", label="Click") — annotate elements
-      - playwright_util.scan_annotations() — read user/Claude annotations
-      - playwright_util.clear_annotations() — remove all highlights
-      - playwright_util.guide_user(task="...", steps=[...]) — multi-step guidance
-      - Users can annotate manually with Ctrl+I / Cmd+I in the browser.
-
-      **Usage patterns:**
-      - Always take browser_snapshot after actions (preferred over screenshots)
-      - Standard flow: browser_navigate -> browser_snapshot -> browser_click/type -> browser_snapshot
-      - Use browser_evaluate for custom JS execution
-
-      **Common mistakes to avoid:**
-      - Don't assume elements exist - use browser_snapshot first
-      - Don't skip snapshots between actions
 
   # =============================================================================
   # GITHUB MCP (HTTP)
   # =============================================================================
   # GitHub's official MCP Server for repository management, issues, PRs, and more.
   # Source: https://github.com/github/github-mcp-server
+  # Guide:  __ot ot.skills(name="github-guide")
   #
   # SETUP:
   #   1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens
@@ -159,24 +104,24 @@ servers:
       Authorization: "Bearer ${GITHUB_TOKEN}"
       Accept: "application/json, text/event-stream"
     timeout: 120
-    instructions: |
-      GitHub MCP Server - Official GitHub API integration for repository management.
 
-      **Toolsets:**
-      - **Repositories**: Browse code, search files, analyze commits, manage branches
-      - **Issues**: Create, update, list, search, and manage issues
-      - **Pull Requests**: Create PRs, review changes, merge, manage reviews
-      - **Actions**: Monitor workflows, analyze build failures, trigger runs
-      - **Code Security**: Review security findings, Dependabot alerts
-
-      **Usage patterns:**
-      - Search before creating: Use search tools to check for existing issues/PRs
-      - Batch operations: Use list tools to get multiple items at once
-      - For code changes: Create branch -> make commits -> create PR
-      - Issue workflow: search_issues -> get_issue -> update_issue or create_issue_comment
-
-      **Common mistakes to avoid:**
-      - Don't create duplicate issues - search first
-      - Don't forget to specify the repository (owner/repo format)
-      - Don't make multiple API calls when a single list/search call works
-      - Check PR status before attempting to merge
+  # =============================================================================
+  # MULTI-INSTANCE EXAMPLE
+  # =============================================================================
+  # You can run multiple named instances of the same server binary.
+  # Useful for having one browser session per task, or mixing connection modes.
+  #
+  # Example: devtools with isolated profile + devtools connected to existing Chrome
+  #
+  # devtools-isolated:
+  #   type: stdio
+  #   command: npx
+  #   args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720"]
+  #   timeout: 120
+  #
+  # devtools-auto:
+  #   type: stdio
+  #   command: npx
+  #   args: ["-y", "chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"]
+  #   timeout: 120
+  #   enabled: false  # Enable with: ot.server(enable="devtools-auto")

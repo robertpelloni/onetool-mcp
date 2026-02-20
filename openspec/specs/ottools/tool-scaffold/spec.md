@@ -147,3 +147,71 @@ Extension templates SHALL be stored in the bundled config defaults directory.
 - **WHEN** a template is referenced
 - **THEN** the file name is `<template>.py` in the tool_templates directory
 
+### Requirement: List Available Skill Stubs
+
+The scaffold pack SHALL provide a `scaffold.skills()` function that lists bundled skills available for installation.
+
+#### Scenario: List skills with no arguments
+- **WHEN** `scaffold.skills()` is called
+- **THEN** it SHALL return a formatted list of available skill stub names and descriptions
+- **AND** each entry SHALL indicate whether the stub is already installed
+
+### Requirement: Install Skill Stub
+
+The scaffold pack SHALL install skill stubs for the specified AI tool (agent).
+
+#### Scenario: Install stub for Claude Code (default)
+- **WHEN** `scaffold.skills(install="onetool-discover")` is called
+- **THEN** it SHALL write a stub file to `.claude/skills/onetool-discover/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="onetool-discover")`
+
+#### Scenario: Install stub for Codex
+- **WHEN** `scaffold.skills(install="devtools-guide", tool="codex")` is called
+- **THEN** it SHALL write a stub file to `.agents/skills/devtools-guide/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="devtools-guide")`
+
+#### Scenario: Install stub for OpenCode
+- **WHEN** `scaffold.skills(install="playwright-guide", tool="opencode")` is called
+- **THEN** it SHALL write a stub file to `.opencode/skills/playwright-guide/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="playwright-guide")`
+
+#### Scenario: Install all stubs
+- **WHEN** `scaffold.skills(install="all")` is called
+- **THEN** it SHALL install stubs for all bundled skills
+- **AND** default tool SHALL be `"claude"`
+
+#### Scenario: Install all stubs for a specific tool
+- **WHEN** `scaffold.skills(install="all", tool="opencode")` is called
+- **THEN** it SHALL install stubs for all bundled skills into `.opencode/skills/`
+
+#### Scenario: Stub already installed
+- **WHEN** `scaffold.skills(install="onetool-discover")` is called
+- **AND** the stub file already exists
+- **THEN** it SHALL overwrite the existing stub
+- **AND** report that it was updated
+
+#### Scenario: Unknown skill name
+- **WHEN** `scaffold.skills(install="unknown-skill")` is called
+- **THEN** it SHALL return an error message listing available skill names
+
+### Requirement: Stub File Format
+
+Skill stub files SHALL use a unified frontmatter format. All three tools (Claude Code, Codex, OpenCode) use the same YAML frontmatter with `name:` and `description:` fields, per the Agent Skills standard adopted by each tool.
+
+#### Scenario: Stub frontmatter format (all tools)
+- **WHEN** a stub is installed for any supported tool
+- **THEN** the file SHALL have YAML frontmatter with both `name:` and `description:` fields
+- **AND** the body SHALL contain a single instruction to call `__ot ot.skills(name="<name>")`
+
+### Requirement: Tool Path Configuration
+
+Stub installation paths SHALL be driven by configuration in `global_templates/skills.md`, not hardcoded in Python.
+
+#### Scenario: Path config read from skills.md
+- **WHEN** `scaffold.skills()` resolves the installation path
+- **THEN** it SHALL read the path template from `global_templates/skills.md` for the specified tool
+- **AND** substitute `{name}` with the skill name
+
+#### Scenario: Unsupported tool
+- **WHEN** `scaffold.skills(install="onetool-discover", tool="unknown-tool")` is called
+- **THEN** it SHALL return an error message listing supported tools

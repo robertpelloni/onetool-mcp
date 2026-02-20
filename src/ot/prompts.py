@@ -26,7 +26,15 @@ class PromptsConfig(BaseModel):
     """Configuration for MCP server prompts and tool descriptions."""
 
     instructions: str = Field(
-        description="Main server instructions shown to the LLM",
+        description="Main server instructions shown to the LLM (full version)",
+    )
+    instructions_slim: str | None = Field(
+        default=None,
+        description="Slim instructions (~20 lines) used when slim=true",
+    )
+    slim: bool = Field(
+        default=True,
+        description="Use slim instructions (default true). Set false for full prompt.",
     )
     tools: dict[str, ToolPrompt] = Field(
         default_factory=dict,

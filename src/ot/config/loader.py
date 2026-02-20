@@ -148,10 +148,9 @@ def _validate_version(data: dict[str, Any]) -> None:
 def _resolve_include_path(include_path_str: str, ot_dir: Path) -> Path | None:
     """Resolve an include path relative to OT_DIR (.onetool/).
 
-    Supports:
-    - Absolute paths (used as-is)
-    - ~ expansion (expands to home directory)
-    - Relative paths (resolved relative to OT_DIR)
+    Resolution order:
+    1. Absolute paths: used as-is, no fallback
+    2. Relative paths: check OT_DIR first, then fall back to global_templates/
 
     Args:
         include_path_str: Path string from include directive
@@ -163,18 +162,33 @@ def _resolve_include_path(include_path_str: str, ot_dir: Path) -> Path | None:
     # Expand ~ first
     include_path = Path(include_path_str).expanduser()
 
-    # Absolute paths are used as-is
+    # Absolute paths are used as-is (no fallback)
     if include_path.is_absolute():
         if include_path.exists():
             logger.debug(f"Include resolved (absolute): {include_path}")
             return include_path
+        logger.warning(f"Include file not found (absolute): {include_path_str}")
         return None
 
-    # Relative paths: resolve from OT_DIR
+    # Relative paths: try OT_DIR first
     resolved = (ot_dir / include_path).resolve()
     if resolved.exists():
         logger.debug(f"Include resolved (ot_dir): {resolved}")
         return resolved
+
+    # Fallback to global_templates/<path>
+    try:
+        from ot.paths import get_global_templates_dir
+
+        global_templates_dir = get_global_templates_dir()
+        fallback = (global_templates_dir / include_path).resolve()
+        if fallback.exists():
+            logger.info(
+                f"Include resolved (package default): {include_path_str} -> {fallback}"
+            )
+            return fallback
+    except FileNotFoundError:
+        pass
 
     logger.warning(f"Include file not found: {include_path_str}")
     return None
@@ -226,7 +240,7 @@ def _process_includes(
     Files are merged left-to-right (later files override earlier).
     Inline content in the main file overrides everything.
 
-    Include resolution is single-tier (no fallback), relative to OT_DIR (.onetool/).
+    Include resolution: OT_DIR first, then global_templates/ fallback.
 
     Args:
         data: Config data dict containing optional 'include' key

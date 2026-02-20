@@ -51,7 +51,7 @@ def test_all_exports() -> None:
     """Verify __all__ contains the expected public functions."""
     from ottools.scaffold import __all__
 
-    expected = {"create", "extensions", "templates", "validate"}
+    expected = {"create", "extensions", "skills", "templates", "validate"}
     assert set(__all__) == expected
 
 

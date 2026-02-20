@@ -62,29 +62,21 @@ _stats_writer: JsonlStatsWriter | None = None
 def _get_instructions() -> str:
     """Generate MCP server instructions.
 
+    Uses slim mode (default) for a minimal ~20-line prompt, or full mode when
+    prompts.slim=false. Server instructions from servers.yaml are no longer
+    included in the handshake (moved to on-demand skills).
+
     Note: Tool descriptions are NOT included here - they come through
     the MCP tool definitions which the client converts to function calling format.
     """
     # Load prompts from config (loaded via include: or inline prompts:)
     prompts = get_prompts(inline_prompts=_config.prompts)
 
-    parts = [prompts.instructions.strip()]
+    # Branch on slim mode: use instructions_slim when slim=True (default)
+    if prompts.slim and prompts.instructions_slim:
+        return prompts.instructions_slim.strip()
 
-    # Append server-specific instructions from enabled servers
-    if _config.servers:
-        server_instructions = []
-        for name, cfg in _config.servers.items():
-            if cfg.enabled and cfg.instructions:
-                server_instructions.append(f"## {name}\n{cfg.instructions.strip()}")
-
-        if server_instructions:
-            parts.append("\n# MCP Server Instructions\n")
-            parts.append(
-                "The following MCP servers have provided instructions for how to use their tools and resources:\n"
-            )
-            parts.append("\n\n".join(server_instructions))
-
-    return "\n".join(parts)
+    return prompts.instructions.strip()
 
 
 @asynccontextmanager

@@ -30,7 +30,7 @@ The system SHALL load MCP prompts from a YAML configuration file.
 
 ### Requirement: Server Instructions
 
-The system SHALL support externalised server instructions with explicit trigger documentation and comprehensive discovery guidance.
+The system SHALL support externalised server instructions with explicit trigger documentation and a minimal footprint.
 
 #### Scenario: Instructions loaded
 - **GIVEN** prompts.yaml with `instructions: "Custom instructions..."`
@@ -45,17 +45,44 @@ The system SHALL support externalised server instructions with explicit trigger 
 #### Scenario: Instructions fallback
 - **GIVEN** prompts.yaml without instructions key
 - **WHEN** instructions are requested
-- **THEN** it SHALL return default instructions including `__onetool__run` trigger documentation
+- **THEN** it SHALL return default instructions
 
 #### Scenario: Trigger pattern in default
 - **GIVEN** no prompts.yaml or no instructions key
 - **WHEN** default instructions are used
-- **THEN** they SHALL include the `__onetool__run` trigger pattern and canonical formats
+- **THEN** they SHALL include the `__ot` trigger pattern and `mcp__onetool__run` alias
 
-#### Scenario: Discovery functions documented
-- **GIVEN** prompts.yaml instructions
-- **WHEN** loaded
-- **THEN** they SHALL document `ot.tools()`, `ot.packs()`, `ot.snippets()`, and `ot.aliases()` for capability discovery
+#### Scenario: Slim mode active (default)
+- **GIVEN** `prompts.yaml` with `slim: true` (or no `slim` key)
+- **WHEN** the server builds the handshake instructions
+- **THEN** it SHALL use the `instructions_slim` value from `prompts.yaml`
+- **AND** the resulting prompt SHALL contain at most 25 lines
+- **AND** SHALL include: identity line, trigger aliases, pass-through rule, keyword-args rule, batch rule, discovery hint (`__ot ot.help()`), external content boundary warning, and tool output directive
+- **AND** SHALL NOT include full discovery reference, error recovery patterns, security/allowlist guide, output format/sanitisation controls, aliases & snippets reference, or per-server usage guides
+
+#### Scenario: Full mode active
+- **GIVEN** `prompts.yaml` with `slim: false`
+- **WHEN** the server builds the handshake instructions
+- **THEN** it SHALL use the `instructions` value from `prompts.yaml`
+- **AND** the resulting prompt SHALL be the complete reference prompt (~76 lines)
+
+#### Scenario: Slim default when key absent
+- **GIVEN** `prompts.yaml` with no `slim` key
+- **WHEN** the server builds the handshake instructions
+- **THEN** it SHALL behave as if `slim: true`
+
+#### Scenario: Discovery hint present in slim mode
+- **GIVEN** `slim: true`
+- **WHEN** an agent is lost or encountering errors
+- **THEN** the prompt SHALL direct the agent to run `__ot ot.help()` for discovery
+
+## Removed Requirements
+
+### Requirement: Discovery functions documented
+
+**Reason**: Discovery reference material is too detailed for the always-on prompt. Moved to the `onetool-discover` skill, retrieved on-demand via `ot.skills(name="onetool-discover")`.
+
+**Migration**: Agents can access discovery guidance by invoking the `onetool-discover` skill or running `__ot ot.help()`.
 
 ### Requirement: Tool-Specific Prompts
 

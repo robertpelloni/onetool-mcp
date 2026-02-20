@@ -300,3 +300,11 @@ def build_execution_namespace(
         _namespace_cache.popitem(last=False)
 
     return namespace
+
+
+def reset() -> None:
+    """Clear the execution namespace cache.
+
+    Called by ot.reload() to release stale proxy/registry references.
+    """
+    _namespace_cache.clear()

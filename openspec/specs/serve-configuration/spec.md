@@ -32,46 +32,99 @@ The system SHALL load configuration from a YAML file using a standard resolution
 - **THEN** it SHALL prompt user to initialise (interactive mode)
 - **OR** exit with error message (non-interactive mode)
 
+### Requirement: Config Include Fallback to Package Defaults
+
+> **Terminology:** The **config dir** is `config_path.parent` — the directory that contains `onetool.yaml`. All relative includes resolve from here. This directory is conventionally named `.onetool/` but the code treats it as `config_path.parent`; do not hardcode `.onetool` in implementation.
+
+When an include path is not found in the config dir, the system SHALL fall back to the matching path in the package's `global_templates/` directory.
+
+#### Scenario: Include resolved from user config dir
+- **GIVEN** `include: servers.yaml` in `onetool.yaml`
+- **AND** `<config-dir>/servers.yaml` exists
+- **WHEN** the config is loaded
+- **THEN** `<config-dir>/servers.yaml` SHALL be used (user file takes precedence)
+
+#### Scenario: Include falls back to package default
+- **GIVEN** `include: servers.yaml` in `onetool.yaml`
+- **AND** `<config-dir>/servers.yaml` does NOT exist
+- **WHEN** the config is loaded
+- **THEN** `global_templates/servers.yaml` SHALL be loaded as the fallback
+- **AND** an INFO log message SHALL record that the package default was used
+
+#### Scenario: Absolute include path — no fallback
+- **GIVEN** `include: /absolute/path/to/file.yaml`
+- **AND** the file does not exist
+- **WHEN** the config is loaded
+- **THEN** a warning SHALL be logged and the include SHALL be skipped
+- **AND** no fallback to `global_templates/` SHALL occur
+
+#### Scenario: Include not found anywhere
+- **GIVEN** `include: nonexistent.yaml`
+- **AND** neither `<config-dir>/nonexistent.yaml` nor `global_templates/nonexistent.yaml` exists
+- **WHEN** the config is loaded
+- **THEN** a warning SHALL be logged
+- **AND** loading SHALL continue without that include
+
+### Requirement: Graceful Cold Start
+
+The system SHALL start successfully with only a minimal `onetool.yaml` file, without requiring `onetool init` to be run first.
+
+#### Scenario: Bare config file
+- **GIVEN** an `onetool.yaml` containing only `version: 2`
+- **WHEN** the server starts
+- **THEN** it SHALL start successfully
+- **AND** security rules SHALL be loaded from the package default via include fallback
+- **AND** no servers SHALL be configured (no proxy functionality)
+
+#### Scenario: Config without init
+- **GIVEN** no files exist in the config dir except `onetool.yaml`
+- **WHEN** the server starts
+- **THEN** it SHALL start successfully using package default includes
+
 ### Requirement: First-Run Initialization
 
-The system SHALL require explicit initialization before first use.
+The system SHALL support a graceful cold start without requiring prior initialisation. Explicit initialisation via `onetool init` remains available for users who want to customise config files.
 
-#### Scenario: First-run interactive mode
-- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
+#### Scenario: First-run with bare config
+- **GIVEN** `onetool.yaml` exists with `version: 2` and no other files in the config dir
+- **WHEN** the server starts
+- **THEN** it SHALL start normally using package default fallbacks
+- **AND** no initialization prompt SHALL be shown
+
+#### Scenario: First-run interactive mode (no config at all)
+- **GIVEN** no `onetool.yaml` exists anywhere
 - **AND** stdin is a TTY (interactive mode)
 - **WHEN** the server starts
 - **THEN** it SHALL prompt "OneTool is not initialized. Initialize now? [Y/n]"
-- **AND** on "y": call `ensure_global_dir()` and continue
+- **AND** on "y": call `ensure_ot_dir(config_path)` and continue
 - **AND** on "n": print "Run 'onetool init' when ready." and exit(1)
 
-#### Scenario: First-run non-interactive mode
-- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
-- **AND** stdin is NOT a TTY (piped input)
+#### Scenario: First-run non-interactive mode (no config at all)
+- **GIVEN** no `onetool.yaml` exists anywhere
+- **AND** stdin is NOT a TTY
 - **WHEN** the server starts
 - **THEN** it SHALL print "OneTool not initialized. Run: onetool init"
 - **AND** exit with code 1
 
-#### Scenario: First-run with init subcommand
-- **GIVEN** `~/.onetool/config/onetool.yaml` does not exist
-- **WHEN** user runs `onetool init`
-- **THEN** it SHALL create global config directory without prompting
-- **AND** copy template YAML files to `~/.onetool/config/`
-- **AND** copy resource subdirectories (e.g., `diagram-templates/`) to `~/.onetool/config/`
-- **AND** skip `tool_templates/` subdirectory (code templates accessed via package)
-
-#### Scenario: Resource subdirectory copying
-- **GIVEN** global templates contain subdirectories like `diagram-templates/`
-- **WHEN** `onetool init` is run
-- **THEN** subdirectories SHALL be copied to `~/.onetool/config/`
-- **AND** `tool_templates/` SHALL be excluded (accessed via `get_global_templates_dir()`)
-- **AND** subdirectories starting with `_` SHALL be excluded
-- **RATIONALE** Resource subdirectories contain user-customizable files (diagram templates), while `tool_templates/` contains code generation templates accessed directly from the package
-
 #### Scenario: Already initialized
-- **GIVEN** `~/.onetool/config/onetool.yaml` exists
+- **GIVEN** `onetool.yaml` exists
 - **WHEN** the server starts
 - **THEN** it SHALL load configuration normally
 - **AND** no initialization prompt SHALL be shown
+
+## Removed Requirements
+
+### Requirement: DevTools Server Instructions Field
+
+**Reason**: Server `instructions:` fields are removed from `servers.yaml`. DevTools usage guidance moves to the `devtools-guide` skill, retrieved on-demand via `ot.skills(name="devtools-guide")`.
+
+**Migration**: Run `scaffold.skills(install="devtools-guide")` to install a stub, or call `__ot ot.skills(name="devtools-guide")` directly.
+
+### Requirement: Playwright Server Instructions Field
+
+**Reason**: Server `instructions:` fields are removed from `servers.yaml`. Playwright usage guidance moves to the `playwright-guide` skill, retrieved on-demand via `ot.skills(name="playwright-guide")`.
+
+**Migration**: Run `scaffold.skills(install="playwright-guide")` to install a stub, or call `__ot ot.skills(name="playwright-guide")` directly.
 
 ### Requirement: Config Version Migration Detection
 

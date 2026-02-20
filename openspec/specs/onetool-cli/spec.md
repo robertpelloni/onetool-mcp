@@ -109,3 +109,77 @@ The system SHALL display version information.
 - **GIVEN** `onetool --version` is executed
 - **WHEN** executed
 - **THEN** it SHALL display the package version
+
+---
+
+> **Terminology:** The **config dir** is `config_path.parent` — the directory that contains `onetool.yaml`, passed via `--config`. This is conventionally named `.onetool/` but the code treats it as `config_path.parent`; all materialised files are written to `config_path.parent`, not to a hardcoded `.onetool/` path.
+
+### Requirement: Init Guided Setup
+
+The `onetool init` command SHALL guide users through selective config file materialisation rather than bulk-copying all templates.
+
+#### Scenario: Init with no flags (interactive)
+- **GIVEN** `onetool init` is run with no flags
+- **AND** stdin is a TTY
+- **WHEN** init runs
+- **THEN** it SHALL ask: "Configure security rules? [y/N]"
+- **AND** ask: "Include proxy servers? (chrome-devtools, playwright, github, none) [none]"
+- **AND** materialise only the files corresponding to the user's choices
+- **AND** write an `onetool.yaml` that includes only those materialised files
+
+#### Scenario: Init with --security flag
+- **GIVEN** `onetool init --security` is run
+- **WHEN** init runs
+- **THEN** it SHALL materialise `security.yaml` into the config dir (`config_path.parent`) from the package default
+- **AND** add `security.yaml` to `include:` in the generated `onetool.yaml`
+
+#### Scenario: Init with --servers flag
+- **GIVEN** `onetool init --servers chrome-devtools,playwright` is run
+- **WHEN** init runs
+- **THEN** it SHALL materialise `servers.yaml` into the config dir, containing only the `chrome-devtools` and `playwright` server blocks
+- **AND** add `servers.yaml` to `include:` in the generated `onetool.yaml`
+
+#### Scenario: Init with --file flag
+- **GIVEN** `onetool init --file security.yaml` is run
+- **WHEN** init runs
+- **THEN** it SHALL materialise only `security.yaml` into the config dir from the package default
+- **AND** print a message explaining that the file is now user-owned and will override the package default
+
+#### Scenario: Init with --full flag
+- **GIVEN** `onetool init --full` is run
+- **WHEN** init runs
+- **THEN** it SHALL copy all global_templates YAML files into the config dir (`config_path.parent`)
+- **AND** generate an `onetool.yaml` that includes all materialised files
+
+#### Scenario: Minimal output config
+- **GIVEN** the user does not select security or servers during init
+- **WHEN** init completes
+- **THEN** the generated `onetool.yaml` SHALL contain only `version: 2` with no `include:` section
+- **AND** a message SHALL inform the user that package defaults will be used for security and that no servers are configured
+
+#### Scenario: Init output informs about defaults
+- **GIVEN** `onetool init --security` is run
+- **WHEN** init completes
+- **THEN** output SHALL state which files were materialised
+- **AND** for non-materialised files, SHALL note that package defaults will be used via fallback
+
+### Requirement: Init Validate Source Reporting
+
+The `onetool init validate` command SHALL report the source of each resolved include.
+
+#### Scenario: Validate shows include sources
+- **GIVEN** `onetool init validate` is run
+- **AND** some includes are user-owned and some use package defaults
+- **WHEN** validation output is displayed
+- **THEN** each include SHALL be listed with its source tag:
+  - `[user]` — loaded from the config dir (`config_path.parent/<path>`)
+  - `[default]` — loaded from `global_templates/<path>`
+  - `[missing]` — listed in `include:` but not found in either location
+  - `[absolute]` — resolved from an absolute path
+  - `[not listed]` — not in `include:`, not loaded
+- **AND** the resolved file path SHALL be shown for each loaded include
+
+#### Scenario: Validate suggests materialisation
+- **GIVEN** an include using a package default (`[default]` source)
+- **WHEN** validation output is shown
+- **THEN** it SHALL include a hint: "Run `onetool init --file <name>` to customise"
