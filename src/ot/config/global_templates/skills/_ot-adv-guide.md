@@ -14,7 +14,7 @@ Not all tool packs are available by default. Install the appropriate extra if a 
 
 | Extra | Install command | Tool packs included |
 |-------|----------------|---------------------|
-| (core) | `pip install onetool-mcp` | `mem`, `llm`, `ot`, `package.audit` |
+| (core) | `pip install onetool-mcp` | `mem`, `ot_llm`, `ot`, `package.audit` |
 | `[util]` | `pip install onetool-mcp[util]` | `brave`, `convert`, `excel`, `file`, `ground` |
 | `[dev]` | `pip install onetool-mcp[dev]` | `context7`, `db`, `diagram`, `package`, `ripgrep`, `web`, `worktree` |
 
@@ -131,9 +131,9 @@ convert.powerpoint(pattern="slides/*.pptx", output_dir="md/")
 ## LLM Transform
 
 ```python
-llm.transform(data=some_text, prompt="Summarise in 3 bullet points")
-llm.transform(data=results, prompt="Extract prices as JSON", json_mode=True)
-llm.transform_file(prompt="Convert to RST", in_file="README.md", out_file="README.rst")
+ot_llm.transform(data=some_text, prompt="Summarise in 3 bullet points")
+ot_llm.transform(data=results, prompt="Extract prices as JSON", json_mode=True)
+ot_llm.transform_file(prompt="Convert to RST", in_file="README.md", out_file="README.rst")
 ```
 
 ## Diagrams

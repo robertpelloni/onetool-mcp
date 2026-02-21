@@ -9,7 +9,7 @@ Example usage in an extension tool:
     from ot.tools import call_tool, get_pack
 
     # Call a single tool by name
-    result = call_tool("llm.transform", input=text, prompt="Summarize")
+    result = call_tool("ot_llm.transform", input=text, prompt="Summarize")
 
     # Get a pack for multiple calls
     brave = get_pack("brave")
@@ -28,7 +28,7 @@ def call_tool(name: str, **kwargs: Any) -> Any:
     """Call another tool by its full name.
 
     Args:
-        name: Full tool name with pack prefix (e.g., "llm.transform", "brave.search").
+        name: Full tool name with pack prefix (e.g., "ot_llm.transform", "brave.search").
               Must contain a dot separator.
         **kwargs: Keyword arguments to pass to the tool function.
 
@@ -40,7 +40,7 @@ def call_tool(name: str, **kwargs: Any) -> Any:
         KeyError: If the pack or function is not found.
 
     Example:
-        result = call_tool("llm.transform", input="Hello", prompt="Translate to Spanish")
+        result = call_tool("ot_llm.transform", input="Hello", prompt="Translate to Spanish")
     """
     if "." not in name:
         raise ValueError(
@@ -80,7 +80,7 @@ def get_pack(name: str) -> Any:
     Returns a proxy object that allows calling pack functions using dot notation.
 
     Args:
-        name: Pack name (e.g., "brave", "llm", "file").
+        name: Pack name (e.g., "brave", "ot_llm", "file").
 
     Returns:
         Pack proxy object with tool functions as attributes.
@@ -92,7 +92,7 @@ def get_pack(name: str) -> Any:
         brave = get_pack("brave")
         results = brave.search(query="python")
 
-        llm = get_pack("llm")
+        llm = get_pack("ot_llm")
         summary = llm.transform(data=text, prompt="Summarize")
     """
     from ot.executor.pack_proxy import build_execution_namespace

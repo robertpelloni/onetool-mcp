@@ -167,7 +167,7 @@ Extension tools can call other tools:
 from ot.tools import call_tool, get_pack
 
 # Call a single tool
-result = call_tool("llm.transform", input=text, prompt="Summarize")
+result = call_tool("ot_llm.transform", input=text, prompt="Summarize")
 
 # Get a pack for multiple calls
 brave = get_pack("brave")
@@ -301,19 +301,19 @@ cd src
 python -m pytest ../test_mytool.py
 ```
 
-## Creating Tools with Scaffold
+## Creating Tools with Forge
 
-Use the scaffold tool to generate new extensions:
+Use the forge tool to generate new extensions:
 
 ```python
 # Create an extension tool
-scaffold.create(name="my_tool", function="search")
+ot_forge.create_ext(name="my_tool", function="search")
 ```
 
 Validate before reloading:
 
 ```python
-scaffold.validate(path=".onetool/tools/my_tool/my_tool.py")
+ot_forge.validate_ext(path=".onetool/tools/my_tool/my_tool.py")
 ```
 
 ## Larger Extensions

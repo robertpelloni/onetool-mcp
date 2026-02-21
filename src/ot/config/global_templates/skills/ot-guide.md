@@ -11,7 +11,7 @@ Use `>>>` (or `__run`, `mcp__onetool__run`) to invoke OneTool tools.
 
 ## Pack Availability
 
-Not all packs are installed by default. Core packs (`mem`, `llm`, `ot`) are always available.
+Not all packs are installed by default. Core packs (`mem`, `ot_llm`, `ot`) are always available.
 Others require an extra:
 
 - `[util]` — `brave`, `convert`, `excel`, `file`, `ground`

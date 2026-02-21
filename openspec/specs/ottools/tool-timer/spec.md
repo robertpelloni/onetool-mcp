@@ -5,21 +5,21 @@ Provide named stopwatch timers that persist across multiple tool calls, useful f
 ## Requirements
 ### Requirement: Timer Pack Registration
 
-The timer pack SHALL be registered as `timer` with functions `start`, `elapsed`, `list`, and `clear` exposed in `__all__`.
+The timer pack SHALL be registered as `ot_timer` with functions `start`, `elapsed`, `list`, and `clear` exposed in `__all__`.
 
 #### Scenario: Pack discovery
-- **WHEN** calling `ot.tools(pattern="timer")`
-- **THEN** four tools are listed: `timer.start`, `timer.elapsed`, `timer.list`, `timer.clear`
+- **WHEN** calling `ot.tools(pattern="ot_timer")`
+- **THEN** four tools are listed: `ot_timer.start`, `ot_timer.elapsed`, `ot_timer.list`, `ot_timer.clear`
 
 ---
 
 ### Requirement: Start Function
 
-The `timer.start` function SHALL record a named time bookmark using `time.perf_counter()` for elapsed calculation and `datetime.now(UTC)` for display context.
+The `ot_timer.start` function SHALL record a named time bookmark using `time.perf_counter()` for elapsed calculation and `datetime.now(UTC)` for display context.
 
 #### Scenario: Basic start
 - **WHEN** calling `timer.start(name="build")`
-- **THEN** a confirmation string is returned containing the timer name and ISO 8601 timestamp
+- **THEN** a confirmation dict is returned with keys `status` (`"started"`), `name`, and `started_at` (ISO 8601 string)
 
 #### Scenario: Default name
 - **WHEN** calling `timer.start()` without a name argument
@@ -33,7 +33,7 @@ The `timer.start` function SHALL record a named time bookmark using `time.perf_c
 
 ### Requirement: Elapsed Function
 
-The `timer.elapsed` function SHALL compute elapsed time from a named start bookmark using `perf_counter()` delta.
+The `ot_timer.elapsed` function SHALL compute elapsed time from a named start bookmark using `perf_counter()` delta.
 
 #### Scenario: Basic elapsed
 - **WHEN** `timer.start(name="t1")` has been called
@@ -47,7 +47,7 @@ The `timer.elapsed` function SHALL compute elapsed time from a named start bookm
 #### Scenario: Unknown name
 - **WHEN** calling `timer.elapsed(name="nonexistent")`
 - **AND** no start bookmark exists for `"nonexistent"`
-- **THEN** an error string is returned (not an exception) containing guidance to call `timer.start` first
+- **THEN** an error string is returned (not an exception) containing guidance to call `ot_timer.start` first
 
 #### Scenario: Store result
 - **WHEN** calling `timer.elapsed(name="t1", store_as="phase_a")`
@@ -64,7 +64,7 @@ The `timer.elapsed` function SHALL compute elapsed time from a named start bookm
 
 ### Requirement: List Function
 
-The `timer.list` function SHALL return all stored elapsed results and currently active timers.
+The `ot_timer.list` function SHALL return all stored elapsed results and currently active timers.
 
 #### Scenario: Stored results
 - **WHEN** multiple elapsed results have been stored via `store_as`
@@ -78,13 +78,13 @@ The `timer.list` function SHALL return all stored elapsed results and currently 
 
 ### Requirement: Clear Function
 
-The `timer.clear` function SHALL remove all start bookmarks but preserve stored results.
+The `ot_timer.clear` function SHALL remove all start bookmarks but preserve stored results.
 
 #### Scenario: Clears starts
 - **WHEN** `timer.start(name="x")` has been called
 - **AND** `timer.clear()` is called
 - **THEN** `timer.elapsed(name="x")` returns an error string (bookmark removed)
-- **AND** a dict is returned: `{"status": "cleared", "timers_removed": N}`
+- **AND** a dict is returned: `{"status": "cleared", "timers_removed": N, "results_removed": 0}`
 
 #### Scenario: Preserves stored
 - **WHEN** `timer.elapsed(name="x", store_as="saved")` has been called
@@ -94,7 +94,7 @@ The `timer.clear` function SHALL remove all start bookmarks but preserve stored 
 #### Scenario: Nothing to clear
 - **WHEN** no start bookmarks exist
 - **AND** `timer.clear()` is called
-- **THEN** `{"status": "cleared", "timers_removed": 0}` is returned
+- **THEN** `{"status": "cleared", "timers_removed": 0, "results_removed": 0}` is returned
 
 ---
 

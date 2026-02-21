@@ -112,7 +112,7 @@ class TestGetDocUrl:
         assert _get_doc_url("brave") == "https://onetool.beycom.online/reference/tools/brave-search/"
         assert _get_doc_url("db") == "https://onetool.beycom.online/reference/tools/database/"
         assert _get_doc_url("ground") == "https://onetool.beycom.online/reference/tools/grounding-search/"
-        assert _get_doc_url("llm") == "https://onetool.beycom.online/reference/tools/llm/"
+        assert _get_doc_url("ot_llm") == "https://onetool.beycom.online/reference/tools/ot_llm/"
         assert _get_doc_url("web") == "https://onetool.beycom.online/reference/tools/web-fetch/"
 
 

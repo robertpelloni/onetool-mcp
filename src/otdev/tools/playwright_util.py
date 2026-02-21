@@ -1,14 +1,14 @@
-"""Chrome DevTools annotation utilities for the inject.js system.
+"""Playwright annotation utilities for the inject.js system.
 
 Provides high-level functions to interact with the inject.js v2.0 annotation
-system via the Chrome DevTools MCP server (``chrome-devtools.evaluate_script``).
+system via the Playwright MCP server (``playwright.evaluate``).
 
-For Playwright, use the ``playwright_util`` pack instead.
+For Chrome DevTools, use the ``chrome_devtools_util`` pack instead.
 """
 
 from __future__ import annotations
 
-pack = "chrome_devtools_util"
+pack = "playwright_util"
 
 __all__ = [
     "clear_annotations",
@@ -20,31 +20,31 @@ __all__ = [
 
 from typing import Any
 
-from ottools._inject_base import (
+from otdev._inject_base import (
     clear_annotations as _clear,
 )
-from ottools._inject_base import (
+from otdev._inject_base import (
     guide_user as _guide,
 )
-from ottools._inject_base import (
+from otdev._inject_base import (
     highlight_element as _highlight,
 )
-from ottools._inject_base import (
+from otdev._inject_base import (
     inject_annotations as _inject,
 )
-from ottools._inject_base import (
+from otdev._inject_base import (
     scan_annotations as _scan,
 )
 
-_SERVER = "chrome-devtools"
-_TOOL = "evaluate_script"
-_PACK = "chrome_devtools_util"
+_SERVER = "playwright"
+_TOOL = "browser_evaluate"
+_PACK = "playwright_util"
 
 
 def inject_annotations() -> dict[str, Any]:
     """Inject the annotation script into the current browser page.
 
-    Loads inject.js v2.0 via Chrome DevTools, enabling element annotation,
+    Loads inject.js v2.0 via Playwright, enabling element annotation,
     highlighting, and the Ctrl+I (Cmd+I) selection mode. When the user
     presses Ctrl+I/Cmd+I and clicks an element, a prompt dialog appears
     allowing them to enter a custom annotation name. Idempotent: re-calling
@@ -54,7 +54,7 @@ def inject_annotations() -> dict[str, Any]:
         Dict with ``success``, ``ready``, and ``version`` fields.
 
     Example:
-        chrome_devtools_util.inject_annotations()
+        playwright_util.inject_annotations()
     """
     return _inject(_SERVER, _TOOL, _PACK)
 
@@ -81,7 +81,7 @@ def highlight_element(
         Dict with ``success``, ``count``, and ``ids`` fields.
 
     Example:
-        chrome_devtools_util.highlight_element(selector="button.submit", label="Click here")
+        playwright_util.highlight_element(selector="button.submit", label="Click here")
     """
     return _highlight(
         _SERVER, _TOOL, _PACK,
@@ -101,7 +101,7 @@ def scan_annotations() -> list[dict[str, Any]]:
         ``tagName``, and ``color`` fields. Empty list if none exist.
 
     Example:
-        chrome_devtools_util.scan_annotations()
+        playwright_util.scan_annotations()
     """
     return _scan(_SERVER, _TOOL, _PACK)
 
@@ -116,7 +116,7 @@ def clear_annotations() -> dict[str, Any]:
         Dict with ``success`` and ``cleared`` count.
 
     Example:
-        chrome_devtools_util.clear_annotations()
+        playwright_util.clear_annotations()
     """
     return _clear(_SERVER, _TOOL, _PACK)
 
@@ -142,7 +142,7 @@ def guide_user(
         and per-step ``results``.
 
     Example:
-        chrome_devtools_util.guide_user(
+        playwright_util.guide_user(
             task="Fill form",
             steps=[
                 {"selector": "input[name='name']", "label": "Enter name"},

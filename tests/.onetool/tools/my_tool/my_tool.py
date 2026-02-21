@@ -43,7 +43,7 @@ def search(
             # TODO: Implement your logic here
             # Access secrets: api_key = get_secret("MY_API_KEY")
             # Access config: timeout = get_tool_config("my_tool", "timeout", 30.0)
-            # Call other tools: result = call_tool("llm.transform", input=text, prompt="...")
+            # Call other tools: result = call_tool("ot_llm.transform", input=text, prompt="...")
             result = f"Processed: {input}"
             s.add(outputLen=len(result))
             return result

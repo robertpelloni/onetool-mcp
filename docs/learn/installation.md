@@ -103,7 +103,7 @@ API keys are stored in `secrets.yaml` (gitignored):
 
 | Key | Service | Used By |
 |-----|---------|---------|
-| `OPENAI_API_KEY` | OpenRouter | `llm.transform`, `code.*` |
+| `OPENAI_API_KEY` | OpenRouter | `ot_llm.transform`, `code.*` |
 | `BRAVE_API_KEY` | [Brave Search](https://brave.com/search/api/) | `brave.*` tools |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) | `context7.*` tools |
 

@@ -1,10 +1,6 @@
-"""Extension scaffolding tools.
+"""Extension forge tools.
 
-Provides tools for creating new tools from templates.
-
-Templates:
-- extension: In-process tool with full onetool access (default, recommended)
-- isolated: Subprocess tool with PEP 723 dependencies, fully standalone
+Provides tools for creating and validating new in-process extension tools.
 """
 
 from __future__ import annotations
@@ -17,10 +13,10 @@ from ot.config.loader import get_config
 from ot.logging import LogSpan
 from ot.utils.cache import cache
 
-# Pack for dot notation: scaffold.create(), scaffold.templates(), scaffold.list()
-pack = "scaffold"
+# Pack for dot notation: ot_forge.create_ext(), ot_forge.validate_ext(), ot_forge.install_skill()
+pack = "ot_forge"
 
-__all__ = ["create", "extensions", "skills", "templates", "validate"]
+__all__ = ["create_ext", "install_skill", "validate_ext"]
 
 
 def _get_templates_dir() -> Path:
@@ -30,77 +26,21 @@ def _get_templates_dir() -> Path:
     return get_global_templates_dir() / "tool_templates"
 
 
-def templates() -> str:
-    """List available extension templates.
-
-    Returns:
-        Formatted list of templates with descriptions
-
-    Example:
-        scaffold.templates()
-    """
-    with LogSpan(span="scaffold.templates") as s:
-        templates_dir = _get_templates_dir()
-
-        if not templates_dir.exists():
-            s.add(error="templates_dir_missing")
-            return "Error: Templates directory not found"
-
-        templates = []
-        for template_file in templates_dir.glob("*.py"):
-            if template_file.name.startswith("_"):
-                continue
-
-            # Read the module docstring
-            content = template_file.read_text()
-            docstring = ""
-            if '"""' in content:
-                match = re.search(r'"""(.*?)"""', content, re.DOTALL)
-                if match:
-                    lines = match.group(1).strip().split("\n")
-                    # Skip placeholder lines like {{description}}
-                    for line in lines:
-                        line = line.strip()
-                        if line and "{{" not in line:
-                            docstring = line
-                            break
-
-            templates.append({
-                "name": template_file.stem,
-                "description": docstring or "No description",
-            })
-
-        if not templates:
-            return "No templates found"
-
-        lines = ["Available extension templates:", ""]
-        for t in templates:
-            lines.append(f"  {t['name']}")
-            lines.append(f"    {t['description']}")
-            lines.append("")
-
-        lines.append("Use scaffold.create() to create a new extension from a template.")
-        s.add(count=len(templates))
-        return "\n".join(lines)
-
-
-def create(
+def create_ext(
     *,
     name: str,
-    template: str = "extension",
     pack_name: str | None = None,
     function: str = "run",
     description: str = "My extension tool",
     function_description: str = "Execute the tool function",
     api_key: str = "MY_API_KEY",
 ) -> str:
-    """Create a new extension tool from a template.
+    """Create a new extension tool.
 
-    Creates a new extension in .onetool/tools/{name}/{name}.py.
+    Creates a new in-process extension in .onetool/tools/{name}/{name}.py.
 
     Args:
         name: Extension name (will be used as directory and file name)
-        template: Template name - "extension" (default, in-process) or "isolated" (subprocess)
         pack_name: Pack name for dot notation (default: same as name)
         function: Main function name (default: run)
         description: Module description
@@ -111,25 +51,23 @@ def create(
         Success message with instructions, or error message
 
     Example:
-        scaffold.create(name="my_tool", function="search")
-        scaffold.create(name="numpy_tool", template="isolated")
+        ot_forge.create_ext(name="my_tool")
+        ot_forge.create_ext(name="my_tool", function="search")
     """
-    with LogSpan(span="scaffold.create", name=name, template=template) as s:
+    with LogSpan(span="ot_forge.create_ext", name=name) as s:
         # Validate name
         if not re.match(r"^[a-z][a-z0-9_]*$", name):
             return "Error: Name must be lowercase alphanumeric with underscores, starting with a letter"
 
-        # Get templates directory
+        # Get extension template
         templates_dir = _get_templates_dir()
-        template_file = templates_dir / f"{template}.py"
+        template_file = templates_dir / "extension.py"
 
         if not template_file.exists():
-            available = [f.stem for f in templates_dir.glob("*.py") if not f.name.startswith("_")]
-            return f"Error: Template '{template}' not found. Available: {', '.join(available)}"
+            return "Error: Extension template not found"
 
         # Determine output directory (always uses ot dir from loaded config)
-        from ot.config.loader import get_config as _get_config
-        ot_dir = _get_config()._config_dir
+        ot_dir = get_config()._config_dir
         base_dir = ot_dir / "tools"
 
         ext_dir = base_dir / name
@@ -161,81 +99,26 @@ def create(
 
         s.add(path=str(ext_file))
 
-        # Build helpful output with next steps
         lines = [
             f"Created extension: {ext_file}",
             "",
             "Next steps:",
             "  1. Edit the file to implement your logic",
-            f"  2. Validate before reload: scaffold.validate(path=\"{ext_file}\")",
+            f"  2. Validate before reload: ot_forge.validate_ext(path=\"{ext_file}\")",
             "  3. Reload to activate: ot.reload()",
             f"  4. Use your tool: {pack}.{function}()",
         ]
         return "\n".join(lines)
 
 
-def extensions() -> str:
-    """List extension tools loaded from tools_dir config.
-
-    Shows all extension tool files currently loaded, with full paths.
-    Tools are loaded from paths specified in the tools_dir config.
-
-    Returns:
-        Formatted list of loaded extension files
-
-    Example:
-        scaffold.extensions()
-    """
-    with LogSpan(span="scaffold.extensions") as s:
-        from ot.config.loader import get_config
-
-        config = get_config()
-        if config is None:
-            s.add(error="no_config")
-            return "No configuration loaded"
-
-        tool_files = config.get_tool_files()
-
-        if not tool_files:
-            s.add(count=0)
-            return "No extensions loaded. Create one with scaffold.create()"
-
-        lines = ["Loaded extensions:", ""]
-        for path in sorted(tool_files):
-            lines.append(f"  {path}")
-
-        lines.append("")
-        lines.append(f"Total: {len(tool_files)} files")
-
-        s.add(count=len(tool_files))
-        return "\n".join(lines)
-
-
-def _has_pep723_deps(content: str) -> bool:
-    """Check if content has PEP 723 script metadata with dependencies."""
-    if "# /// script" not in content:
-        return False
-    # Look for dependencies line in the script block
-    in_script_block = False
-    for line in content.split("\n"):
-        if line.strip() == "# /// script":
-            in_script_block = True
-        elif line.strip() == "# ///":
-            in_script_block = False
-        elif in_script_block and "dependencies" in line:
-            return True
-    return False
-
-
 def _check_best_practices(
-    content: str, tree: ast.Module, *, is_isolated: bool = False
+    content: str, tree: ast.Module
 ) -> tuple[dict[str, bool], list[str]]:
     """Check for best practices violations.
 
     Args:
         content: The file content
         tree: The parsed AST
-        is_isolated: Whether this is an isolated tool (skips logging check)
 
     Returns:
         Tuple of (checks dict, warnings list)
@@ -272,14 +155,11 @@ def _check_best_practices(
     if not pack_before_imports:
         warnings.append("Best practice: 'pack = \"name\"' should appear before imports")
 
-    # Check for LogSpan or log usage (skip for isolated tools - they can't use onetool logging)
-    if is_isolated:
-        checks["log_usage"] = True  # N/A for isolated tools
-    else:
-        has_log_usage = "LogSpan" in content or "with log(" in content
-        checks["log_usage"] = has_log_usage
-        if not has_log_usage:
-            warnings.append("Best practice: Consider using LogSpan or log() for observability")
+    # Check for LogSpan or log usage
+    has_log_usage = "LogSpan" in content or "with log(" in content
+    checks["log_usage"] = has_log_usage
+    if not has_log_usage:
+        warnings.append("Best practice: Consider using LogSpan or log() for observability")
 
     # Check for raise statements (should prefer return error strings)
     has_raise = any(isinstance(node, ast.Raise) for node in ast.walk(tree))
@@ -292,7 +172,6 @@ def _check_best_practices(
     all_kwonly = True
     for func in exported_funcs:
         if not func.args.kwonlyargs and func.args.args:
-            # Has positional args but no keyword-only args
             all_kwonly = False
             break
     checks["keyword_only_args"] = all_kwonly
@@ -322,7 +201,6 @@ def _check_best_practices(
 
 def _get_exported_functions(tree: ast.Module) -> list[ast.FunctionDef]:
     """Get functions that are exported via __all__."""
-    # Find __all__ list
     all_names: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -332,7 +210,6 @@ def _get_exported_functions(tree: ast.Module) -> list[ast.FunctionDef]:
                         if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
                             all_names.add(elt.value)
 
-    # Find exported functions
     funcs: list[ast.FunctionDef] = []
     for node in tree.body:
         if isinstance(node, ast.FunctionDef) and node.name in all_names:
@@ -340,7 +217,7 @@ def _get_exported_functions(tree: ast.Module) -> list[ast.FunctionDef]:
     return funcs
 
 
-def validate(*, path: str) -> str:
+def validate_ext(*, path: str) -> str:
     """Validate an extension before reload.
 
     Checks Python syntax, required structure, and best practices.
@@ -352,9 +229,9 @@ def validate(*, path: str) -> str:
         Validation result with any errors or warnings
 
     Example:
-        scaffold.validate(path="/path/to/extension.py")
+        ot_forge.validate_ext(path="/path/to/extension.py")
     """
-    with LogSpan(span="scaffold.validate", path=path) as s:
+    with LogSpan(span="ot_forge.validate_ext", path=path) as s:
         ext_path = Path(path)
 
         if not ext_path.exists():
@@ -399,31 +276,20 @@ def validate(*, path: str) -> str:
         if not has_all:
             errors.append("Missing '__all__ = [...]' export list")
 
-        # Check 4: Isolated tools (PEP 723) need inline JSON-RPC loop
-        if _has_pep723_deps(content):
-            has_json_rpc = 'if __name__ == "__main__":' in content and "json.loads" in content
-            if not has_json_rpc:
-                errors.append("Missing inline JSON-RPC loop - required for isolated tools with PEP 723 dependencies")
-
-        # Check 5: Best practices
-        is_isolated = _has_pep723_deps(content)
-        checks, bp_warnings = _check_best_practices(content, tree, is_isolated=is_isolated)
+        # Check 4: Best practices
+        checks, bp_warnings = _check_best_practices(content, tree)
         warnings.extend(bp_warnings)
 
-        # Check 6: Warn about deprecated ot_sdk imports
+        # Check 5: Warn about deprecated ot_sdk imports
         if "from ot_sdk" in content or "import ot_sdk" in content:
-            warnings.append("DEPRECATED: ot_sdk imports are deprecated. Use ot.* imports for extension tools, or inline JSON-RPC for isolated tools")
+            warnings.append("DEPRECATED: ot_sdk imports are deprecated. Use ot.* imports for extension tools")
 
         # Build result showing what passed and failed
         result: list[str] = []
 
-        # Show check results
         result.append("Checks:")
         result.append(f"  [{'x' if has_pack else ' '}] pack = \"name\" variable")
         result.append(f"  [{'x' if has_all else ' '}] __all__ export list")
-        if _has_pep723_deps(content):
-            has_json_rpc = 'if __name__ == "__main__":' in content and "json.loads" in content
-            result.append(f"  [{'x' if has_json_rpc else ' '}] inline JSON-RPC loop (isolated)")
         result.append("  [x] Python syntax valid")
         result.append(f"  [{'x' if checks.get('module_docstring', True) else ' '}] module docstring")
         result.append(f"  [{'x' if checks.get('future_annotations', True) else ' '}] from __future__ import annotations")
@@ -464,7 +330,7 @@ def validate(*, path: str) -> str:
 
 
 # =============================================================================
-# Skill Stub Generation
+# Skill Installation
 # =============================================================================
 
 
@@ -489,7 +355,6 @@ def _get_skill_stub_template() -> str:
 
     tmpl = get_global_templates_dir() / "skill_stub.md.j2"
     if not tmpl.exists():
-        # Fallback inline template
         return (
             "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n"
             "To load this skill: `>>> ot.skills(name=\"{{ name }}\")`\n"
@@ -531,14 +396,15 @@ def _get_skill_description(skill_name: str) -> str:
     return skill_name
 
 
-def skills(
-    install: str | None = None,
+def install_skill(
+    *,
+    install: str,
     tool: str = "claude",
 ) -> str:
-    """List available skill stubs or install one for an AI tool.
+    """Install a skill stub for an AI tool.
 
-    Without arguments, lists all bundled skills and whether they're installed.
-    With install=, writes a stub file to the appropriate location for the tool.
+    Writes a stub file to the appropriate location for the specified AI tool.
+    Use ot.skills() to list available skills.
 
     Args:
         install: Skill name to install, or "all" to install all skills
@@ -548,30 +414,14 @@ def skills(
         Status message describing what was done
 
     Example:
-        scaffold.skills()                                      # list available stubs
-        scaffold.skills(install="ot-guide")                   # install for Claude
-        scaffold.skills(install="ot-chrome-devtools-mcp", tool="codex")
-        scaffold.skills(install="all")                        # install all for Claude
-        scaffold.skills(install="all", tool="opencode")
+        ot_forge.install_skill(install="ot-guide")
+        ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")
+        ot_forge.install_skill(install="all")
+        ot_forge.install_skill(install="all", tool="opencode")
     """
-    with LogSpan(span="scaffold.skills") as s:
+    with LogSpan(span="ot_forge.install_skill", install=install, tool=tool) as s:
         tools_config = _get_tools_config()
         bundled = _list_bundled_skills()
-
-        if install is None:
-            # List available skills and install status
-            if not bundled:
-                return "No bundled skills found."
-            lines = ["Available skill stubs:"]
-            for skill_name in bundled:
-                desc = _get_skill_description(skill_name)
-                lines.append(f"  - {skill_name}: {desc}")
-            lines.append("")
-            lines.append(
-                "Install: scaffold.skills(install=\"<name>\", tool=\"claude|codex|opencode\")"
-            )
-            s.add(count=len(bundled))
-            return "\n".join(lines)
 
         # Validate tool
         if tool not in tools_config:
@@ -601,7 +451,7 @@ def skills(
             template_src = _get_skill_stub_template()
             tmpl = Template(template_src)
         except ImportError:
-            return "Error: jinja2 is required for scaffold.skills(). Install it: pip install jinja2"
+            return "Error: jinja2 is required for ot_forge.install_skill(). Install it: pip install jinja2"
 
         from ot.paths import expand_path
 

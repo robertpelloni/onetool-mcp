@@ -106,10 +106,10 @@ servers:
 | stats | persist_dir | string | stats | - | Stats directory path |
 | stats | persist_path | string | stats.jsonl | - | Stats file path |
 | stats | time_overhead_per_call_ms | int | 4000 | ≥0 | Time overhead saved (ms) |
-| transform | base_url | string | "" | - | OpenAI-compatible API base URL |
-| transform | max_tokens | int | null | - | Max output tokens (null=no limit) |
-| transform | model | string | "" | - | Model for transformations |
-| transform | timeout | int | 30 | - | API timeout in seconds |
+| ot_llm | base_url | string | "" | - | OpenAI-compatible API base URL |
+| ot_llm | max_tokens | int | null | - | Max output tokens (null=no limit) |
+| ot_llm | model | string | "" | - | Model for transformations |
+| ot_llm | timeout | int | 30 | - | API timeout in seconds |
 | web | max_length | int | 50000 | 1K-500K | Max content characters |
 | web | timeout | float | 30.0 | 1-120 | Page fetch timeout (seconds) |
 
@@ -286,11 +286,11 @@ ot.stats(output="stats_report.html") # HTML report
 
 ## Transform Configuration
 
-Configure the `llm.transform()` tool for LLM-powered text transformations:
+Configure the `ot_llm.transform()` tool for LLM-powered text transformations:
 
 ```yaml
 tools:
-  transform:
+  ot_llm:
     model: "gpt-4o-mini"                    # Model for transformations
     base_url: "https://api.openai.com/v1"   # OpenAI-compatible API endpoint
     max_tokens: 4096                        # Max output tokens

@@ -1058,6 +1058,9 @@ def packs(
         runner_registry = load_tool_registry()
         proxy = get_proxy_manager()
 
+        # Build lookup of extension packs (user-created, non-internal)
+        ext_lookup = {t.pack: t for t in runner_registry.extension_tools if t.pack}
+
         # Collect all packs
         local_packs = set(runner_registry.packs.keys())
         proxy_packs = set(proxy.servers)
@@ -1085,7 +1088,11 @@ def packs(
 
                 # Show source type
                 if is_local:
-                    lines.append("**Type:** Local")
+                    if pack_name in ext_lookup:
+                        lines.append("**Type:** Extension")
+                        lines.append(f"**Path:** {ext_lookup[pack_name].path}")
+                    else:
+                        lines.append("**Type:** Local")
                 else:
                     lines.append("**Type:** MCP Proxy Server")
                 lines.append("")
@@ -1161,11 +1168,15 @@ def packs(
             else:
                 tool_count = len(proxy.list_tools(server=pack_name))
 
-            packs_list.append({
+            entry: dict[str, Any] = {
                 "name": pack_name,
                 "source": source,
                 "tool_count": tool_count,
-            })
+            }
+            if pack_name in ext_lookup:
+                entry["is_extension"] = True
+                entry["path"] = str(ext_lookup[pack_name].path)
+            packs_list.append(entry)
 
         s.add("count", len(packs_list))
         return packs_list
@@ -1648,8 +1659,8 @@ def reload() -> str:
         ot.executor.param_resolver._mcp_param_cache.clear()
 
         # Clean up dynamically loaded tool modules from sys.modules
-        # Tool loader uses "tools.{stem}" naming pattern
-        tool_modules = [name for name in sys.modules if name.startswith("tools.")]
+        # Tool loader uses "ot_tool.{parent}.{stem}" naming pattern
+        tool_modules = [name for name in sys.modules if name.startswith("ot_tool.")]
         for mod_name in tool_modules:
             del sys.modules[mod_name]
         s.add("toolModulesCleared", len(tool_modules))

@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Do sanity testing and find issues.
 
 Test out the following packs:
-Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, llm, mem, ot, package, ripgrep, scaffold, web
+Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, package, ripgrep, ot_forge, web
 
 When testing:
 - convert with files at demo/data/files
@@ -18,10 +18,10 @@ When testing:
 - excel with files at demo/data/files
 - mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
-- scaffold: templates, validate, extensions
+- ot_forge: create_ext, validate_ext, install_skill
 - web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
-- llm: transform with simple data, transform_file with a file from demo/data/files
+- ot_llm: transform with simple data, transform_file with a file from demo/data/files
 
 ```
 
@@ -135,10 +135,10 @@ Large Output Handling
 - ot.result() - query stored large output with pagination
 
 Timing
-- timer.start(name="label") - start a named timer
-- timer.elapsed(name="label") - get elapsed time
-- timer.list() - show all active and stored timers
-- timer.clear() - clear all running timers
+- ot_timer.start(name="label") - start a named timer
+- ot_timer.elapsed(name="label") - get elapsed time
+- ot_timer.list() - show all active and stored timers
+- ot_timer.clear() - clear all running timers
 
 Notifications
 - ot.notify(topic="...", message="...") - publish messages to topic files
@@ -191,10 +191,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `convert.excel(pattern="demo/data/files/*.xlsx", output_dir="tmp/")` not `convert.excel(filepath="...")`
 - **package tools**: `packages=` requires a list, not a string
   - Example: `package.pypi(packages=["requests", "flask"])` not `package.pypi(packages="requests")`
-- **llm tools**: Use `data=` not `input=`
-  - Example: `llm.transform(data="text", prompt="...")` not `llm.transform(input="text", ...)`
-  - `llm.transform_file` uses `in_file=`/`out_file=` (not `filepath=`). Only works with text files (not binary like .xlsx).
-  - Example: `llm.transform_file(prompt="translate to Spanish", in_file="README.md", out_file="tmp/output.txt")`
+- **ot_llm tools**: Use `data=` not `input=`
+  - Example: `ot_llm.transform(data="text", prompt="...")` not `ot_llm.transform(input="text", ...)`
+  - `ot_llm.transform_file` uses `in_file=`/`out_file=` (not `filepath=`). Only works with text files (not binary like .xlsx).
+  - Example: `ot_llm.transform_file(prompt="translate to Spanish", in_file="README.md", out_file="tmp/output.txt")`
 - **db.schema**: Use `table_names=` as a list
   - Example: `db.schema(db_url="...", table_names=["users"])` not `db.schema(db_url="...", table_names="users")`
 - **ripgrep.files**: Use `glob=` or `file_type=`, not `pattern=`. Has no `limit=` param (lists all matching files).
@@ -228,9 +228,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `diagram.get_template(name="api-flow")` - get a template (valid names: api-flow, microservices, c4-context, state-machine, class-diagram, project-gantt, feature-mindmap)
   - Example: `diagram.generate_source(provider="mermaid", source="graph TD; A-->B", name="test", output_dir="output/")`
   - Example: `diagram.render_diagram(provider="mermaid", source="graph TD; A-->B", name="test")`
-- **scaffold tools**: Use `template=` and `name=` for creating extensions
-  - Example: `scaffold.templates()` - list available templates
-  - Example: `scaffold.extensions()` - list loaded extensions
+- **ot_forge tools**: Use `name=` for creating extensions
+  - Example: `ot_forge.create_ext(name="my_tool")` - create a new extension
+  - Example: `ot_forge.validate_ext(path=".onetool/tools/my_tool/my_tool.py")` - validate before reload
+  - Example: `ot.packs()` - lists extensions with `is_extension` and `path`
 - **Snippets use abbreviated parameter names** (by design):
   - `$rg` and `$rg_count` use `p=` for pattern (not `pattern=`)
   - `$brv`, `$g`, and `$gh` use `q=` for query (not `query=`)
@@ -286,7 +287,7 @@ All test data lives under `demo/data/`:
 - **Test context7 and ground BEFORE calling `$ot_reload`** — `ot.reload()` clears
   env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
   tools to fail in the same session. These tools only work on fresh server startup.
-- **`$brv_research` and `$web_summary`/`$web_data`** require `llm.transform`, which
+- **`$brv_research` and `$web_summary`/`$web_data`** require `ot_llm.transform`, which
   depends on `OPENAI_API_KEY`. Skip or expect failure if that key is not configured.
 - **`$ot_notify`** returns "SKIP: no matching topic" when no subscriber is configured — this is expected, not a bug.
 - **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index

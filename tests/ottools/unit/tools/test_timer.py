@@ -9,7 +9,7 @@ from time import sleep
 
 import pytest
 
-from ottools import timer
+from ottools import ot_timer as timer
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +30,7 @@ def _clean_timer_state():
 @pytest.mark.unit
 @pytest.mark.tools
 def test_pack_name():
-    assert timer.pack == "timer"
+    assert timer.pack == "ot_timer"
 
 
 @pytest.mark.unit

@@ -5,10 +5,10 @@ useful for profiling workflows, benchmarking API responses, or capturing
 lap times during multi-step operations.
 
 Example:
-    timer.start(name="api_bench")
+    ot_timer.start(name="api_bench")
     # ... do work across multiple tool calls ...
-    timer.elapsed(name="api_bench", store_as="api_total")
-    timer.list()
+    ot_timer.elapsed(name="api_bench", store_as="api_total")
+    ot_timer.list()
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-pack = "timer"
+pack = "ot_timer"
 
 __all__ = ["clear", "elapsed", "list", "start"]
 
@@ -37,7 +37,7 @@ def start(*, name: str = "_default") -> dict[str, Any]:
     Returns:
         Confirmation with timer name and wall-clock start time.
     """
-    with LogSpan(span="timer.start", name=name):
+    with LogSpan(span="ot_timer.start", name=name):
         now_perf = perf_counter()
         now_wall = datetime.now(UTC)
         _timers[name] = (now_perf, now_wall)
@@ -56,9 +56,9 @@ def elapsed(*, name: str = "_default", store_as: str | None = None) -> dict[str,
     Returns:
         Dict with elapsed seconds and formatted duration, or error string if timer not found.
     """
-    with LogSpan(span="timer.elapsed", name=name):
+    with LogSpan(span="ot_timer.elapsed", name=name):
         if name not in _timers:
-            return f"No timer named '{name}' is running. Call timer.start(name='{name}') first."
+            return f"No timer named '{name}' is running. Call ot_timer.start(name='{name}') first."
 
         start_perf, start_wall = _timers[name]
         elapsed_secs = perf_counter() - start_perf
@@ -81,7 +81,7 @@ def list() -> dict[str, Any]:
     Returns:
         Dict with stored results and active timer names.
     """
-    with LogSpan(span="timer.list"):
+    with LogSpan(span="ot_timer.list"):
         active = {
             name: {"started_at": wall.isoformat()}
             for name, (_perf, wall) in _timers.items()
@@ -98,7 +98,7 @@ def clear(*, results: bool = False) -> dict[str, Any]:
     Returns:
         Confirmation with count of timers and results cleared.
     """
-    with LogSpan(span="timer.clear", results=results):
+    with LogSpan(span="ot_timer.clear", results=results):
         timer_count = len(_timers)
         result_count = len(_results) if results else 0
         _timers.clear()

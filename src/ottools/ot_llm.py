@@ -3,7 +3,7 @@
 Takes data and a prompt, uses an LLM to transform/process it.
 
 Example:
-    llm.transform(
+    ot_llm.transform(
         data=brave.search(query="metal prices", count=10),
         prompt="Extract prices as YAML with fields: metal, price, unit, url",
     )
@@ -12,16 +12,16 @@ Supports OpenAI API and OpenRouter (OpenAI-compatible).
 
 **Requires configuration:**
 - OPENAI_API_KEY in secrets.yaml
-- llm.base_url in onetool.yaml (e.g., https://openrouter.ai/api/v1)
-- llm.model in onetool.yaml (e.g., openai/gpt-5-mini)
+- ot_llm.base_url in onetool.yaml (e.g., https://openrouter.ai/api/v1)
+- ot_llm.model in onetool.yaml (e.g., openai/gpt-5-mini)
 
 Tool is not available until all three are configured.
 """
 
 from __future__ import annotations
 
-# Pack for dot notation: llm.transform()
-pack = "llm"
+# Pack for dot notation: ot_llm.transform()
+pack = "ot_llm"
 
 __all__ = ["transform", "transform_file"]
 
@@ -64,7 +64,7 @@ class Config(BaseModel):
 
 def _get_config() -> Config:
     """Get transform pack configuration."""
-    return get_tool_config("llm", Config)
+    return get_tool_config("ot_llm", Config)
 
 
 def _get_api_config() -> tuple[str | None, str | None, str | None, Config]:
@@ -96,7 +96,7 @@ def transform(
     Args:
         data: Data to transform (will be converted to string if not already)
         prompt: Instructions for how to transform/process the data
-        model: AI model to use (uses llm.model from config if not specified)
+        model: AI model to use (uses ot_llm.model from config if not specified)
         json_mode: If True, request JSON output format from the model
 
     Returns:
@@ -104,31 +104,31 @@ def transform(
 
     Examples:
         # Extract structured data from search results
-        llm.transform(
+        ot_llm.transform(
             data=brave.search(query="gold price today", count=5),
             prompt="Extract the current gold price in USD/oz as a single number",
         )
 
         # Convert to YAML format
-        llm.transform(
+        ot_llm.transform(
             data=brave.search(query="metal prices", count=10),
             prompt="Return ONLY valid YAML with fields: metal, price, unit, url",
         )
 
         # Summarize content
-        llm.transform(
+        ot_llm.transform(
             data=some_long_text,
             prompt="Summarize this in 3 bullet points"
         )
 
         # Get JSON output
-        llm.transform(
+        ot_llm.transform(
             data=my_data,
             prompt="Extract name and email as JSON",
             json_mode=True
         )
     """
-    with LogSpan(span="llm.transform", promptLen=len(prompt)) as s:
+    with LogSpan(span="ot_llm.transform", promptLen=len(prompt)) as s:
         # Validate inputs
         if not prompt or not prompt.strip():
             s.add(error="empty_prompt")
@@ -152,7 +152,7 @@ def transform(
         if not base_url:
             s.add(error="no_base_url")
             return (
-                "Error: Transform tool not available. Set llm.base_url in config."
+                "Error: Transform tool not available. Set ot_llm.base_url in config."
             )
 
         # Create client with timeout
@@ -168,7 +168,7 @@ Instructions:
         used_model = model or default_model
         if not used_model:
             s.add(error="no_model")
-            return "Error: Transform tool not available. Set llm.model in config."
+            return "Error: Transform tool not available. Set ot_llm.model in config."
 
         s.add(model=used_model, jsonMode=json_mode)
 
@@ -231,7 +231,7 @@ def transform_file(
         prompt: Instructions for how to transform/process the content
         in_file: Path to input file (relative to cwd or absolute)
         out_file: Path to output file (relative to cwd or absolute)
-        model: AI model to use (uses llm.model from config if not specified)
+        model: AI model to use (uses ot_llm.model from config if not specified)
         json_mode: If True, request JSON output format from the model
 
     Returns:
@@ -239,14 +239,14 @@ def transform_file(
 
     Examples:
         # Convert markdown to restructured text
-        llm.transform_file(
+        ot_llm.transform_file(
             prompt="Convert this markdown to reStructuredText format",
             in_file="README.md",
             out_file="README.rst",
         )
 
         # Extract data as JSON
-        llm.transform_file(
+        ot_llm.transform_file(
             prompt="Extract all URLs and their descriptions as JSON",
             in_file="links.txt",
             out_file="links.json",
@@ -254,14 +254,14 @@ def transform_file(
         )
 
         # Translate content
-        llm.transform_file(
+        ot_llm.transform_file(
             prompt="Translate this to Spanish",
             in_file="greeting.txt",
             out_file="greeting_es.txt",
         )
     """
     with LogSpan(
-        span="llm.transform_file", promptLen=len(prompt), inFile=in_file, outFile=out_file
+        span="ot_llm.transform_file", promptLen=len(prompt), inFile=in_file, outFile=out_file
     ) as s:
         # Validate prompt
         if not prompt or not prompt.strip():

@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ottools import playwright_util
+from otdev.tools import playwright_util
 
 
 # =============================================================================
@@ -88,7 +88,7 @@ class TestInjectAnnotations:
         ready = json.dumps({"ready": True, "version": "2.0.0"})
         mock_proxy_manager.servers = ["playwright"]
         mock_proxy_manager.call_tool_sync.side_effect = [not_ready, "undefined", ready]
-        with patch("ottools._inject_base.get_inject_script", return_value="// inject.js"):
+        with patch("otdev._inject_base.get_inject_script", return_value="// inject.js"):
             result = playwright_util.inject_annotations()
             assert result["success"] is True
             assert result["version"] == "2.0.0"

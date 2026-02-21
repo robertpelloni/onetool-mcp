@@ -13,10 +13,10 @@ Named stopwatch timers for performance measurement across tool calls.
 
 | Function | Description |
 |----------|-------------|
-| `timer.start(name)` | Start or restart a named timer |
-| `timer.elapsed(name, store_as)` | Get elapsed time (lap behavior) |
-| `timer.list()` | Show all stored results and active timers |
-| `timer.clear(results)` | Clear running timers; optionally clear stored results |
+| `ot_timer.start(name)` | Start or restart a named timer |
+| `ot_timer.elapsed(name, store_as)` | Get elapsed time (lap behavior) |
+| `ot_timer.list()` | Show all stored results and active timers |
+| `ot_timer.clear(results)` | Clear running timers; optionally clear stored results |
 
 ## Key Parameters
 
@@ -31,20 +31,20 @@ Named stopwatch timers for performance measurement across tool calls.
 ### Basic timing
 
 ```python
-timer.start(name="api_call")
+ot_timer.start(name="api_call")
 # ... make API call ...
-timer.elapsed(name="api_call")
+ot_timer.elapsed(name="api_call")
 # {name: "api_call", elapsed_seconds: 1.234, elapsed_formatted: "1.234s", started_at: "..."}
 ```
 
 ### Lap timing
 
 ```python
-timer.start(name="workflow")
-timer.elapsed(name="workflow", store_as="step1")
+ot_timer.start(name="workflow")
+ot_timer.elapsed(name="workflow", store_as="step1")
 # ... more work ...
-timer.elapsed(name="workflow", store_as="step2")
-timer.list()  # shows stored results + active timers
+ot_timer.elapsed(name="workflow", store_as="step2")
+ot_timer.list()  # shows stored results + active timers
 ```
 
 ## Notes

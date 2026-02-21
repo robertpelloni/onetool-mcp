@@ -231,7 +231,7 @@ def mock_proxy_manager():
             mock_proxy_manager.call_tool_sync.return_value = '{"success": true}'
             # Run test that calls MCP tools
     """
-    with patch("ottools._inject_base.get_proxy_manager") as mock:
+    with patch("otdev._inject_base.get_proxy_manager") as mock:
         proxy = MagicMock()
         proxy.servers = []
         mock.return_value = proxy

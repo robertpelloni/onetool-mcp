@@ -75,6 +75,9 @@ class LoadedTools:
     worker_tools: list[ToolFileInfo] = field(
         default_factory=list
     )  # Tools using workers
+    extension_tools: list[ToolFileInfo] = field(
+        default_factory=list
+    )  # User extension tools (non-internal inprocess)
 
 
 # Module cache: stores (LoadedTools, mtime_dict) for each tools_dir
@@ -379,7 +382,10 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
     functions.update(ot_funcs)
 
     registry = LoadedTools(
-        functions=functions, packs=packs, worker_tools=worker_tools_list
+        functions=functions,
+        packs=packs,
+        worker_tools=worker_tools_list,
+        extension_tools=[t for t in inprocess_tools if not t.is_internal],
     )
     _cache_set(cache_key, (registry, mtimes))
 
