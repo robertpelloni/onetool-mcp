@@ -163,6 +163,9 @@ pythonpath = ["src"]
 addopts = "-v"
 asyncio_mode = "auto"
 cache_dir = "tmp/.pytest_cache"
+filterwarnings = [
+    "ignore:builtin type.*has no __module__ attribute:DeprecationWarning",
+]
 markers = [
     # Speed tiers (required - pick one)
     "smoke: Quick sanity checks (<1s each)",

@@ -147,8 +147,8 @@ def test_init_validate_include_source_reporting(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_init_with_security_flag(tmp_path: Path) -> None:
-    """--security materialises security.yaml and writes onetool.yaml with include."""
+def test_init_validate_succeeds_with_config_flag(tmp_path: Path) -> None:
+    """init validate --config <path> must not raise 'No config loaded' (regression)."""
     from typer.testing import CliRunner
 
     from onetool.cli import app
@@ -156,67 +156,158 @@ def test_init_with_security_flag(tmp_path: Path) -> None:
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
     config_path = ot_dir / "onetool.yaml"
+    config_path.write_text("version: 2\n")
 
     runner = CliRunner()
-    result = runner.invoke(
-        app, ["init", "--config", str(config_path), "--security"]
-    )
+    result = runner.invoke(app, ["init", "validate", "--config", str(config_path)])
 
+    assert "No config loaded" not in result.output
     assert result.exit_code == 0
-    assert (ot_dir / "security.yaml").exists()
-    data = yaml.safe_load(config_path.read_text())
-    assert "security.yaml" in data.get("include", [])
+
+
+
+
+# =============================================================================
+# Conflict handling: _safe_copy / _safe_write
+# =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_init_with_full_flag(tmp_path: Path) -> None:
-    """--full materialises all template YAML files."""
-    from typer.testing import CliRunner
+def test_safe_copy_backs_up_existing_file(tmp_path: Path) -> None:
+    """_safe_copy renames existing dest to .bak before copying."""
+    from onetool.cli import _safe_copy
 
-    from onetool.cli import app
+    src = tmp_path / "src.yaml"
+    src.write_text("new content")
+    dest = tmp_path / "dest.yaml"
+    dest.write_text("old content")
 
-    ot_dir = tmp_path / ".onetool"
-    ot_dir.mkdir()
-    config_path = ot_dir / "onetool.yaml"
+    _safe_copy(src, dest)
 
-    runner = CliRunner()
-    result = runner.invoke(
-        app, ["init", "--config", str(config_path), "--full"]
-    )
-
-    assert result.exit_code == 0
-    assert (ot_dir / "security.yaml").exists()
-    assert (ot_dir / "servers.yaml").exists()
-    assert (ot_dir / "prompts.yaml").exists()
+    assert dest.read_text() == "new content"
+    bak = tmp_path / "dest.yaml.bak"
+    assert bak.exists()
+    assert bak.read_text() == "old content"
 
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_init_with_servers_flag(tmp_path: Path) -> None:
-    """--servers devtools,playwright materialises servers.yaml with only those blocks."""
+def test_safe_copy_no_backup_when_dest_absent(tmp_path: Path) -> None:
+    """_safe_copy works normally when dest does not exist (no .bak created)."""
+    from onetool.cli import _safe_copy
+
+    src = tmp_path / "src.yaml"
+    src.write_text("content")
+    dest = tmp_path / "dest.yaml"
+
+    _safe_copy(src, dest)
+
+    assert dest.read_text() == "content"
+    assert not (tmp_path / "dest.yaml.bak").exists()
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_safe_write_backs_up_existing_file(tmp_path: Path) -> None:
+    """_safe_write renames existing dest to .bak before writing new content."""
+    from onetool.cli import _safe_write
+
+    dest = tmp_path / "config.yaml"
+    dest.write_text("old")
+
+    _safe_write(dest, "new")
+
+    assert dest.read_text() == "new"
+    bak = tmp_path / "config.yaml.bak"
+    assert bak.exists()
+    assert bak.read_text() == "old"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_materialise_file_backs_up_existing(tmp_path: Path) -> None:
+    """_materialise_file renames existing file to .bak before writing."""
+    from onetool.cli import _materialise_file
+
+    ot_dir = tmp_path / ".onetool"
+    ot_dir.mkdir()
+    existing = ot_dir / "security.yaml"
+    existing.write_text("# my custom rules\n")
+
+    _materialise_file(ot_dir, "security.yaml")
+
+    assert existing.exists()
+    bak = ot_dir / "security.yaml.bak"
+    assert bak.exists()
+    assert bak.read_text() == "# my custom rules\n"
+
+
+# =============================================================================
+# --config smart path detection
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_init_config_directory_creates_onetool_yaml(tmp_path: Path) -> None:
+    """onetool init -c <dir> (no .yaml suffix) writes onetool.yaml inside that dir."""
+    from typer.testing import CliRunner
+
+    from onetool.cli import app
+
+    ot_dir = tmp_path / ".onetool"
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["init", "-c", str(ot_dir)])
+
+    assert result.exit_code == 0, result.output
+    assert ot_dir.exists()
+    config_path = ot_dir / "onetool.yaml"
+    assert config_path.exists()
+    data = yaml.safe_load(config_path.read_text())
+    assert data["version"] == 2
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_init_config_yaml_path_writes_named_file(tmp_path: Path) -> None:
+    """onetool init -c <path>.yaml writes that exact file (not onetool.yaml inside it)."""
     from typer.testing import CliRunner
 
     from onetool.cli import app
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
-    config_path = ot_dir / "onetool.yaml"
+    config_path = ot_dir / "custom.yaml"
 
     runner = CliRunner()
-    result = runner.invoke(
-        app, ["init", "--config", str(config_path), "--servers", "devtools,playwright"]
-    )
+    result = runner.invoke(app, ["init", "-c", str(config_path)])
 
-    assert result.exit_code == 0
-    assert (ot_dir / "servers.yaml").exists()
-    servers_data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
-    servers = servers_data.get("servers", {})
-    assert "devtools" in servers
-    assert "playwright" in servers
-    assert "github" not in servers
+    assert result.exit_code == 0, result.output
+    assert config_path.exists()
+    assert not (ot_dir / "onetool.yaml").exists()
     data = yaml.safe_load(config_path.read_text())
-    assert "servers.yaml" in data.get("include", [])
+    assert data["version"] == 2
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_init_config_creates_missing_directory(tmp_path: Path) -> None:
+    """onetool init -c <dir> creates the directory when it doesn't exist yet."""
+    from typer.testing import CliRunner
+
+    from onetool.cli import app
+
+    ot_dir = tmp_path / "new" / "nested"
+    assert not ot_dir.exists()
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["init", "-c", str(ot_dir)])
+
+    assert result.exit_code == 0, result.output
+    assert ot_dir.exists()
+    assert (ot_dir / "onetool.yaml").exists()
 
 
 # =============================================================================

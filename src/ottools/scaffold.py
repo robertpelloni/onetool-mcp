@@ -548,10 +548,10 @@ def skills(
         Status message describing what was done
 
     Example:
-        scaffold.skills()                              # list available stubs
-        scaffold.skills(install="onetool-discover")    # install for Claude
-        scaffold.skills(install="devtools-guide", tool="codex")
-        scaffold.skills(install="all")                 # install all for Claude
+        scaffold.skills()                                      # list available stubs
+        scaffold.skills(install="ot-guide")                   # install for Claude
+        scaffold.skills(install="ot-chrome-devtools-mcp", tool="codex")
+        scaffold.skills(install="all")                        # install all for Claude
         scaffold.skills(install="all", tool="opencode")
     """
     with LogSpan(span="scaffold.skills") as s:

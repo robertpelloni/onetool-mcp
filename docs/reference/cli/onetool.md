@@ -25,19 +25,20 @@ Initialize and manage global configuration in `~/.onetool/`.
 onetool init [subcommand]
 ```
 
-Running `onetool init` without a subcommand creates the global config directory.
+Running `onetool init` without a subcommand runs an interactive TUI to select which extensions to materialise. Existing files are backed up to `.bak` automatically.
 
 | Subcommand | Description |
 |------------|-------------|
 | `validate` | Validate config and show status |
-| `reset` | Reset global config to default templates |
 
 #### init (default)
 
-Creates the global config directory and copies template files if they don't already exist.
+Interactive setup — select which extensions to materialise into the config directory. Pass `-c` to specify a directory or config file path.
 
 ```bash
-onetool init
+onetool init                     # uses current directory
+onetool init -c .onetool         # explicit directory
+onetool init -c .onetool/ot.yaml # explicit file path
 ```
 
 #### init validate
@@ -45,15 +46,7 @@ onetool init
 Validates configuration files and displays status including packs, secrets (names only), snippets, aliases, and MCP servers.
 
 ```bash
-onetool init validate
-```
-
-#### init reset
-
-Resets config files in `~/.onetool/` to fresh templates. Prompts for each existing file before overwriting, with option to create backups. Backups are named `file.bak`, `file.bak.1`, `file.bak.2`, etc.
-
-```bash
-onetool init reset
+onetool init validate -c .onetool/onetool.yaml
 ```
 
 ## Examples
@@ -68,14 +61,14 @@ onetool --config config/onetool.yaml
 
 ## Configuration
 
-Configuration files: `.onetool/config/onetool.yaml` (project) or `~/.onetool/config/onetool.yaml` (global)
+Configuration files: `.onetool/onetool.yaml` (project) or `~/.onetool/onetool.yaml` (global)
 
 See [onetool Configuration](onetool-config.md) for full schema reference.
 
 ### Quick Setup
 
 ```bash
-onetool init           # Create ~/.onetool/ with defaults
+onetool init           # Interactive TUI setup
 onetool init validate  # Check for errors
 ```
 
@@ -83,7 +76,6 @@ onetool init validate  # Check for errors
 
 | Variable | Description |
 |----------|-------------|
-| `ONETOOL_CONFIG` | Config file path override |
 | `OT_LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) |
 | `OT_LOG_DIR` | Log directory path |
 

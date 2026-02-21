@@ -161,19 +161,19 @@ The scaffold pack SHALL provide a `scaffold.skills()` function that lists bundle
 The scaffold pack SHALL install skill stubs for the specified AI tool (agent).
 
 #### Scenario: Install stub for Claude Code (default)
-- **WHEN** `scaffold.skills(install="onetool-discover")` is called
-- **THEN** it SHALL write a stub file to `.claude/skills/onetool-discover/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="onetool-discover")`
+- **WHEN** `scaffold.skills(install="ot-guide")` is called
+- **THEN** it SHALL write a stub file to `.claude/skills/ot-guide/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-guide")`
 
 #### Scenario: Install stub for Codex
-- **WHEN** `scaffold.skills(install="devtools-guide", tool="codex")` is called
-- **THEN** it SHALL write a stub file to `.agents/skills/devtools-guide/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="devtools-guide")`
+- **WHEN** `scaffold.skills(install="ot-chrome-devtools-mcp", tool="codex")` is called
+- **THEN** it SHALL write a stub file to `.agents/skills/ot-chrome-devtools-mcp/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-chrome-devtools-mcp")`
 
 #### Scenario: Install stub for OpenCode
-- **WHEN** `scaffold.skills(install="playwright-guide", tool="opencode")` is called
-- **THEN** it SHALL write a stub file to `.opencode/skills/playwright-guide/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="playwright-guide")`
+- **WHEN** `scaffold.skills(install="ot-playwright-mcp", tool="opencode")` is called
+- **THEN** it SHALL write a stub file to `.opencode/skills/ot-playwright-mcp/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-playwright-mcp")`
 
 #### Scenario: Install all stubs
 - **WHEN** `scaffold.skills(install="all")` is called
@@ -185,7 +185,7 @@ The scaffold pack SHALL install skill stubs for the specified AI tool (agent).
 - **THEN** it SHALL install stubs for all bundled skills into `.opencode/skills/`
 
 #### Scenario: Stub already installed
-- **WHEN** `scaffold.skills(install="onetool-discover")` is called
+- **WHEN** `scaffold.skills(install="ot-guide")` is called
 - **AND** the stub file already exists
 - **THEN** it SHALL overwrite the existing stub
 - **AND** report that it was updated
@@ -213,5 +213,5 @@ Stub installation paths SHALL be driven by configuration in `global_templates/sk
 - **AND** substitute `{name}` with the skill name
 
 #### Scenario: Unsupported tool
-- **WHEN** `scaffold.skills(install="onetool-discover", tool="unknown-tool")` is called
+- **WHEN** `scaffold.skills(install="ot-guide", tool="unknown-tool")` is called
 - **THEN** it SHALL return an error message listing supported tools

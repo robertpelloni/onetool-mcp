@@ -5,9 +5,9 @@
 # in project-specific onetool.yaml files.
 #
 # Server usage guides are available as on-demand skills:
-#   __ot ot.skills(name="devtools-guide")
-#   __ot ot.skills(name="playwright-guide")
-#   __ot ot.skills(name="github-guide")
+#   __ot ot.skills(name="ot-chrome-devtools-mcp")
+#   __ot ot.skills(name="ot-playwright-mcp")
+#   __ot ot.skills(name="ot-github-mcp")
 
 servers:
 
@@ -16,7 +16,7 @@ servers:
   # =============================================================================
   # Browser automation, debugging, and inspection via Chrome DevTools Protocol.
   # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
-  # Guide:  __ot ot.skills(name="devtools-guide")
+  # Guide:  __ot ot.skills(name="ot-chrome-devtools-mcp")
   #
   # CONNECTION MODES:
   #
@@ -67,7 +67,7 @@ servers:
   # =============================================================================
   # Browser automation via Playwright accessibility tree (no vision needed).
   # Source: https://github.com/microsoft/playwright-mcp
-  # Guide:  __ot ot.skills(name="playwright-guide")
+  # Guide:  __ot ot.skills(name="ot-playwright-mcp")
   #
   # OPTIONS (add to args array):
   #   --headless         Run without visible browser window
@@ -86,7 +86,7 @@ servers:
   # =============================================================================
   # GitHub's official MCP Server for repository management, issues, PRs, and more.
   # Source: https://github.com/github/github-mcp-server
-  # Guide:  __ot ot.skills(name="github-guide")
+  # Guide:  __ot ot.skills(name="ot-github-mcp")
   #
   # SETUP:
   #   1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens

@@ -303,12 +303,11 @@ The `ensure_global_dir` function SHALL seed from global templates into the `conf
 - **AND** overwrite template files in `config/` with fresh copies
 - **AND** print reset messages to stderr
 
-#### Scenario: CLI init reset command
-- **GIVEN** a user wants to reset their global config
-- **WHEN** `onetool init reset` is called
-- **THEN** it SHALL prompt for each existing file before overwriting (default: Y)
-- **AND** offer to create a backup before overwriting (default: Y)
-- **AND** backups SHALL be numbered (`file.bak`, `file.bak.1`, `file.bak.2`, etc.)
+#### Scenario: Re-running init (conflict handling)
+- **GIVEN** a user wants to re-initialise a config directory
+- **WHEN** `onetool init -c <dir>` is called and files already exist
+- **THEN** existing files SHALL be automatically backed up to `file.bak` (incrementing to `.bak1`, `.bak2`, etc.)
+- **AND** new files SHALL be written to the original paths
 
 #### Scenario: CLI init validate command
 - **GIVEN** a user wants to validate config and view status

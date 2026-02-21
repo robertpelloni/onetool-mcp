@@ -5,13 +5,12 @@ from __future__ import annotations
 import atexit
 import os
 import signal
+import warnings
+
+warnings.filterwarnings("ignore", message="builtin type.*has no __module__ attribute")
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import typer
-
-if TYPE_CHECKING:
-    from rich.console import Console
 
 
 def _suppress_shutdown_warnings() -> None:
@@ -84,15 +83,48 @@ init_app = typer.Typer(
 app.add_typer(init_app)
 
 
+def _next_bak(path: Path) -> Path:
+    """Return the next available .bak path for *path* (avoids collisions)."""
+    bak = Path(str(path) + ".bak")
+    if not bak.exists():
+        return bak
+    n = 1
+    while True:
+        bak = Path(str(path) + f".bak{n}")
+        if not bak.exists():
+            return bak
+        n += 1
+
+
+def _safe_copy(src: Path, dest: Path) -> None:
+    """Copy *src* to *dest*; if *dest* exists rename it to .bak first."""
+    import shutil
+
+    if dest.exists():
+        bak = _next_bak(dest)
+        dest.rename(bak)
+        console.print(f"  [yellow]![/yellow]  {dest.name} exists → backed up as {bak.name}")
+    shutil.copy(src, dest)
+
+
+def _safe_write(dest: Path, content: str) -> None:
+    """Write *content* to *dest*; if *dest* exists rename it to .bak first."""
+    if dest.exists():
+        bak = _next_bak(dest)
+        dest.rename(bak)
+        console.print(f"  [yellow]![/yellow]  {dest.name} exists → backed up as {bak.name}")
+    dest.write_text(content)
+
+
 def _write_onetool_yaml(config_path: Path, includes: list[str]) -> None:
     """Write a minimal onetool.yaml with the given includes."""
     import yaml
 
-    data: dict = {"version": 2}
+    data: dict[str, object] = {"version": 2}
     if includes:
         data["include"] = includes
 
-    config_path.write_text(yaml.dump(data, default_flow_style=False, sort_keys=False))
+    _safe_write(config_path, yaml.dump(data, default_flow_style=False, sort_keys=False))
 
 
 def _materialise_servers_yaml(
@@ -112,7 +144,7 @@ def _materialise_servers_yaml(
     raw = yaml.safe_load(src.read_text()) or {}
     all_servers = raw.get("servers", {})
 
-    selected: dict = {}
+    selected: dict[str, object] = {}
     unknown: list[str] = []
     for name in server_names:
         if name in all_servers:
@@ -127,16 +159,12 @@ def _materialise_servers_yaml(
         console.print(f"  Available: {', '.join(sorted(all_servers.keys()))}")
 
     dest = ot_dir / "servers.yaml"
-    dest.write_text(
-        yaml.dump({"servers": selected}, default_flow_style=False, sort_keys=False)
-    )
+    _safe_write(dest, yaml.dump({"servers": selected}, default_flow_style=False, sort_keys=False))
     console.print(f"  [green]✓[/green] servers.yaml (servers: {', '.join(selected.keys())})")
 
 
 def _materialise_file(ot_dir: Path, filename: str) -> bool:
     """Materialise a single file from global_templates. Returns True if success."""
-    import shutil
-
     from ot.paths import get_global_templates_dir
 
     templates_dir = get_global_templates_dir()
@@ -150,8 +178,31 @@ def _materialise_file(ot_dir: Path, filename: str) -> bool:
         return False
 
     dest = ot_dir / filename
-    shutil.copy(src, dest)
+    _safe_copy(src, dest)
     console.print(f"  [green]✓[/green] {filename}")
+    return True
+
+
+def _materialise_skills(ot_dir: Path) -> bool:
+    """Materialise skills/ directory from package templates. Returns True if success."""
+    import shutil
+
+    from ot.paths import get_global_templates_dir
+
+    templates_dir = get_global_templates_dir()
+    src_skills = templates_dir / "skills"
+    if not src_skills.exists():
+        console.print("  [red]✗[/red] skills/ not found in package templates")
+        return False
+
+    dest_skills = ot_dir / "skills"
+    if dest_skills.exists():
+        bak = _next_bak(dest_skills)
+        dest_skills.rename(bak)
+        console.print(f"  [yellow]![/yellow]  skills/ exists → backed up as {bak.name}")
+
+    shutil.copytree(src_skills, dest_skills, ignore=shutil.ignore_patterns("__pycache__", "*.py"))
+    console.print("  [green]✓[/green] skills/")
     return True
 
 
@@ -162,242 +213,77 @@ def init_callback(
         None,
         "--config",
         "-c",
-        help="Path to onetool.yaml to initialise (directory will be created).",
-    ),
-    security: bool = typer.Option(
-        False,
-        "--security",
-        help="Materialise security.yaml for custom security rules.",
-    ),
-    servers: str | None = typer.Option(
-        None,
-        "--servers",
-        help="Comma-separated server names to include (e.g. devtools,playwright,github).",
-    ),
-    file: str | None = typer.Option(
-        None,
-        "--file",
-        "-f",
-        help="Materialise a specific template file (e.g. security.yaml).",
-    ),
-    full: bool = typer.Option(
-        False,
-        "--full",
-        help="Materialise all global template files.",
+        help="Config directory or onetool.yaml path (auto-detected by suffix).",
     ),
 ) -> None:
     """Initialize OneTool configuration directory.
 
-    Without flags: guided interactive setup (TTY) or minimal config (non-TTY).
+    Runs an interactive TUI to select which extensions to materialise.
+    Existing files are backed up to .bak before overwriting.
 
     Examples:
-      onetool init --config .onetool/onetool.yaml
-      onetool init --config .onetool/onetool.yaml --security
-      onetool init --config .onetool/onetool.yaml --servers devtools,playwright
-      onetool init --config .onetool/onetool.yaml --full
+      onetool init                     (uses current directory)
+      onetool init -c .onetool         (directory: writes .onetool/onetool.yaml)
+      onetool init -c .onetool/ot.yaml (explicit file path)
     """
     if ctx.invoked_subcommand is not None:
         return
 
-    if config is None:
-        console.print("[red]Error: Missing option '--config' / '-c'[/red]")
-        console.print("Usage: onetool init --config /path/to/.onetool/onetool.yaml")
-        raise typer.Exit(1)
+    # Resolve config dir and file: .yaml/.yml suffix → treat as file, else → directory
+    if config is not None:
+        if config.suffix in (".yaml", ".yml"):
+            ot_dir = config.parent
+            config_path = config
+        else:
+            ot_dir = config
+            config_path = config / "onetool.yaml"
+    else:
+        ot_dir = Path()
+        config_path = ot_dir / "onetool.yaml"
 
-    import shutil
-    import sys
-
-    from ot.paths import get_global_templates_dir
-
-    ot_dir = config.parent
     ot_dir.mkdir(parents=True, exist_ok=True)
 
-    templates_dir = get_global_templates_dir()
     includes: list[str] = []
 
-    if full:
-        # Materialise all YAML templates
-        console.print(f"Materialising all templates into {ot_dir}/")
-        import stat
+    if _stdin_is_tty():
+        import questionary
 
-        for tmpl in sorted(templates_dir.glob("*.yaml")):
-            dest_name = tmpl.name.replace("-template.yaml", ".yaml")
-            dest = ot_dir / dest_name
-            shutil.copy(tmpl, dest)
-            if dest_name == "secrets.yaml":
-                dest.chmod(stat.S_IRUSR | stat.S_IWUSR)
-            console.print(f"  [green]✓[/green] {dest_name}")
-            if dest_name not in ("onetool.yaml", "bench.yaml", "bench-secrets.yaml"):
-                includes.append(dest_name)
-        _write_onetool_yaml(config, includes)
-        console.print(f"\n[green]✓[/green] {config.name} written with {len(includes)} includes")
-        return
+        console.print(f"Setting up OneTool config at [bold]{ot_dir}/[/bold]\n")
+        choices = [
+            questionary.Choice("prompts.yaml   - prompt templates", value="prompts.yaml"),
+            questionary.Choice("servers.yaml   - MCP proxy server configs", value="servers.yaml"),
+            questionary.Choice("security.yaml  - custom security rules", value="security.yaml"),
+            questionary.Choice("diagram.yaml   - diagram tool config", value="diagram.yaml"),
+            questionary.Choice("snippets.yaml  - code snippets", value="snippets.yaml"),
+            questionary.Choice("worktree.yaml  - git worktree config", value="worktree.yaml"),
+            questionary.Choice("skills/        - agent skill stubs", value="skills"),
+        ]
+        selected_ext = questionary.checkbox(
+            "Which extensions to materialise? (space to toggle, enter to confirm)",
+            choices=choices,
+        ).ask()
 
-    if file is not None:
-        # Materialise a single specific file
-        console.print(f"Materialising {file} into {ot_dir}/")
-        _materialise_file(ot_dir, file)
-        console.print(
-            f"\n[dim]Note:[/dim] {file} is now user-owned and will override the package default."
-        )
-        console.print("[dim]Tip:[/dim]  Add it to your onetool.yaml include: list to activate.")
-        return
+        if selected_ext is None:
+            # User cancelled (Ctrl+C)
+            raise typer.Exit(1)
 
-    # Flag-based setup (--security, --servers, or interactive)
-    do_security = security
-    selected_servers: list[str] = []
-
-    if servers is not None:
-        selected_servers = [s.strip() for s in servers.split(",") if s.strip()]
-
-    is_interactive = not (security or servers is not None) and sys.stdin.isatty()
-
-    if is_interactive:
-        # Guided interactive setup
-        console.print(f"Setting up OneTool config at {ot_dir}/\n")
-        do_security = typer.confirm("Configure security rules? [y/N]", default=False)
-
-        # Ask for servers
-        all_servers_src = templates_dir / "servers.yaml"
-        if all_servers_src.exists():
-            import yaml as _yaml
-
-            raw = _yaml.safe_load(all_servers_src.read_text()) or {}
-            available_srv = list((raw.get("servers") or {}).keys())
-        else:
-            available_srv = ["devtools", "playwright", "github"]
-
-        srv_options = ", ".join(available_srv) + ", none"
-        console.print(f"\nInclude proxy servers? ({srv_options}) [none]")
-        srv_input = typer.prompt("  Servers", default="none")
-        if srv_input.strip().lower() != "none":
-            selected_servers = [s.strip() for s in srv_input.split(",") if s.strip() and s.strip().lower() != "none"]
-
-    # Materialise requested files
-    if do_security:
-        console.print(f"\nMaterialising into {ot_dir}/")
-        if _materialise_file(ot_dir, "security.yaml"):
-            includes.append("security.yaml")
-
-    if selected_servers:
-        if not do_security:
+        if selected_ext:
             console.print(f"\nMaterialising into {ot_dir}/")
-        _materialise_servers_yaml(ot_dir, selected_servers)
-        includes.append("servers.yaml")
+            for ext in selected_ext:
+                if ext == "skills":
+                    _materialise_skills(ot_dir)
+                elif _materialise_file(ot_dir, ext):
+                    includes.append(ext)
 
-    # Write the onetool.yaml
-    _write_onetool_yaml(config, includes)
-
-    console.print(f"\n[green]✓[/green] {config} written")
-
-    if includes:
-        console.print(f"  Includes: {', '.join(includes)}")
-    else:
-        console.print(
-            "\n[dim]Using package defaults for security rules. "
-            "No servers configured.[/dim]"
-        )
-        console.print(
-            "[dim]Run `onetool init --security` or `--servers <list>` to customise.[/dim]"
-        )
-
-
-@init_app.command("create", hidden=True)
-def init_create(
-    config: Path = typer.Option(
-        ...,
-        "--config",
-        "-c",
-        help="Path to onetool.yaml to create (directory will be initialised).",
-    ),
-) -> None:
-    """Initialize OneTool configuration directory (legacy: copies all templates).
-
-    Creates the directory at config file's parent and copies template files.
-    Existing files are preserved.
-    """
-    from ot.paths import ensure_ot_dir
-
-    ot_dir = config.parent
-    if ot_dir.exists():
-        console.print(f"Config directory already exists at {ot_dir}/")
-        console.print("Use 'onetool init reset --config ...' to reinstall templates.")
+        _write_onetool_yaml(config_path, includes)
+        console.print(f"\n[green]✓[/green] {config_path.name} written")
+        if includes:
+            console.print(f"  Includes: {', '.join(includes)}")
         return
 
-    ensure_ot_dir(config, quiet=False, force=False)
-
-
-@init_app.command("reset")
-def init_reset(
-    config: Path = typer.Option(
-        ...,
-        "--config",
-        "-c",
-        help="Path to onetool.yaml (directory contains files to reset).",
-    ),
-) -> None:
-    """Reset config directory to default templates.
-
-    Prompts for each file before overwriting. For existing files, offers to
-    create a backup first. Backups are named file.bak, file.bak.1, etc.
-    """
-    import shutil
-
-    from ot.paths import create_backup, get_template_files
-
-    ot_dir = config.parent
-
-    # Ensure directory exists
-    ot_dir.mkdir(parents=True, exist_ok=True)
-
-    template_files = get_template_files()
-    if not template_files:
-        console.print("No template files found.")
-        return
-
-    copied_files: list[str] = []
-    backed_up_files: list[tuple[str, Path]] = []
-    skipped_files: list[str] = []
-
-    for source_path, dest_name in template_files:
-        dest_path = ot_dir / dest_name
-        exists = dest_path.exists()
-
-        if exists:
-            # Prompt for overwrite
-            console.print(f"\n{dest_name} already exists.")
-            do_overwrite = typer.confirm("Overwrite?", default=True)
-
-            if not do_overwrite:
-                skipped_files.append(dest_name)
-                continue
-
-            # Prompt for backup
-            do_backup = typer.confirm(f"Create backup of {dest_name}?", default=True)
-
-            if do_backup:
-                backup_path = create_backup(dest_path)
-                backed_up_files.append((dest_name, backup_path))
-
-        shutil.copy(source_path, dest_path)
-        copied_files.append(dest_name)
-
-    # Summary
-    console.print()
-    if copied_files:
-        console.print(f"Reset files in {ot_dir}/:")
-        for name in copied_files:
-            console.print(f"  + {name}")
-
-    if backed_up_files:
-        console.print("\nBackups created:")
-        for name, backup_path in backed_up_files:
-            console.print(f"  {name} -> {backup_path.name}")
-
-    if skipped_files:
-        console.print("\nSkipped:")
-        for name in skipped_files:
-            console.print(f"  - {name}")
+    # Non-interactive: write minimal onetool.yaml
+    _write_onetool_yaml(config_path, includes)
+    console.print(f"\n[green]✓[/green] {config_path} written")
 
 
 @init_app.command("validate")
@@ -425,7 +311,7 @@ def init_validate(
     from loguru import logger
 
     from ot import __version__
-    from ot.config.loader import get_config, load_config
+    from ot.config.loader import get_config
     from ot.config.secrets import load_secrets
     from ot.executor.tool_loader import load_tool_registry
 
@@ -436,7 +322,7 @@ def init_validate(
     validated: list[str] = []
 
     try:
-        load_config(config, secrets_path=secrets)
+        get_config(config, secrets_path=secrets)
         validated.append(str(config))
     except Exception as e:
         errors.append(f"{config}: {e}")
@@ -476,15 +362,17 @@ def init_validate(
 
         raw_config = yaml.safe_load(config.read_text()) or {}
         include_list: list[str] = raw_config.get("include", [])
-        ot_dir = config.parent
+        ot_dir = config.parent.resolve()
         templates_dir = get_global_templates_dir()
 
-        # Known includeable template files
+        # Known includeable template files (filter on dest name after transformation)
+        _excluded = {"onetool.yaml", "bench.yaml", "bench-secrets.yaml", "secrets.yaml"}
         known_templates = sorted(
-            tmpl.name.replace("-template.yaml", ".yaml")
+            dest
             for tmpl in templates_dir.glob("*.yaml")
             if not tmpl.name.startswith("_")
-            and tmpl.name not in ("onetool.yaml", "bench.yaml", "bench-secrets.yaml")
+            for dest in [tmpl.name.replace("-template.yaml", ".yaml")]
+            if dest not in _excluded
         )
 
         listed_set = set(include_list)
@@ -496,11 +384,11 @@ def init_validate(
             if resolved is None:
                 console.print(f"  [red]\\[missing][/red] {inc}")
             elif resolved.is_relative_to(ot_dir):
-                console.print(f"  [cyan]\\[user][/cyan]    {inc} -> {resolved}")
+                console.print(f"  [cyan]\\[user][/cyan]    {inc}")
             elif resolved.is_relative_to(templates_dir):
-                console.print(f"  [yellow]\\[default][/yellow] {inc} -> {resolved}")
+                console.print(f"  [yellow]\\[default][/yellow] {inc}")
                 console.print(
-                    f"             [dim]Hint: Run `onetool init --file {inc}` to customise[/dim]"
+                    f"             [dim]Hint: Copy to your config dir to customise: {resolved.name}[/dim]"
                 )
             else:
                 console.print(f"  [green]\\[absolute][/green] {inc} -> {resolved}")
@@ -633,7 +521,7 @@ def serve(
         raise typer.Exit(1)
     if not config.exists():
         if _stdin_is_tty():
-            console.print(f"[yellow]OneTool is not initialized.[/yellow]")
+            console.print("[yellow]OneTool is not initialized.[/yellow]")
             console.print(f"Config file not found: {config}")
             do_init = typer.confirm("Initialize now?", default=True)
             if do_init:

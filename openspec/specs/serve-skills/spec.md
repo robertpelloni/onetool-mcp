@@ -32,7 +32,7 @@ The system SHALL provide an `ot.skills()` function that lists available bundled 
 The system SHALL return the full body of a named skill via `ot.skills(name=...)`.
 
 #### Scenario: Retrieve bundled skill
-- **WHEN** `ot.skills(name="onetool-discover")` is called
+- **WHEN** `ot.skills(name="ot-guide")` is called
 - **THEN** it SHALL return the full Markdown body of the skill (below the frontmatter)
 - **AND** the body SHALL reflect the currently running server version
 
@@ -51,20 +51,20 @@ The system SHALL bundle an initial set of skills for on-demand discovery and ser
 
 #### Scenario: onetool-discover skill bundled
 - **WHEN** `ot.skills()` is called
-- **THEN** `onetool-discover` SHALL be listed
+- **THEN** `ot-guide` SHALL be listed
 - **AND** its content SHALL include discovery functions (`ot.help()`, `ot.tools()`, `ot.packs()`), error recovery patterns, security allowlist guidance, and output format/sanitisation controls
 
 #### Scenario: devtools-guide skill bundled
 - **WHEN** `ot.skills()` is called
-- **THEN** `devtools-guide` SHALL be listed
+- **THEN** `ot-chrome-devtools-mcp` SHALL be listed
 - **AND** its content SHALL cover the Chrome DevTools MCP server tools, connection modes, and usage patterns
 
 #### Scenario: playwright-guide skill bundled
 - **WHEN** `ot.skills()` is called
-- **THEN** `playwright-guide` SHALL be listed
+- **THEN** `ot-playwright-mcp` SHALL be listed
 - **AND** its content SHALL cover the Playwright MCP server tools and usage patterns
 
 #### Scenario: github-guide skill bundled
 - **WHEN** `ot.skills()` is called
-- **THEN** `github-guide` SHALL be listed
+- **THEN** `ot-github-mcp` SHALL be listed
 - **AND** its content SHALL cover the GitHub MCP server tools and usage patterns

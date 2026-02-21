@@ -80,9 +80,9 @@ The system SHALL support externalised server instructions with explicit trigger 
 
 ### Requirement: Discovery functions documented
 
-**Reason**: Discovery reference material is too detailed for the always-on prompt. Moved to the `onetool-discover` skill, retrieved on-demand via `ot.skills(name="onetool-discover")`.
+**Reason**: Discovery reference material is too detailed for the always-on prompt. Moved to the `ot-guide` skill, retrieved on-demand via `ot.skills(name="ot-guide")`.
 
-**Migration**: Agents can access discovery guidance by invoking the `onetool-discover` skill or running `__ot ot.help()`.
+**Migration**: Agents can access discovery guidance by invoking the `ot-guide` skill or running `__ot ot.help()`.
 
 ### Requirement: Tool-Specific Prompts
 

@@ -49,5 +49,4 @@ def test_onetool_init_help() -> None:
         timeout=30,
     )
     assert result.returncode == 0
-    assert "reset" in result.stdout
     assert "validate" in result.stdout

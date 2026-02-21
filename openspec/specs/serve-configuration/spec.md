@@ -116,15 +116,15 @@ The system SHALL support a graceful cold start without requiring prior initialis
 
 ### Requirement: DevTools Server Instructions Field
 
-**Reason**: Server `instructions:` fields are removed from `servers.yaml`. DevTools usage guidance moves to the `devtools-guide` skill, retrieved on-demand via `ot.skills(name="devtools-guide")`.
+**Reason**: Server `instructions:` fields are removed from `servers.yaml`. DevTools usage guidance moves to the `ot-chrome-devtools-mcp` skill, retrieved on-demand via `ot.skills(name="ot-chrome-devtools-mcp")`.
 
-**Migration**: Run `scaffold.skills(install="devtools-guide")` to install a stub, or call `__ot ot.skills(name="devtools-guide")` directly.
+**Migration**: Run `scaffold.skills(install="ot-chrome-devtools-mcp")` to install a stub, or call `__ot ot.skills(name="ot-chrome-devtools-mcp")` directly.
 
 ### Requirement: Playwright Server Instructions Field
 
-**Reason**: Server `instructions:` fields are removed from `servers.yaml`. Playwright usage guidance moves to the `playwright-guide` skill, retrieved on-demand via `ot.skills(name="playwright-guide")`.
+**Reason**: Server `instructions:` fields are removed from `servers.yaml`. Playwright usage guidance moves to the `ot-playwright-mcp` skill, retrieved on-demand via `ot.skills(name="ot-playwright-mcp")`.
 
-**Migration**: Run `scaffold.skills(install="playwright-guide")` to install a stub, or call `__ot ot.skills(name="playwright-guide")` directly.
+**Migration**: Run `scaffold.skills(install="ot-playwright-mcp")` to install a stub, or call `__ot ot.skills(name="ot-playwright-mcp")` directly.
 
 ### Requirement: Config Version Migration Detection
 

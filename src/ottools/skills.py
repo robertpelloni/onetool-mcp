@@ -114,7 +114,7 @@ def skills(
     skills take priority over bundled skills with the same name.
 
     Args:
-        name: Skill name to retrieve body for (e.g., "onetool-discover")
+        name: Skill name to retrieve body for (e.g., "ot-guide")
         pattern: Filter skills by substring match on name
         info: Detail level — "list" (names only), "min" (+ description, default), "full" (everything)
 
@@ -122,10 +122,10 @@ def skills(
         Skill body if name= provided; formatted list of skills otherwise
 
     Example:
-        skills()                          # list all
-        skills(pattern="devtools")        # filter by pattern
-        skills(name="devtools-guide")     # retrieve body
-        skills(info="full")               # full info for each skill
+        skills()                                  # list all
+        skills(pattern="ot-")                     # filter by pattern
+        skills(name="ot-chrome-devtools-mcp")     # retrieve body
+        skills(info="full")                       # full info for each skill
     """
     with LogSpan(span="skills") as s:
         # Bundled skills first, user-defined skills override on name collision
@@ -159,7 +159,7 @@ def skills(
                 tags = fm.get("tags", [])
                 tags_str = f"  tags: {tags}" if tags else ""
                 source_str = (
-                    f"  source: user-defined"
+                    "  source: user-defined"
                     if source == "user"
                     else f"  path: {skills_dir / f'{stem}.md'}"
                 )

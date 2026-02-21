@@ -14,41 +14,19 @@ Complete reference for `onetool.yaml` configuration.
 
 | Location | Purpose | Scope |
 |----------|---------|-------|
-| `~/.onetool/config/onetool.yaml` | Global config | User |
-| `.onetool/config/onetool.yaml` | Project config | Project |
+| `~/.onetool/onetool.yaml` | Global config | User |
+| `.onetool/onetool.yaml` | Project config | Project |
 
-**Resolution order:** CLI flags → `ONETOOL_CONFIG` env var → project → global
+**Resolution order:** CLI flags → project → global
 
 **Windows paths:** Replace `~/.onetool/` with `%USERPROFILE%\.onetool\`
 
-## First Run Bootstrap
+## First Run Setup
 
-On first `onetool` invocation, OneTool creates `~/.onetool/` with default configs:
-
-```bash
-$ onetool --help
-Creating ~/.onetool/
-  ✓ config/
-  ✓ logs/
-  ✓ stats/
-  ✓ tools/
-  ✓ config/onetool.yaml
-  ✓ config/snippets.yaml
-  ✓ config/servers.yaml
-  ✓ config/secrets.yaml
-  ✓ config/prompts.yaml
-  ✓ config/security.yaml
-  ✓ config/diagram.yaml
-  ✓ config/bench.yaml
-  ✓ config/bench-secrets.yaml
-  ✓ config/diagram-templates/
-```
-
-Manage manually:
+Run `onetool init` to set up a config directory interactively:
 
 ```bash
-onetool init           # Create ~/.onetool/ (if missing)
-onetool init reset     # Reset to defaults (prompts per file, offers backups)
+onetool init           # Interactive setup (uses current directory)
 onetool init validate  # Check for errors
 ```
 
@@ -57,7 +35,7 @@ onetool init validate  # Check for errors
 Project configs can inherit from global config:
 
 ```yaml
-version: 1
+version: 2
 inherit: global  # global (default) or none
 
 tools_dir:
@@ -77,7 +55,7 @@ tools_dir:
 ## YAML Schema
 
 ```yaml
-version: 1                    # Config schema version (required)
+version: 2                    # Config schema version (required)
 
 include:                      # External config files to merge
   - prompts.yaml
@@ -106,7 +84,7 @@ prompts: {}                   # Inline prompts (overrides included)
 Compose configuration from multiple files:
 
 ```yaml
-version: 1
+version: 2
 
 include:
   - config/prompts.yaml     # Relative to OT_DIR (.onetool/)
@@ -195,10 +173,10 @@ API keys stored separately in `secrets.yaml` (gitignored):
 
 | Location | Purpose | Scope |
 |----------|---------|-------|
-| `.onetool/config/secrets.yaml` | Project secrets | Project |
-| `~/.onetool/config/secrets.yaml` | Global secrets | User |
+| `.onetool/secrets.yaml` | Project secrets | Project |
+| `~/.onetool/secrets.yaml` | Global secrets | User |
 
-**Resolution:** `OT_SECRETS_FILE` env var → project → global
+**Resolution:** project → global (pass `--secrets` flag to override)
 
 ```yaml
 # API keys for tools (values are literal, no ${VAR} expansion)
@@ -457,11 +435,9 @@ See [Security Model](../../learn/security.md) for full documentation.
 
 | Variable | Description |
 |----------|-------------|
-| `ONETOOL_CONFIG` | Config file path override |
 | `OT_LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) |
 | `OT_LOG_VERBOSE` | Enable verbose logging (true/false) |
 | `OT_LOG_DIR` | Log directory path |
-| `OT_SECRETS_FILE` | Secrets file path override |
 | `OT_COMPACT_MAX_LENGTH` | Max value length in compact output |
 
 ## Environment Variable Expansion
@@ -490,7 +466,7 @@ ValueError: Invalid configuration in config/onetool.yaml:
 ### Minimal
 
 ```yaml
-version: 1
+version: 2
 tools_dir:
   - src/ottools/*.py
 ```
@@ -498,7 +474,7 @@ tools_dir:
 ### Production
 
 ```yaml
-version: 1
+version: 2
 
 tools_dir:
   - src/ottools/*.py

@@ -434,7 +434,7 @@ def skills(
     """List available bundled skills or retrieve a skill's body content.
 
     Args:
-        name: Skill name to retrieve body for (e.g., "onetool-discover")
+        name: Skill name to retrieve body for (e.g., "ot-guide")
         pattern: Filter skills by substring match on name
         info: Detail level — "list" (names only), "min" (+ description, default), "full" (everything)
 
@@ -442,10 +442,10 @@ def skills(
         Skill body if name= provided; formatted list of skills otherwise
 
     Example:
-        ot.skills()                          # list all
-        ot.skills(pattern="devtools")        # filter by pattern
-        ot.skills(name="devtools-guide")     # retrieve body
-        ot.skills(info="full")               # full info for each skill
+        ot.skills()                                  # list all
+        ot.skills(pattern="ot-")                     # filter by pattern
+        ot.skills(name="ot-chrome-devtools-mcp")     # retrieve body
+        ot.skills(info="full")                       # full info for each skill
     """
     from ottools.skills import skills as _skills
 
