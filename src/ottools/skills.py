@@ -7,7 +7,7 @@ Skills are Markdown files with YAML frontmatter.
 Example:
     skills()                          # list all skills
     skills(pattern="devtools")        # filter by name substring
-    skills(name="devtools-guide")     # retrieve skill body
+    skills(name="ot-chrome-devtools-mcp")  # retrieve skill body
 """
 
 from __future__ import annotations

@@ -1,5 +1,5 @@
 ---
-name: playwright-guide
+name: ot-playwright-mcp
 description: Playwright MCP usage guide — browser automation via accessibility snapshots (no vision needed)
 tags: [browser, playwright, automation]
 ---

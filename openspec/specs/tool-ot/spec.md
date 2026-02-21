@@ -14,7 +14,7 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **GIVEN** tools are registered
 - **WHEN** `ot.tools()` is called
 - **THEN** it SHALL return a list of all tools
-- **AND** default info level SHALL be `min`
+- **AND** default info level SHALL be `list` (names only)
 
 #### Scenario: Filter by pattern
 - **GIVEN** a pattern parameter
@@ -28,9 +28,10 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **THEN** it SHALL return only tool names as a list of strings
 
 #### Scenario: Info level min
-- **GIVEN** `info="min"` parameter (or default)
-- **WHEN** `ot.tools()` or `ot.tools(info="min")` is called
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.tools(info="min")` is called
 - **THEN** each entry SHALL include: `{name, description}`
+- **AND** description SHALL be truncated to 100 characters with `…` appended if cut
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter

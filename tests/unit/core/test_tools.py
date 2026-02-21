@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from ot.meta import _truncate
 
 
 @pytest.mark.unit
@@ -71,3 +72,61 @@ class TestGetPack:
         result = ot_pack.help()
         assert result is not None
         assert isinstance(result, str)
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestTruncate:
+    """Tests for _truncate helper."""
+
+    def test_short_string_unchanged(self) -> None:
+        assert _truncate("hello", 100) == "hello"
+
+    def test_exact_length_unchanged(self) -> None:
+        s = "x" * 100
+        assert _truncate(s, 100) == s
+
+    def test_long_string_truncated(self) -> None:
+        s = "x" * 150
+        result = _truncate(s, 100)
+        assert result == "x" * 100 + "…"
+        assert len(result) == 101
+
+    def test_default_limit_is_100(self) -> None:
+        s = "a" * 101
+        result = _truncate(s)
+        assert result.endswith("…")
+        assert len(result) == 101
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestOtToolsDefault:
+    """Tests for ot.tools() default info level and description truncation."""
+
+    def test_default_info_is_list(self) -> None:
+        """ot.tools() defaults to info='list', returning strings not dicts."""
+        from ot.meta import tools
+
+        result = tools()
+        assert len(result) > 0
+        assert all(isinstance(item, str) for item in result)
+
+    def test_info_min_returns_dicts(self) -> None:
+        """ot.tools(info='min') returns dicts with name and description."""
+        from ot.meta import tools
+
+        result = tools(info="min")
+        assert len(result) > 0
+        assert all(isinstance(item, dict) for item in result)
+        assert all("name" in item and "description" in item for item in result)
+
+    def test_info_min_truncates_long_descriptions(self) -> None:
+        """ot.tools(info='min') truncates descriptions to 100 chars."""
+        from ot.meta import tools
+
+        result = tools(info="min")
+        for item in result:
+            assert isinstance(item, dict)
+            desc = item["description"]
+            assert len(desc) <= 101, f"Description too long for {item['name']}: {len(desc)}"

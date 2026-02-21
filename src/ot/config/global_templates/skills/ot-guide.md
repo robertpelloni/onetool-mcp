@@ -1,5 +1,5 @@
 ---
-name: onetool-discover
+name: ot-guide
 description: OneTool discovery guide — find tools, recover from errors, understand security and output controls
 tags: [discovery, introspection, onboarding]
 ---
@@ -7,7 +7,18 @@ tags: [discovery, introspection, onboarding]
 # OneTool Discovery Guide
 
 ## Trigger
-Use `__ot` (or `mcp__onetool__run`) to invoke OneTool tools.
+Use `>>>` (or `__run`, `mcp__onetool__run`) to invoke OneTool tools.
+
+## Pack Availability
+
+Not all packs are installed by default. Core packs (`mem`, `llm`, `ot`) are always available.
+Others require an extra:
+
+- `[util]` — `brave`, `convert`, `excel`, `file`, `ground`
+- `[dev]` — `context7`, `db`, `diagram`, `package`, `ripgrep`, `web`, `worktree`
+
+Install: `pip install onetool-mcp[util]` or `pip install onetool-mcp[dev]`.
+See the advanced guide for full details: `ot.skills(name="ot-adv-guide")`.
 
 ## Discovery Functions
 
@@ -51,6 +62,14 @@ Set `__sanitize__` to control output sanitization:
 1. **Keyword args only**: `foo.bar(x=1)` not `foo.bar(1)`
 2. **Batch when possible**: `foo(items=["a","b"])` not multiple calls
 3. **Return last expression**: `x = a(); y = b(); {"a": x, "b": y}`
+
+## Advanced Reference
+
+For a full cheatsheet covering all packs, parameter traps, multi-step patterns, and output control — load this before working with unfamiliar tools or when you need exact parameter names:
+
+```python
+>>> ot.skills(name="ot-adv-guide")
+```
 
 ## External Content Boundaries
 

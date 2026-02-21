@@ -61,7 +61,7 @@ scenarios:
         tags: [compare, onetool, npm, pypi]
         evaluate: version_found
         prompt: |
-          __ot
+          >>>
           ```python
           npm = package.version(registry="npm", packages={"express": "4.0.0"})
           pypi = package.version(registry="pypi", packages={"httpx": "0.20.0"})
@@ -74,7 +74,7 @@ scenarios:
         tags: [compare, onetool, proxy, npm, pypi]
         evaluate: version_found
         prompt: |
-          __ot
+          >>>
           ```python
           npm = proxy_package_version.check_npm_versions(dependencies={"express": "4.0.0"})
           pypi = proxy_package_version.check_python_versions(requirements=["httpx==0.20.0"])
@@ -106,13 +106,13 @@ scenarios:
         tags: [compare, onetool, multi-prompt, npm, pypi]
         evaluate: version_found
         prompt: |
-          __ot
+          >>>
           ```python
           package.version(registry="npm", packages={"express": "4.0.0"})
           ```
           Return only the version number.
           ---PROMPT---
-          __ot
+          >>>
           ```python
           package.version(registry="pypi", packages={"httpx": "0.20.0"})
           ```

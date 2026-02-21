@@ -35,7 +35,7 @@ And then there's **context rot** - your AI literally gets dumber as you add more
 OneTool is **one MCP server** that exposes tools as a Python API. Instead of reading tool definitions, your agent writes code:
 
 ```python
-__ot brave.search(query="react docs 2026")
+>>> brave.search(query="react docs 2026")
 ```
 
 Configure one MCP server. Use unlimited tools.
@@ -100,7 +100,7 @@ Verify: `onetool init validate`
 | ----------------------- | ------------------------------------------------------ |
 | **96% Token Savings**   | ~2K tokens no matter how many tools you add            |
 | **100+ Built-in Tools** | Web search, databases, file ops, diagrams, conversions |
-| **Explicit Execution**  | See exactly what runs - `__ot brave.search(q="AI")`    |
+| **Explicit Execution**  | See exactly what runs - `>>> brave.search(q="AI")`    |
 | **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
 | **Scaffold Tools**      | Build new tools as part of the conversation            |
 | **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
@@ -150,7 +150,7 @@ mcp_servers:
 ```
 
 ```python
-__ot mcp.call(server="github", tool="get_file_contents", arguments={"path": "README.md"})
+>>> mcp.call(server="github", tool="get_file_contents", arguments={"path": "README.md"})
 ```
 
 [📖 Configuration guide](https://onetool.beycom.online/learn/configuration/#external-mcp-servers)
@@ -173,7 +173,7 @@ def summary(*, title: str) -> str:
 ```
 
 ```python
-__ot wiki.summary(title="Python_(programming_language)")
+>>> wiki.summary(title="Python_(programming_language)")
 ```
 
 [📖 Creating tools guide](https://onetool.beycom.online/learn/extending/extension-tools/)

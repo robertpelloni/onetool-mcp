@@ -6,7 +6,7 @@ Four layers of defence protect against arbitrary code execution and prompt injec
 
 `fence_processor.py` normalises input before any execution:
 
-- Strips execution prefixes: `__ot`, `__onetool`, `mcp__onetool__run`
+- Strips execution prefixes: `>>>`, `__run`, `mcp__onetool__run` (and legacy `__ot`, `__onetool`)
 - Removes markdown code fences and backticks
 - Ensures clean Python code reaches the validator
 
@@ -45,7 +45,7 @@ Excluded: `__import__`, `exec`, `eval`, direct filesystem access, network access
 
 `sanitize.py` protects against prompt injection in tool results:
 
-- **Trigger sanitisation**: Replaces `__ot`, `mcp__onetool` in output with `[REDACTED:trigger]`
+- **Trigger sanitisation**: Replaces legacy `__ot`, `mcp__onetool` in output with `[REDACTED:trigger]`
 - **Tag sanitisation**: Removes boundary tag patterns
 - **GUID wrapping**: External content wrapped in unpredictable UUID-tagged boundaries
 

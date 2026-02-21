@@ -69,6 +69,7 @@ def resolve_ot_path(path: str) -> Path:
     config_dir = get_config()._config_dir
     return (config_dir / p).resolve()
 
+
 # Info level type for discovery functions
 InfoLevel = Literal["list", "min", "full"]
 ServerInfoLevel = Literal["list", "min", "full", "resources", "prompts"]
@@ -88,7 +89,6 @@ DOC_BASE_URL = "https://onetool.beycom.online/reference/tools/"
 
 __all__ = [
     "PACK_NAME",
-    "agent_hints",
     "aliases",
     "config",
     "debug",
@@ -121,39 +121,6 @@ def version() -> str:
     """
     return __version__
 
-
-def agent_hints() -> str:
-    """Return the OneTool agent hints reference document.
-
-    Provides a project-agnostic quick reference for AI agents with
-    tool usage patterns, parameter names, and common workflows.
-
-    Reads from agent-hints.md in the ot dir if available,
-    otherwise falls back to the package's built-in template.
-
-    Returns:
-        Markdown content of the agent hints document
-
-    Example:
-        ot.agent_hints()
-    """
-    from ot.paths import get_global_templates_dir
-
-    with log(span="ot.agent_hints") as s:
-        # Try user-editable copy first (flat layout: agent-hints.md in ot dir)
-        user_path = resolve_ot_path("agent-hints.md")
-        if user_path.is_file():
-            s.add("source", "user")
-            return user_path.read_text()
-
-        # Fall back to package template
-        template_path = get_global_templates_dir() / "agent-hints.md"
-        if template_path.is_file():
-            s.add("source", "package")
-            return template_path.read_text()
-
-        s.add("error", "not_found")
-        return "Error: agent-hints.md not found"
 
 
 def _get_version_info() -> dict[str, Any]:
@@ -459,7 +426,6 @@ def get_ot_pack_functions() -> dict[str, Any]:
         Dict mapping function names to callables
     """
     return {
-        "agent_hints": agent_hints,
         "tools": tools,
         "packs": packs,
         "server": server,
@@ -810,6 +776,11 @@ def _parse_docstring(doc: str | None) -> dict[str, Any]:
     }
 
 
+def _truncate(s: str, n: int = 100) -> str:
+    """Truncate string to n characters, appending … if cut."""
+    return s[:n] + "…" if len(s) > n else s
+
+
 def _build_tool_info(
     full_name: str, func: Any, source: str, info: InfoLevel
 ) -> dict[str, Any] | str:
@@ -841,7 +812,7 @@ def _build_tool_info(
         parsed = _parse_docstring(None)
 
     if info == "min":
-        return {"name": full_name, "description": description}
+        return {"name": full_name, "description": _truncate(description)}
 
     # info == "full"
     tool_info: dict[str, Any] = {
@@ -963,7 +934,7 @@ def _build_proxy_tool_info(
         return full_name
 
     if info == "min":
-        return {"name": full_name, "description": description}
+        return {"name": full_name, "description": _truncate(description)}
 
     # info == "full"
     tool_info: dict[str, Any] = {
@@ -984,7 +955,7 @@ def _build_proxy_tool_info(
 def tools(
     *,
     pattern: str = "",
-    info: InfoLevel = "min",
+    info: InfoLevel = "list",
 ) -> list[dict[str, Any] | str]:
     """List all available tools with optional filtering.
 
@@ -993,8 +964,8 @@ def tools(
 
     Args:
         pattern: Filter tools by name pattern (case-insensitive substring match)
-        info: Output verbosity level - "list" (names only), "min" (name + description),
-              or "full" (complete details including args, returns, example)
+        info: Output verbosity level - "list" (names only, default), "min" (name +
+              description truncated to 100 chars), or "full" (complete details)
 
     Returns:
         List of tool names (info="list") or tool dicts (info="min"/"full")
@@ -1270,17 +1241,10 @@ def servers(
                 # Add resource and prompt counts if connected
                 if conn:
                     try:
-                        if proxy._loop and proxy._loop.is_running():
-                            future_res = asyncio.run_coroutine_threadsafe(
-                                proxy.list_resources(server_name), proxy._loop
-                            )
-                            future_pmt = asyncio.run_coroutine_threadsafe(
-                                proxy.list_prompts(server_name), proxy._loop
-                            )
-                            resource_count = len(future_res.result(timeout=5))
-                            prompt_count = len(future_pmt.result(timeout=5))
-                            lines.append(f"**Resources:** {resource_count}")
-                            lines.append(f"**Prompts:** {prompt_count}")
+                        resource_count = len(proxy.list_resources_sync(server_name))
+                        prompt_count = len(proxy.list_prompts_sync(server_name))
+                        lines.append(f"**Resources:** {resource_count}")
+                        lines.append(f"**Prompts:** {prompt_count}")
                     except Exception:
                         # Silently skip if resources/prompts not supported
                         pass
@@ -1333,16 +1297,7 @@ def servers(
                     continue
 
                 try:
-                    # Run async list_resources using ProxyManager's event loop
-                    if proxy._loop and proxy._loop.is_running():
-                        future = asyncio.run_coroutine_threadsafe(
-                            proxy.list_resources(server_name),
-                            proxy._loop,
-                        )
-                        resources = future.result(timeout=10)
-                    else:
-                        # No event loop available - server not initialized
-                        resources = []
+                    resources = proxy.list_resources_sync(server_name, timeout=10.0)
 
                     results_resources.append({
                         "server": server_name,
@@ -1376,16 +1331,7 @@ def servers(
                     continue
 
                 try:
-                    # Run async list_prompts using ProxyManager's event loop
-                    if proxy._loop and proxy._loop.is_running():
-                        future = asyncio.run_coroutine_threadsafe(
-                            proxy.list_prompts(server_name),
-                            proxy._loop,
-                        )
-                        prompts = future.result(timeout=10)
-                    else:
-                        # No event loop available - server not initialized
-                        prompts = []
+                    prompts = proxy.list_prompts_sync(server_name, timeout=10.0)
 
                     results_prompts.append({
                         "server": server_name,

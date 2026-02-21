@@ -93,14 +93,13 @@ Parameter Prefixes
 - Short prefixes work: ot.tools(p="brave", i="full") equivalent to ot.tools(pattern="brave", info="full")
 
 Trigger Prefixes (invocation styles)
-- __ot - short form
-- __onetool__run - full explicit call
-- __onetool - full name, default tool
-- mcp__onetool__run - explicit MCP call
+- >>> - recommended (Python REPL symbol)
+- __run - systematic short form
+- mcp__onetool__run - canonical MCP call
+- __ot, __onetool__run - legacy (backward compat)
 
 Invocation Styles
-- Simple call: __ot func(arg=val)
-- Inline backticks: __ot `func(arg=val)`
+- Simple call: >>> func(arg=val)
 - Code fence: multi-line Python blocks
 
 Snippet Expansion

@@ -40,6 +40,7 @@ def mock_config():
     """Mock config to avoid needing real config file."""
     with patch("ot.executor.result_store.get_config") as mock:
         mock.return_value.output.preview_lines = 10
+        mock.return_value.output.preview_max_chars = 500
         mock.return_value.output.result_ttl = 3600
         yield mock
 
@@ -420,6 +421,7 @@ class TestRunnerIntegration:
         mock_cfg = MagicMock()
         mock_cfg.output.max_inline_size = 100
         mock_cfg.output.preview_lines = 5
+        mock_cfg.output.preview_max_chars = 500
         mock_cfg.output.result_ttl = 3600
 
         with (
@@ -579,6 +581,7 @@ class TestDoubleWrapPrevention:
         mock_cfg = MagicMock()
         mock_cfg.output.max_inline_size = 100
         mock_cfg.output.preview_lines = 5
+        mock_cfg.output.preview_max_chars = 500
         mock_cfg.output.result_ttl = 3600
         mock_cfg.security.sanitize.enabled = True
 
@@ -800,3 +803,68 @@ class TestOutputConfigDefaults:
 
         cfg = OutputConfig()
         assert cfg.max_inline_size == 5000
+
+    def test_preview_max_chars_default(self) -> None:
+        """OutputConfig.preview_max_chars defaults to 500."""
+        from ot.config.models import OutputConfig
+
+        cfg = OutputConfig()
+        assert cfg.preview_max_chars == 500
+
+
+# =============================================================================
+# PREVIEW TRUNCATION
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestPreviewTruncation:
+    """Test that preview lines are truncated to preview_max_chars."""
+
+    def test_long_line_truncated(self, result_store: ResultStore) -> None:
+        """Preview line longer than preview_max_chars is truncated with ellipsis."""
+        long_line = "x" * 1000
+        with patch("ot.executor.result_store.get_config") as mock:
+            mock.return_value.output.preview_lines = 10
+            mock.return_value.output.preview_max_chars = 500
+            mock.return_value.output.result_ttl = 3600
+            result = result_store.store(long_line)
+
+        assert len(result.preview) == 1
+        assert result.preview[0] == "x" * 500 + "…"
+
+    def test_short_line_not_truncated(self, result_store: ResultStore) -> None:
+        """Preview line within preview_max_chars is not modified."""
+        short_line = "hello world"
+        with patch("ot.executor.result_store.get_config") as mock:
+            mock.return_value.output.preview_lines = 10
+            mock.return_value.output.preview_max_chars = 500
+            mock.return_value.output.result_ttl = 3600
+            result = result_store.store(short_line)
+
+        assert result.preview[0] == "hello world"
+
+    def test_preview_max_chars_zero_disables_truncation(self, result_store: ResultStore) -> None:
+        """preview_max_chars=0 disables truncation entirely."""
+        long_line = "y" * 2000
+        with patch("ot.executor.result_store.get_config") as mock:
+            mock.return_value.output.preview_lines = 10
+            mock.return_value.output.preview_max_chars = 0
+            mock.return_value.output.result_ttl = 3600
+            result = result_store.store(long_line)
+
+        assert result.preview[0] == long_line
+
+    def test_large_single_line_preview_bounded(self, result_store: ResultStore) -> None:
+        """40KB single-line output produces a small preview regardless of preview_lines."""
+        large_json_line = '{"data": "' + "a" * 40_000 + '"}'
+        with patch("ot.executor.result_store.get_config") as mock:
+            mock.return_value.output.preview_lines = 10
+            mock.return_value.output.preview_max_chars = 500
+            mock.return_value.output.result_ttl = 3600
+            result = result_store.store(large_json_line)
+
+        assert len(result.preview) == 1
+        assert len(result.preview[0]) <= 501  # 500 chars + "…"
+        assert result.preview[0].endswith("…")

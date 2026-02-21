@@ -211,7 +211,7 @@ class OutputSanitizationConfig(BaseModel):
     that may contain malicious payloads from external content.
 
     Three-layer defense:
-    1. Trigger sanitization: Replace __ot, mcp__onetool patterns
+    1. Trigger sanitization: Replace __ot, __run, mcp__onetool patterns
     2. Tag sanitization: Remove <external-content-*> patterns
     3. GUID-tagged boundaries: Wrap content in unpredictable tags
     """
@@ -362,6 +362,11 @@ class OutputConfig(BaseModel):
         default=10,
         ge=0,
         description="Number of preview lines to include in summary",
+    )
+    preview_max_chars: int = Field(
+        default=500,
+        ge=0,
+        description="Max characters per preview line (0 = no limit)",
     )
 
 

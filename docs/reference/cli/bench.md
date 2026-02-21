@@ -79,7 +79,7 @@ scenarios:
         server: onetool
         evaluate: accuracy
         prompt: |
-          __ot `brave.search(query="AI news")`
+          >>> brave.search(query="AI news")
 
 servers:
   onetool:
@@ -96,13 +96,13 @@ Use `---PROMPT---` delimiter to split a task into sequential prompts. Each promp
 - name: multi-step-task
   server: onetool
   prompt: |
-    __ot
+    >>>
     ```python
     npm = package.version(registry="npm", packages={"express": "4.0.0"})
     ```
     Return the latest version.
     ---PROMPT---
-    __ot
+    >>>
     ```python
     pypi = package.version(registry="pypi", packages={"httpx": "0.20.0"})
     ```
@@ -194,6 +194,6 @@ brave.search_batch(queries=["topic 1", "topic 2"])
 
 ### Token Efficiency
 
-- Use short prefixes (`__ot`) for simple calls
+- Use `>>>` for simple calls
 - Use code fences for multi-step operations
 - Prefer batch operations over multiple calls

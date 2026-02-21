@@ -118,13 +118,13 @@ The system SHALL support a graceful cold start without requiring prior initialis
 
 **Reason**: Server `instructions:` fields are removed from `servers.yaml`. DevTools usage guidance moves to the `ot-chrome-devtools-mcp` skill, retrieved on-demand via `ot.skills(name="ot-chrome-devtools-mcp")`.
 
-**Migration**: Run `scaffold.skills(install="ot-chrome-devtools-mcp")` to install a stub, or call `__ot ot.skills(name="ot-chrome-devtools-mcp")` directly.
+**Migration**: Run `scaffold.skills(install="ot-chrome-devtools-mcp")` to install a stub, or call `>>> ot.skills(name="ot-chrome-devtools-mcp")` directly.
 
 ### Requirement: Playwright Server Instructions Field
 
 **Reason**: Server `instructions:` fields are removed from `servers.yaml`. Playwright usage guidance moves to the `ot-playwright-mcp` skill, retrieved on-demand via `ot.skills(name="ot-playwright-mcp")`.
 
-**Migration**: Run `scaffold.skills(install="ot-playwright-mcp")` to install a stub, or call `__ot ot.skills(name="ot-playwright-mcp")` directly.
+**Migration**: Run `scaffold.skills(install="ot-playwright-mcp")` to install a stub, or call `>>> ot.skills(name="ot-playwright-mcp")` directly.
 
 ### Requirement: Config Version Migration Detection
 
@@ -1134,6 +1134,7 @@ The system SHALL support configuration for large output handling in the `output`
   - `result_store_dir`: `tmp` (relative to `.onetool/`)
   - `result_ttl`: 3600 (seconds)
   - `preview_lines`: 10
+  - `preview_max_chars`: 500
 
 #### Scenario: Custom max_inline_size
 - **GIVEN** configuration:
@@ -1170,6 +1171,16 @@ The system SHALL support configuration for large output handling in the `output`
   ```
 - **WHEN** a large output is stored
 - **THEN** summary preview SHALL include first 20 lines
+
+#### Scenario: Custom preview_max_chars
+- **GIVEN** configuration:
+  ```yaml
+  output:
+    preview_max_chars: 200
+  ```
+- **WHEN** a large output is stored
+- **THEN** each preview line SHALL be truncated to 200 characters with `…` appended if truncated
+- **AND** `preview_max_chars: 0` SHALL disable per-line truncation entirely
 
 #### Scenario: Disabled large output handling
 - **GIVEN** configuration:

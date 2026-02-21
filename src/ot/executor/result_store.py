@@ -175,12 +175,20 @@ class ResultStore:
         # Generate summary
         summary = self._generate_summary(lines, tool)
 
-        # Get preview lines from config if not specified
+        # Get preview config from config if not specified
+        config = get_config()
         if preview_lines is None:
-            config = get_config()
             preview_lines = config.output.preview_lines
+        preview_max_chars = config.output.preview_max_chars
 
-        preview = lines[:preview_lines]
+        raw_preview = lines[:preview_lines]
+        if preview_max_chars > 0:
+            preview = [
+                line[:preview_max_chars] + "…" if len(line) > preview_max_chars else line
+                for line in raw_preview
+            ]
+        else:
+            preview = raw_preview
 
         return StoredResult(
             handle=handle,

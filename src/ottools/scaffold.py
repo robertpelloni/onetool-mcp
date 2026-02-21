@@ -128,8 +128,8 @@ def create(
             return f"Error: Template '{template}' not found. Available: {', '.join(available)}"
 
         # Determine output directory (always uses ot dir from loaded config)
-        from ot.config.loader import get_config
-        ot_dir = get_config()._config_dir
+        from ot.config.loader import get_config as _get_config
+        ot_dir = _get_config()._config_dir
         base_dir = ot_dir / "tools"
 
         ext_dir = base_dir / name
@@ -492,7 +492,7 @@ def _get_skill_stub_template() -> str:
         # Fallback inline template
         return (
             "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n"
-            "To load this skill: `__ot ot.skills(name=\"{{ name }}\")`\n"
+            "To load this skill: `>>> ot.skills(name=\"{{ name }}\")`\n"
         )
     return tmpl.read_text(encoding="utf-8")
 

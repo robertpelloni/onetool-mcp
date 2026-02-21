@@ -79,7 +79,7 @@ def test_tools_returns_correct_signatures_for_same_named_functions() -> None:
     """Verify ot.tools() returns correct signatures for functions with same name."""
     from ot.meta import tools
 
-    result = tools(pattern="search")
+    result = tools(pattern="search", info="min")
 
     # Result is now a list of dicts
     tool_names = [t["name"] for t in result]
@@ -99,8 +99,8 @@ def test_tools_info_levels() -> None:
     """Verify info levels control output verbosity."""
     from ot.meta import tools
 
-    # info="min" (default) - name + description only
-    min_output = tools()
+    # info="min" - name + description only
+    min_output = tools(info="min")
     assert isinstance(min_output, list)
     for tool in min_output:
         assert "name" in tool
@@ -129,7 +129,7 @@ def test_tools_pattern_filter_by_pack() -> None:
     """Verify pattern filter works to filter by pack prefix."""
     from ot.meta import tools
 
-    result = tools(pattern="ot.")
+    result = tools(pattern="ot.", info="min")
     # Result is a list of dicts
     tool_names = [t["name"] for t in result]
 

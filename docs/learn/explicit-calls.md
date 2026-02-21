@@ -1,51 +1,64 @@
 # Explicit Tool Calls
 
-OneTool's `__ot` prefix gives you explicit control over tool invocation. You write the code - the agent doesn't have to guess which tool or which parameters.
+OneTool's `>>>` prefix gives you explicit control over tool invocation. You write the code — the agent doesn't have to guess which tool or which parameters.
 
-## Trigger Prefixes
+## Two Modes
 
-OneTool supports five trigger prefixes. All prefixes support the same three invocation styles.
+### Mode 1: Snippets
 
-| Prefix              | Description                    | Recommended |
-| ------------------- | ------------------------------ | ----------- |
-| `__onetool__run`    | Full name, explicit tool call  | Yes         |
-| `__ot`              | Short form                     | Yes         |
-| `__onetool`         | Full name, default tool        |             |
-| `__ot__run`         | Short name, explicit tool call |             |
-| `mcp__onetool__run` | Explicit MCP call              |             |
+Jinja2 templates invoked with `$name`. Values are plain strings; Python syntax does not apply.
 
-**Recommended:** Use `__onetool__run` for clarity or `__ot` for brevity.
+```
+>>> $g q=latest AI tools
+>>> $pkg_npm packages=react lodash
+>>> $g q="AI news"
+```
+
+- Quotes are optional and stripped (`q=abc` ≡ `q="abc"`)
+- Param names support prefix abbreviation (`q` resolves to `query` if defined)
+- Per-template features (e.g. pipe batch) are not snippet language features
+
+### Mode 2: Code
+
+Python executed directly against the tool namespace.
+
+```
+>>> brave.search(q="AI news")
+>>> x = sha256(text="hello"); x
+```
+
+- Python syntax applies: strings must be quoted
+- Short param names work: `q` resolves to `query` (pack proxy prefix resolution)
+- Keyword arguments only: `fn(key="val")` not `fn("val")`
+
+## Trigger Hierarchy
+
+| Prefix              | Role                                |
+| ------------------- | ----------------------------------- |
+| `>>>`               | Recommended; Python REPL symbol     |
+| `__run`             | Systematic short form (`__(tool)`)  |
+| `mcp__onetool__run` | Canonical MCP name                  |
+| `__ot`, `__onetool` | Legacy; kept for backward compat    |
 
 **Note:** `mcp__ot__run` is NOT a valid prefix.
 
 ## Invocation Styles
 
-Each prefix supports three ways to pass code:
-
-### 1. Simple Call
+### Simple Call
 
 Direct function call after the prefix:
 
 ```
-__ot sha256(text="hello")
-__onetool__run multiply(a=8472, b=9384)
+>>> sha256(text="hello")
+>>> multiply(a=8472, b=9384)
 ```
 
-### 2. Inline Backticks
-
-Code wrapped in backticks:
-
-```
-__ot `sha256(text="hello")`
-__onetool__run `multiply(a=8472, b=9384)`
-```
-
-### 3. Code Fence
+### Code Fence
 
 Multi-line code in a fenced block:
 
 ```
-__onetool__run
+>>>
 ```python
 metals = ["Gold", "Silver"]
 results = {}
@@ -53,7 +66,6 @@ for metal in metals:
     results[metal] = brave.web_search(query=f"{metal} price")
 results
 ```
-
 ```
 
 ## Direct MCP Call
@@ -61,9 +73,7 @@ results
 For programmatic or explicit MCP invocation:
 
 ```
-
 mcp__onetool__run(command='sha256(text="hello")')
-
 ```
 
 ## Complete Examples
@@ -71,43 +81,27 @@ mcp__onetool__run(command='sha256(text="hello")')
 ### Simple Hash Computation
 
 ```
-
-__ot sha256(text="hello world")
-
+>>> sha256(text="hello world")
 ```
 
 ### Multi-step Computation with Variables
 
 ```
-
-__onetool__run
-
+>>>
 ```python
 msg = "Hello World"
 sha256(text=msg)
 ```
-
 ```
 
 ### Loop with Multiple Tool Calls
 
 ```
-
-__ot
-
+>>>
 ```python
 primes = [is_prime(n=i) for i in range(11, 21)]
 primes
 ```
-
-```
-
-### Chained Operations
-
-```
-
-__ot__run `upper(text=reverse(text="hello"))`
-
 ```
 
 ---
@@ -120,7 +114,7 @@ Add context before the tool call to guide the agent:
 
 ```
 Calculate the SHA-256 hash of the following text:
-__onetool__run sha256(text="hello world")
+>>> sha256(text="hello world")
 ```
 
 ### Post-Call Processing
@@ -128,7 +122,7 @@ __onetool__run sha256(text="hello world")
 Request specific formatting or analysis after the tool result:
 
 ```
-__onetool__run brave.web_search(query="latest AI news", count=5)
+>>> brave.web_search(query="latest AI news", count=5)
 
 Summarise the top 3 results in bullet points.
 ```
@@ -137,7 +131,7 @@ Summarise the top 3 results in bullet points.
 
 Combine tool execution with output formatting:
 
-    __onetool__run
+    >>>
     ```python
     results = {
         "hash": sha256(text="hello"),

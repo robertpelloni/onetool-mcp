@@ -44,7 +44,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_tables
         prompt: |
-          __ot `db.tables(db_url="sqlite:///data/northwind.db")`
+          >>> db.tables(db_url="sqlite:///data/northwind.db")
           Return the list of tables.
 
       - name: "tool:db:schema"
@@ -52,7 +52,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_schema
         prompt: |
-          __ot `db.schema(table_names=["Customers", "Products"], db_url="sqlite:///data/northwind.db")`
+          >>> db.schema(table_names=["Customers", "Products"], db_url="sqlite:///data/northwind.db")
           Describe the schema structure.
 
       - name: "tool:db:query"
@@ -60,7 +60,7 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_data
         prompt: |
-          __ot `db.query(sql="SELECT * FROM Customers LIMIT 5", db_url="sqlite:///data/northwind.db")`
+          >>> db.query(sql="SELECT * FROM Customers LIMIT 5", db_url="sqlite:///data/northwind.db")
           Summarise the query results.
 
       - name: "tool:db:query_params"
@@ -68,5 +68,5 @@ scenarios:
         tags: [demo, tool, db]
         evaluate: has_data
         prompt: |
-          __ot `db.query(sql="SELECT * FROM Customers WHERE Country = :country", db_url="sqlite:///data/northwind.db", params={"country": "Germany"})`
+          >>> db.query(sql="SELECT * FROM Customers WHERE Country = :country", db_url="sqlite:///data/northwind.db", params={"country": "Germany"})
           Summarise the query results.

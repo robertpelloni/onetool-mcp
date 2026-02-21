@@ -4,7 +4,7 @@ Protects against indirect prompt injection by sanitizing tool outputs
 that may contain malicious payloads designed to trick the LLM.
 
 Three-layer defense:
-1. Trigger sanitization: Replace __ot, mcp__onetool patterns
+1. Trigger sanitization: Replace __ot, __run, mcp__onetool patterns
 2. Tag sanitization: Remove <external-content-*> patterns
 3. GUID-tagged boundaries: Wrap content in unpredictable tags
 """
@@ -22,9 +22,10 @@ __all__ = [
 ]
 
 # Regex patterns for trigger detection (case-insensitive)
-# Matches: __ot, mcp__onetool, mcp__onetool__run
+# Matches legacy triggers: __ot, mcp__onetool, mcp__onetool__run
+# Note: >>> is not sanitized (too common in Python docs/notebooks)
 TRIGGER_PATTERN = re.compile(
-    r"(__ot\b|mcp__onetool\w*)",
+    r"(__ot\b|__run\b|mcp__onetool\w*)",
     re.IGNORECASE,
 )
 
@@ -39,7 +40,7 @@ TAG_PATTERN = re.compile(
 def sanitize_triggers(content: str) -> str:
     """Replace trigger patterns that could invoke OneTool.
 
-    Replaces patterns like __ot, mcp__onetool, mcp__onetool__run
+    Replaces patterns like __ot, mcp__onetool, mcp__onetool__run (legacy triggers)
     with [REDACTED:trigger] to prevent indirect prompt injection.
 
     Args:

@@ -251,13 +251,13 @@ Second prompt"""
 
     def test_multiline_prompts(self) -> None:
         """Multi-line prompts within segments are preserved."""
-        prompt = """__ot
+        prompt = """>>>
 ```python
 npm = check_npm()
 ```
 Return versions.
 ---PROMPT---
-__ot
+>>>
 ```python
 other = check_other()
 ```

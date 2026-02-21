@@ -111,8 +111,10 @@ demo/.onetool/stats/
 demo/.onetool/logs/
 demo/tmp/
 
-# Claude Code
+# AI tool directories
 .claude/
+.opencode/
+.codex/
 .mcp.json
 
 # Worktree state files

@@ -15,7 +15,7 @@ uv sync && uv run onetool
 ## Invocation
 
 ```python
-__ot brave.search(query="AI news")
+>>> brave.search(query="AI news")
 ```
 
 ## Tools

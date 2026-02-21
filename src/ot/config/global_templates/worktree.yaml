@@ -14,7 +14,7 @@ tools:
     # Command returned by worktree.add() to start a worker session
     launch_cmd: "cd {workspace_dir}"
 
-    # First __ot tool call the worker agent should run after starting
+    # First OneTool call the worker agent should run after starting
     ot_cmd: "worktree.info()"
 
     # Shell commands run after git worktree add.

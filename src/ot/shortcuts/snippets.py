@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
+
+from ot.executor.param_resolver import resolve_kwargs
 
 if TYPE_CHECKING:
     from ot.config import OneToolConfig, SnippetDef
@@ -206,8 +208,12 @@ def expand_snippet(
         if param_def.default is not None:
             context[param_name] = param_def.default
 
+    # Resolve abbreviated param names before applying (prefix resolution)
+    param_names = list(snippet_def.params.keys())
+    resolved_input = resolve_kwargs(cast("dict[str, object]", parsed.params), param_names)
+
     # Apply provided values
-    for key, value in parsed.params.items():
+    for key, value in resolved_input.items():
         if key not in snippet_def.params:
             logger.warning(
                 f"Unknown parameter '{key}' for snippet '{parsed.name}' (ignored)"

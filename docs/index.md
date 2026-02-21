@@ -71,7 +71,7 @@ Agents are excellent at writing code. OneTool tool calls can be batched, chained
 Write Python, not tool definitions. You see exactly what runs. No more guessing.
 
 ```python
-__ot brave.search(q="AI")
+>>> brave.search(q="AI")
 ```
 
 </div>

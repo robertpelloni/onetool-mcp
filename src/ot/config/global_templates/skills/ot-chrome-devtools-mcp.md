@@ -1,5 +1,5 @@
 ---
-name: devtools-guide
+name: ot-chrome-devtools-mcp
 description: Chrome DevTools MCP usage guide — browser automation and debugging via Chrome DevTools Protocol
 tags: [browser, devtools, automation]
 ---

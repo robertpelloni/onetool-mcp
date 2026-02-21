@@ -185,6 +185,86 @@ def test_expand_snippet_with_defaults() -> None:
     assert result == "demo.items(count=5)"
 
 
+@pytest.mark.unit
+@pytest.mark.core
+def test_expand_snippet_prefix_resolution() -> None:
+    """Verify expand_snippet resolves abbreviated param names via prefix matching.
+
+    User provides short key 'q'; snippet defines full param 'query'.
+    resolve_kwargs resolves q → query (param starts with key).
+    """
+    from ot.config import OneToolConfig, SnippetDef, SnippetParam
+    from ot.shortcuts import expand_snippet, parse_snippet
+
+    config = OneToolConfig(
+        snippets={
+            "g": SnippetDef(
+                description="Search snippet",
+                body='ground.search(query="{{ query }}")',
+                params={"query": SnippetParam()},
+            )
+        }
+    )
+
+    # Prefix match: 'q' resolves to 'query'
+    parsed = parse_snippet("$g q=test")
+    result = expand_snippet(parsed, config)
+    assert result == 'ground.search(query="test")'
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_expand_snippet_prefix_resolution_exact_wins() -> None:
+    """Verify exact match takes precedence over prefix match."""
+    from ot.config import OneToolConfig, SnippetDef, SnippetParam
+    from ot.shortcuts import expand_snippet, parse_snippet
+
+    config = OneToolConfig(
+        snippets={
+            "x": SnippetDef(
+                description="Snippet with overlapping params",
+                body='demo.call(quality="{{ quality }}", query="{{ query }}")',
+                params={
+                    "quality": SnippetParam(required=False, default=""),
+                    "query": SnippetParam(required=False, default=""),
+                },
+            )
+        }
+    )
+
+    # Exact match: 'query' resolves to 'query', not 'quality'
+    parsed = parse_snippet("$x query=abc")
+    result = expand_snippet(parsed, config)
+    assert 'query="abc"' in result
+    assert 'quality=""' in result
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_expand_snippet_prefix_resolution_first_in_order_wins() -> None:
+    """Verify first param in YAML definition order wins on ambiguous prefix match."""
+    from ot.config import OneToolConfig, SnippetDef, SnippetParam
+    from ot.shortcuts import expand_snippet, parse_snippet
+
+    config = OneToolConfig(
+        snippets={
+            "x": SnippetDef(
+                description="Snippet with ambiguous params",
+                body='demo.call(quality="{{ quality }}", query="{{ query }}")',
+                params={
+                    "quality": SnippetParam(required=False, default=""),
+                    "query": SnippetParam(required=False, default=""),
+                },
+            )
+        }
+    )
+
+    # 'q' is a prefix of both 'quality' and 'query'; first in definition order wins
+    parsed = parse_snippet("$x q=abc")
+    result = expand_snippet(parsed, config)
+    assert 'quality="abc"' in result
+
+
 @pytest.mark.integration
 @pytest.mark.core
 def test_include_loads_snippets_library() -> None:

@@ -30,28 +30,6 @@ onetool init           # Interactive setup (uses current directory)
 onetool init validate  # Check for errors
 ```
 
-## Configuration Inheritance
-
-Project configs can inherit from global config:
-
-```yaml
-version: 2
-inherit: global  # global (default) or none
-
-tools_dir:
-  - ./tools/*.py
-```
-
-| Value | Behaviour |
-|-------|-----------|
-| `global` (default) | Merge global config first, project overrides |
-| `none` | No inheritance, use project config as-is |
-
-**Merge semantics:**
-
-- Nested dicts are deep-merged (partial overrides work)
-- Lists and scalars are replaced entirely
-
 ## YAML Schema
 
 ```yaml
@@ -71,7 +49,6 @@ security:                     # Code validation settings
   validate_code: true
   enabled: true
 
-projects: {}                  # Named project paths
 servers: {}                   # External MCP servers
 tools: {}                     # Pack-specific configuration
 alias: {}                     # Function aliases
@@ -147,24 +124,6 @@ tools:
     docs_limit: 20
   db:
     max_chars: 8000
-```
-
-## Projects Configuration
-
-Named projects for path resolution and attributes:
-
-```yaml
-projects:
-  myapp:
-    path: /path/to/myapp
-    attrs:
-      db_url: postgresql://localhost/myapp
-      api_key: ${MY_API_KEY}
-
-  demo:
-    path: .
-    attrs:
-      db_url: sqlite:///demo/data/northwind.db
 ```
 
 ## Secrets Configuration
@@ -423,7 +382,7 @@ ot.security(check="pickle.load") # Check qualified call
 
 The `security.sanitize` subsection protects against indirect prompt injection by sanitizing tool outputs:
 
-1. **Trigger sanitization:** Replace `__ot`, `mcp__onetool` patterns
+1. **Trigger sanitization:** Replace `__ot`, `__run`, `mcp__onetool` patterns
 2. **Tag sanitization:** Remove `<external-content-*>` patterns
 3. **GUID-tagged boundaries:** Wrap content in unpredictable tags
 
@@ -445,11 +404,13 @@ See [Security Model](../../learn/security.md) for full documentation.
 Config values support `${VAR}` and `${VAR:-default}` syntax:
 
 ```yaml
-projects:
-  myapp:
-    path: ${HOME}/projects/myapp
-    attrs:
-      db_url: ${DATABASE_URL:-sqlite:///local.db}
+servers:
+  myserver:
+    type: http
+    url: ${MY_SERVER_URL:-https://localhost:3000/mcp}
+    auth:
+      type: bearer
+      token: ${MY_API_KEY}
 ```
 
 ## Validation
@@ -494,10 +455,4 @@ tools:
     max_chars: 8000
   ripgrep:
     timeout: 120.0
-
-projects:
-  app:
-    path: /srv/myapp
-    attrs:
-      db_url: ${DATABASE_URL}
 ```

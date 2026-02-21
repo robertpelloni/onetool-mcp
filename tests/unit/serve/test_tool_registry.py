@@ -148,6 +148,22 @@ def test_pack_proxy_raises_on_unknown_function() -> None:
 
 @pytest.mark.unit
 @pytest.mark.serve
+def test_pack_proxy_resolves_abbreviated_params_for_domain_tools() -> None:
+    """Verify param prefix matching works for domain tools not in ToolRegistry."""
+    from ot.executor.pack_proxy import _wrap_with_stats
+
+    def search(query: str, limit: int = 10) -> str:
+        return f"query={query} limit={limit}"
+
+    wrapped = _wrap_with_stats("ground", "search", search)
+
+    # 'q' should resolve to 'query' via prefix matching
+    result = wrapped(q="test")
+    assert result == "query=test limit=10"
+
+
+@pytest.mark.unit
+@pytest.mark.serve
 def test_registry_functions_by_full_name() -> None:
     """Verify we can look up functions by full pack.function name from packs dict."""
     from ot.executor.tool_loader import load_tool_registry

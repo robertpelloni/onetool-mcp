@@ -10,13 +10,13 @@ Used by the runner to build the execution namespace.
 
 from __future__ import annotations
 
+import inspect
 from collections import OrderedDict
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
 from ot.executor.param_resolver import (
     get_mcp_tool_param_names,
-    get_tool_param_names,
     resolve_kwargs,
 )
 from ot.stats import timed_tool_call
@@ -33,13 +33,15 @@ def _wrap_with_stats(
     """Wrap a function to record execution-level stats, track calls, and resolve param prefixes."""
     tool_name = f"{pack_name}.{func_name}"
 
+    try:
+        _param_names = tuple(inspect.signature(func).parameters.keys())
+    except (ValueError, TypeError):
+        _param_names = ()
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        # Resolve abbreviated parameter names (cached lookup)
-        if kwargs:
-            param_names = get_tool_param_names(tool_name)
-            if param_names:
-                kwargs = resolve_kwargs(kwargs, param_names)
+        if kwargs and _param_names:
+            kwargs = resolve_kwargs(kwargs, _param_names)
 
         with timed_tool_call(tool_name):
             return func(*args, **kwargs)

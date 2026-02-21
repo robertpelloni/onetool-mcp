@@ -11,7 +11,7 @@ def test_slim_mode_produces_short_prompt() -> None:
     """Slim mode produces at most 25 lines."""
     from ot.prompts import PromptsConfig
 
-    slim_text = "Line 1\nLine 2\nLine 3\nDiscovery hint: `__ot ot.help()`"
+    slim_text = "Line 1\nLine 2\nLine 3\nDiscovery hint: `>>> ot.help()`"
     config = PromptsConfig(
         instructions="Full long prompt\n" * 50,
         instructions_slim=slim_text,
@@ -80,7 +80,7 @@ def test_template_prompts_slim_has_required_elements() -> None:
     prompts = load_prompts()
     slim = prompts.instructions_slim or ""
 
-    assert "__ot" in slim, "Missing trigger in slim prompt"
+    assert ">>>" in slim, "Missing trigger in slim prompt"
     assert "ot.help()" in slim, "Missing discovery hint in slim prompt"
     assert "external-content" in slim or "boundary" in slim.lower(), (
         "Missing external content boundary warning in slim prompt"

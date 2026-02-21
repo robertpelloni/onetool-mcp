@@ -1,24 +1,24 @@
-# OneTool Agent Hints
+---
+name: ot-adv-guide
+description: OneTool advanced reference — full tool cheatsheet, parameter traps, output control, and multi-step patterns
+tags: [reference, cheatsheet, advanced]
+---
 
-Quick reference for AI agents using OneTool. All examples are valid, copy-pasteable function calls using keyword-only arguments.
+# OneTool Advanced Reference
 
-## Discovery
+Full cheatsheet for AI agents. All examples use keyword-only arguments.
 
-```python
-ot.tools()                        # List all tools
-ot.tools(pattern="search")        # Filter by name
-ot.tools(pattern="brave", info="full")  # Full docs
-ot.packs()                        # List all packs
-ot.help(query="brave.search")     # Help on a tool
-ot.help(query="web")              # Help on a pack
-```
+## Prerequisites
 
-## Info Levels
+Not all tool packs are available by default. Install the appropriate extra if a pack is missing:
 
-All discovery functions accept `info=`:
-- `"list"` - names only
-- `"min"` - name + description (default)
-- `"full"` - complete docs, args, examples
+| Extra | Install command | Tool packs included |
+|-------|----------------|---------------------|
+| (core) | `pip install onetool-mcp` | `mem`, `llm`, `ot`, `package.audit` |
+| `[util]` | `pip install onetool-mcp[util]` | `brave`, `convert`, `excel`, `file`, `ground` |
+| `[dev]` | `pip install onetool-mcp[dev]` | `context7`, `db`, `diagram`, `package`, `ripgrep`, `web`, `worktree` |
+
+If a tool is missing, check installed packs with `ot.packs()` and install the required extra.
 
 ## Web Search
 
@@ -163,7 +163,17 @@ context7.doc(library_key="fastapi/fastapi", topic="middleware")
 context7.doc(library_key="pallets/flask", topic="blueprints", mode="code")
 ```
 
-## Browser Annotations (Chrome DevTools)
+## Browser Annotation Utilities
+
+OneTool provides visual annotation helpers for both browser automation stacks.
+For full browser automation tools, see: `ot.skills(name="ot-chrome-devtools-mcp")` or `ot.skills(name="ot-playwright-mcp")`.
+
+> **MCP server required.** These utilities only work when the corresponding MCP server is configured
+> in your project's `servers.yaml` (or via `include: [config/servers.yaml]` in `onetool.yaml`).
+> `devtools_util` requires the `devtools:` server; `playwright_util` requires the `playwright:` server.
+> Check configured servers with `ot.servers()`.
+
+### devtools_util (Chrome DevTools)
 
 ```python
 devtools_util.inject_annotations()
@@ -177,7 +187,7 @@ devtools_util.guide_user(task="Fill form", steps=[
 ])
 ```
 
-## Browser Annotations (Playwright)
+### playwright_util (Playwright)
 
 ```python
 playwright_util.inject_annotations()
@@ -193,41 +203,46 @@ playwright_util.guide_user(task="Fill form", steps=[
 ## System & Config
 
 ```python
-ot.health()           # Component status
-ot.config()           # Configuration summary
-ot.debug()            # Full debug info
-ot.stats()            # Usage statistics
-ot.version()          # Version string
-ot.reload()           # Reload configuration
-ot.security()         # Security rules summary
-ot.security(check="os")  # Check specific pattern
-ot.servers()          # List MCP proxy servers
-ot.servers(info="full")  # Server details + tools
-ot.result(handle="abc123")  # Paginate large output
+ot.health()                              # Component status
+ot.config()                              # Configuration summary
+ot.debug()                               # Full debug info
+ot.stats()                               # Usage statistics
+ot.version()                             # Version string
+ot.reload()                              # Reload configuration
+ot.security()                            # Security rules summary
+ot.security(check="os")                  # Check specific pattern
+ot.servers()                             # List MCP proxy servers
+ot.servers(info="full")                  # Server details + tools
+ot.result(handle="abc123")               # Paginate large output
 ot.result(handle="abc123", search="error")  # Filter stored result
-ot.agent_hints()      # This cheatsheet
+ot.skills()                              # List available skills
+ot.skills(name="ot-guide")               # Discovery guide
+ot.skills(name="ot-adv-guide")           # This cheatsheet
 ```
 
 ## Output Control
 
-Set `__format__` before a call to control serialization:
-
 ```python
 __format__ = "yml_h"; brave.search(query="test")
 __format__ = "json"; file.read(path="data.json")
+__sanitize__ = False; file.read(path="config.yaml")
 ```
 
-Modes: `json` (default), `json_h` (pretty), `yml` (flow), `yml_h` (block).
+Formats: `json` (default), `json_h` (pretty), `yml` (flow), `yml_h` (block).
 
-## Call Rules
+## Multi-Step Patterns
 
-1. **Keyword args only**: `brave.search(query="test")` not `brave.search("test")`
-2. **Batch when possible**: `brave.search_batch(queries=["a", "b"])` not multiple calls
-3. **Multi-step**: End with the value to return: `x = brave.search(query="a"); y = brave.search(query="b"); {"a": x, "b": y}`
+End multi-step code with the value to return:
+
+```python
+x = brave.search(query="topic A")
+y = brave.search(query="topic B")
+{"a": x, "b": y}
+```
 
 ## Parameter Traps
 
-Common naming mistakes - check `ot.tools(pattern="tool", info="full")` when a call fails:
+Check `ot.tools(pattern="tool", info="full")` when a call fails:
 
 | Pack | Wrong | Correct |
 |------|-------|---------|

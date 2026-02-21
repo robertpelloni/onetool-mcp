@@ -28,7 +28,7 @@ def fake_env(tmp_path: Path):
         yaml.dump({
             "tools": {
                 "claude": {"stub_path": ".claude/skills/{name}/SKILL.md"},
-                "codex": {"stub_path": ".agents/skills/{name}/SKILL.md"},
+                "codex": {"stub_path": ".codex/skills/{name}/SKILL.md"},
                 "opencode": {"stub_path": ".opencode/skills/{name}/SKILL.md"},
             }
         })
@@ -37,7 +37,7 @@ def fake_env(tmp_path: Path):
     # Create a fake stub template (unified frontmatter for all tools)
     stub_tmpl = tmp_path / "skill_stub.md.j2"
     stub_tmpl.write_text(
-        "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`__ot ot.skills(name=\"{{ name }}\")`\n"
+        "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`>>> ot.skills(name=\"{{ name }}\")`\n"
     )
 
     # Create project dir (where relative paths resolve from)
@@ -62,7 +62,7 @@ def _patch_env(env: dict):
         stack.enter_context(
             patch("ottools.scaffold._get_tools_config", return_value={
                 "claude": {"stub_path": ".claude/skills/{name}/SKILL.md"},
-                "codex": {"stub_path": ".agents/skills/{name}/SKILL.md"},
+                "codex": {"stub_path": ".codex/skills/{name}/SKILL.md"},
                 "opencode": {"stub_path": ".opencode/skills/{name}/SKILL.md"},
             })
         )
@@ -74,7 +74,7 @@ def _patch_env(env: dict):
         )
         stack.enter_context(
             patch("ottools.scaffold._get_skill_stub_template",
-                  return_value="---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`__ot ot.skills(name=\"{{ name }}\")`\n")
+                  return_value="---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`>>> ot.skills(name=\"{{ name }}\")`\n")
         )
         mock_cfg = MagicMock()
         mock_cfg._config_dir = str(env["project_dir"] / ".onetool")
@@ -136,7 +136,7 @@ def test_scaffold_skills_install_codex(fake_env: dict) -> None:
         result = skills(install="my-skill", tool="codex")
 
     assert "installed" in result or "updated" in result
-    stub_file = fake_env["project_dir"] / ".agents" / "skills" / "my-skill" / "SKILL.md"
+    stub_file = fake_env["project_dir"] / ".codex" / "skills" / "my-skill" / "SKILL.md"
     assert stub_file.exists(), f"Codex stub not created at {stub_file}"
 
 

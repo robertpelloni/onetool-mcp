@@ -1,7 +1,7 @@
 """Fence processing for command execution.
 
 Handles stripping of:
-- Execution trigger prefixes (__ot, __onetool, mcp__onetool__run)
+- Execution trigger prefixes (>>>, __run, __ot, __onetool, mcp__onetool__run)
 - Markdown code fences (triple backticks with/without language)
 - Inline backticks (single and double)
 
@@ -17,15 +17,16 @@ def strip_fences(command: str) -> tuple[str, bool]:
     """Strip execution prefixes, markdown code fences, and inline backticks.
 
     Execution trigger prefixes (stripped first):
-        __ot                 - short name, default tool
-        __ot__run            - short name, explicit tool call
-        __onetool            - full name, default tool
-        __onetool__run       - full name, explicit tool call
-        mcp__onetool__run    - explicit MCP call
+        >>>                  - Python REPL symbol; recommended human-friendly form
+        __run                - short form following __(tool) pattern; systematic
+        __ot                 - legacy; kept for backward compat; not in docs
+        __ot__run            - legacy variant
+        __onetool            - legacy full name
+        __onetool__run       - legacy full name explicit
+        mcp__onetool__run    - canonical MCP tool name
 
-    Each prefix supports three invocation styles:
+    Each prefix supports two invocation styles:
         <prefix> func(arg="value")     - simple call
-        <prefix> `code`                - inline backticks
         <prefix> + code fence          - multi-line code fence
 
     Note: mcp__ot__run is NOT a valid prefix.
@@ -45,15 +46,18 @@ def strip_fences(command: str) -> tuple[str, bool]:
     Returns:
         Tuple of (stripped command, whether anything was stripped)
     """
-    stripped = command.strip()
+    # Normalize line endings before any processing
+    stripped = command.strip().replace("\r\n", "\n").replace("\r", "\n")
     anything_stripped = False
 
     # Strip execution trigger prefixes:
-    # - __ot, __ot__run (short name)
-    # - __onetool, __onetool__run (full name)
-    # - mcp__onetool__run (explicit MCP call)
+    # - >>> (Python REPL symbol; recommended)
+    # - __run (short form; systematic)
+    # - __ot, __ot__run (legacy short name)
+    # - __onetool, __onetool__run (legacy full name)
+    # - mcp__onetool__run (canonical MCP call)
     # Note: mcp__ot__run is NOT valid
-    prefix_pattern = r"^(?:mcp__onetool__run|__onetool(?:__run)?|__ot(?:__run)?)\s*"
+    prefix_pattern = r"^(?:mcp__onetool__run|__onetool(?:__run)?|__ot(?:__run)?|__run|>>>)\s*"
     match = re.match(prefix_pattern, stripped)
     if match:
         stripped = stripped[match.end() :].strip()

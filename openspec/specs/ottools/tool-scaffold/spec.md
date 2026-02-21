@@ -11,7 +11,7 @@ The scaffold pack SHALL provide a `templates()` function to list available exten
 #### Scenario: List available templates
 - **WHEN** `scaffold.templates()` is called
 - **THEN** it returns a formatted list of template names and descriptions
-- **AND** templates are read from `src/ot/config/defaults/tool_templates/`
+- **AND** templates are read from `get_global_templates_dir() / "tool_templates"`
 
 #### Scenario: Empty template directory
 - **WHEN** the template directory does not exist or is empty
@@ -26,10 +26,6 @@ The scaffold pack SHALL provide a `create()` function to scaffold new extensions
 - **THEN** it creates `.onetool/tools/mypack/mypack.py`
 - **AND** uses the default "extension" template (in-process, full `ot.*` access)
 - **AND** substitutes `{{pack}}`, `{{function}}`, `{{description}}` placeholders
-
-#### Scenario: Create global extension
-- **WHEN** `scaffold.create(name="mypack", scope="global")` is called
-- **THEN** it creates `~/.onetool/tools/mypack/mypack.py`
 
 #### Scenario: Custom function name
 - **WHEN** `scaffold.create(name="mypack", function="search")` is called
@@ -140,7 +136,7 @@ Extension templates SHALL be stored in the bundled config defaults directory.
 
 #### Scenario: Template discovery
 - **WHEN** scaffold functions look for templates
-- **THEN** they use `get_bundled_config_dir() / "tool_templates"` to find the directory
+- **THEN** they use `get_global_templates_dir() / "tool_templates"` to find the directory
 - **AND** templates are bundled with the onetool package
 
 #### Scenario: Template file naming
@@ -154,7 +150,6 @@ The scaffold pack SHALL provide a `scaffold.skills()` function that lists bundle
 #### Scenario: List skills with no arguments
 - **WHEN** `scaffold.skills()` is called
 - **THEN** it SHALL return a formatted list of available skill stub names and descriptions
-- **AND** each entry SHALL indicate whether the stub is already installed
 
 ### Requirement: Install Skill Stub
 
@@ -163,17 +158,17 @@ The scaffold pack SHALL install skill stubs for the specified AI tool (agent).
 #### Scenario: Install stub for Claude Code (default)
 - **WHEN** `scaffold.skills(install="ot-guide")` is called
 - **THEN** it SHALL write a stub file to `.claude/skills/ot-guide/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-guide")`
+- **AND** the stub SHALL instruct the agent to call `>>> ot.skills(name="ot-guide")`
 
 #### Scenario: Install stub for Codex
 - **WHEN** `scaffold.skills(install="ot-chrome-devtools-mcp", tool="codex")` is called
-- **THEN** it SHALL write a stub file to `.agents/skills/ot-chrome-devtools-mcp/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-chrome-devtools-mcp")`
+- **THEN** it SHALL write a stub file to `.codex/skills/ot-chrome-devtools-mcp/SKILL.md`
+- **AND** the stub SHALL instruct the agent to call `>>> ot.skills(name="ot-chrome-devtools-mcp")`
 
 #### Scenario: Install stub for OpenCode
 - **WHEN** `scaffold.skills(install="ot-playwright-mcp", tool="opencode")` is called
 - **THEN** it SHALL write a stub file to `.opencode/skills/ot-playwright-mcp/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `__ot ot.skills(name="ot-playwright-mcp")`
+- **AND** the stub SHALL instruct the agent to call `>>> ot.skills(name="ot-playwright-mcp")`
 
 #### Scenario: Install all stubs
 - **WHEN** `scaffold.skills(install="all")` is called
@@ -201,7 +196,7 @@ Skill stub files SHALL use a unified frontmatter format. All three tools (Claude
 #### Scenario: Stub frontmatter format (all tools)
 - **WHEN** a stub is installed for any supported tool
 - **THEN** the file SHALL have YAML frontmatter with both `name:` and `description:` fields
-- **AND** the body SHALL contain a single instruction to call `__ot ot.skills(name="<name>")`
+- **AND** the body SHALL contain a single instruction to call `>>> ot.skills(name="<name>")`
 
 ### Requirement: Tool Path Configuration
 

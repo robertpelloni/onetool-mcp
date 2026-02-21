@@ -13,13 +13,13 @@ class TestMultiPromptIntegration:
 
     def test_split_prompts_integration(self) -> None:
         """Verify split_prompts works with realistic multi-prompt YAML content."""
-        prompt = """__ot
+        prompt = """>>>
 ```python
 npm = check_npm_versions(dependencies={"express": "4.0.0"})
 ```
 Return only latest versions.
 ---PROMPT---
-__ot
+>>>
 ```python
 pypi = check_pypi_versions(dependencies={"requests": "2.0.0"})
 ```

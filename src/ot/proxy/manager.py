@@ -214,6 +214,40 @@ class ProxyManager:
         )
         return future.result(timeout=timeout + 5)
 
+    def list_resources_sync(self, server: str, timeout: float = 5.0) -> list[dict[str, Any]]:
+        """Synchronously list resources from a proxied MCP server.
+
+        Blocking wrapper around list_resources, suitable for sync code.
+
+        Args:
+            server: Name of the server.
+            timeout: Timeout in seconds.
+
+        Returns:
+            List of resource metadata dicts, or empty list if not connected.
+        """
+        if self._loop is None or not self._loop.is_running():
+            return []
+        future = asyncio.run_coroutine_threadsafe(self.list_resources(server), self._loop)
+        return future.result(timeout=timeout)
+
+    def list_prompts_sync(self, server: str, timeout: float = 5.0) -> list[dict[str, Any]]:
+        """Synchronously list prompts from a proxied MCP server.
+
+        Blocking wrapper around list_prompts, suitable for sync code.
+
+        Args:
+            server: Name of the server.
+            timeout: Timeout in seconds.
+
+        Returns:
+            List of prompt metadata dicts, or empty list if not connected.
+        """
+        if self._loop is None or not self._loop.is_running():
+            return []
+        future = asyncio.run_coroutine_threadsafe(self.list_prompts(server), self._loop)
+        return future.result(timeout=timeout)
+
     async def list_resources(self, server: str) -> list[dict[str, Any]]:
         """List resources from a proxied MCP server.
 

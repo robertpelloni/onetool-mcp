@@ -8,7 +8,7 @@ Read dev/index.md for complete dev docs navigation.
 Two OneTool versions are configured:
 
 - **otd**: Local dev version. Use `mcp__onetool-dev__run` only when explicitly requested
-- **ot**: Stable version . Use `__ot` for all normal operations (default)
+- **ot**: Stable version . Use `>>>` for all normal operations (default)
 Use stable version unless "dev" is explicitly mentioned.
 
 ## Commands

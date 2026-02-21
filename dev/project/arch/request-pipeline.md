@@ -4,7 +4,7 @@ Every call flows through a seven-stage pipeline from client to response.
 
 ## Stages
 
-1. **Fence stripping** - Remove `__ot` prefix, markdown fences, backticks
+1. **Fence stripping** - Remove trigger prefix (`>>>`, `__run`, legacy `__ot`), markdown fences, backticks
 2. **Validation** - AST-based security checks against allowlists
 3. **Code preparation** - Parse Python, auto-wrap last expression as return
 4. **Namespace building** - Load tool packs as proxy objects
@@ -27,7 +27,7 @@ sequenceDiagram
     participant E as Executor
     participant T as Tool Function
 
-    C->>M: run(command="__ot brave.search(query='test')")
+    C->>M: run(command=">>> brave.search(query='test')")
     M->>S: Handle tool call
 
     rect rgb(240, 248, 255)
@@ -79,7 +79,7 @@ sequenceDiagram
 |------|------|
 | `src/ot/server.py` | FastMCP server, `run()` entry point |
 | `src/ot/executor/runner.py` | Orchestrates prepare + execute |
-| `src/ot/executor/fence_processor.py` | Strips `__ot`, fences, backticks |
+| `src/ot/executor/fence_processor.py` | Strips trigger prefix, fences, backticks |
 | `src/ot/executor/validator.py` | AST-based security validation |
 | `src/ot/executor/pack_proxy.py` | Builds dot-notation namespace |
 | `src/ot/utils/format.py` | Result serialisation (JSON/YAML/raw) |

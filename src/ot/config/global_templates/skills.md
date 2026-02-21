@@ -17,8 +17,8 @@ tools:
     description: "Claude Code"
 
   codex:
-    # Codex searches .agents/skills/ (repo-level) and ~/.agents/skills/ (user-level)
-    stub_path: ".agents/skills/{name}/SKILL.md"
+    # Codex project config lives in .codex/ (global: ~/.codex/)
+    stub_path: ".codex/skills/{name}/SKILL.md"
     description: "OpenAI Codex CLI"
 
   opencode:

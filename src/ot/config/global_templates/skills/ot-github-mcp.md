@@ -1,5 +1,5 @@
 ---
-name: github-guide
+name: ot-github-mcp
 description: GitHub MCP usage guide — official GitHub API integration for repository management, issues, and PRs
 tags: [github, vcs, issues, prs]
 ---

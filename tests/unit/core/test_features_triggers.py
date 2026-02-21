@@ -1,8 +1,9 @@
 """Unit tests for OneTool trigger prefixes and invocation styles.
 
 Tests the fence processor without LLM involvement:
-- All 5 trigger prefixes (__ot, __ot__run, __onetool, __onetool__run, mcp__onetool__run)
-- All 3 invocation styles (simple call, inline backticks, code fence)
+- All 7 trigger prefixes (>>>, __run, __ot, __ot__run, __onetool, __onetool__run, mcp__onetool__run)
+- Invocation styles (simple call, inline backticks, code fence)
+- Whitespace and CRLF robustness
 
 Migrated from demo/bench/features.yaml prefix/style tests to provide:
 - Faster feedback (seconds vs minutes)
@@ -240,4 +241,109 @@ demo.foo()
         # Leading/trailing whitespace
         stripped, changed = strip_fences("  __ot demo.foo()  ")
         assert stripped == "demo.foo()"
+        assert changed is True
+
+
+# =============================================================================
+# NEW TRIGGERS: >>> and __run
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestNewTriggers:
+    """Test the new >>> and __run trigger prefixes."""
+
+    def test_arrow_prefix_with_space(self) -> None:
+        """>>> with space is stripped."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences(">>> brave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_prefix_no_space(self) -> None:
+        """>>> without space is stripped."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences(">>>brave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_run_prefix(self) -> None:
+        """__run prefix is stripped."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences("__run brave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+
+# =============================================================================
+# WHITESPACE ROBUSTNESS
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestWhitespaceRobustness:
+    """Test that whitespace and line-ending variations are handled."""
+
+    def test_arrow_with_newline(self) -> None:
+        """>>> followed by newline before content."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences(">>>\nbrave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_with_crlf(self) -> None:
+        """>>> followed by CRLF before content."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences(">>>\r\nbrave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_with_multiple_blank_lines(self) -> None:
+        """>>> followed by multiple blank lines before content."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences(">>>\n\n\nbrave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_run_with_newline(self) -> None:
+        """__run followed by newline before content."""
+        from ot.executor.fence_processor import strip_fences
+
+        stripped, changed = strip_fences("__run\nbrave.search(q='x')")
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_with_fence_after_newline(self) -> None:
+        """>>> then newline then fenced block."""
+        from ot.executor.fence_processor import strip_fences
+
+        code = ">>>\n```python\nbrave.search(q='x')\n```"
+        stripped, changed = strip_fences(code)
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_with_fence_after_crlf(self) -> None:
+        """>>> then CRLF then fenced block."""
+        from ot.executor.fence_processor import strip_fences
+
+        code = ">>>\r\n```python\nbrave.search(q='x')\n```"
+        stripped, changed = strip_fences(code)
+        assert stripped == "brave.search(q='x')"
+        assert changed is True
+
+    def test_arrow_with_fence_after_multiple_blank_lines(self) -> None:
+        """>>> then multiple blank lines then fenced block."""
+        from ot.executor.fence_processor import strip_fences
+
+        code = ">>>\n\n```python\nbrave.search(q='x')\n```"
+        stripped, changed = strip_fences(code)
+        assert stripped == "brave.search(q='x')"
         assert changed is True

@@ -49,22 +49,22 @@ The system SHALL return the full body of a named skill via `ot.skills(name=...)`
 
 The system SHALL bundle an initial set of skills for on-demand discovery and server guides.
 
-#### Scenario: onetool-discover skill bundled
+#### Scenario: ot-guide skill bundled
 - **WHEN** `ot.skills()` is called
 - **THEN** `ot-guide` SHALL be listed
 - **AND** its content SHALL include discovery functions (`ot.help()`, `ot.tools()`, `ot.packs()`), error recovery patterns, security allowlist guidance, and output format/sanitisation controls
 
-#### Scenario: devtools-guide skill bundled
+#### Scenario: ot-chrome-devtools-mcp skill bundled
 - **WHEN** `ot.skills()` is called
 - **THEN** `ot-chrome-devtools-mcp` SHALL be listed
 - **AND** its content SHALL cover the Chrome DevTools MCP server tools, connection modes, and usage patterns
 
-#### Scenario: playwright-guide skill bundled
+#### Scenario: ot-playwright-mcp skill bundled
 - **WHEN** `ot.skills()` is called
 - **THEN** `ot-playwright-mcp` SHALL be listed
 - **AND** its content SHALL cover the Playwright MCP server tools and usage patterns
 
-#### Scenario: github-guide skill bundled
+#### Scenario: ot-github-mcp skill bundled
 - **WHEN** `ot.skills()` is called
 - **THEN** `ot-github-mcp` SHALL be listed
 - **AND** its content SHALL cover the GitHub MCP server tools and usage patterns

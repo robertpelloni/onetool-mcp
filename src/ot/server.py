@@ -1,12 +1,11 @@
 """FastMCP server implementation with a single 'run' tool.
 
-The agent generates function call syntax with __ot prefix:
-  __ot context7.search(query="next.js")
-  __ot context7.doc(library_key="vercel/next.js", topic="routing")
-  __ot `demo.upper(text="hello")`
+The agent generates function call syntax with >>> prefix:
+  >>> context7.search(query="next.js")
+  >>> context7.doc(library_key="vercel/next.js", topic="routing")
 
 Or Python code blocks:
-  __ot
+  >>>
   ```python
   metals = ["Gold", "Silver", "Bronze"]
   results = {}
@@ -18,7 +17,8 @@ Or Python code blocks:
 Or direct MCP calls:
   mcp__onetool__run(command='brave.web_search(query="test")')
 
-Supported prefixes: __ot, __ot__run, __onetool, __onetool__run, mcp__onetool__run
+Supported prefixes: >>>, __run, mcp__onetool__run
+Legacy (backward compat, not advertised): __ot, __ot__run, __onetool, __onetool__run
 Note: mcp__ot__run is NOT valid.
 """
 
@@ -273,7 +273,7 @@ def _get_run_description() -> str:
 @mcp.tool(
     description=_get_run_description(),
     annotations={
-        "title": "Execute OneTool Command",
+        "title": "🧿>>>",
         "readOnlyHint": False,
         "destructiveHint": False,
         "idempotentHint": False,
