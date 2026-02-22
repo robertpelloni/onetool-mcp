@@ -34,7 +34,7 @@ def fake_env(tmp_path: Path):
 
     stub_tmpl = tmp_path / "skill_stub.md.j2"
     stub_tmpl.write_text(
-        "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`>>> ot.skills(name=\"{{ name }}\")`\n"
+        "---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n{{ body }}\n"
     )
 
     project_dir = tmp_path / "project"
@@ -70,7 +70,10 @@ def _patch_env(env: dict):
         )
         stack.enter_context(
             patch("ottools.ot_forge._get_skill_stub_template",
-                  return_value="---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n`>>> ot.skills(name=\"{{ name }}\")`\n")
+                  return_value="---\nname: {{ name }}\ndescription: {{ description }}\n---\n\n{{ body }}\n")
+        )
+        stack.enter_context(
+            patch("ottools.ot_forge._get_skill_body", side_effect=lambda name: f"Full content of {name}")
         )
         mock_cfg = MagicMock()
         mock_cfg._config_dir = str(env["project_dir"] / ".onetool")
@@ -101,6 +104,8 @@ def test_install_skill_claude(fake_env: dict, tmp_path: Path) -> None:
     assert stub_file.exists(), f"Stub file not created at {stub_file}"
     content = stub_file.read_text()
     assert "my-skill" in content
+    assert "Full content of my-skill" in content
+    assert "ot.skills" not in content
 
 
 @pytest.mark.unit
@@ -144,6 +149,38 @@ def test_install_skill_overwrites(fake_env: dict) -> None:
         result = install_skill(install="my-skill", tool="claude")
 
     assert "updated" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_install_skill_default(fake_env: dict) -> None:
+    """install_skill() with no args installs all bundled skills."""
+    from ottools.ot_forge import install_skill
+
+    with _patch_env(fake_env):
+        result = install_skill()
+
+    assert "my-skill" in result
+    assert "other-skill" in result
+    project = fake_env["project_dir"]
+    assert (project / ".claude" / "skills" / "my-skill" / "SKILL.md").exists()
+    assert (project / ".claude" / "skills" / "other-skill" / "SKILL.md").exists()
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_install_skill_exclude(fake_env: dict) -> None:
+    """install_skill(exclude=[...]) installs all skills except excluded ones."""
+    from ottools.ot_forge import install_skill
+
+    with _patch_env(fake_env):
+        result = install_skill(exclude=["other-skill"])
+
+    project = fake_env["project_dir"]
+    assert (project / ".claude" / "skills" / "my-skill" / "SKILL.md").exists()
+    assert not (project / ".claude" / "skills" / "other-skill" / "SKILL.md").exists()
+    assert "my-skill" in result
+    assert "other-skill" not in result
 
 
 @pytest.mark.unit

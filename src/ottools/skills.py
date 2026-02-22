@@ -1,7 +1,6 @@
 """Skill content retrieval for OneTool.
 
-Lists and retrieves bundled skill content from global_templates/skills/,
-merged with any user-defined skills from onetool.yaml (skills: key).
+Lists and retrieves bundled skill content from global_templates/skills/.
 Skills are Markdown files with YAML frontmatter.
 
 Example:
@@ -79,29 +78,6 @@ def _load_skill_index() -> dict[str, tuple[dict[str, Any], str]]:
     return result
 
 
-def _load_user_skills() -> dict[str, tuple[dict[str, Any], str]]:
-    """Load user-defined skills from onetool.yaml skills: key.
-
-    User skills take priority over bundled skills with the same name.
-
-    Returns:
-        Mapping of skill name → (frontmatter dict, body text)
-    """
-    try:
-        from ot.config.loader import get_config
-
-        cfg = get_config()
-        user_skills = cfg.skills
-    except Exception:
-        return {}
-
-    result: dict[str, tuple[dict[str, Any], str]] = {}
-    for skill_name, skill_def in user_skills.items():
-        fm = {"description": skill_def.description, "source": "user"}
-        result[skill_name] = (fm, skill_def.body)
-    return result
-
-
 def skills(
     name: str | None = None,
     pattern: str | None = None,
@@ -109,9 +85,7 @@ def skills(
 ) -> str:
     """List available skills or retrieve a skill's body content.
 
-    Lists bundled skills from global_templates/skills/ merged with any
-    user-defined skills from onetool.yaml (skills: key). User-defined
-    skills take priority over bundled skills with the same name.
+    Lists bundled skills from global_templates/skills/.
 
     Args:
         name: Skill name to retrieve body for (e.g., "ot-guide")
@@ -128,9 +102,7 @@ def skills(
         skills(info="full")                       # full info for each skill
     """
     with LogSpan(span="skills") as s:
-        # Bundled skills first, user-defined skills override on name collision
         index: dict[str, tuple[dict[str, Any], str]] = {**_load_skill_index()}
-        index.update(_load_user_skills())
 
         if name is not None:
             # Retrieve body of a specific skill
