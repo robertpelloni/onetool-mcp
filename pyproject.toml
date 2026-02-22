@@ -36,7 +36,7 @@ dependencies = [
     # === LLM & Search ===
     "openai>=2.15.0",             # mem embeddings, LLM tools
     "tiktoken>=0.9.0",            # Token counting for embedding truncation
-
+    "pillow>=12.1.0",
 ]
 
 [project.urls]
@@ -56,6 +56,7 @@ util = [
     "send2trash>=2.1.0",
 ]
 dev = [
+    "boto3>=1.42.54",
     "filelock>=3.12.0",
     "sqlalchemy>=2.0.46",
     "trafilatura>=2.0.0",
