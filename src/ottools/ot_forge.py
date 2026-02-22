@@ -396,9 +396,27 @@ def _get_skill_description(skill_name: str) -> str:
     return skill_name
 
 
+@cache(ttl=3600)
+def _get_skill_body(skill_name: str) -> str:
+    """Get the body content from a bundled skill."""
+    from ot.paths import get_global_templates_dir
+
+    skill_file = get_global_templates_dir() / "skills" / f"{skill_name}.md"
+    if not skill_file.exists():
+        return ""
+
+    content = skill_file.read_text(encoding="utf-8")
+    if content.startswith("---"):
+        end = content.find("\n---", 3)
+        if end != -1:
+            return content[end + 4:].strip()
+    return content.strip()
+
+
 def install_skill(
     *,
-    install: str,
+    install: str = "all",
+    exclude: list[str] | None = None,
     tool: str = "claude",
 ) -> str:
     """Install a skill stub for an AI tool.
@@ -407,18 +425,21 @@ def install_skill(
     Use ot.skills() to list available skills.
 
     Args:
-        install: Skill name to install, or "all" to install all skills
+        install: Skill name to install, or "all" to install all skills (default)
+        exclude: Skill names to skip when install="all"
         tool: Target AI tool — "claude" (default), "codex", or "opencode"
 
     Returns:
         Status message describing what was done
 
     Example:
+        ot_forge.install_skill()
+        ot_forge.install_skill(exclude=["ot-aws-mcp"])
         ot_forge.install_skill(install="ot-guide")
         ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")
-        ot_forge.install_skill(install="all")
         ot_forge.install_skill(install="all", tool="opencode")
     """
+    exclude = exclude or []
     with LogSpan(span="ot_forge.install_skill", install=install, tool=tool) as s:
         tools_config = _get_tools_config()
         bundled = _list_bundled_skills()
@@ -434,7 +455,7 @@ def install_skill(
 
         # Resolve list of skills to install
         if install == "all":
-            to_install = bundled
+            to_install = [s for s in bundled if s not in exclude]
         else:
             if install not in bundled:
                 s.add(error="unknown_skill", install=install)
@@ -464,7 +485,8 @@ def install_skill(
         results: list[str] = []
         for skill_name in to_install:
             description = _get_skill_description(skill_name)
-            rendered = tmpl.render(name=skill_name, description=description, tool=tool)
+            body = _get_skill_body(skill_name)
+            rendered = tmpl.render(name=skill_name, description=description, body=body, tool=tool)
 
             # Resolve stub path
             raw_path = stub_path_template.format(name=skill_name)

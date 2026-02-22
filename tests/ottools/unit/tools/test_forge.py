@@ -27,7 +27,7 @@ def mock_ot_dir(tmp_path: Path) -> Generator[Path, None, None]:
     mock_config = MagicMock()
     mock_config._config_dir = ot_dir
 
-    with patch("ot.config.loader.get_config", return_value=mock_config):
+    with patch("ottools.ot_forge.get_config", return_value=mock_config):
         yield ot_dir
 
 

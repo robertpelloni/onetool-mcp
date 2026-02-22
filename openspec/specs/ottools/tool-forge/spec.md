@@ -86,7 +86,7 @@ The ot_forge pack SHALL provide an `install_skill()` function to install skill s
 #### Scenario: Install stub for Claude Code (default)
 - **WHEN** `ot_forge.install_skill(install="ot-guide")` is called
 - **THEN** it SHALL write a stub file to `.claude/skills/ot-guide/SKILL.md`
-- **AND** the stub SHALL instruct the agent to call `>>> ot.skills(name="ot-guide")`
+- **AND** the stub SHALL contain the full body content of the skill
 
 #### Scenario: Install stub for Codex
 - **WHEN** `ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")` is called
@@ -122,7 +122,7 @@ Skill stub files SHALL use a unified frontmatter format with `name:` and `descri
 #### Scenario: Stub frontmatter format (all tools)
 - **WHEN** a stub is installed for any supported tool
 - **THEN** the file SHALL have YAML frontmatter with both `name:` and `description:` fields
-- **AND** the body SHALL contain a single instruction to call `>>> ot.skills(name="<name>")`
+- **AND** the body SHALL contain the full content of the skill (not a call to `ot.skills()`)
 
 ### Requirement: Tool Path Configuration
 
