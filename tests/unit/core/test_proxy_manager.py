@@ -648,3 +648,258 @@ class TestProxyManagerBackgroundConnect:
         manager._reset_state()
 
         assert manager._connect_task is None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestProxyManagerIncrementalConnect:
+    """Tests for connect_additional and disconnect_server methods."""
+
+    @pytest.mark.asyncio
+    async def test_connect_additional_already_connected(self) -> None:
+        """Should return 'already connected' without reconnecting."""
+        manager = ProxyManager()
+        manager._clients = {"my-server": MagicMock()}
+
+        from ot.config.models import McpServerConfig
+
+        config = McpServerConfig(type="stdio", command="uvx", args=["my-server"])
+        result = await manager.connect_additional("my-server", config)
+
+        assert result == "already connected"
+
+    @pytest.mark.asyncio
+    async def test_connect_additional_disabled(self) -> None:
+        """Should return 'disabled' without connecting when config.enabled is false."""
+        manager = ProxyManager()
+
+        from ot.config.models import McpServerConfig
+
+        config = McpServerConfig(type="stdio", command="uvx", args=["my-server"], enabled=False)
+        result = await manager.connect_additional("my-server", config)
+
+        assert result == "disabled"
+
+    @pytest.mark.asyncio
+    async def test_connect_additional_success(self) -> None:
+        """Should connect new server and return 'ok (N tools)'."""
+        from mcp import types
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="uvx", args=["my-server"])
+
+        mock_tool = MagicMock(spec=types.Tool)
+        mock_tool.name = "do_thing"
+        mock_tool.description = "Does a thing"
+        mock_tool.inputSchema = {}
+
+        async def fake_connect(name: str, cfg: McpServerConfig) -> None:
+            manager._clients[name] = MagicMock()
+            manager._tools_by_server[name] = [mock_tool, mock_tool]
+
+        with patch.object(manager, "_connect_server", side_effect=fake_connect):
+            result = await manager.connect_additional("my-server", config)
+
+        assert result == "ok (2 tools)"
+        assert "my-server" in manager._clients
+
+    @pytest.mark.asyncio
+    async def test_connect_additional_failure(self) -> None:
+        """Should return 'failed: <reason>' and record error on connection failure."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="uvx", args=["my-server"])
+
+        with patch.object(manager, "_connect_server", side_effect=RuntimeError("process failed")):
+            result = await manager.connect_additional("my-server", config)
+
+        assert result.startswith("failed:")
+        assert "process failed" in result
+        assert manager._errors.get("my-server") is not None
+
+    @pytest.mark.asyncio
+    async def test_connect_additional_does_not_affect_other_servers(self) -> None:
+        """Should not disconnect existing servers when connecting a new one."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        existing_client = MagicMock()
+        manager._clients = {"existing": existing_client}
+
+        config = McpServerConfig(type="stdio", command="uvx", args=["new-server"])
+
+        async def fake_connect(name: str, cfg: McpServerConfig) -> None:
+            manager._clients[name] = MagicMock()
+            manager._tools_by_server[name] = []
+
+        with patch.object(manager, "_connect_server", side_effect=fake_connect):
+            await manager.connect_additional("new-server", config)
+
+        assert manager._clients["existing"] is existing_client
+
+    @pytest.mark.asyncio
+    async def test_disconnect_server_not_connected(self) -> None:
+        """Should return 'not connected' when server is not in clients."""
+        manager = ProxyManager()
+        result = await manager.disconnect_server("nonexistent")
+        assert result == "not connected"
+
+    @pytest.mark.asyncio
+    async def test_disconnect_server_success(self) -> None:
+        """Should disconnect server and unregister its tools."""
+        from mcp import types
+
+        manager = ProxyManager()
+        mock_client = AsyncMock()
+        mock_tool = MagicMock(spec=types.Tool)
+        manager._clients = {"aws-iam": mock_client}
+        manager._tools_by_server = {"aws-iam": [mock_tool]}
+
+        result = await manager.disconnect_server("aws-iam")
+
+        assert result == "disconnected"
+        assert "aws-iam" not in manager._clients
+        assert "aws-iam" not in manager._tools_by_server
+
+    @pytest.mark.asyncio
+    async def test_disconnect_server_does_not_affect_other_servers(self) -> None:
+        """Should not affect other connected servers."""
+        manager = ProxyManager()
+        other_client = MagicMock()
+        target_client = AsyncMock()
+
+        manager._clients = {"keep": other_client, "remove": target_client}
+        manager._tools_by_server = {"keep": [], "remove": []}
+
+        await manager.disconnect_server("remove")
+
+        assert "keep" in manager._clients
+        assert manager._clients["keep"] is other_client
+
+    def test_connect_additional_sync_no_loop(self) -> None:
+        """Should return failure string when no running event loop."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        manager._loop = None
+        config = McpServerConfig(type="stdio", command="uvx", args=["my-server"])
+
+        result = manager.connect_additional_sync("my-server", config)
+        assert "failed" in result
+
+    def test_disconnect_server_sync_no_loop(self) -> None:
+        """Should remove from clients dict directly when no running loop."""
+        manager = ProxyManager()
+        manager._loop = None
+        manager._clients = {"aws-iam": MagicMock()}
+        manager._tools_by_server = {"aws-iam": []}
+
+        result = manager.disconnect_server_sync("aws-iam")
+        assert result == "disconnected"
+        assert "aws-iam" not in manager._clients
+
+    def test_disconnect_server_sync_no_loop_not_connected(self) -> None:
+        """Should return 'not connected' when no loop and server not in clients."""
+        manager = ProxyManager()
+        manager._loop = None
+
+        result = manager.disconnect_server_sync("nonexistent")
+        assert result == "not connected"
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestStripCtxFromSchema:
+    """Tests for _strip_ctx_from_schema helper."""
+
+    def _make_tool(self, schema: dict) -> "types.Tool":
+        from mcp import types
+
+        return types.Tool(name="test_tool", description="test", inputSchema=schema)
+
+    def test_strips_ctx_from_required(self) -> None:
+        """Should remove 'ctx' from the required list."""
+        from mcp import types
+
+        from ot.proxy.manager import _strip_ctx_from_schema
+
+        tool = self._make_tool({
+            "type": "object",
+            "required": ["ctx", "user_name"],
+            "properties": {
+                "ctx": {"type": "object"},
+                "user_name": {"type": "string"},
+            },
+        })
+
+        result = _strip_ctx_from_schema(tool)
+
+        assert "ctx" not in result.inputSchema.get("required", [])
+        assert "user_name" in result.inputSchema["required"]
+
+    def test_strips_ctx_from_properties(self) -> None:
+        """Should remove 'ctx' from properties dict."""
+        from ot.proxy.manager import _strip_ctx_from_schema
+
+        tool = self._make_tool({
+            "type": "object",
+            "required": ["ctx"],
+            "properties": {
+                "ctx": {"type": "object"},
+            },
+        })
+
+        result = _strip_ctx_from_schema(tool)
+
+        assert "ctx" not in result.inputSchema.get("properties", {})
+
+    def test_no_ctx_returns_same_tool(self) -> None:
+        """Should return the same tool object if no ctx field present."""
+        from ot.proxy.manager import _strip_ctx_from_schema
+
+        tool = self._make_tool({
+            "type": "object",
+            "required": ["user_name"],
+            "properties": {"user_name": {"type": "string"}},
+        })
+
+        result = _strip_ctx_from_schema(tool)
+
+        assert result is tool  # identical object, no copy made
+
+    def test_preserves_other_required_fields(self) -> None:
+        """Should preserve all required fields other than ctx."""
+        from ot.proxy.manager import _strip_ctx_from_schema
+
+        tool = self._make_tool({
+            "type": "object",
+            "required": ["ctx", "a", "b"],
+            "properties": {
+                "ctx": {},
+                "a": {"type": "string"},
+                "b": {"type": "integer"},
+            },
+        })
+
+        result = _strip_ctx_from_schema(tool)
+
+        assert result.inputSchema["required"] == ["a", "b"]
+        assert "a" in result.inputSchema["properties"]
+        assert "b" in result.inputSchema["properties"]
+
+    def test_ctx_only_in_required_not_properties(self) -> None:
+        """Should handle ctx only in required (not in properties) gracefully."""
+        from ot.proxy.manager import _strip_ctx_from_schema
+
+        tool = self._make_tool({
+            "type": "object",
+            "required": ["ctx", "name"],
+            "properties": {"name": {"type": "string"}},
+        })
+
+        result = _strip_ctx_from_schema(tool)
+
+        assert "ctx" not in result.inputSchema["required"]
+        assert "name" in result.inputSchema["required"]

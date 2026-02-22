@@ -111,6 +111,60 @@ MCP servers may use naming conventions incompatible with Python identifiers (e.g
   - Convert to lowercase
   - Example: `list-Account_Details` → `listaccountdetails`
 
+### Requirement: Server Name Aliasing
+
+The system SHALL expose MCP servers via Python-accessible namespace aliases when the server name contains hyphens.
+
+Server names with hyphens cannot be used as Python variable names (e.g., `aws-iam` is parsed as subtraction, not a namespace). The system SHALL register Python-safe aliases so users can call tools via dot notation.
+
+#### Scenario: aws-* server gets short-name underscore alias
+
+- **GIVEN** an `aws-*` MCP server is connected (e.g., `aws-cost-explorer`)
+- **WHEN** the execution namespace is built
+- **THEN** the short name with hyphens replaced by underscores SHALL be accessible as a variable (e.g., `cost_explorer`)
+- **AND** `aws-iam` → `iam`, `aws-cost-explorer` → `cost_explorer`, `aws-well-architected` → `well_architected`
+
+#### Scenario: Non-aws hyphenated server gets underscore alias
+
+- **GIVEN** a non-aws MCP server whose name contains hyphens (e.g., `chrome-devtools`)
+- **WHEN** the execution namespace is built
+- **THEN** the server name with hyphens replaced by underscores SHALL be accessible (e.g., `chrome_devtools`)
+
+#### Scenario: Alias does not overwrite existing local pack
+
+- **GIVEN** a local pack named `iam` already exists in the namespace
+- **AND** an `aws-iam` server is connected
+- **WHEN** the execution namespace is built
+- **THEN** the existing `iam` local pack SHALL take precedence
+- **AND** `aws-iam` SHALL still be accessible via the full hyphenated key (internal use only)
+
+### Requirement: Tool Prefix Omission
+
+Some MCP servers expose tools whose names carry a prefix that is redundant when accessed via dot notation (e.g., the AWS Knowledge server exposes `aws_search_documentation` but callers write `knowledge.search_documentation()`). The system SHALL support a `tool_prefix` config field on `McpServerConfig` that enables prefix-omission when resolving tool names.
+
+When `tool_prefix` is declared for a server, the proxy pack SHALL attempt a second match with the prefix prepended if the first canonical match fails. This allows callers to omit the prefix entirely.
+
+#### Scenario: Caller omits tool prefix
+
+- **GIVEN** a server with `tool_prefix: "aws_"` connected as `aws-know`
+- **AND** the server exposes a tool named `aws_search_documentation`
+- **WHEN** code calls `knowledge.search_documentation()`
+- **THEN** the system SHALL resolve it to `aws_search_documentation` via prefix prepend
+- **AND** SHALL call the tool successfully
+
+#### Scenario: Exact prefixed name still works
+
+- **GIVEN** a server with `tool_prefix: "aws_"` configured
+- **WHEN** code calls `knowledge.aws_search_documentation()`
+- **THEN** the exact tool name SHALL match directly (prefix not prepended again)
+
+#### Scenario: No tool_prefix — no fallback
+
+- **GIVEN** a server with no `tool_prefix` configured
+- **AND** the server exposes `aws_search_documentation`
+- **WHEN** code calls `server.search_documentation()`
+- **THEN** the system SHALL raise `AttributeError` (no prefix fallback attempted)
+
 ### Requirement: Local Tool Precedence
 
 The system SHALL prioritize local tools over proxied tools when names conflict.

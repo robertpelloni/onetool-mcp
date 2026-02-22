@@ -15,6 +15,7 @@ from collections import OrderedDict
 from functools import wraps
 from typing import TYPE_CHECKING, Any
 
+from ot.config import get_config
 from ot.executor.param_resolver import (
     get_mcp_tool_param_names,
     resolve_kwargs,
@@ -84,7 +85,7 @@ def _create_pack_proxy(pack_name: str, pack_funcs: dict[str, Any]) -> Any:
     return PackProxy()
 
 
-def _create_mcp_proxy_pack(server_name: str) -> Any:
+def _create_mcp_proxy_pack(server_name: str, tool_prefix: str | None = None) -> Any:
     """Create a pack proxy for an MCP server.
 
     Allows calling proxied MCP tools using dot notation with automatic aliasing:
@@ -97,6 +98,10 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
 
     Args:
         server_name: Name of the MCP server.
+        tool_prefix: Optional prefix that the server's tools carry (e.g. "aws_").
+            When provided, a second match attempt is made with the prefix prepended,
+            so callers can omit it: knowledge.search_documentation() resolves to
+            aws_search_documentation.
 
     Returns:
         Object with __getattr__ that routes to proxy manager.
@@ -134,6 +139,13 @@ def _create_mcp_proxy_pack(server_name: str) -> Any:
                 except ValueError as e:
                     # Ambiguous match
                     raise AttributeError(str(e)) from None
+
+                if match_result is None and tool_prefix:
+                    # Server declares a tool_prefix (e.g. "aws_"): try matching with it
+                    # prepended so callers can omit it.
+                    match_result = find_canonical_match(
+                        f"{tool_prefix}{accessor_name}", available_tools
+                    )
 
                 if match_result is None:
                     # No match found - provide suggestions
@@ -277,6 +289,7 @@ def build_execution_namespace(
         _namespace_cache.move_to_end(cache_key)
         return _namespace_cache[cache_key]
 
+    config = get_config()
     namespace: dict[str, Any] = {}
 
     # Add pack proxies for dot notation
@@ -289,8 +302,24 @@ def build_execution_namespace(
 
     # Add MCP proxy packs (only if not already defined locally)
     for server_name in proxy_mgr.servers:
+        server_cfg = (config.servers or {}).get(server_name)
+        tool_prefix = server_cfg.tool_prefix if server_cfg else None
+
         if server_name not in namespace:
-            namespace[server_name] = _create_mcp_proxy_pack(server_name)
+            namespace[server_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
+
+        # Add Python-accessible aliases for servers with hyphens in their names.
+        # aws-* servers get short-name aliases (strip prefix, normalize hyphens to underscores)
+        # so that e.g. aws-cost-explorer → cost_explorer, aws-iam → iam.
+        # Other hyphenated servers get underscore-normalized aliases (chrome-devtools → chrome_devtools).
+        if server_name.startswith("aws-"):
+            short_name = server_name[4:].replace("-", "_")
+            if short_name not in namespace:
+                namespace[short_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
+        elif "-" in server_name:
+            safe_name = server_name.replace("-", "_")
+            if safe_name not in namespace:
+                namespace[safe_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
 
     # Add proxy introspection pack (always available)
     if "proxy" not in namespace:

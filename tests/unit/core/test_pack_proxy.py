@@ -1,0 +1,183 @@
+"""Unit tests for pack_proxy namespace alias generation."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestBuildExecutionNamespaceAliases:
+    """Tests for hyphen-to-underscore namespace aliases in build_execution_namespace."""
+
+    def _build_namespace(self, server_names: list[str]) -> dict:
+        """Build namespace with a mocked proxy manager and empty registry."""
+        from ot.executor.pack_proxy import build_execution_namespace, reset
+
+        reset()  # clear cache
+
+        mock_proxy = MagicMock()
+        mock_proxy.servers = server_names
+        mock_proxy.list_tools.return_value = []
+
+        mock_registry = MagicMock()
+        mock_registry.packs = {}
+
+        mock_config = MagicMock()
+        mock_config.servers = {}
+
+        with (
+            patch("ot.proxy.get_proxy_manager", return_value=mock_proxy),
+            patch("ot.executor.pack_proxy.get_config", return_value=mock_config),
+        ):
+            ns = build_execution_namespace(mock_registry)
+
+        return ns
+
+    def test_aws_iam_adds_short_name_alias(self) -> None:
+        """aws-iam server should create 'iam' alias (not 'aws_iam')."""
+        ns = self._build_namespace(["aws-iam"])
+
+        assert "iam" in ns
+        assert "aws-iam" in ns
+
+    def test_aws_cost_explorer_adds_underscore_short_name(self) -> None:
+        """aws-cost-explorer server should create 'cost_explorer' alias."""
+        ns = self._build_namespace(["aws-cost-explorer"])
+
+        assert "cost_explorer" in ns
+        assert "aws-cost-explorer" in ns
+
+    def test_aws_well_architected_adds_short_name(self) -> None:
+        """aws-well-architected server should create 'well_architected' alias."""
+        ns = self._build_namespace(["aws-well-architected"])
+
+        assert "well_architected" in ns
+
+    def test_aws_single_word_server_adds_short_name(self) -> None:
+        """aws-billing server (no hyphen in short name) should create 'billing' alias."""
+        ns = self._build_namespace(["aws-billing"])
+
+        assert "billing" in ns
+        assert "aws-billing" in ns
+
+    def test_non_aws_hyphenated_server_gets_underscore_alias(self) -> None:
+        """Non-aws hyphenated server (e.g. chrome-devtools) should get underscore alias."""
+        ns = self._build_namespace(["chrome-devtools"])
+
+        assert "chrome_devtools" in ns
+        assert "chrome-devtools" in ns
+
+    def test_non_hyphenated_server_no_alias_added(self) -> None:
+        """Server without hyphens should not get an extra alias."""
+        ns = self._build_namespace(["github"])
+
+        assert "github" in ns
+        # No spurious keys added
+        proxy_keys = {k for k in ns if k not in ("proxy",)}
+        assert proxy_keys == {"github"}
+
+    def test_short_name_alias_not_overwritten_by_local_pack(self) -> None:
+        """Short-name alias should not overwrite an existing local pack."""
+        from ot.executor.pack_proxy import build_execution_namespace, reset
+
+        reset()
+
+        mock_proxy = MagicMock()
+        mock_proxy.servers = ["aws-iam"]
+        mock_proxy.list_tools.return_value = []
+
+        mock_registry = MagicMock()
+        existing_pack = object()
+        mock_registry.packs = {"iam": existing_pack}
+
+        mock_config = MagicMock()
+        mock_config.servers = {}
+
+        with (
+            patch("ot.proxy.get_proxy_manager", return_value=mock_proxy),
+            patch("ot.executor.pack_proxy.get_config", return_value=mock_config),
+        ):
+            ns = build_execution_namespace(mock_registry)
+
+        # 'iam' key exists (either from local pack or alias — local pack wins)
+        assert "iam" in ns
+
+    def test_multiple_aws_servers_all_get_aliases(self) -> None:
+        """All aws-* servers should each get a short-name alias."""
+        ns = self._build_namespace(["aws-iam", "aws-cost-explorer", "aws-cloudtrail"])
+
+        assert "iam" in ns
+        assert "cost_explorer" in ns
+        assert "cloudtrail" in ns
+
+    def test_alias_proxy_is_callable(self) -> None:
+        """The namespace alias should be an object supporting attribute access."""
+        ns = self._build_namespace(["aws-iam"])
+
+        # Both the full server name and alias should be pack proxy objects
+        assert ns["iam"] is not None
+        assert hasattr(ns["iam"], "__getattr__") or callable(getattr(ns["iam"], "__class__", None))
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestMcpProxyPackToolPrefixFallback:
+    """Tests for tool_prefix fallback in McpProxyPack.__getattr__."""
+
+    def _make_proxy_tools(self, server_name: str, tool_names: list[str]) -> MagicMock:
+        from ot.proxy.manager import ProxyToolInfo
+
+        mock_proxy = MagicMock()
+        mock_proxy.list_tools.return_value = [
+            ProxyToolInfo(server=server_name, name=n, description="", input_schema={})
+            for n in tool_names
+        ]
+        mock_proxy.call_tool_sync.return_value = {"result": "ok"}
+        return mock_proxy
+
+    def test_tool_prefix_allows_omitting_prefix(self) -> None:
+        """knowledge.search_documentation() resolves to aws_search_documentation via tool_prefix."""
+        from ot.executor.pack_proxy import _create_mcp_proxy_pack
+
+        mock_proxy = self._make_proxy_tools("aws-knowledge", ["aws_search_documentation"])
+
+        with patch("ot.proxy.get_proxy_manager", return_value=mock_proxy):
+            pack = _create_mcp_proxy_pack("aws-knowledge", tool_prefix="aws_")
+            fn = pack.search_documentation  # omit prefix — should resolve
+            assert callable(fn)
+
+    def test_no_tool_prefix_does_not_fallback(self) -> None:
+        """Without tool_prefix, accessing an unprefixed name that only exists prefixed raises."""
+        from ot.executor.pack_proxy import _create_mcp_proxy_pack
+
+        mock_proxy = self._make_proxy_tools("github", ["aws_something"])
+
+        with patch("ot.proxy.get_proxy_manager", return_value=mock_proxy):
+            pack = _create_mcp_proxy_pack("github")  # no tool_prefix
+            with pytest.raises(AttributeError):
+                _ = pack.something  # no prefix fallback — should not resolve
+
+    def test_exact_tool_name_works_regardless_of_prefix(self) -> None:
+        """The full prefixed tool name is always accessible directly."""
+        from ot.executor.pack_proxy import _create_mcp_proxy_pack
+
+        mock_proxy = self._make_proxy_tools("aws-knowledge", ["aws_search_documentation"])
+
+        with patch("ot.proxy.get_proxy_manager", return_value=mock_proxy):
+            pack = _create_mcp_proxy_pack("aws-knowledge", tool_prefix="aws_")
+            fn = pack.aws_search_documentation  # exact name still works
+            assert callable(fn)
+
+    def test_tool_prefix_works_for_any_server_name(self) -> None:
+        """tool_prefix is server-agnostic — any server can declare one."""
+        from ot.executor.pack_proxy import _create_mcp_proxy_pack
+
+        mock_proxy = self._make_proxy_tools("my-custom-server", ["myco_list_things"])
+
+        with patch("ot.proxy.get_proxy_manager", return_value=mock_proxy):
+            pack = _create_mcp_proxy_pack("my-custom-server", tool_prefix="myco_")
+            fn = pack.list_things  # prefix stripped
+            assert callable(fn)

@@ -26,6 +26,33 @@ if TYPE_CHECKING:
     from ot.config.models import McpServerConfig
 
 
+def _strip_ctx_from_schema(tool: types.Tool) -> types.Tool:
+    """Remove 'ctx' from a tool's inputSchema.
+
+    Some MCP server implementations (e.g. awslabs.iam-mcp-server) include
+    a 'ctx: Context' parameter in their function signatures that the framework
+    fails to strip from the exposed JSON schema.  This parameter is an internal
+    MCP framework injection and must never be presented to callers.
+    """
+    schema = tool.inputSchema
+    if not isinstance(schema, dict):
+        return tool
+
+    required = schema.get("required", [])
+    properties = schema.get("properties", {})
+
+    if "ctx" not in required and "ctx" not in properties:
+        return tool
+
+    new_schema = dict(schema)
+    if "ctx" in required:
+        new_schema["required"] = [f for f in required if f != "ctx"]
+    if "ctx" in properties:
+        new_schema["properties"] = {k: v for k, v in properties.items() if k != "ctx"}
+
+    return tool.model_copy(update={"inputSchema": new_schema})
+
+
 @dataclass
 class ProxyToolInfo:
     """Information about a proxied tool."""
@@ -66,6 +93,10 @@ class ProxyManager:
     def tool_count(self) -> int:
         """Total number of proxied tools across all servers."""
         return sum(len(tools) for tools in self._tools_by_server.values())
+
+    def server_tool_count(self, name: str) -> int:
+        """Number of tools registered for a specific server."""
+        return len(self._tools_by_server.get(name, []))
 
     def get_connection(self, server: str) -> Client | None:  # type: ignore[type-arg]
         """Get a client by server name."""
@@ -432,6 +463,7 @@ class ProxyManager:
             try:
                 # List tools to verify connection and cache tool info
                 tools = await client.list_tools()
+                tools = [_strip_ctx_from_schema(t) for t in tools]
 
                 self._clients[name] = client
                 self._tools_by_server[name] = tools
@@ -582,6 +614,95 @@ class ProxyManager:
         """
         await self.shutdown()
         await self.connect(configs)
+
+    async def connect_additional(self, name: str, config: McpServerConfig) -> str:
+        """Connect a single new server without disrupting existing connections.
+
+        Args:
+            name: Server name.
+            config: Server configuration.
+
+        Returns:
+            Status string: "ok (N tools)", "already connected", "disabled", or "failed: <reason>".
+        """
+        if name in self._clients:
+            return "already connected"
+        if not config.enabled:
+            return "disabled"
+        try:
+            await self._connect_server(name, config)
+            self._errors.pop(name, None)
+            tool_count = len(self._tools_by_server.get(name, []))
+            return f"ok ({tool_count} tools)"
+        except Exception as e:
+            self._errors[name] = str(e)
+            logger.warning(f"Failed to connect to MCP server '{name}': {e}")
+            return f"failed: {e}"
+
+    def connect_additional_sync(self, name: str, config: McpServerConfig) -> str:
+        """Synchronously connect a single new server without disrupting existing connections.
+
+        Blocking wrapper around connect_additional.
+
+        Args:
+            name: Server name.
+            config: Server configuration.
+
+        Returns:
+            Status string: "ok (N tools)", "already connected", "disabled", or "failed: <reason>".
+        """
+        if self._loop is None or not self._loop.is_running():
+            return "failed: no running event loop"
+        future = asyncio.run_coroutine_threadsafe(
+            self.connect_additional(name, config),
+            self._loop,
+        )
+        return future.result(timeout=120)
+
+    async def disconnect_server(self, name: str) -> str:
+        """Disconnect a single server without affecting other connections.
+
+        Args:
+            name: Server name to disconnect.
+
+        Returns:
+            Status string: "disconnected" or "not connected".
+        """
+        if name not in self._clients:
+            return "not connected"
+        client = self._clients.pop(name)
+        self._tools_by_server.pop(name, None)
+        self._errors.pop(name, None)
+        try:
+            await client.__aexit__(None, None, None)  # type: ignore[no-untyped-call]
+            logger.debug(f"Disconnected from MCP server '{name}'")
+        except Exception as e:
+            logger.debug(f"Error disconnecting from '{name}': {e}")
+        return "disconnected"
+
+    def disconnect_server_sync(self, name: str) -> str:
+        """Synchronously disconnect a single server without affecting other connections.
+
+        Blocking wrapper around disconnect_server.
+
+        Args:
+            name: Server name to disconnect.
+
+        Returns:
+            Status string: "disconnected" or "not connected".
+        """
+        if self._loop is None or not self._loop.is_running():
+            if name in self._clients:
+                self._clients.pop(name)
+                self._tools_by_server.pop(name, None)
+                self._errors.pop(name, None)
+                return "disconnected"
+            return "not connected"
+        future = asyncio.run_coroutine_threadsafe(
+            self.disconnect_server(name),
+            self._loop,
+        )
+        return future.result(timeout=30)
 
     def reconnect_sync(self, configs: dict[str, McpServerConfig]) -> None:
         """Synchronously reconnect to all MCP servers.
