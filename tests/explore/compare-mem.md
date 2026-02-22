@@ -2,7 +2,7 @@
 
 Compare mem (OneTool memory) vs file access (OneTool file/ripgrep) — focus on speed.
 
-Start with `ot.agent_hints()` then `ot.tools(pattern="mem", info="full")` and `ot.tools(pattern="timer", info="full")`.
+Start with `ot.help()` then `ot.tools(pattern="mem", info="core")` and `ot.tools(pattern="timer", info="core")`.
 
 Setup (not part of benchmark):
 - `mem.write_batch(topic="proj/onetool-mcp/dev", glob_pattern="dev/**/*.md", toc=True, category="context")`
@@ -15,7 +15,7 @@ Use timer.start/elapsed around each call to measure speed:
 ### Test 1: Agent Context Loading
 - **File**: `file.read(path="dev/agents/hints.md")`
 - **Mem**: `mem.read(topic="proj/onetool-mcp/dev/agents/hints.md")`
-- **Shortcut**: `ot.agent_hints()`
+- **File direct**: `file.read(path="dev/agents/hints.md")`
 
 ### Test 2: Regex Search (mem.grep vs ripgrep)
 Search for "LogSpan" across all dev docs.

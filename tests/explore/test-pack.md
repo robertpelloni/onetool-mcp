@@ -2,7 +2,7 @@
 
 Test an OneTool pack — find defects and suggest improvements.
 
-Start with `ot.agent_hints()` then `ot.tools(pattern="{pack}", info="full")`.
+Start with `ot.help()` then `ot.tools(pattern="{pack}", info="core")`.
 
 Run each tool in the pack with realistic inputs. Note errors, edge cases, and UX issues.
 

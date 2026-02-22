@@ -2,7 +2,7 @@
 
 Use the diagram pack to create and render a flowchart.
 
-Start with `ot.agent_hints()` then `ot.tools(pattern="diagram", info="full")`.
+Start with `ot.help()` then `ot.tools(pattern="diagram", info="core")`.
 
 Steps:
 1. `diagram.list_providers(focus_only=True)` — see what's available

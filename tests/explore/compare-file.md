@@ -2,7 +2,7 @@
 
 Compare OneTool file/ripgrep tools to Claude Code's built-in Read, Grep, and Glob.
 
-Start with `ot.agent_hints()` to learn available tools.
+Start with `ot.help()` to learn available tools.
 
 Run these 5 tasks on the current codebase. Use timer.start/elapsed to measure OneTool calls.
 

@@ -2,7 +2,7 @@
 
 Build a "wiki" tool pack with 3 tools: page, summary, data.
 
-Start with `ot.agent_hints()` then `ot.tools(pattern="scaffold", info="full")`.
+Start with `ot.help()` then `ot.tools(pattern="forge", info="core")`.
 
 Steps:
 1. Check tools_dir is configured: `ot.config()`

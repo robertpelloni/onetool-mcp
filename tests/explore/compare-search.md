@@ -2,7 +2,7 @@
 
 Compare OneTool search tools to Claude Code's built-in WebSearch.
 
-Start with `ot.agent_hints()` to learn available tools and calling conventions.
+Start with `ot.help()` to learn available tools and calling conventions.
 
 Question: MCP resources vs tools — what's the difference?
 

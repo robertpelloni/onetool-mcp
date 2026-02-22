@@ -122,11 +122,11 @@ prompts:
     - Help:      `ot.help()` overview; `ot.help(query="brave")` search
     - Tools:     `ot.tools()` list; `ot.tools(pattern="search")` filter
     - Snippets:  `ot.snippets()` list; `ot.snippets(pattern="pkg")` filter
-    - Full docs: `ot.tools(pattern="brave", info="full")`
+    - Full docs: `ot.tools(pattern="brave", info="core")`
 
     Error recovery:
     - Unknown tool? `ot.tools(pattern="name")`
-    - Wrong args?   `ot.tools(pattern="tool.name", info="full")`
+    - Wrong args?   `ot.tools(pattern="tool.name", info="core")`
     - Confused?     `ot.help(query="topic")`
     - Introspection fails? Report the error — do not compute results yourself
 
