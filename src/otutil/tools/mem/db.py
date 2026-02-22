@@ -1,0 +1,235 @@
+"""SQLite connection management, schema, and serialisation helpers."""
+from __future__ import annotations
+
+import builtins
+import contextlib
+import json
+import math
+import re
+import sqlite3
+import struct
+import threading
+from typing import TYPE_CHECKING, Any
+
+from .config import _get_config
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+_builtins_list = builtins.list
+
+# Thread lock for connection operations
+_connection_lock = threading.RLock()
+_connection: Any = None
+
+
+def _get_db_path():
+    """Get the memory database path, resolving relative to .onetool/ directory.
+
+    Uses resolve_ot_path (not expand_path) so the default "mem.db" resolves
+    against config._config_dir (config_path.parent).
+    """
+    from ot.meta import resolve_ot_path
+
+    config = _get_config()
+    db_path = resolve_ot_path(config.db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return db_path
+
+
+def _regexp(pattern: str, text: str | None) -> bool:
+    """SQLite REGEXP function for use in WHERE clauses."""
+    if text is None:
+        return False
+    try:
+        return re.search(pattern, text) is not None
+    except re.error:
+        return False
+
+
+def _cosine_similarity(a_blob: bytes | None, b_blob: bytes | None) -> float | None:
+    """Cosine similarity between two packed float32 BLOB vectors.
+
+    Registered as a SQLite UDF so it can be used in ORDER BY clauses.
+    """
+    if a_blob is None or b_blob is None:
+        return None
+    n = len(a_blob) // 4
+    a = struct.unpack(f"<{n}f", a_blob)
+    b = struct.unpack(f"<{n}f", b_blob)
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(x * x for x in b))
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _get_connection() -> sqlite3.Connection:
+    """Get or create a read-write SQLite connection with WAL mode.
+
+    Uses a module-level connection with thread lock for safety.
+    """
+    global _connection
+    with _connection_lock:
+        if _connection is not None:
+            try:
+                _connection.execute("SELECT 1").fetchone()
+                return _connection
+            except Exception:
+                _connection = None
+
+        db_path = _get_db_path()
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+
+        # Register UDFs
+        conn.create_function("cosine_similarity", 2, _cosine_similarity)
+        conn.create_function("regexp", 2, _regexp)
+
+        _connection = conn
+        _ensure_tables(_connection)
+        return _connection
+
+
+@contextlib.contextmanager
+def _use_connection() -> Generator[Any, None, None]:
+    """Context manager that holds the connection lock for the entire operation.
+
+    Ensures thread-safe access to the shared SQLite connection.
+    """
+    conn = _get_connection()
+    with _connection_lock:
+        yield conn
+
+
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    """Check if a column exists in a SQLite table."""
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(r[1] == column for r in rows)
+
+
+def _ensure_tables(conn: sqlite3.Connection) -> None:
+    """Create memory tables if they don't exist, then apply migrations."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS memories (
+            id             TEXT PRIMARY KEY,
+            topic          TEXT NOT NULL,
+            content        TEXT NOT NULL,
+            content_hash   TEXT NOT NULL,
+            category       TEXT DEFAULT 'note',
+            tags           TEXT DEFAULT '[]',
+            relevance      INTEGER DEFAULT 5,
+            access_count   INTEGER DEFAULT 0,
+            created_at     TEXT DEFAULT (datetime('now')),
+            updated_at     TEXT DEFAULT (datetime('now')),
+            last_accessed  TEXT DEFAULT (datetime('now')),
+            embedding      BLOB,
+            meta           TEXT DEFAULT '{}'
+        )
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_memories_topic ON memories(topic)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_memories_content_hash ON memories(content_hash)
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS memory_history (
+            id             TEXT PRIMARY KEY,
+            memory_id      TEXT NOT NULL,
+            content        TEXT NOT NULL,
+            updated_at     TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+    _migrate_tables(conn)
+
+
+def _migrate_tables(conn: sqlite3.Connection) -> None:
+    """Apply schema migrations to existing tables.
+
+    Each migration checks before applying so it is safe to call repeatedly.
+    """
+    # v2: add meta column for extensible key-value metadata
+    if not _has_column(conn, "memories", "meta"):
+        conn.execute("ALTER TABLE memories ADD COLUMN meta TEXT DEFAULT '{}'")
+    conn.commit()
+
+
+def _close_connection() -> None:
+    """Close the module-level connection (for testing)."""
+    global _connection
+    with _connection_lock:
+        if _connection is not None:
+            with contextlib.suppress(Exception):
+                _connection.close()
+            _connection = None
+
+
+# ---------------------------------------------------------------------------
+# Serialisation helpers for SQLite columns
+# ---------------------------------------------------------------------------
+
+
+def _serialize_embedding(vec: list[float] | None) -> bytes | None:
+    """Pack a float list into a BLOB for SQLite storage."""
+    if vec is None:
+        return None
+    return struct.pack(f"<{len(vec)}f", *vec)
+
+
+def _deserialize_embedding(blob: bytes | None) -> list[float] | None:
+    """Unpack a BLOB back to a float list."""
+    if blob is None:
+        return None
+    n = len(blob) // 4
+    return _builtins_list(struct.unpack(f"<{n}f", blob))
+
+
+def _serialize_tags(tags: list[str] | None) -> str:
+    """Serialize tag list to JSON string."""
+    return json.dumps(tags or [])
+
+
+def _deserialize_tags(raw: str | None) -> list[str]:
+    """Deserialize JSON string back to tag list."""
+    if not raw:
+        return []
+    return json.loads(raw)
+
+
+def _serialize_meta(meta: dict[str, str] | None) -> str:
+    """Serialize meta dict to JSON string."""
+    return json.dumps(meta or {})
+
+
+def _deserialize_meta(raw: str | None) -> dict[str, str]:
+    """Deserialize JSON string back to meta dict."""
+    if not raw:
+        return {}
+    return json.loads(raw)
+
+
+__all__ = [
+    "_close_connection",
+    "_connection",
+    "_connection_lock",
+    "_cosine_similarity",
+    "_deserialize_embedding",
+    "_deserialize_meta",
+    "_deserialize_tags",
+    "_ensure_tables",
+    "_get_connection",
+    "_get_db_path",
+    "_has_column",
+    "_migrate_tables",
+    "_regexp",
+    "_serialize_embedding",
+    "_serialize_meta",
+    "_serialize_tags",
+    "_use_connection",
+]

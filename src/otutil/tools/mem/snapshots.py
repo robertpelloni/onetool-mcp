@@ -1,0 +1,314 @@
+"""Memory snap and restore (directory-based snapshots)."""
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from ot.logging import LogSpan
+
+from .cache import _cache_invalidate
+from .config import _validate_file_path
+from .content import _content_hash, _topic_filter
+from .db import (
+    _deserialize_meta,
+    _deserialize_tags,
+    _get_connection,
+    _serialize_embedding,
+    _serialize_meta,
+    _serialize_tags,
+)
+from .embedding import _maybe_embed
+
+
+def snap(
+    *,
+    output: str,
+    topic: str | None = None,
+    ext: str = "",
+    on_conflict: str = "skip",
+) -> str:
+    """Write memories to a directory as individual files with an index.yaml.
+
+    Creates one file per memory record with an index.yaml containing metadata.
+    Round-trips losslessly with `mem.restore()`.
+
+    Args:
+        output: Output directory path
+        topic: Topic prefix filter (all memories if omitted)
+        ext: File extension appended to topic for content files (default: "" — topic is the file path)
+        on_conflict: "skip" (default) or "overwrite" for existing files
+
+    Returns:
+        Summary of snap results.
+
+    Example:
+        mem.snap(output="backup/consult", topic="consult/")
+        mem.snap(output="backup/all")
+        mem.snap(output="backup/config", topic="config/", ext=".yaml")
+    """
+    if on_conflict not in ("skip", "overwrite"):
+        return f"Error: on_conflict must be 'skip' or 'overwrite', got '{on_conflict}'"
+
+    with LogSpan(span="mem.snap", output=output, topic=topic) as s:
+        try:
+            conn = _get_connection()
+
+            sql = """
+                SELECT id, topic, content, category, tags, relevance, access_count,
+                       created_at, updated_at, meta
+                FROM memories
+                WHERE 1=1
+            """
+            params: list[Any] = []
+
+            topic_sql, topic_params = _topic_filter(topic)
+            sql += topic_sql
+            params.extend(topic_params)
+
+            sql += " ORDER BY topic, created_at"
+
+            rows = conn.execute(sql, params).fetchall()
+
+            if not rows:
+                return "No memories to snap"
+
+            # Determine topic prefix to strip
+            strip_prefix = ""
+            if topic and topic.endswith("/"):
+                strip_prefix = topic
+
+            validated_path, error = _validate_file_path(output, must_exist=False)
+            if error:
+                return f"Error: {error}"
+            assert validated_path is not None
+            validated_path.mkdir(parents=True, exist_ok=True)
+
+            written = 0
+            skipped = 0
+            index_entries = []
+
+            for r in rows:
+                _id, mem_topic, content, category, raw_tags, relevance = (
+                    r[0], r[1], r[2], r[3], r[4], r[5],
+                )
+                tags = _deserialize_tags(raw_tags)
+                raw_meta = _deserialize_meta(r[9])
+
+                # Compute relative file path
+                rel_topic = mem_topic
+                if strip_prefix and mem_topic.startswith(strip_prefix):
+                    rel_topic = mem_topic[len(strip_prefix):]
+                elif strip_prefix and mem_topic == strip_prefix.rstrip("/"):
+                    rel_topic = mem_topic.rsplit("/", 1)[-1]
+
+                file_rel = rel_topic + ext
+                file_path = validated_path / file_rel
+
+                if file_path.exists() and on_conflict == "skip":
+                    skipped += 1
+                    index_entries.append({
+                        "topic": mem_topic,
+                        "file": file_rel,
+                        "category": category,
+                        "tags": tags,
+                        "relevance": relevance,
+                        "meta": raw_meta,
+                    })
+                    continue
+
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(content, encoding="utf-8")
+                written += 1
+
+                index_entries.append({
+                    "topic": mem_topic,
+                    "file": file_rel,
+                    "category": category,
+                    "tags": tags,
+                    "relevance": relevance,
+                    "meta": raw_meta,
+                })
+
+            # Write index.yaml
+            now_str = datetime.now(UTC).isoformat()
+            filter_val = f'"{topic}"' if topic else "null"
+            index_lines = [
+                "snapshot:",
+                f'  created_at: "{now_str}"',
+                f"  topic_filter: {filter_val}",
+                f'  ext: "{ext}"',
+                f"  count: {len(index_entries)}",
+                "",
+                "memories:",
+            ]
+            for entry in index_entries:
+                tags_str = "[" + ", ".join(f'"{t}"' for t in entry["tags"]) + "]"
+                meta_json = json.dumps(entry.get("meta", {}))
+                index_lines.extend([
+                    f'  - topic: "{entry["topic"]}"',
+                    f'    file: "{entry["file"]}"',
+                    f'    category: "{entry["category"]}"',
+                    f"    tags: {tags_str}",
+                    f'    relevance: {entry["relevance"]}',
+                    f"    meta: '{meta_json}'",
+                    "",
+                ])
+
+            index_path = validated_path / "index.yaml"
+            index_path.write_text("\n".join(index_lines), encoding="utf-8")
+
+            s.add("written", written)
+            s.add("skipped", skipped)
+            s.add("total", len(index_entries))
+            return f"Snap {len(index_entries)} memories to {validated_path} ({written} written, {skipped} skipped)"
+
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error creating snap: {e}"
+
+
+def restore(
+    *,
+    input: str,
+    topic: str | None = None,
+    overwrite: bool = False,
+) -> str:
+    """Restore memories from a snap directory (created by `mem.snap`).
+
+    Reads index.yaml and content files, recreating memories with full metadata.
+
+    Args:
+        input: Input directory path (must contain index.yaml)
+        topic: Override base topic (otherwise uses topics from index)
+        overwrite: If True, overwrite existing memories with same topic+hash
+
+    Returns:
+        Restore summary.
+
+    Example:
+        mem.restore(input="backup/consult", topic="consult")
+        mem.restore(input="backup/consult", topic="consult", overwrite=True)
+    """
+    with LogSpan(span="mem.restore", input=input) as s:
+        try:
+            try:
+                import yaml
+            except ImportError as e:
+                raise ImportError(
+                    "pyyaml is required for YAML import. Install with: pip install pyyaml"
+                ) from e
+
+            validated_path, error = _validate_file_path(input, must_exist=True)
+            if error:
+                return f"Error: {error}"
+            assert validated_path is not None
+
+            if not validated_path.is_dir():
+                return f"Error: '{input}' is not a directory"
+
+            index_path = validated_path / "index.yaml"
+            if not index_path.exists():
+                return f"Error: index.yaml not found in '{input}'"
+
+            data = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+            if not data or "memories" not in data:
+                return "Error: Invalid index.yaml - expected 'memories' key"
+
+            # Determine topic remapping
+            snapshot_meta = data.get("snapshot", {})
+            original_filter = snapshot_meta.get("topic_filter")
+
+            memories = data["memories"]
+            restored = 0
+            skipped = 0
+            errors = []
+            conn = _get_connection()
+
+            for entry in memories:
+                mem_topic = entry.get("topic", "")
+                file_rel = entry.get("file", "")
+                category = entry.get("category", "note")
+                tags = entry.get("tags", [])
+                relevance = max(1, min(10, int(entry.get("relevance", 5))))
+
+                # Restore meta if present
+                meta_raw = entry.get("meta", {})
+                if isinstance(meta_raw, dict):
+                    meta_str = _serialize_meta(meta_raw)
+                elif isinstance(meta_raw, str):
+                    meta_str = _serialize_meta(_deserialize_meta(meta_raw))
+                else:
+                    meta_str = "{}"
+
+                if not mem_topic or not file_rel:
+                    errors.append("Missing topic or file in index entry")
+                    continue
+
+                # Remap topic if override provided
+                if topic is not None:
+                    # Strip original filter prefix, prepend new topic
+                    rel = mem_topic
+                    if original_filter and mem_topic.startswith(original_filter):
+                        rel = mem_topic[len(original_filter):]
+                    elif original_filter and mem_topic == original_filter.rstrip("/"):
+                        rel = mem_topic.rsplit("/", 1)[-1]
+                    mem_topic = f"{topic}/{rel}" if rel else topic
+
+                # Read content file
+                content_path = validated_path / file_rel
+                if not content_path.exists():
+                    errors.append(f"File not found: {file_rel}")
+                    continue
+
+                content = content_path.read_text(encoding="utf-8")
+                content_hash = _content_hash(content)
+
+                # Check for existing
+                existing = conn.execute(
+                    "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
+                    [mem_topic, content_hash],
+                ).fetchone()
+
+                if existing and not overwrite:
+                    skipped += 1
+                    continue
+
+                if existing and overwrite:
+                    conn.execute("DELETE FROM memories WHERE id = ?", [existing[0]])
+
+                memory_id = str(uuid.uuid4())
+                embedding = _maybe_embed(memory_id, content)
+
+                conn.execute(
+                    """
+                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [memory_id, mem_topic, content, content_hash, category,
+                     _serialize_tags(tags), relevance, _serialize_embedding(embedding), meta_str],
+                )
+                restored += 1
+
+            conn.commit()
+            s.add("restored", restored)
+            s.add("skipped", skipped)
+            s.add("errors", len(errors))
+            _cache_invalidate()
+
+            parts = [f"Restored {restored} memories, skipped {skipped}"]
+            if errors:
+                parts.append(f", {len(errors)} errors")
+                for err in errors[:5]:
+                    parts.append(f"\n  - {err}")
+            return "".join(parts)
+
+        except ImportError as e:
+            return f"Error: {e}"
+        except Exception as e:
+            s.add("error", str(e))
+            return f"Error restoring snap: {e}"
+
+
+__all__ = ["restore", "snap"]

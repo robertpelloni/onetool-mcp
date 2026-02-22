@@ -446,7 +446,7 @@ def test_ot_stats_info_list() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         mock_cfg, _ = _make_mock_cfg(tmpdir)
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+        with patch("ot.meta._stats.get_config", return_value=mock_cfg):
             from ot.meta import stats
 
             result = stats(info="list")
@@ -471,7 +471,7 @@ def test_ot_stats_info_min() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         mock_cfg, _ = _make_mock_cfg(tmpdir)
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+        with patch("ot.meta._stats.get_config", return_value=mock_cfg):
             from ot.meta import stats
 
             result = stats(info="min")
@@ -504,7 +504,7 @@ def test_ot_stats_info_full() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         mock_cfg, _ = _make_mock_cfg(tmpdir)
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+        with patch("ot.meta._stats.get_config", return_value=mock_cfg):
             from ot.meta import stats
 
             result = stats(info="full")
@@ -528,7 +528,7 @@ def test_ot_stats_default_is_min() -> None:
 
     with tempfile.TemporaryDirectory() as tmpdir:
         mock_cfg, _ = _make_mock_cfg(tmpdir)
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+        with patch("ot.meta._stats.get_config", return_value=mock_cfg):
             from ot.meta import stats
 
             result = stats()
@@ -562,7 +562,7 @@ def test_ot_stats_html_write_error() -> None:
         # Return a read-only directory that will fail on mkdir
         mock_cfg.get_result_store_path.return_value = Path("/nonexistent/readonly")
 
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+        with patch("ot.meta._stats.get_config", return_value=mock_cfg):
             from ot.meta import stats
 
             result = stats(output="report.html")

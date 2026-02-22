@@ -45,9 +45,26 @@ def mem_db(tmp_path):
         base[1] = float(hash(text) % 1000) / 1000.0
         return base
 
+    import importlib
+
+    import otutil.tools.mem.cache as mem_cache
+    import otutil.tools.mem.config as mem_config
+    import otutil.tools.mem.content as mem_content
+    import otutil.tools.mem.db as mem_db_mod
+    import otutil.tools.mem.embedding as mem_embedding
+    import otutil.tools.mem.lifecycle as mem_lifecycle
+
+    mem_search = importlib.import_module("otutil.tools.mem.search")
+
     with (
-        patch.object(mem_module, "_get_config", return_value=mock_config),
-        patch.object(mem_module, "_generate_embedding", side_effect=mock_embedding),
+        patch.object(mem_config, "_get_config", return_value=mock_config),
+        patch.object(mem_db_mod, "_get_config", return_value=mock_config),
+        patch.object(mem_embedding, "_get_config", return_value=mock_config),
+        patch.object(mem_cache, "_get_config", return_value=mock_config),
+        patch.object(mem_content, "_get_config", return_value=mock_config),
+        patch.object(mem_lifecycle, "_get_config", return_value=mock_config),
+        patch.object(mem_search, "_get_config", return_value=mock_config),
+        patch.object(mem_embedding, "_generate_embedding", side_effect=mock_embedding),
     ):
         yield mem_module
 

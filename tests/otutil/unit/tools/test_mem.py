@@ -7,15 +7,15 @@ with mocked SQLite and OpenAI.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from otutil.tools.mem import (
-    Config,
     VALID_CATEGORIES,
+    Config,
     _build_toc,
     _cache_get,
     _cache_invalidate,
@@ -113,7 +113,7 @@ class TestTopicFilter:
 
 @pytest.mark.unit
 @pytest.mark.tools
-@patch("otutil.tools.mem._get_config", return_value=Config())
+@patch("otutil.tools.mem.content._get_config", return_value=Config())
 class TestRedact:
     """Test _redact secret/PII redaction."""
 
@@ -148,16 +148,16 @@ class TestRedact:
 class TestValidateTags:
     """Test _validate_tags whitelist validation."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(tags_whitelist=[]))
+    @patch("otutil.tools.mem.content._get_config", return_value=Config(tags_whitelist=[]))
     def test_empty_whitelist_allows_all(self, _mock_config):
         assert _validate_tags(["any", "tag"]) == ["any", "tag"]
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(tags_whitelist=["allowed"]))
+    @patch("otutil.tools.mem.content._get_config", return_value=Config(tags_whitelist=["allowed"]))
     def test_whitelist_rejects_unknown(self, _mock_config):
         with pytest.raises(ValueError, match="not in whitelist"):
             _validate_tags(["forbidden"])
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(tags_whitelist=["project/*"]))
+    @patch("otutil.tools.mem.content._get_config", return_value=Config(tags_whitelist=["project/*"]))
     def test_whitelist_wildcard_prefix(self, _mock_config):
         assert _validate_tags(["project/onetool"]) == ["project/onetool"]
 
@@ -190,22 +190,22 @@ class TestValidateCategory:
 class TestReadCache:
     """Test read cache get/put/invalidate."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_put_and_get(self, _mock_config):
         row = ("id-1", "topic/a", "content", "note", [], 5, 0)
         _cache_put("topic:topic/a", row)
         assert _cache_get("topic:topic/a") == row
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_miss_returns_none(self, _mock_config):
         assert _cache_get("topic:nonexistent") is None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=0))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=0))
     def test_disabled_cache_never_stores(self, _mock_config):
         _cache_put("topic:a", ("row",))
         assert _cache_get("topic:a") is None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=2, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=2, read_cache_ttl_seconds=300))
     def test_evicts_oldest_at_capacity(self, _mock_config):
         _cache_put("topic:a", ("row-a",))
         _cache_put("topic:b", ("row-b",))
@@ -214,12 +214,12 @@ class TestReadCache:
         assert _cache_get("topic:b") is not None
         assert _cache_get("topic:c") is not None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=0))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=0))
     def test_ttl_zero_means_no_expiry(self, _mock_config):
         _cache_put("topic:a", ("row",))
         assert _cache_get("topic:a") is not None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_invalidate_by_topic(self, _mock_config):
         _cache_put("topic:proj/a", ("row-a",))
         _cache_put("topic:proj/b", ("row-b",))
@@ -229,7 +229,7 @@ class TestReadCache:
         assert _cache_get("topic:proj/b") is not None
         assert _cache_get("topic:other/c") is not None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_invalidate_by_topic_prefix(self, _mock_config):
         _cache_put("topic:proj/a", ("row-a",))
         _cache_put("topic:proj/b", ("row-b",))
@@ -240,7 +240,7 @@ class TestReadCache:
         assert _cache_get("topic:proj/b") is None
         assert _cache_get("topic:other/c") is not None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_invalidate_by_id_clears_all(self, _mock_config):
         _cache_put("topic:a", ("row-a",))
         _cache_put("id:123", ("row-123",))
@@ -249,7 +249,7 @@ class TestReadCache:
         assert _cache_get("topic:a") is None
         assert _cache_get("id:123") is None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_invalidate_no_args_clears_all(self, _mock_config):
         _cache_put("topic:a", ("row-a",))
         _cache_put("topic:b", ("row-b",))
@@ -264,7 +264,7 @@ class TestReadCache:
 class TestReadCacheIntegration:
     """Test that read() uses the cache."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_second_read_hits_cache(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -296,7 +296,7 @@ class TestReadCacheIntegration:
 class TestCacheClear:
     """Test mem.cache_clear() public API."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_clear_all(self, _mock_config):
         from otutil.tools.mem import cache_clear
 
@@ -307,7 +307,7 @@ class TestCacheClear:
         assert _cache_get("topic:a") is None
         assert _cache_get("topic:b") is None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_clear_by_topic(self, _mock_config):
         from otutil.tools.mem import cache_clear
 
@@ -320,7 +320,7 @@ class TestCacheClear:
         assert _cache_get("topic:proj/a") is None
         assert _cache_get("topic:other/c") is not None
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
     def test_clear_empty_cache(self, _mock_config):
         from otutil.tools.mem import cache_clear
 
@@ -338,8 +338,8 @@ class TestCacheClear:
 class TestWrite:
     """Test mem.write() with mocked database and embeddings."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._maybe_embed")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_stores_new_memory(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
@@ -358,7 +358,7 @@ class TestWrite:
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         assert len(insert_calls) == 1
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_rejects_duplicate(self, mock_conn):
         from otutil.tools.mem import write
 
@@ -393,8 +393,8 @@ class TestWrite:
         assert result == "Error: Provide content or file"
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._maybe_embed")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_reads_from_file(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import write
 
@@ -411,7 +411,7 @@ class TestWrite:
         assert "Stored memory" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_file_not_found(self, mock_conn, tmp_path):
         from otutil.tools.mem import write
 
@@ -429,7 +429,7 @@ class TestWrite:
 class TestRead:
     """Test mem.read() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_by_topic(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -444,7 +444,7 @@ class TestRead:
 
         assert result == "memory content"
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_by_topic_with_meta(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -463,7 +463,7 @@ class TestRead:
         assert "memory content" in result
         assert "id-123" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_by_id(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -478,7 +478,7 @@ class TestRead:
 
         assert result == "content"
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_not_found(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -496,7 +496,7 @@ class TestRead:
 class TestReadBatch:
     """Test mem.read_batch() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_by_topic_prefix(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -513,7 +513,7 @@ class TestReadBatch:
         assert "content a" in result
         assert "content b" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_by_ids(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -528,7 +528,7 @@ class TestReadBatch:
         assert "Read 1 memory" in result
         assert "content a" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_reads_with_meta(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -545,7 +545,7 @@ class TestReadBatch:
         assert "Tags: tag1" in result
         assert "content a" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_empty_result(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -589,7 +589,7 @@ class TestReadBatch:
         assert "Error" in result
         assert "ids cannot be combined" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_filters_by_category(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -607,7 +607,7 @@ class TestReadBatch:
         sql_arg = conn.execute.call_args_list[0][0][0]
         assert "category = ?" in sql_arg
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_filters_by_tags(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -624,7 +624,7 @@ class TestReadBatch:
         sql_arg = conn.execute.call_args_list[0][0][0]
         assert "json_each" in sql_arg
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_combined_topic_and_category(self, mock_conn):
         from otutil.tools.mem import read_batch
 
@@ -647,9 +647,9 @@ class TestReadBatch:
 class TestSearch:
     """Test mem.search() with mocked database and embeddings."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._generate_embedding")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.search._generate_embedding")
+    @patch("otutil.tools.mem.search._get_connection")
     def test_semantic_search(self, mock_conn, mock_embed, _mock_config):
         from otutil.tools.mem import search
 
@@ -669,7 +669,7 @@ class TestSearch:
         assert "topic/one" in result
         assert "0.95" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_connection")
     def test_pattern_search(self, mock_conn):
         from otutil.tools.mem import search
 
@@ -690,9 +690,9 @@ class TestSearch:
         assert "Error" in result
         assert "Invalid mode" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._generate_embedding")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.search._generate_embedding")
+    @patch("otutil.tools.mem.search._get_connection")
     def test_no_results(self, mock_conn, mock_embed, _mock_config):
         from otutil.tools.mem import search
 
@@ -706,9 +706,9 @@ class TestSearch:
 
         assert "No memories found" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._generate_embedding")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.search._generate_embedding")
+    @patch("otutil.tools.mem.search._get_connection")
     def test_search_custom_extract(self, mock_conn, mock_embed, _mock_config):
         from otutil.tools.mem import search
 
@@ -729,9 +729,9 @@ class TestSearch:
         assert "a" * 51 not in result
         assert "..." in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._generate_embedding")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.search._generate_embedding")
+    @patch("otutil.tools.mem.search._get_connection")
     def test_search_extract_zero_returns_full(self, mock_conn, mock_embed, _mock_config):
         from otutil.tools.mem import search
 
@@ -761,23 +761,23 @@ class TestSearch:
 class TestMaybeEmbed:
     """Test _maybe_embed helper with different config states."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("otutil.tools.mem.embedding._get_config", return_value=Config(embeddings_enabled=False))
     def test_disabled_returns_none(self, _mock_config):
         from otutil.tools.mem import _maybe_embed
 
         result = _maybe_embed("mem-id", "some content")
         assert result is None
 
-    @patch("otutil.tools.mem._generate_embedding", return_value=[0.1, 0.2, 0.3])
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=False))
+    @patch("otutil.tools.mem.embedding._generate_embedding", return_value=[0.1, 0.2, 0.3])
+    @patch("otutil.tools.mem.embedding._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=False))
     def test_sync_returns_vector(self, _mock_config, _mock_embed):
         from otutil.tools.mem import _maybe_embed
 
         result = _maybe_embed("mem-id", "some content")
         assert result == [0.1, 0.2, 0.3]
 
-    @patch("otutil.tools.mem._enqueue_embedding")
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=True))
+    @patch("otutil.tools.mem.embedding._enqueue_embedding")
+    @patch("otutil.tools.mem.embedding._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=True))
     def test_async_enqueues_and_returns_none(self, _mock_config, mock_enqueue):
         from otutil.tools.mem import _maybe_embed
 
@@ -791,22 +791,22 @@ class TestMaybeEmbed:
 class TestSearchEmbeddingsDisabled:
     """Test search returns helpful messages when embeddings disabled."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=False))
     def test_semantic_search_returns_message(self, _mock_config):
         from otutil.tools.mem import search
 
         result = search(query="test query")
         assert "embeddings_enabled" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=False))
     def test_hybrid_search_returns_message(self, _mock_config):
         from otutil.tools.mem import search
 
         result = search(query="test query", mode="hybrid")
         assert "embeddings_enabled" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=False))
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("otutil.tools.mem.search._get_connection")
     def test_pattern_search_works_when_disabled(self, mock_conn, _mock_config):
         from otutil.tools.mem import search
 
@@ -825,8 +825,8 @@ class TestSearchEmbeddingsDisabled:
 class TestSearchNoEmbeddings:
     """Test search returns guidance when enabled but no embeddings exist."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.search._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.search._get_connection")
     def test_semantic_no_embeddings_returns_guidance(self, mock_conn, _mock_config):
         from otutil.tools.mem import search
 
@@ -843,8 +843,8 @@ class TestSearchNoEmbeddings:
 class TestWriteWithoutEmbeddings:
     """Test that write stores NULL embedding when disabled."""
 
-    @patch("otutil.tools.mem._maybe_embed", return_value=None)
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._maybe_embed", return_value=None)
+    @patch("otutil.tools.mem.write._get_connection")
     def test_write_stores_null_embedding(self, mock_conn, _mock_embed):
         from otutil.tools.mem import write
 
@@ -867,15 +867,15 @@ class TestWriteWithoutEmbeddings:
 class TestEmbedFunction:
     """Test mem.embed() backfill function."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=False))
+    @patch("otutil.tools.mem.lifecycle._get_config", return_value=Config(embeddings_enabled=False))
     def test_disabled_returns_message(self, _mock_config):
         from otutil.tools.mem import embed
 
         result = embed()
         assert "disabled" in result.lower()
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_dry_run_shows_count(self, mock_conn, _mock_config):
         from otutil.tools.mem import embed
 
@@ -889,9 +889,9 @@ class TestEmbedFunction:
         result = embed(dry_run=True)
         assert "2 memories" in result
 
-    @patch("otutil.tools.mem._generate_embedding", return_value=[0.1] * 1536)
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._generate_embedding", return_value=[0.1] * 1536)
+    @patch("otutil.tools.mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_generates_embeddings(self, mock_conn, _mock_config, _mock_embed):
         from otutil.tools.mem import embed
 
@@ -904,8 +904,8 @@ class TestEmbedFunction:
         result = embed(dry_run=False)
         assert "Generated embeddings for 1 memories" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config(embeddings_enabled=True))
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_all_embedded_returns_message(self, mock_conn, _mock_config):
         from otutil.tools.mem import embed
 
@@ -934,7 +934,7 @@ class TestFlush:
 class TestListMemories:
     """Test mem.list() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_lists_memories(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -957,7 +957,7 @@ class TestListMemories:
         assert "rel=8" in result  # non-default relevance shown
         assert "rel=5" not in result  # default relevance hidden
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_with_tags(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -971,7 +971,7 @@ class TestListMemories:
 
         assert "tags=a|b" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_no_tags(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -985,7 +985,7 @@ class TestListMemories:
 
         assert "tags=" not in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_rel_default_hidden(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -999,7 +999,7 @@ class TestListMemories:
 
         assert "rel=" not in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_rel_non_default_shown(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -1013,7 +1013,7 @@ class TestListMemories:
 
         assert "rel=8" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_sec_shown(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -1028,7 +1028,7 @@ class TestListMemories:
 
         assert "sec=3" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_list_format_sec_absent(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -1042,7 +1042,7 @@ class TestListMemories:
 
         assert "sec=" not in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_empty_list(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -1060,7 +1060,7 @@ class TestListMemories:
 class TestCount:
     """Test mem.count() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_counts_all(self, mock_conn):
         from otutil.tools.mem import count
 
@@ -1078,7 +1078,7 @@ class TestCount:
 class TestDelete:
     """Test mem.delete() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_deletes_by_id(self, mock_conn):
         from otutil.tools.mem import delete
 
@@ -1090,7 +1090,7 @@ class TestDelete:
 
         assert "Deleted memory id-123" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_requires_confirm_for_multi_delete(self, mock_conn):
         from otutil.tools.mem import delete
 
@@ -1115,8 +1115,8 @@ class TestDelete:
 class TestUpdate:
     """Test mem.update() with mocked database and embeddings."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._maybe_embed")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_updates_single_match(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
@@ -1131,7 +1131,7 @@ class TestUpdate:
 
         assert "Updated memory" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_rejects_multiple_matches(self, mock_conn):
         from otutil.tools.mem import update
 
@@ -1146,7 +1146,7 @@ class TestUpdate:
 
         assert "Multiple memories" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_not_found(self, mock_conn):
         from otutil.tools.mem import update
 
@@ -1164,8 +1164,8 @@ class TestUpdate:
 class TestAppend:
     """Test mem.append() with mocked database and embeddings."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._maybe_embed")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_appends_content(self, mock_conn, mock_embed):
         from otutil.tools.mem import append
 
@@ -1193,7 +1193,7 @@ class TestAppend:
 class TestContext:
     """Test mem.context() hot cache loading."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.maintenance._get_connection")
     def test_loads_top_accessed(self, mock_conn):
         from otutil.tools.mem import context
 
@@ -1209,7 +1209,7 @@ class TestContext:
         assert "hot/topic" in result
         assert "frequently accessed content" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.maintenance._get_connection")
     def test_empty_context(self, mock_conn):
         from otutil.tools.mem import context
 
@@ -1232,7 +1232,7 @@ class TestContext:
 class TestUpdateBatch:
     """Test mem.update_batch() search-and-replace."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.maintenance._get_connection")
     def test_dry_run_preview(self, mock_conn):
         from otutil.tools.mem import update_batch
 
@@ -1248,7 +1248,7 @@ class TestUpdateBatch:
         assert "Dry run" in result
         assert "2 memories" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.maintenance._get_connection")
     def test_no_matches(self, mock_conn):
         from otutil.tools.mem import update_batch
 
@@ -1266,14 +1266,14 @@ class TestUpdateBatch:
 class TestDecay:
     """Test mem.decay() importance decay."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_decay_dry_run(self, mock_conn):
         from otutil.tools.mem import decay
 
         conn = MagicMock()
         mock_conn.return_value = conn
         # Memory created 60 days ago, accessed 0 times, relevance 10
-        old_time = datetime(2025, 12, 1, tzinfo=timezone.utc).isoformat()
+        old_time = datetime(2025, 12, 1, tzinfo=UTC).isoformat()
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "old/topic", 10, 0, old_time),
         ]
@@ -1282,7 +1282,7 @@ class TestDecay:
 
         assert "Decay preview" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_empty_decay(self, mock_conn):
         from otutil.tools.mem import decay
 
@@ -1300,7 +1300,7 @@ class TestDecay:
 class TestStats:
     """Test mem.stats() statistics."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_shows_statistics(self, mock_conn):
         from otutil.tools.mem import stats
 
@@ -1325,7 +1325,7 @@ class TestStats:
         assert "Memory Statistics" in result
         assert "Embeddings:" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.lifecycle._get_connection")
     def test_empty_stats(self, mock_conn):
         from otutil.tools.mem import stats
 
@@ -1343,7 +1343,7 @@ class TestStats:
 class TestExport:
     """Test mem.export() YAML output."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.io._get_connection")
     def test_export_yaml(self, mock_conn):
         from otutil.tools.mem import export
 
@@ -1360,7 +1360,7 @@ class TestExport:
         assert "content one" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.io._get_connection")
     def test_export_to_file(self, mock_conn, tmp_path):
         from otutil.tools.mem import export
 
@@ -1376,7 +1376,7 @@ class TestExport:
         assert "Exported 1 memories" in result
         assert out_file.exists()
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.io._get_connection")
     def test_empty_export(self, mock_conn):
         from otutil.tools.mem import export
 
@@ -1403,8 +1403,8 @@ class TestLoad:
         assert "not found" in result.lower()
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.io._maybe_embed")
+    @patch("otutil.tools.mem.io._get_connection")
     def test_imports_from_yaml(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import load
 
@@ -1434,7 +1434,7 @@ class TestSnap:
     """Test mem.snap() file-based export."""
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_snapshot_creates_files_and_index(self, mock_conn, tmp_path):
         from otutil.tools.mem import snap
 
@@ -1456,7 +1456,7 @@ class TestSnap:
         assert "docs/readme" in index_text
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_snapshot_with_topic_filter(self, mock_conn, tmp_path):
         from otutil.tools.mem import snap
 
@@ -1478,7 +1478,7 @@ class TestSnap:
         assert (out_dir / "mem-tool").exists()
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_snapshot_skip_existing(self, mock_conn, tmp_path):
         from otutil.tools.mem import snap
 
@@ -1500,7 +1500,7 @@ class TestSnap:
         assert (out_dir / "notes/a").read_text() == "existing"
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_snapshot_overwrite_existing(self, mock_conn, tmp_path):
         from otutil.tools.mem import snap
 
@@ -1522,7 +1522,7 @@ class TestSnap:
         assert (out_dir / "notes/a").read_text() == "new content"
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_snapshot_nested_topics(self, mock_conn, tmp_path):
         from otutil.tools.mem import snap
 
@@ -1547,8 +1547,8 @@ class TestRestore:
     """Test mem.restore() from snapshot directory."""
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._maybe_embed")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_restore_from_snapshot(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
@@ -1586,8 +1586,8 @@ class TestRestore:
         assert insert_params[6] == 7  # relevance
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._maybe_embed")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_restore_skips_duplicates(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
@@ -1613,8 +1613,8 @@ class TestRestore:
         assert "skipped 1" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._maybe_embed")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_restore_overwrite(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
@@ -1655,7 +1655,7 @@ class TestRestore:
         assert "index.yaml" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_restore_missing_file(self, mock_conn, tmp_path):
         from otutil.tools.mem import restore
 
@@ -1679,8 +1679,8 @@ class TestRestore:
         assert "1 errors" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.snapshots._maybe_embed")
+    @patch("otutil.tools.mem.snapshots._get_connection")
     def test_restore_topic_override(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
@@ -1722,7 +1722,7 @@ class TestRestore:
 class TestGetOpenAIClient:
     """Test _get_openai_client function."""
 
-    @patch("otutil.tools.mem.get_secret")
+    @patch("otutil.tools.mem.embedding.get_secret")
     def test_raises_without_api_key(self, mock_secret):
         from otutil.tools.mem import _get_openai_client
 
@@ -1732,7 +1732,7 @@ class TestGetOpenAIClient:
             _get_openai_client()
 
     @patch("openai.OpenAI")
-    @patch("otutil.tools.mem.get_secret")
+    @patch("otutil.tools.mem.embedding.get_secret")
     def test_creates_client_with_key(self, mock_secret, mock_openai):
         from otutil.tools.mem import _get_openai_client
 
@@ -1766,9 +1766,9 @@ class TestChunkTextByTokens:
             assert len(chunk) > 0
 
     def test_exact_limit_single_chunk(self):
-        from otutil.tools.mem import _chunk_text_by_tokens
-
         import tiktoken
+
+        from otutil.tools.mem import _chunk_text_by_tokens
 
         encoding = tiktoken.encoding_for_model("text-embedding-3-small")
         text = "hello world this is a test"
@@ -1783,9 +1783,9 @@ class TestChunkTextByTokens:
         assert chunks == ["hello world"]
 
     def test_chunks_cover_all_content(self):
-        from otutil.tools.mem import _chunk_text_by_tokens
-
         import tiktoken
+
+        from otutil.tools.mem import _chunk_text_by_tokens
 
         encoding = tiktoken.encoding_for_model("text-embedding-3-small")
         text = "word " * 500  # moderate text
@@ -1803,7 +1803,7 @@ class TestChunkTextByTokens:
 class TestGenerateEmbedding:
     """Test _generate_embedding function."""
 
-    @patch("otutil.tools.mem._get_openai_client")
+    @patch("otutil.tools.mem.embedding._get_openai_client")
     def test_generates_embedding_short_text(self, mock_client):
         from otutil.tools.mem import _generate_embedding
 
@@ -1820,8 +1820,8 @@ class TestGenerateEmbedding:
         assert result == [0.1, 0.2, 0.3]
         mock_openai.embeddings.create.assert_called_once()
 
-    @patch("otutil.tools.mem._chunk_text_by_tokens")
-    @patch("otutil.tools.mem._get_openai_client")
+    @patch("otutil.tools.mem.embedding._chunk_text_by_tokens")
+    @patch("otutil.tools.mem.embedding._get_openai_client")
     def test_averages_multi_chunk_embeddings(self, mock_client, mock_chunk):
         from otutil.tools.mem import _generate_embedding
 
@@ -1848,8 +1848,8 @@ class TestGenerateEmbedding:
         call_kwargs = mock_openai.embeddings.create.call_args[1]
         assert call_kwargs["input"] == ["chunk one", "chunk two"]
 
-    @patch("otutil.tools.mem._chunk_text_by_tokens")
-    @patch("otutil.tools.mem._get_openai_client")
+    @patch("otutil.tools.mem.embedding._chunk_text_by_tokens")
+    @patch("otutil.tools.mem.embedding._get_openai_client")
     def test_single_chunk_passes_string_not_list(self, mock_client, mock_chunk):
         from otutil.tools.mem import _generate_embedding
 
@@ -1910,7 +1910,7 @@ class TestFilePathSecurity:
         assert "Error" in result
         assert "not found" in result.lower() or "outside allowed" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.io._get_connection")
     def test_export_rejects_path_outside_cwd(self, mock_conn):
         from otutil.tools.mem import export
 
@@ -1972,7 +1972,7 @@ class TestWriteValidation:
         assert "relevance" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_rejects_large_file(self, mock_conn, tmp_path):
         from otutil.tools.mem import write
 
@@ -2137,7 +2137,7 @@ class TestBuildToc:
 class TestTocFunction:
     """Test mem.toc() with mocked database."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.slicing._get_connection")
     def test_returns_toc(self, mock_conn):
         from otutil.tools.mem import toc
 
@@ -2155,7 +2155,7 @@ class TestTocFunction:
         assert "Requirements" in result
         assert "4 sections" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.slicing._get_connection")
     def test_not_found(self, mock_conn):
         from otutil.tools.mem import toc
 
@@ -2166,7 +2166,7 @@ class TestTocFunction:
         result = toc(topic="nonexistent")
         assert "No memory found" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.slicing._get_connection")
     def test_staleness_warning(self, mock_conn, tmp_path):
         from otutil.tools.mem import toc
 
@@ -2200,7 +2200,7 @@ class TestSliceFunction:
             datetime.now().isoformat(), datetime.now().isoformat(),
             _serialize_meta({"sections": sections_str, "section_count": "4"}),
         )
-        with patch("otutil.tools.mem._get_connection") as mock_conn:
+        with patch("otutil.tools.mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchone.return_value = row
@@ -2251,7 +2251,7 @@ class TestSliceFunction:
         result = slice(topic="spec", select="nonexistent heading")
         assert "No matching content" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.slicing._get_connection")
     def test_slice_not_found(self, mock_conn):
         from otutil.tools.mem import slice
 
@@ -2269,7 +2269,7 @@ class TestSliceFunction:
 class TestReadMode:
     """Test mem.read() mode parameter."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_toc_mode(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -2286,7 +2286,7 @@ class TestReadMode:
         assert "Introduction" in result
         assert "Requirements" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.read._get_connection")
     def test_meta_mode(self, mock_conn):
         from otutil.tools.mem import read
 
@@ -2317,8 +2317,8 @@ class TestReadMode:
 class TestWriteWithToc:
     """Test mem.write() with toc=True."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._maybe_embed")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_stores_sections_in_meta(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
@@ -2341,8 +2341,8 @@ class TestWriteWithToc:
         assert "section_count" in meta
         assert meta["section_count"] == "4"
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.write._maybe_embed")
+    @patch("otutil.tools.mem.write._get_connection")
     def test_without_toc_has_empty_meta(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
@@ -2364,8 +2364,8 @@ class TestWriteWithToc:
 class TestUpdateRecomputesToc:
     """Test that update() recomputes toc when sections exist in meta."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._maybe_embed")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_recomputes_sections(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
@@ -2390,8 +2390,8 @@ class TestUpdateRecomputesToc:
         assert "sections" in meta
         assert meta["section_count"] == "2"
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._maybe_embed")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_no_recompute_without_sections(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
@@ -2416,8 +2416,8 @@ class TestUpdateRecomputesToc:
 class TestAppendRecomputesToc:
     """Test that append() recomputes toc when sections exist in meta."""
 
-    @patch("otutil.tools.mem._maybe_embed")
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.mutations._maybe_embed")
+    @patch("otutil.tools.mem.mutations._get_connection")
     def test_recomputes_sections_on_append(self, mock_conn, mock_embed):
         from otutil.tools.mem import append
 
@@ -2543,9 +2543,13 @@ def _mock_use_conn(rows, *, conn=None):
     """
     ctx = conn or MagicMock()
     ctx.execute.return_value.fetchall.return_value = rows
-    with patch("otutil.tools.mem._use_connection") as mock_conn:
-        mock_conn.return_value.__enter__ = MagicMock(return_value=ctx)
-        mock_conn.return_value.__exit__ = MagicMock(return_value=False)
+    with (
+        patch("otutil.tools.mem.formatting._use_connection") as mock_fmt,
+        patch("otutil.tools.mem.refresh._use_connection") as mock_ref,
+    ):
+        for mock_conn in (mock_fmt, mock_ref):
+            mock_conn.return_value.__enter__ = MagicMock(return_value=ctx)
+            mock_conn.return_value.__exit__ = MagicMock(return_value=False)
         yield ctx
 
 
@@ -2559,7 +2563,7 @@ def _mock_use_conn(rows, *, conn=None):
 class TestStale:
     """Test mem.stale() bulk staleness check."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_no_memories(self, _mock_config):
         from otutil.tools.mem import stale
 
@@ -2567,7 +2571,7 @@ class TestStale:
             result = stale()
         assert "No memories found" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_no_file_backed(self, _mock_config):
         from otutil.tools.mem import stale
 
@@ -2576,7 +2580,7 @@ class TestStale:
             result = stale()
         assert "No file-backed memories found" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_mixed_staleness(self, _mock_config, tmp_path):
         import json
 
@@ -2621,7 +2625,7 @@ class TestStale:
 class TestListTreeFormat:
     """Test mem.list(format='tree') topic hierarchy view."""
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_empty(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -2631,7 +2635,7 @@ class TestListTreeFormat:
         result = list(format="tree")
         assert "No memories found" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_flat_topics(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -2651,7 +2655,7 @@ class TestListTreeFormat:
         # Tree connectors present
         assert "├──" in result or "└──" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_nested_topics_with_counts(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -2671,7 +2675,7 @@ class TestListTreeFormat:
         assert "── core.md  (id=id-2" in result
         assert "── testing.md  (id=id-3" in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_depth_limit(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -2690,7 +2694,7 @@ class TestListTreeFormat:
         assert "index.md" not in result
         assert "testing.md" not in result
 
-    @patch("otutil.tools.mem._get_connection")
+    @patch("otutil.tools.mem.listing._get_connection")
     def test_tree_leaf_with_tags(self, mock_conn):
         from otutil.tools.mem import list
 
@@ -2714,7 +2718,7 @@ class TestListTreeFormat:
 class TestRefresh:
     """Test mem.refresh() source file re-read."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_dry_run_reports_without_modifying(self, _mock_config, tmp_path):
         import json
 
@@ -2736,7 +2740,7 @@ class TestRefresh:
         update_calls = [c for c in ctx.execute.call_args_list if "UPDATE" in str(c) or "INSERT" in str(c)]
         assert len(update_calls) == 0
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_apply_updates_content(self, _mock_config, tmp_path):
         import json
 
@@ -2751,8 +2755,8 @@ class TestRefresh:
         conn_mock = MagicMock()
         with (
             _mock_use_conn(rows, conn=conn_mock),
-            patch("otutil.tools.mem._maybe_embed", return_value=None),
-            patch("otutil.tools.mem._cache_invalidate"),
+            patch("otutil.tools.mem.refresh._maybe_embed", return_value=None),
+            patch("otutil.tools.mem.refresh._cache_invalidate"),
         ):
             result = refresh(topic="docs/", dry_run=False)
 
@@ -2764,7 +2768,7 @@ class TestRefresh:
         assert any("INSERT" in s for s in all_sql)
         assert any("UPDATE" in s for s in all_sql)
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_missing_source_skipped(self, _mock_config, tmp_path):
         import json
 
@@ -2779,7 +2783,7 @@ class TestRefresh:
         assert "1 missing" in result
         assert "docs/gone.md" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_fresh_untouched(self, _mock_config, tmp_path):
         import json
 
@@ -2796,7 +2800,7 @@ class TestRefresh:
         assert "1 fresh" in result
         assert "stale" not in result.lower() or "0 stale" in result.lower()
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.content._get_config", return_value=Config())
     def test_toc_recomputed_on_refresh(self, _mock_config, tmp_path):
         import json
 
@@ -2816,8 +2820,8 @@ class TestRefresh:
         conn_mock = MagicMock()
         with (
             _mock_use_conn(rows, conn=conn_mock),
-            patch("otutil.tools.mem._maybe_embed", return_value=None),
-            patch("otutil.tools.mem._cache_invalidate"),
+            patch("otutil.tools.mem.refresh._maybe_embed", return_value=None),
+            patch("otutil.tools.mem.refresh._cache_invalidate"),
         ):
             result = refresh(topic="docs/", dry_run=False)
 
@@ -2858,7 +2862,7 @@ def _make_read_row(
 class TestSliceBatch:
     """Test mem.slice_batch() batch section extraction."""
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_multiple_topics(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
@@ -2869,8 +2873,8 @@ class TestSliceBatch:
         rows = [row_a, row_b]
 
         with (
-            patch("otutil.tools.mem._get_connection") as mock_conn,
-            patch("otutil.tools.mem._cache_put"),
+            patch("otutil.tools.mem.slicing._get_connection") as mock_conn,
+            patch("otutil.tools.mem.slicing._cache_put"),
         ):
             conn = MagicMock()
             mock_conn.return_value = conn
@@ -2884,14 +2888,14 @@ class TestSliceBatch:
         assert "docs/a.md [Intro]" in result
         assert "docs/b.md [Run]" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_mixed_selectors(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md", content="# H1\n\nLine2\n\n# H2\n\nLine6\nLine7")
         with (
-            patch("otutil.tools.mem._get_connection") as mock_conn,
-            patch("otutil.tools.mem._cache_put"),
+            patch("otutil.tools.mem.slicing._get_connection") as mock_conn,
+            patch("otutil.tools.mem.slicing._cache_put"),
         ):
             conn = MagicMock()
             mock_conn.return_value = conn
@@ -2907,14 +2911,14 @@ class TestSliceBatch:
         assert "[H2]" in result
         assert "[:3]" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_missing_topic(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
         with (
-            patch("otutil.tools.mem._get_connection") as mock_conn,
-            patch("otutil.tools.mem._cache_put"),
+            patch("otutil.tools.mem.slicing._get_connection") as mock_conn,
+            patch("otutil.tools.mem.slicing._cache_put"),
         ):
             conn = MagicMock()
             mock_conn.return_value = conn
@@ -2928,14 +2932,14 @@ class TestSliceBatch:
         assert "No memory found" in result
         assert "docs/missing.md" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_no_match_selector(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
         with (
-            patch("otutil.tools.mem._get_connection") as mock_conn,
-            patch("otutil.tools.mem._cache_put"),
+            patch("otutil.tools.mem.slicing._get_connection") as mock_conn,
+            patch("otutil.tools.mem.slicing._cache_put"),
         ):
             conn = MagicMock()
             mock_conn.return_value = conn
@@ -2946,7 +2950,7 @@ class TestSliceBatch:
 
         assert "No matching content" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_empty_items(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
@@ -2954,7 +2958,7 @@ class TestSliceBatch:
         assert "Error" in result
         assert "non-empty" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_max_items_exceeded(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
@@ -2963,14 +2967,14 @@ class TestSliceBatch:
         assert "Error" in result
         assert "20" in result
 
-    @patch("otutil.tools.mem._get_config", return_value=Config())
+    @patch("otutil.tools.mem.cache._get_config", return_value=Config())
     def test_invalid_item_missing_select(self, _mock_config):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
         with (
-            patch("otutil.tools.mem._get_connection") as mock_conn,
-            patch("otutil.tools.mem._cache_put"),
+            patch("otutil.tools.mem.slicing._get_connection") as mock_conn,
+            patch("otutil.tools.mem.slicing._cache_put"),
         ):
             conn = MagicMock()
             mock_conn.return_value = conn

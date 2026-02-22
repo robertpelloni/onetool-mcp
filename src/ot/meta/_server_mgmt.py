@@ -1,0 +1,110 @@
+"""Server management and security functions."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from ot.logging import LogSpan
+
+log = LogSpan
+
+
+def security(*, check: str = "") -> dict[str, Any]:
+    """Check security rules for code validation.
+
+    OneTool uses an allowlist-based security model: everything is blocked
+    by default, and only explicitly allowed builtins, imports, and calls
+    are permitted. Tool namespaces (ot.*, brave.*, etc.) are auto-allowed.
+
+    Args:
+        check: Pattern to check (e.g., "os", "json.loads", "pickle.*").
+               If empty, returns a summary of all security rules.
+
+    Returns:
+        If check is provided: Dict with 'pattern', 'status' (allowed/blocked/warned),
+            'category', and 'reason' explaining why.
+        If check is empty: Dict with summary of all security categories
+            (builtins, imports, calls, dunders, tool_namespaces).
+
+    Example:
+        ot.security()                      # Show all rules
+        ot.security(check="os")            # "blocked: import"
+        ot.security(check="json")          # "allowed: import"
+        ot.security(check="json.loads")    # "allowed: module in imports"
+        ot.security(check="pickle.load")   # "blocked: calls"
+        ot.security(check="brave.search")  # "allowed: tool namespace"
+    """
+    from ot.executor.validator import get_security_status, get_security_summary
+
+    with log(span="ot.security", check=check or None) as s:
+        if check:
+            result = get_security_status(check)
+            s.add("status", result["status"])
+            s.add("category", result["category"])
+            return result
+        else:
+            summary = get_security_summary()
+            s.add("status", summary.get("status", "unknown"))
+            return summary
+
+
+def server(
+    *,
+    status: str | None = None,
+    enable: str | None = None,
+    disable: str | None = None,
+    restart: str | None = None,
+) -> str:
+    """List or manage runtime proxy server state.
+
+    Without arguments, lists all configured servers with their status.
+    Accepts one action at a time: status, enable, disable, or restart.
+
+    All changes are in-memory only — state resets when OneTool restarts.
+
+    Args:
+        status: Show detailed status for a named server
+        enable: Enable a disabled server and connect it
+        disable: Disable an enabled server and disconnect it
+        restart: Disconnect and reconnect a server
+
+    Returns:
+        Status report or action confirmation message
+
+    Example:
+        ot.server()                           # list all servers
+        ot.server(status="devtools")          # show status for devtools
+        ot.server(enable="devtools-auto")     # enable devtools-auto
+        ot.server(disable="devtools")         # disable devtools
+        ot.server(restart="playwright")       # reconnect playwright
+    """
+    from ottools.server import server as _server
+
+    return _server(status=status, enable=enable, disable=disable, restart=restart)
+
+
+def skills(
+    *,
+    name: str | None = None,
+    pattern: str | None = None,
+    info: str = "min",
+) -> str:
+    """List available bundled skills or retrieve a skill's body content.
+
+    Args:
+        name: Skill name to retrieve body for (e.g., "ot-guide")
+        pattern: Filter skills by substring match on name
+        info: Detail level — "list" (names only), "min" (+ description, default), "full" (everything)
+
+    Returns:
+        Skill body if name= provided; formatted list of skills otherwise
+
+    Example:
+        ot.skills()                                  # list all
+        ot.skills(pattern="ot-")                     # filter by pattern
+        ot.skills(name="ot-chrome-devtools-mcp")     # retrieve body
+        ot.skills(info="full")                       # full info for each skill
+    """
+    from ottools.skills import skills as _skills
+
+    return _skills(name=name, pattern=pattern, info=info)

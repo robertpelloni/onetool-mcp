@@ -50,8 +50,8 @@ def test_notify_returns_ok_with_matching_topic(msg_config: OneToolConfig) -> Non
     from ot.meta import notify
 
     with (
-        patch("ot.meta.get_config", return_value=msg_config),
-        patch("ot.meta._write_to_file"),
+        patch("ot.meta._messaging.get_config", return_value=msg_config),
+        patch("ot.meta._messaging._write_to_file"),
     ):
         result = notify(topic="status:scan", message="Scanning src/")
 
@@ -67,7 +67,7 @@ def test_notify_returns_skip_no_match_when_no_pattern_matches(
     """Verify notify() returns 'SKIP: no matching topic' when no pattern matches."""
     from ot.meta import notify
 
-    with patch("ot.meta.get_config", return_value=empty_msg_config):
+    with patch("ot.meta._messaging.get_config", return_value=empty_msg_config):
         result = notify(topic="unknown:topic", message="test")
 
     assert result == "SKIP: no matching topic"
@@ -80,8 +80,8 @@ def test_notify_uses_first_matching_pattern(msg_config: OneToolConfig) -> None:
     from ot.meta import notify
 
     with (
-        patch("ot.meta.get_config", return_value=msg_config),
-        patch("ot.meta._write_to_file"),
+        patch("ot.meta._messaging.get_config", return_value=msg_config),
+        patch("ot.meta._messaging._write_to_file"),
     ):
         # status:scan should match status:* not *
         result = notify(topic="status:scan", message="test")
@@ -97,8 +97,8 @@ def test_notify_falls_through_to_catchall(msg_config: OneToolConfig) -> None:
     from ot.meta import notify
 
     with (
-        patch("ot.meta.get_config", return_value=msg_config),
-        patch("ot.meta._write_to_file"),
+        patch("ot.meta._messaging.get_config", return_value=msg_config),
+        patch("ot.meta._messaging._write_to_file"),
     ):
         # other:topic should match * catchall
         result = notify(topic="other:topic", message="test")
@@ -114,7 +114,7 @@ def test_match_topic_to_file_returns_none_for_no_match(
     """Verify _match_topic_to_file returns None when no pattern matches."""
     from ot.meta import _match_topic_to_file
 
-    with patch("ot.meta.get_config", return_value=empty_msg_config):
+    with patch("ot.meta._messaging.get_config", return_value=empty_msg_config):
         result = _match_topic_to_file("any:topic")
 
     assert result is None
@@ -128,7 +128,7 @@ def test_match_topic_to_file_returns_path_for_match(
     """Verify _match_topic_to_file returns Path for matching pattern."""
     from ot.meta import _match_topic_to_file
 
-    with patch("ot.meta.get_config", return_value=msg_config):
+    with patch("ot.meta._messaging.get_config", return_value=msg_config):
         result = _match_topic_to_file("doc:api")
 
     assert result is not None

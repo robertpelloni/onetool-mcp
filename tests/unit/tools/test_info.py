@@ -490,7 +490,7 @@ def test_packs_with_proxy(mock_proxy_manager: MagicMock) -> None:
     mock_proxy_manager.list_tools.return_value = mock_tools
     mock_proxy_manager.servers = ["github"]
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         result = packs(pattern="github", info="full")
 
     # Should generate from proxy tool list
@@ -525,7 +525,7 @@ def test_packs_with_config_instructions(
         )
     ):
         with patch(
-            "ot.meta.get_proxy_manager", return_value=mock_proxy_manager
+            "ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager
         ):
             result = packs(pattern="brave", info="full")
 
@@ -798,7 +798,7 @@ def test_tools_proxy_returns_enriched_info(mock_proxy_manager: MagicMock) -> Non
     mock_proxy_manager.list_tools.return_value = mock_tools
     mock_proxy_manager.servers = ["github"]
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         result = tools(pattern="github.search", info="full")
 
     assert isinstance(result, list)
@@ -833,8 +833,8 @@ def test_servers_list_info(mock_proxy_manager: MagicMock) -> None:
     mock_cfg = MM()
     mock_cfg.servers = {"chrome-devtools": MM(), "github": MM()}
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = servers(info="list")
 
     assert result == ["chrome-devtools", "github"]
@@ -860,8 +860,8 @@ def test_servers_min_info(mock_proxy_manager: MagicMock) -> None:
     mock_proxy_manager.get_connection.return_value = None  # Not connected
     mock_proxy_manager.list_tools.return_value = []
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = servers(info="min")
 
     assert len(result) == 1
@@ -894,8 +894,8 @@ def test_servers_full_with_instructions(mock_proxy_manager: MagicMock) -> None:
 
     mock_proxy_manager.get_connection.return_value = None  # Not connected
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = servers(pattern="chrome-devtools", info="full")
 
     assert len(result) == 1
@@ -918,8 +918,8 @@ def test_servers_pattern_filter(mock_proxy_manager: MagicMock) -> None:
     mock_cfg = MM()
     mock_cfg.servers = {"chrome-devtools": MM(), "github": MM(), "gitlab": MM()}
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = servers(pattern="git", info="list")
 
     assert result == ["github", "gitlab"]
@@ -950,8 +950,8 @@ def test_help_server_lookup(mock_proxy_manager: MagicMock) -> None:
     mock_proxy_manager.servers = []
     mock_proxy_manager.list_tools.return_value = []
 
-    with patch("ot.meta.get_proxy_manager", return_value=mock_proxy_manager):
-        with patch("ot.meta.get_config", return_value=mock_cfg):
+    with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
+        with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = help(query="chrome-devtools")
 
     assert "# chrome-devtools server" in result
