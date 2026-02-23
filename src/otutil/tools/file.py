@@ -27,17 +27,23 @@ __all__ = [
     "copy",
     "delete",
     "edit",
+    "grep",
     "info",
     "list",
     "move",
     "read",
+    "read_batch",
     "search",
+    "slice",
+    "slice_batch",
+    "toc",
     "tree",
     "write",
 ]
 
 import fnmatch
 import os
+import re
 import shutil
 import stat
 import tempfile
@@ -51,6 +57,13 @@ from ot.config import get_tool_config
 from ot.logging import LogSpan
 from ot.paths import resolve_cwd_path
 from ot.utils import is_path_excluded, validate_path
+from otutil.tools._content_util import (
+    build_toc,
+    grep_lines,
+    parse_headings,
+    resolve_slice,
+    selector_label,
+)
 
 
 class Config(BaseModel):
@@ -823,6 +836,474 @@ def search(
         except OSError as e:
             s.add(error=str(e))
             return f"Error: {e}"
+
+
+def grep(
+    *,
+    pattern: str,
+    path: str = ".",
+    glob: str | None = None,
+    context: int = 2,
+    case_sensitive: bool = True,
+    max_matches: int = 500,
+    fixed_strings: bool = False,
+) -> str:
+    """Search file contents with regex (pure Python, no external tools required).
+
+    Recursively searches files for lines matching the pattern. Output format
+    mirrors ripgrep: matches as `filename:lineno: line`, context as
+    `filename-lineno- line`.
+
+    Args:
+        pattern: Regex pattern (or literal string if fixed_strings=True)
+        path: Root directory to search (default: current directory)
+        glob: Glob pattern to filter files (e.g., "*.py", "**/*.md")
+        context: Context lines before/after each match (default: 2)
+        case_sensitive: Case-sensitive matching (default: True)
+        max_matches: Stop after this many total matches (default: 500)
+        fixed_strings: If True, treat pattern as a literal string (default: False)
+
+    Returns:
+        Ripgrep-style output with match markers, or error message
+
+    Example:
+        file.grep(pattern="LogSpan", path="src/", glob="*.py")
+        file.grep(pattern="TODO", path=".", fixed_strings=True)
+        file.grep(pattern="def \\w+\\(", path="src/", glob="**/*.py", context=1)
+    """
+    with LogSpan(span="file.grep", pattern=pattern, path=path, glob=glob) as s:
+        resolved, error = _validate_path(path, must_exist=True)
+        if error:
+            s.add(error=error)
+            return f"Error: {error}"
+        assert resolved is not None
+
+        if not resolved.is_dir():
+            s.add(error="not_a_directory")
+            return f"Error: Not a directory: {path}"
+
+        # Compile regex
+        if fixed_strings:
+            pattern = re.escape(pattern)
+        flags = 0 if case_sensitive else re.IGNORECASE
+        try:
+            regex = re.compile(pattern, flags)
+        except re.error as e:
+            s.add(error="invalid_regex")
+            return f"Error: Invalid regex pattern: {e}"
+
+        cfg = _get_file_config()
+        cwd = resolved
+
+        output_parts: list[str] = []
+        total_matches = 0
+
+        # Always recurse; strip leading "**/" so "**/*.md" and "*.md" behave identically
+        file_glob = re.sub(r"^\*\*/", "", glob) if glob else "*"
+        for entry in cwd.rglob(file_glob):
+            if total_matches >= max_matches:
+                break
+
+            if not entry.is_file():
+                continue
+
+            if is_path_excluded(entry, cfg.exclude_patterns):
+                continue
+
+            # Skip oversized files
+            if _check_file_size(entry):
+                continue
+
+            # Read file
+            try:
+                raw = entry.read_bytes()
+            except OSError:
+                continue
+
+            if _is_binary(raw):
+                continue
+
+            content = _decode_content(raw, "utf-8")
+            if content is None:
+                continue
+
+            # Get display path
+            try:
+                display = str(entry.relative_to(cwd))
+            except ValueError:
+                display = str(entry)
+
+            groups = grep_lines(content, regex, context=context)
+            if not groups:
+                continue
+
+            for group in groups:
+                if total_matches >= max_matches:
+                    break
+                block_lines: list[str] = []
+                for lineno, line, is_match in group:
+                    if is_match:
+                        block_lines.append(f"{display}:{lineno}: {line}")
+                        total_matches += 1
+                    else:
+                        block_lines.append(f"{display}-{lineno}- {line}")
+                output_parts.append("\n".join(block_lines))
+
+        if not output_parts:
+            s.add(resultCount=0)
+            return f"No matches found for: {pattern}"
+
+        if total_matches >= max_matches:
+            output_parts.append(f"\n... (stopped at {max_matches} matches)")
+
+        s.add(resultCount=total_matches)
+        return "\n\n".join(output_parts)
+
+
+def read_batch(
+    *,
+    paths: list[str] | None = None,
+    glob: str | None = None,
+    encoding: str = "utf-8",
+    max_files: int = 20,
+) -> str:
+    """Read multiple files in a single call.
+
+    Provide either a list of paths or a glob pattern. Skips binary files
+    silently. Respects file security config (allowed_dirs, exclude_patterns).
+
+    Args:
+        paths: List of file paths to read
+        glob: Glob pattern to match files (e.g., "src/**/*.py", "docs/*.md")
+        encoding: Text encoding (default: utf-8)
+        max_files: Maximum number of files to read (default: 20)
+
+    Returns:
+        Concatenated file contents separated by dividers with filename headers
+
+    Example:
+        file.read_batch(paths=["src/a.py", "src/b.py"])
+        file.read_batch(glob="src/**/*.py", max_files=10)
+        file.read_batch(glob="docs/*.md")
+    """
+    with LogSpan(span="file.read_batch", paths=len(paths) if paths else 0, glob=glob) as s:
+        if not paths and not glob:
+            s.add(error="missing_input")
+            return "Error: Either 'paths' or 'glob' is required"
+        if paths and glob:
+            s.add(error="ambiguous_input")
+            return "Error: Provide 'paths' or 'glob', not both"
+
+        cfg = _get_file_config()
+        cwd = _expand_path(".")
+
+        # Collect candidate paths
+        candidates: list[Path] = []
+        if paths:
+            for p in paths:
+                resolved, error = _validate_path(p, must_exist=True)
+                if error:
+                    # Path failed security check — skip it entirely
+                    continue
+                assert resolved is not None
+                if resolved.is_file():
+                    candidates.append(resolved)
+        else:
+            assert glob is not None
+            # Always recurse; strip leading "**/" so "**/*.md" and "*.md" behave identically
+            file_glob = re.sub(r"^\*\*/", "", glob)
+            for entry in cwd.rglob(file_glob):
+                if not entry.is_file():
+                    continue
+                if is_path_excluded(entry, cfg.exclude_patterns):
+                    continue
+                candidates.append(entry)
+                if len(candidates) >= max_files:
+                    break
+
+        if not candidates:
+            s.add(resultCount=0)
+            return f"No files found matching {'glob' if glob else 'paths'}"
+
+        if len(candidates) > max_files:
+            candidates = candidates[:max_files]
+
+        parts: list[str] = []
+        read_count = 0
+
+        for entry in candidates:
+            try:
+                display = str(entry.relative_to(cwd))
+            except ValueError:
+                display = str(entry)
+
+            size_error = _check_file_size(entry)
+            if size_error:
+                parts.append(f"# {display}\n\nError: {size_error}")
+                continue
+
+            try:
+                raw = entry.read_bytes()
+            except OSError as e:
+                parts.append(f"# {display}\n\nError: {e}")
+                continue
+
+            if _is_binary(raw):
+                continue
+
+            content = _decode_content(raw, encoding)
+            if content is None:
+                parts.append(f"# {display}\n\nError: Could not decode file")
+                continue
+
+            parts.append(f"# {display}\n\n{content}")
+            read_count += 1
+
+        if not parts:
+            s.add(resultCount=0)
+            return "No readable files found"
+
+        noun = "file" if read_count == 1 else "files"
+        header = f"Read {read_count} {noun}\n\n---\n\n"
+        s.add(resultCount=read_count)
+        return header + "\n\n---\n\n".join(parts)
+
+
+def toc(
+    *,
+    path: str,
+    encoding: str = "utf-8",
+) -> str:
+    """Display a numbered section index for a file (table of contents).
+
+    Parses ATX-style markdown headings (# through ###) and shows their
+    line ranges. Useful before calling file.slice() to navigate sections.
+
+    Args:
+        path: Path to file
+        encoding: Text encoding (default: utf-8)
+
+    Returns:
+        Numbered section list with line ranges, or "No sections found"
+
+    Example:
+        file.toc(path="README.md")
+        file.toc(path="docs/spec.md")
+    """
+    with LogSpan(span="file.toc", path=path) as s:
+        resolved, error = _validate_path(path, must_exist=True)
+        if error:
+            s.add(error=error)
+            return f"Error: {error}"
+        assert resolved is not None
+
+        if not resolved.is_file():
+            s.add(error="not_a_file")
+            return f"Error: Not a file: {path}"
+
+        size_error = _check_file_size(resolved)
+        if size_error:
+            s.add(error="file_too_large")
+            return f"Error: {size_error}"
+
+        try:
+            raw = resolved.read_bytes()
+        except OSError as e:
+            s.add(error=str(e))
+            return f"Error: {e}"
+
+        if _is_binary(raw):
+            s.add(error="binary_file")
+            return "Error: Binary file — no TOC available"
+
+        content = _decode_content(raw, encoding)
+        if content is None:
+            s.add(error="encoding_error")
+            return f"Error: Could not decode file as {encoding}"
+
+        lines = content.split("\n")
+        sections = parse_headings("", lines=lines)
+        s.add(sections=len(sections))
+        return build_toc(sections, len(lines))
+
+
+def slice(
+    *,
+    path: str,
+    select: int | str | list[int | str],
+    encoding: str = "utf-8",
+) -> str:
+    """Extract content from a file by line range, heading, or section number.
+
+    Format detection (polymorphic):
+    - int: section number (1-indexed, from file.toc())
+    - str matching line range pattern: e.g., ":50", "400:", "151:200", "-50:"
+    - str otherwise: heading substring match (case-insensitive)
+    - list: apply each selector and concatenate results
+
+    Args:
+        path: Path to file
+        select: Section selector — int, line range str, heading str, or list
+        encoding: Text encoding (default: utf-8)
+
+    Returns:
+        Extracted content, or error message
+
+    Example:
+        file.slice(path="README.md", select=":50")
+        file.slice(path="README.md", select="Installation")
+        file.slice(path="README.md", select=2)
+        file.slice(path="README.md", select=[1, "Usage", "300:400"])
+    """
+    with LogSpan(span="file.slice", path=path) as s:
+        resolved, error = _validate_path(path, must_exist=True)
+        if error:
+            s.add(error=error)
+            return f"Error: {error}"
+        assert resolved is not None
+
+        if not resolved.is_file():
+            s.add(error="not_a_file")
+            return f"Error: Not a file: {path}"
+
+        size_error = _check_file_size(resolved)
+        if size_error:
+            s.add(error="file_too_large")
+            return f"Error: {size_error}"
+
+        try:
+            raw = resolved.read_bytes()
+        except OSError as e:
+            s.add(error=str(e))
+            return f"Error: {e}"
+
+        if _is_binary(raw):
+            s.add(error="binary_file")
+            return "Error: Binary file — cannot slice"
+
+        content = _decode_content(raw, encoding)
+        if content is None:
+            s.add(error="encoding_error")
+            return f"Error: Could not decode file as {encoding}"
+
+        lines = content.split("\n")
+        sections = parse_headings("", lines=lines)
+
+        selectors: list[int | str] = select if not isinstance(select, (int, str)) else [select]  # type: ignore[assignment]
+        extracted: list[str] = []
+        for sel in selectors:
+            part = resolve_slice(sel, lines, sections)
+            if part is not None:
+                extracted.append(part)
+
+        if not extracted:
+            s.add(resultCount=0)
+            return "No matching content found for the given selector(s)"
+
+        s.add(resultCount=len(extracted))
+        return "\n\n".join(extracted)
+
+
+def slice_batch(
+    *,
+    items: list[dict],
+) -> str:
+    """Extract sections from multiple files in a single call.
+
+    Each item specifies a file path and a selector. Maximum 20 items.
+
+    Args:
+        items: List of dicts, each with 'path' (str) and 'select'
+               (int, str, or list of int/str)
+
+    Returns:
+        Concatenated sliced content with path headers and dividers
+
+    Example:
+        file.slice_batch(items=[
+            {"path": "docs/creating-tools.md", "select": "Checklist"},
+            {"path": "docs/testing.md", "select": "Required Markers"},
+            {"path": "src/file.py", "select": ":50"},
+        ])
+        file.slice_batch(items=[
+            {"path": "README.md", "select": [1, "Installation"]},
+            {"path": "CHANGELOG.md", "select": ":30"},
+        ])
+    """
+    with LogSpan(span="file.slice_batch", itemCount=len(items) if items else 0) as s:
+        if not items:
+            return "Error: items must be a non-empty list"
+        if len(items) > 20:
+            return f"Error: Maximum 20 items allowed, got {len(items)}"
+
+        result_parts: list[str] = []
+        sliced_count = 0
+
+        for item in items:
+            if not isinstance(item, dict):
+                result_parts.append("# (invalid item)\n\nError: Each item must be a dict with 'path' and 'select'")
+                continue
+
+            item_path = item.get("path")
+            sel = item.get("select")
+
+            if not item_path:
+                result_parts.append("# (missing path)\n\nError: Each item must have 'path'")
+                continue
+            if sel is None:
+                result_parts.append(f"# {item_path}\n\nError: 'select' is required")
+                continue
+
+            resolved, error = _validate_path(item_path, must_exist=True)
+            if error:
+                result_parts.append(f"# {item_path}\n\nError: {error}")
+                continue
+            assert resolved is not None
+
+            if not resolved.is_file():
+                result_parts.append(f"# {item_path}\n\nError: Not a file")
+                continue
+
+            size_error = _check_file_size(resolved)
+            if size_error:
+                result_parts.append(f"# {item_path}\n\nError: {size_error}")
+                continue
+
+            try:
+                raw = resolved.read_bytes()
+            except OSError as e:
+                result_parts.append(f"# {item_path}\n\nError: {e}")
+                continue
+
+            if _is_binary(raw):
+                result_parts.append(f"# {item_path}\n\nError: Binary file — cannot slice")
+                continue
+
+            content = _decode_content(raw, "utf-8")
+            if content is None:
+                result_parts.append(f"# {item_path}\n\nError: Could not decode file")
+                continue
+
+            lines = content.split("\n")
+            sections = parse_headings("", lines=lines)
+
+            selectors: list[int | str] = sel if not isinstance(sel, (int, str)) else [sel]  # type: ignore[assignment]
+            extracted: list[str] = []
+            for sel_item in selectors:
+                part = resolve_slice(sel_item, lines, sections)
+                if part is not None:
+                    extracted.append(part)
+
+            sel_label = selector_label(sel)
+            if extracted:
+                result_parts.append(f"# {item_path} [{sel_label}]\n\n" + "\n\n".join(extracted))
+                sliced_count += 1
+            else:
+                result_parts.append(f"# {item_path} [{sel_label}]\n\nNo matching content found for selector(s)")
+
+        s.add(sliced=sliced_count, total=len(items))
+        noun = "file" if sliced_count == 1 else "files"
+        return f"Sliced {sliced_count} {noun}\n\n---\n\n" + "\n\n---\n\n".join(result_parts)
 
 
 # ============================================================================

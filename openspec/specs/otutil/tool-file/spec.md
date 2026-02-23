@@ -93,7 +93,7 @@ The `file.info()` function SHALL return file metadata.
 - **WHEN** `file.info(path=path)` is called
 - **THEN** it SHALL return a dict with:
   - `path`: Relative path (or absolute if `relative_paths=False` or path is outside cwd)
-  - `type`: "file", "directory", or "symlink"
+  - `type`: "file" or "directory" when `follow_symlinks=True` (default); "symlink" when `follow_symlinks=False`
   - `size`: Size in bytes
   - `size_readable`: Human-readable size (e.g., "1.23 MB")
   - `permissions`: Unix permission string
@@ -198,6 +198,152 @@ The `file.search()` function SHALL search for files by name pattern.
 - **WHEN** `file.search(pattern="*", include_hidden=False)` is called
 - **THEN** it SHALL exclude hidden files (starting with `.`)
 - **AND** `include_hidden=True` SHALL include them
+
+### Requirement: Content Grep
+
+The `file.grep()` function SHALL search file contents using pure-Python regex (no external binaries required).
+
+#### Scenario: Basic match
+- **GIVEN** a pattern and directory path
+- **WHEN** `file.grep(pattern="foo", path=".")` is called
+- **THEN** it SHALL return matches in ripgrep format: `filename:lineno: line`
+- **AND** context lines SHALL appear as `filename-lineno- line`
+
+#### Scenario: Glob filter
+- **GIVEN** a glob parameter
+- **WHEN** `file.grep(pattern="foo", path=".", glob="*.py")` is called
+- **THEN** it SHALL search only files matching the glob, recursively into subdirectories
+- **AND** `glob="*.py"` and `glob="**/*.py"` SHALL produce identical results
+
+#### Scenario: Case insensitive
+- **GIVEN** `case_sensitive=False`
+- **WHEN** `file.grep(pattern="FOO", case_sensitive=False)` is called
+- **THEN** it SHALL match regardless of case
+
+#### Scenario: Fixed strings
+- **GIVEN** `fixed_strings=True`
+- **WHEN** `file.grep(pattern="foo()", fixed_strings=True)` is called
+- **THEN** it SHALL treat the pattern as a literal string, not a regex
+
+#### Scenario: No match
+- **GIVEN** a pattern with no matches
+- **WHEN** `file.grep(pattern="xyzzy")` is called
+- **THEN** it SHALL return "No matches found for: <pattern>"
+
+#### Scenario: Binary files skipped
+- **GIVEN** a directory containing binary files
+- **WHEN** `file.grep(pattern="foo")` is called
+- **THEN** it SHALL silently skip binary files
+
+#### Scenario: Oversized files skipped
+- **GIVEN** a file exceeding `max_file_size`
+- **WHEN** `file.grep(pattern="foo")` is called
+- **THEN** it SHALL silently skip the oversized file
+
+#### Scenario: Max matches cap
+- **GIVEN** many matches across files
+- **WHEN** matches exceed `max_matches` (default: 500)
+- **THEN** it SHALL stop and append a truncation notice
+
+### Requirement: Batch File Reading
+
+The `file.read_batch()` function SHALL read multiple files in a single call.
+
+#### Scenario: Read by path list
+- **GIVEN** a list of file paths
+- **WHEN** `file.read_batch(paths=["a.py", "b.py"])` is called
+- **THEN** it SHALL return concatenated file contents separated by `---` dividers
+- **AND** each section SHALL begin with `# filename` header
+
+#### Scenario: Read by glob
+- **GIVEN** a glob pattern
+- **WHEN** `file.read_batch(glob="src/**/*.py")` is called
+- **THEN** it SHALL read all matching text files up to `max_files` limit, recursively
+- **AND** `glob="*.py"` and `glob="**/*.py"` SHALL produce identical results
+
+#### Scenario: Missing input
+- **GIVEN** neither paths nor glob provided
+- **WHEN** `file.read_batch()` is called
+- **THEN** it SHALL return an error
+
+#### Scenario: Binary files skipped
+- **GIVEN** a path list containing binary files
+- **WHEN** `file.read_batch(paths=[...])` is called
+- **THEN** binary files SHALL be silently skipped
+
+#### Scenario: Security-rejected paths dropped
+- **GIVEN** a paths list containing a path outside allowed directories
+- **WHEN** `file.read_batch(paths=[...])` is called
+- **THEN** the rejected path SHALL be silently dropped (not read, not reported)
+- **AND** allowed paths SHALL be read normally
+
+#### Scenario: Oversized file gets error entry
+- **GIVEN** a path list where one file exceeds `max_file_size`
+- **WHEN** `file.read_batch(paths=[...])` is called
+- **THEN** the oversized file SHALL produce an error entry in the output
+- **AND** remaining files SHALL still be read
+
+### Requirement: File TOC
+
+The `file.toc()` function SHALL display a numbered section index for a file.
+
+#### Scenario: Markdown headings
+- **GIVEN** a markdown file with ATX headings
+- **WHEN** `file.toc(path="README.md")` is called
+- **THEN** it SHALL return a numbered list of sections with line ranges
+
+#### Scenario: No headings
+- **GIVEN** a file with no markdown headings
+- **WHEN** `file.toc(path="plain.txt")` is called
+- **THEN** it SHALL return "No sections found"
+
+### Requirement: File Slice
+
+The `file.slice()` function SHALL extract content from a file by section, heading, or line range.
+
+#### Scenario: Line range
+- **GIVEN** a line range selector like ":50" or "100:200"
+- **WHEN** `file.slice(path="file.md", select=":50")` is called
+- **THEN** it SHALL return lines 1 through 50
+
+#### Scenario: Heading match
+- **GIVEN** a heading substring selector
+- **WHEN** `file.slice(path="file.md", select="Installation")` is called
+- **THEN** it SHALL return the section under the matched heading
+
+#### Scenario: Section number
+- **GIVEN** an integer selector
+- **WHEN** `file.slice(path="file.md", select=2)` is called
+- **THEN** it SHALL return the content of the 2nd heading section
+
+#### Scenario: List of selectors
+- **GIVEN** a list of selectors
+- **WHEN** `file.slice(path="file.md", select=[1, "Usage"])` is called
+- **THEN** it SHALL return concatenated content for each matched selector
+
+#### Scenario: No match
+- **GIVEN** a selector that matches nothing
+- **WHEN** `file.slice()` is called
+- **THEN** it SHALL return "No matching content found for the given selector(s)"
+
+### Requirement: Slice Batch
+
+The `file.slice_batch()` function SHALL extract sections from multiple files in a single call.
+
+#### Scenario: Multiple files
+- **GIVEN** a list of items with path and select
+- **WHEN** `file.slice_batch(items=[{"path": "a.md", "select": "Intro"}, ...])` is called
+- **THEN** it SHALL return sliced content from each file with path headers and dividers
+
+#### Scenario: Empty items
+- **GIVEN** an empty items list
+- **WHEN** `file.slice_batch(items=[])` is called
+- **THEN** it SHALL return an error
+
+#### Scenario: Too many items
+- **GIVEN** more than 20 items
+- **WHEN** `file.slice_batch(items=[...])` is called (21+ items)
+- **THEN** it SHALL return an error referencing the 20-item limit
 
 ### Requirement: File Writing
 

@@ -9,13 +9,30 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 - Recursive directory operations with pattern filtering
 - Line-numbered file reading with pagination
 - Text replacement with occurrence control
+- Pure-Python content search (no `rg` binary required)
+- Section-aware navigation: TOC, slice, and batch slice for markdown files
 
 ## Read Operations
 
 | Function | Description |
 |----------|-------------|
 | `file.read(path, offset, limit, encoding)` | Read file content with line numbers |
+| `file.read_batch(paths, glob, encoding, max_files)` | Read multiple files in a single call |
 | `file.info(path, follow_symlinks)` | Get file or directory metadata |
+
+## Search Operations
+
+| Function | Description |
+|----------|-------------|
+| `file.grep(pattern, path, glob, context, case_sensitive, max_matches, fixed_strings)` | Search file contents with regex (pure Python) |
+
+## Section Navigation
+
+| Function | Description |
+|----------|-------------|
+| `file.toc(path, encoding)` | Display numbered section index (table of contents) |
+| `file.slice(path, select, encoding)` | Extract content by section number, heading, or line range |
+| `file.slice_batch(items)` | Extract sections from multiple files in a single call |
 
 ## List Operations
 
@@ -46,7 +63,7 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 |-----------|------|-------------|
 | `path` | str | File or directory path (relative to cwd or absolute) |
 | `pattern` | str | Filename pattern for filtering (e.g., `*.py`, `*test*`) |
-| `glob` | str | Full path glob pattern (e.g., `src/**/*.py`, `**/*.md`) |
+| `glob` | str | Glob pattern to filter files, always recursive (e.g., `*.py`, `*.md`, `src/**/*.py`) |
 | `offset` | int | Line number to start from (1-indexed, default: 1) |
 | `limit` | int | Maximum lines to return |
 | `occurrence` | int | Which match to replace (1=first, 0=all) |
@@ -55,6 +72,12 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 | `recursive` | bool | Delete non-empty directories |
 | `follow_symlinks` | bool | Follow symlinks or treat as links |
 | `include_hidden` | bool | Include hidden files (starting with `.`) |
+| `context` | int | Context lines before/after each match in grep (default: 2) |
+| `max_matches` | int | Max total grep matches before stopping (default: 500) |
+| `fixed_strings` | bool | Treat grep pattern as a literal string, not regex |
+| `max_files` | int | Maximum files to read in read_batch (default: 20) |
+| `select` | int\|str\|list | Slice selector: section number, heading substring, line range, or list |
+| `items` | list[dict] | List of `{path, select}` dicts for slice_batch (max 20) |
 
 ## Configuration
 
@@ -109,6 +132,62 @@ file.search(pattern="*test*", file_pattern="*.py")
 file.search(glob="src/**/*.py")
 file.search(glob="tests/**/test_*.py")
 file.search(glob="**/*.{yaml,yml}")
+```
+
+### Reading Multiple Files
+
+```python
+# Read specific files
+file.read_batch(paths=["src/a.py", "src/b.py"])
+
+# Read by glob pattern
+file.read_batch(glob="src/**/*.py", max_files=10)  # "*.py" also works
+file.read_batch(glob="docs/*.md")  # recurses into docs/ subdirs
+```
+
+### Searching File Contents
+
+```python
+# Search for a regex pattern (glob always recurses — "*.py" == "**/*.py")
+file.grep(pattern="LogSpan", path="src/", glob="*.py")
+
+# Case-insensitive with context lines
+file.grep(pattern="TODO", path=".", context=3, case_sensitive=False)
+
+# Literal string (no regex)
+file.grep(pattern="print(", path="src/", fixed_strings=True)
+
+# Recursive with glob filter
+file.grep(pattern="def \\w+\\(", path="src/", glob="**/*.py", context=1)
+```
+
+### Navigating Sections
+
+```python
+# Show table of contents for a markdown file
+file.toc(path="README.md")
+file.toc(path="docs/spec.md")
+
+# Extract by section number (from toc output)
+file.slice(path="README.md", select=2)
+
+# Extract by heading substring (case-insensitive)
+file.slice(path="README.md", select="Installation")
+
+# Extract by line range
+file.slice(path="README.md", select=":50")       # first 50 lines
+file.slice(path="README.md", select="100:200")   # lines 100–200
+file.slice(path="README.md", select="-30:")      # last 30 lines
+
+# Mixed selectors
+file.slice(path="README.md", select=[1, "Usage", "300:400"])
+
+# Batch slice from multiple files
+file.slice_batch(items=[
+    {"path": "docs/creating-tools.md", "select": "Checklist"},
+    {"path": "docs/testing.md", "select": "Required Markers"},
+    {"path": "src/file.py", "select": ":50"},
+])
 ```
 
 ### Writing Files
