@@ -9,7 +9,7 @@ hide:
 <div class="hero">
 <div class="hero__logo" role="img" aria-label="OneTool logo"></div>
 <p class="hero__title">OneTool</p>
-<p class="hero__tagline">🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.</p>
+<p class="hero__tagline">🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.</p>
 <div class="hero__buttons">
 <a href="learn/" class="btn btn--primary">Learn OneTool</a>
 <a href="reference/" class="btn btn--secondary">Reference</a>
@@ -32,7 +32,7 @@ OneTool is **one MCP server** that exposes tools as a Python API. Instead of rea
 
 Configure one MCP Server. Use unlimited tools. 
 
-**96% fewer tokens. 24× lower cost. No context rot. 100+ tools, extensible and configurable**
+**96% fewer tokens. 30× lower cost. No context rot. 100+ tools, extensible and configurable**
 
 [:octicons-arrow-right-24: Read the full story](about/about-onetool.md)
 
@@ -44,7 +44,7 @@ Configure one MCP Server. Use unlimited tools.
 
 ### :material-chart-line: 96% Token Savings
 
-MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many tools and MCP servers you add. No tool tax. No context rot. **24× lower cost.**
+MCP servers consume 3-30K tokens before you start. OneTool uses ~2K tokens no matter how many tools and MCP servers you add. No tool tax. No context rot. **30× lower cost.**
 
 !!! quote ""
     "Agents scale better by writing code to call tools instead. This reduces the token usage from 150,000 tokens to 2,000 tokens...a cost saving of 98.7%"
@@ -124,7 +124,7 @@ Meta tools for introspection. [Structured logging](learn/extending/extension-too
 
 ### :material-package-variant: 100+ Tools
 
-Web search (Brave, Grounding), web fetch with trafilatura, databases, file operations, diagrams, conversions - ready to use.
+Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.
 
 [:octicons-arrow-right-24: Browse tools](reference/tools/index.md)
 

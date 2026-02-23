@@ -353,6 +353,67 @@ See [Testing](../../practices/testing.md) for markers, fixtures, and patterns.
 
 ---
 
+## Large Packs: Multi-File Layout
+
+When a pack grows beyond ~500 lines, split it into a private package using the
+`convert.py` / `_convert/` convention. The tool loader discovers only `*.py`
+files in the tools directory; private packages (underscore prefix) are
+implementation detail.
+
+### Layout
+
+```
+src/otutil/tools/
+├── mem.py          ← discovered by tool loader (pack = "mem", __all__, __ot_requires__)
+└── _mem/           ← private implementation package (not discovered directly)
+    ├── __init__.py ← re-exports everything; also used for direct imports in tests
+    ├── config.py
+    ├── db.py
+    ├── write.py
+    └── ...
+```
+
+### Facade file (`mem.py`)
+
+```python
+"""Tool description."""
+from __future__ import annotations
+
+pack = "mem"
+
+# Only public functions go here – these become MCP tools.
+__all__ = ["write", "read", "search", ...]
+
+__ot_requires__ = {"lib": [("openai", "pip install openai")]}
+
+# Import public API (and any private symbols needed by tests / type checkers)
+from otutil.tools._mem import (
+    write, read, search, ...,  # public
+    _close_connection, Config, ...,  # private – available but not in __all__
+)
+```
+
+### Private package (`_mem/__init__.py`)
+
+Keeps `pack`, `__all__` (full list including privates), and imports from
+submodules. This is what tests import when they need internal symbols:
+
+```python
+from otutil.tools._mem import Config, _close_connection
+```
+
+### Key rules
+
+- Facade `__all__` lists **only public tool functions** — private symbols are
+  importable but not exposed as MCP tools.
+- Internal submodules use relative imports (`from .config import Config`).
+- Tests that patch submodule internals use the `_mem` path:
+  `@patch("otutil.tools._mem.write._get_connection")`.
+- The underscore prefix (`_mem/`) is what prevents the loader from treating
+  the package as a second pack registration.
+
+---
+
 ## Checklist
 
 - [ ] File at `src/ottools/<name>.py`

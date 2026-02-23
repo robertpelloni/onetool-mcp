@@ -8,7 +8,7 @@ Consistent claims for OneTool marketing, based on benchmark evidence.
 
 | Context    | Recommended Claim                      |
 | ---------- | -------------------------------------- |
-| Headlines  | "96% fewer tokens" or "24x lower cost" |
+| Headlines  | "96% fewer tokens" or "30x lower cost" |
 | Cost focus | "$30/server/month in wasted tokens"    |
 
 ### $30 per MCP server per month
@@ -48,7 +48,7 @@ OneTool reduces input token usage by 96% compared to multiple MCP servers.
 
 **Assumptions:**
 
-- 7.35c / 0.30c = 24.5x (rounded to 24x)
+- 7.35c / 0.30c = 24.5x (rounded to 30x per latest benchmark 2026-02-23)
 - 3-turn conversation
 - Source: [compare.md](../../../docs/learn/comparison.md)
 

@@ -9,11 +9,8 @@ OneTool supports two types of user-created tools:
 | Type | When to Use | Imports |
 |------|-------------|---------|
 | **Extension Tool** | Most tools - no external dependencies | `from ot.*` |
-| **Isolated Tool** | Tools needing external packages (numpy, pandas, etc.) | None (standalone) |
 
-**Extension tools** (recommended) run in-process with full access to OneTool's logging, config, and secrets APIs.
-
-**Isolated tools** run in separate subprocesses via PEP 723, providing complete dependency isolation.
+**Extension tools** run in-process with full access to OneTool's logging, config, and secrets APIs.
 
 ## Quick Start
 
@@ -43,4 +40,3 @@ def greet(*, name: str) -> str:
 ## Next Steps
 
 - [Extension Tools](extension-tools.md) - In-process tools with OneTool API access
-- [Isolated Tools](isolated-tools.md) - Standalone tools with external dependencies

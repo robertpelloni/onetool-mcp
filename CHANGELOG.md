@@ -48,7 +48,7 @@
 - **Stop Context Rot** - 98.7% token reduction (150K to 2K)
 - **Explicit Calls** - Five trigger prefixes, three invocation styles
 - **Configurable Everything** - Per-tool timeouts, limits, behavior
-- **Batteries Included** - 15 packs, 100+ tools ready to use
+- **Batteries Included** - 15+ packs, 100+ tools ready to use
 - **Security First** - AST validation, configurable policies, path boundaries
 
 ### Changes

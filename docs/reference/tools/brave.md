@@ -1,10 +1,10 @@
 # Brave Search
 
-Web, news, local, image, and video search via Brave Search API.
+Web, news, image, and video search via Brave Search API.
 
 ## Highlights
 
-- Five search types: web, news, local, image, video
+- Four search types: web, news, image, video
 - Batch search with concurrent execution
 - Query validation (400 char / 50 word limits)
 
@@ -14,7 +14,6 @@ Web, news, local, image, and video search via Brave Search API.
 |----------|-------------|
 | `brave.search(query, ...)` | General web search |
 | `brave.news(query, ...)` | News articles |
-| `brave.local(query, ...)` | Local businesses/places |
 | `brave.image(query, ...)` | Image search |
 | `brave.video(query, ...)` | Video search |
 | `brave.search_batch(queries, ...)` | Multiple searches concurrently |
@@ -25,7 +24,7 @@ Web, news, local, image, and video search via Brave Search API.
 |-----------|------|-------------|
 | `query` | str | Search query (max 400 chars, 50 words) |
 | `count` | int | Results per query (1-20) |
-| `freshness` | str | "pd" (day), "pw" (week), "pm" (month), "py" (year) |
+| `freshness` | str | "pd" (day), "pw" (week), "pm" (month), "py" (year), or "YYYY-MM-DDtoYYYY-MM-DD" date range |
 | `safesearch` | str | "off", "moderate", "strict" |
 
 ## Requires
@@ -40,9 +39,6 @@ brave.search(query="python async tutorial", count=10)
 
 # News with freshness filter
 brave.news(query="AI announcements", freshness="pw")
-
-# Local search
-brave.local(query="coffee shops near Times Square")
 
 # Batch search
 brave.search_batch(queries=["react hooks", "vue composition api"])

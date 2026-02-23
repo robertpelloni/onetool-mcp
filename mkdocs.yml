@@ -151,7 +151,6 @@ nav:
       - Extending:
           - learn/extending/index.md
           - Extension Tools: learn/extending/extension-tools.md
-          - Isolated Tools: learn/extending/isolated-tools.md
   - Reference:
       - reference/index.md
       - CLIs:
@@ -174,11 +173,11 @@ nav:
           - OT (Meta): reference/tools/ot.md
           - Package: reference/tools/package.md
           - Ripgrep: reference/tools/ripgrep.md
-          - Scaffold: reference/tools/scaffold.md
+          - Forge: reference/tools/forge.md
           - Timer: reference/tools/timer.md
           - Web: reference/tools/web.md
   - Results:
-      - Mem vs File Benchmark: results/mem-vs-file-20260210.md
+      - Mem vs File Benchmark: results/mem-vs-file-20260223.md
   - About:
       - about/index.md
       - About OneTool: about/about-onetool.md

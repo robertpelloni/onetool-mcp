@@ -1,6 +1,6 @@
 # Tool Reference
 
-**16 Packs. 117 Tools.**
+**16 Packs. 115 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -8,7 +8,7 @@ Complete reference of all built-in tool packs and functions.
 
 | Pack | Description | Tool Count | Credits | Tools |
 |------|-------------|---|---------|-------|
-| [**brave**](brave.md) | Web search via Brave Search API. | 6 | [brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server) (MIT) | `image`, `local`, `news`, `search`, `search_batch`, `video` |
+| [**brave**](brave.md) | Web search via Brave Search API. | 5 | [brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server) (MIT) | `image`, `news`, `search`, `search_batch`, `video` |
 | [**context7**](context7.md) | Library documentation lookup. | 2 | [context7](https://github.com/upstash/context7) (MIT) | `doc`, `search` |
 | [**convert**](convert.md) | Convert PDF, Word, PowerPoint, Excel to Markdown. | 5 | MIT | `auto`, `excel`, `pdf`, `powerpoint`, `word` |
 | [**db**](db.md) | SQL database queries. | 3 | [mcp-alchemy](https://github.com/runekaagaard/mcp-alchemy) (MPL 2.0) | `query`, `schema`, `tables` |
@@ -21,9 +21,9 @@ Complete reference of all built-in tool packs and functions.
 | [**ot**](ot.md) | Introspection and management tools. | 11 | MIT | `aliases`, `config`, `health`, `help`, `notify`, `packs`, `reload`, `servers`, `snippets`, `stats`, `tools` |
 | [**package**](package.md) | Package version lookup and security audits. | 5 | MIT | `audit`, `models`, `npm`, `pypi`, `version` |
 | [**ripgrep**](ripgrep.md) | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
-| [**scaffold**](scaffold.md) | Extension scaffolding. | 4 | MIT | `create`, `extensions`, `templates`, `validate` |
+| [**forge**](forge.md) | Create, validate, and install extension tools and skill stubs. | 3 | MIT | `create_ext`, `install_skill`, `validate_ext` |
 | [**timer**](timer.md) | Named stopwatch timers for performance measurement. | 4 | MIT | `clear`, `elapsed`, `list`, `start` |
 | [**web**](web.md) | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
-| | **Total** | **117** | | |
+| | **Total** | **115** | | |
 
 

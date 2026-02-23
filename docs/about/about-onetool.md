@@ -86,7 +86,7 @@ OneTool is the one and only MCP server you need to configure. No matter how many
 
 MCP stays king. You just stop paying the tool tax on every request.
 
-This results in [**96% fewer tokens, 24× lower cost, and improved accuracy**](../learn/comparison.md).
+This results in [**96% fewer tokens, 30× lower cost, and improved accuracy**](../learn/comparison.md).
 
 And yes — like any engineer — I couldn't help engineering a few party tricks along the way.
 
@@ -104,9 +104,9 @@ If you're now coding in your agent prompt, you need powerful snippets for reusab
 
 You'll also get tired of typing `query="..."`, so I added smart parameter prefixes: use `q` instead of `query`, `p` instead of `pattern`. Any unambiguous prefix works.
 
-### Batteries included: 100+ tools, plus "smart tools"
+### Batteries included: 100+ tools
 
-OneTool includes [100+ tools](../reference/tools/index.md), including web search (Brave, Grounding), web fetch using trafilatura, databases, file operations, diagrams, file conversions, and more - ready to use out of the box.
+OneTool includes [100+ tools](../reference/tools/index.md), including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.
 
 It even has "Smart Tools" -  [LLM-powered transformation](../reference/tools/llm.md). Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.
 
@@ -151,7 +151,7 @@ Keep the king. Stop the tax.
 Download and install it, and give your agentic engineering the boost it needs.
 
 🧿 One MCP for developers - No tool tax, no context rot. 
-100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.
+100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.
 
 --- 
 

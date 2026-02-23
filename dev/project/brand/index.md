@@ -49,7 +49,7 @@ Don't enumerate tools. Execute code.
 ### Value Proposition
 
 ```text
-96% fewer tokens. 24x lower cost.
+96% fewer tokens. 30x lower cost.
 ```
 
 See [claims.md](claims.md) for benchmark sources.
@@ -61,7 +61,7 @@ See [claims.md](claims.md) for benchmark sources.
 | Claim | Summary |
 |-------|---------|
 | **96% token reduction** | 46K → 2K tokens (one-shot), gap widens with turns |
-| **24x cost reduction** | 7.35¢ → 0.30¢ per 3-turn conversation |
+| **30x cost reduction** | 7.35¢ → 0.30¢ per 3-turn conversation |
 | **$30/server/month** | Each MCP server wastes ~$30/month in tokens |
 
 Details and methodology: [claims.md](claims.md)
@@ -85,11 +85,11 @@ python, mcp, model-context-protocol, mcp-server, llm, code-execution, mcp-tools,
 ## Stats
 
 ```text
-- 15 packs
+- 15+ packs
 - 100+ tools
 - 2 CLIs (onetool, bench)
 - 96% token reduction
-- 24x cost reduction
+- 30x cost reduction
 ```
 
 ---

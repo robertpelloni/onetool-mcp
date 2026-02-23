@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.</strong>
+  <strong>🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.</strong>
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ Configure one MCP server. Use unlimited tools.
 >
 > — [Anthropic Engineering](https://www.anthropic.com/engineering/code-execution-with-mcp)
 
-**96% fewer tokens. 24× lower cost. No context rot.**
+**96% fewer tokens. 30× lower cost. No context rot.**
 
 [📖 Read the full story](https://onetool.beycom.online/about/about-onetool/)
 
@@ -102,7 +102,7 @@ Verify: `onetool init validate`
 | **100+ Built-in Tools** | Web search, databases, file ops, diagrams, conversions |
 | **Explicit Execution**  | See exactly what runs - `>>> brave.search(q="AI")`    |
 | **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
-| **Scaffold Tools**      | Build new tools as part of the conversation            |
+| **Forge Tools**         | Build new tools as part of the conversation            |
 | **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
 | **Single YAML Config**  | Global configuration, per-pack settings, includes      |
 | **Security Layers**     | AST validation, path boundaries, output sanitisation   |
@@ -111,12 +111,12 @@ Verify: `onetool init validate`
 
 ## Tools
 
-15 packs, 100+ tools ready to use:
+15+ packs, 100+ tools ready to use:
 
 | Pack       | Tools                                   | Description            |
 | ---------- | --------------------------------------- | ---------------------- |
 | `brave`    | `search`, `news`                        | Web and news search    |
-| `context7` | `resolve`, `get_docs`                   | Library documentation  |
+| `context7` | `search`, `doc`                         | Library documentation  |
 | `convert`  | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
 | `db`       | `query`, `schema`, `tables`             | Database operations    |
 | `diagram`  | `create`                                | Mermaid diagrams       |
@@ -127,7 +127,7 @@ Verify: `onetool init validate`
 | `ot`       | `help`, `tools`, `stats`                | Introspection          |
 | `package`  | `npm`, `pypi`, `cargo`                  | Package versions       |
 | `ripgrep`  | `search`, `count`                       | Fast code search       |
-| `scaffold` | `tool`                                  | Generate new tools     |
+| `forge`    | `create_ext`, `install_skill`, `validate_ext` | Generate new tools |
 | `web`      | `fetch`, `fetch_batch`                  | Web fetching           |
 
 [📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
