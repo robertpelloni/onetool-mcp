@@ -12,14 +12,15 @@ from __future__ import annotations
 # Pack for dot notation: brave.search(), brave.news(), etc.
 pack = "brave"
 
-__all__ = ["image", "local", "news", "search", "search_batch", "video"]
+__all__ = ["image", "news", "search", "search_batch", "video"]
 
 # Dependency declarations for CLI validation
 __ot_requires__ = {
     "secrets": ["BRAVE_API_KEY"],
 }
 
-from typing import Any, Literal
+import re
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -169,6 +170,13 @@ def _format_news_results(data: dict[str, Any]) -> str:
     if not results:
         return "No news results found."
 
+    # Sort by page_age (ISO date string) most-recent first; items without it go last
+    results = sorted(
+        results,
+        key=lambda r: r.get("page_age") or "",
+        reverse=True,
+    )
+
     for i, result in enumerate(results, 1):
         title = result.get("title", "No title")
         url = result.get("url", "")
@@ -186,54 +194,6 @@ def _format_news_results(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _format_local_results_from_web(data: dict[str, Any]) -> str:
-    """Format local results from web search with locations filter."""
-    lines: list[str] = []
-
-    locations = data.get("locations", {})
-    results = locations.get("results", [])
-
-    if not results:
-        # Inform user about fallback instead of silent switch
-        web_results = _format_web_results(data)
-        if web_results == "No results found.":
-            return web_results
-        return f"No local business data found. Showing web results:\n\n{web_results}"
-
-    for i, result in enumerate(results, 1):
-        name = result.get("title", "No name")
-
-        lines.append(f"{i}. {name}")
-
-        # Address
-        address = result.get("address", {})
-        if address:
-            addr_parts = [
-                address.get("streetAddress", ""),
-                address.get("addressLocality", ""),
-                address.get("addressRegion", ""),
-            ]
-            addr_str = ", ".join(p for p in addr_parts if p)
-            if addr_str:
-                lines.append(f"   Address: {addr_str}")
-
-        # Rating
-        rating = result.get("rating", {})
-        if rating:
-            stars = rating.get("ratingValue", "")
-            count = rating.get("ratingCount", "")
-            if stars:
-                lines.append(f"   Rating: {stars}/5 ({count} reviews)")
-
-        # Phone
-        phone = result.get("phone", "")
-        if phone:
-            lines.append(f"   Phone: {phone}")
-
-        lines.append("")
-
-    return "\n".join(lines)
-
 
 def _format_image_results(data: dict[str, Any]) -> str:
     """Format image search results for display."""
@@ -245,17 +205,21 @@ def _format_image_results(data: dict[str, Any]) -> str:
         return "No image results found."
 
     for i, result in enumerate(results, 1):
-        title = result.get("title", "No title")
+        title = result.get("title", "") or "No title"
         url = result.get("url", "")
         source = result.get("source", "")
-        width = result.get("properties", {}).get("width", "")
-        height = result.get("properties", {}).get("height", "")
+        props = result.get("properties", {})
+        width = props.get("width", "")
+        height = props.get("height", "")
+        image_url = props.get("url", "")
 
         lines.append(f"{i}. {title}")
         if width and height:
             lines.append(f"   Size: {width}x{height}")
         if source:
             lines.append(f"   Source: {source}")
+        if image_url:
+            lines.append(f"   Image: {image_url}")
         lines.append(f"   {url}")
         lines.append("")
 
@@ -296,6 +260,53 @@ def _format_video_results(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+_DATE_RANGE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}to\d{4}-\d{2}-\d{2}$")
+_FRESHNESS_VALUES = frozenset(["pd", "pw", "pm", "py"])
+_SAFESEARCH_WEB_VALUES = frozenset(["off", "moderate", "strict"])
+_SAFESEARCH_IMAGE_VALUES = frozenset(["off", "strict"])
+_COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
+
+
+def _validate_freshness(freshness: str | None) -> str | None:
+    """Validate freshness value. Returns error string or None if valid."""
+    if freshness is None:
+        return None
+    if freshness in _FRESHNESS_VALUES or _DATE_RANGE_RE.match(freshness):
+        return None
+    return (
+        f"Error: Invalid freshness '{freshness}'. "
+        f"Use {sorted(_FRESHNESS_VALUES)} or YYYY-MM-DDtoYYYY-MM-DD"
+    )
+
+
+def _validate_safesearch(safesearch: str, valid_values: frozenset[str]) -> str | None:
+    """Validate safesearch value. Returns error string or None if valid."""
+    if safesearch in valid_values:
+        return None
+    return f"Error: Invalid safesearch '{safesearch}'. Use {sorted(valid_values)}"
+
+
+def _validate_count(count: int) -> str | None:
+    """Validate count is in range 1-20. Returns error string or None if valid."""
+    if 1 <= count <= 20:
+        return None
+    return f"Error: count must be between 1 and 20 (got {count})"
+
+
+def _validate_offset(offset: int) -> str | None:
+    """Validate offset is in range 0-9. Returns error string or None if valid."""
+    if 0 <= offset <= 9:
+        return None
+    return f"Error: offset must be between 0 and 9 (got {offset})"
+
+
+def _validate_country(country: str) -> str | None:
+    """Validate country is a 2-letter uppercase code. Returns error string or None if valid."""
+    if _COUNTRY_RE.match(country):
+        return None
+    return f"Error: Invalid country '{country}'. Use a 2-letter uppercase country code (e.g. 'US', 'GB')"
+
+
 def _clamp(value: int, min_val: int, max_val: int) -> int:
     """Clamp a value between min and max."""
     return min(max(value, min_val), max_val)
@@ -323,8 +334,8 @@ def search(
     offset: int = 0,
     country: str = "US",
     search_lang: str = "en",
-    safesearch: Literal["off", "moderate", "strict"] = "moderate",
-    freshness: Literal["pd", "pw", "pm", "py"] | None = None,
+    safesearch: str = "moderate",
+    freshness: str | None = None,
 ) -> str:
     """Search the web using Brave Search API.
 
@@ -335,7 +346,8 @@ def search(
         country: 2-letter country code for results (default: "US")
         search_lang: Language code for results (default: "en")
         safesearch: Content filter - "off", "moderate", "strict" (default: "moderate")
-        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year)
+        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
+            or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
 
     Returns:
         YAML flow style search results or error message
@@ -349,11 +361,21 @@ def search(
     """
     if error := _validate_query(query):
         return error
+    if error := _validate_count(count):
+        return error
+    if error := _validate_offset(offset):
+        return error
+    if error := _validate_country(country):
+        return error
+    if error := _validate_safesearch(safesearch, _SAFESEARCH_WEB_VALUES):
+        return error
+    if error := _validate_freshness(freshness):
+        return error
 
     params: dict[str, Any] = {
         "q": query,
-        "count": _clamp(count, 1, 20),
-        "offset": _clamp(offset, 0, 9),
+        "count": count,
+        "offset": offset,
         "country": country,
         "search_lang": search_lang,
         "safesearch": safesearch,
@@ -377,11 +399,12 @@ def news(
     offset: int = 0,
     country: str = "US",
     search_lang: str = "en",
-    freshness: Literal["pd", "pw", "pm"] | None = None,
+    freshness: str | None = None,
 ) -> str:
     """Search news articles using Brave Search API.
 
     Uses the dedicated /news/search endpoint for better news results.
+    Results are sorted by publication date, most recent first.
 
     Args:
         query: Search query for news
@@ -389,7 +412,8 @@ def news(
         offset: Pagination offset (0-9, default: 0)
         country: 2-letter country code (default: "US")
         search_lang: Language code (default: "en")
-        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month)
+        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
+            or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
 
     Returns:
         Formatted news results or error message
@@ -403,11 +427,19 @@ def news(
     """
     if error := _validate_query(query):
         return error
+    if error := _validate_count(count):
+        return error
+    if error := _validate_offset(offset):
+        return error
+    if error := _validate_country(country):
+        return error
+    if error := _validate_freshness(freshness):
+        return error
 
     params: dict[str, Any] = {
         "q": query,
-        "count": _clamp(count, 1, 20),
-        "offset": _clamp(offset, 0, 9),
+        "count": count,
+        "offset": offset,
         "country": country,
         "search_lang": search_lang,
     }
@@ -422,44 +454,6 @@ def news(
     return _format_news_results(result)  # type: ignore[arg-type]
 
 
-def local(
-    *,
-    query: str,
-    count: int = 5,
-    country: str = "US",
-) -> str:
-    """Search for local businesses and places using Brave Search API.
-
-    Performs web search optimized for local queries. Returns location results
-    if available, otherwise falls back to web results.
-
-    Args:
-        query: Local search query (e.g., "pizza near Central Park")
-        count: Number of results (1-20, default: 5)
-        country: 2-letter country code (default: "US")
-
-    Returns:
-        Formatted local results with addresses, ratings, phone numbers
-
-    Example:
-        brave.local(query="coffee shops near Times Square")
-        brave.local(query="restaurants in San Francisco", count=10)
-    """
-    if error := _validate_query(query):
-        return error
-
-    params: dict[str, Any] = {
-        "q": query,
-        "count": _clamp(count, 1, 20),
-        "country": country,
-    }
-
-    success, result = _make_request("/web/search", params)
-
-    if not success:
-        return str(result)
-    return _format_local_results_from_web(result)  # type: ignore[arg-type]
-
 
 def image(
     *,
@@ -467,7 +461,7 @@ def image(
     count: int = 10,
     country: str = "US",
     search_lang: str = "en",
-    safesearch: Literal["off", "strict"] = "strict",
+    safesearch: str = "strict",
 ) -> str:
     """Search for images using Brave Search API.
 
@@ -489,10 +483,16 @@ def image(
     """
     if error := _validate_query(query):
         return error
+    if error := _validate_count(count):
+        return error
+    if error := _validate_country(country):
+        return error
+    if error := _validate_safesearch(safesearch, _SAFESEARCH_IMAGE_VALUES):
+        return error
 
     params: dict[str, Any] = {
         "q": query,
-        "count": _clamp(count, 1, 20),
+        "count": count,
         "country": country,
         "search_lang": search_lang,
         "safesearch": safesearch,
@@ -511,7 +511,7 @@ def video(
     count: int = 10,
     country: str = "US",
     search_lang: str = "en",
-    freshness: Literal["pd", "pw", "pm", "py"] | None = None,
+    freshness: str | None = None,
 ) -> str:
     """Search for videos using Brave Search API.
 
@@ -522,7 +522,8 @@ def video(
         count: Number of results (1-20, default: 10)
         country: 2-letter country code (default: "US")
         search_lang: Language code (default: "en")
-        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year)
+        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
+            or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
 
     Returns:
         Formatted video results with titles, channels, durations, and URLs
@@ -533,10 +534,16 @@ def video(
     """
     if error := _validate_query(query):
         return error
+    if error := _validate_count(count):
+        return error
+    if error := _validate_country(country):
+        return error
+    if error := _validate_freshness(freshness):
+        return error
 
     params: dict[str, Any] = {
         "q": query,
-        "count": _clamp(count, 1, 20),
+        "count": count,
         "country": country,
         "search_lang": search_lang,
     }
@@ -557,6 +564,8 @@ def search_batch(
     count: int = 2,
     country: str = "US",
     search_lang: str = "en",
+    safesearch: str = "moderate",
+    freshness: str | None = None,
 ) -> str:
     """Execute multiple web searches concurrently and return combined results.
 
@@ -569,6 +578,9 @@ def search_batch(
         count: Number of results per query (1-20, default: 2)
         country: 2-letter country code for results (default: "US")
         search_lang: Language code for results (default: "en")
+        safesearch: Content filter - "off", "moderate", "strict" (default: "moderate")
+        freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
+            or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
 
     Returns:
         Combined formatted results with labels
@@ -584,10 +596,20 @@ def search_batch(
             ("current Copper price USD/lb today", "Copper (USD/lb)"),
         ])
     """
+    if error := _validate_count(count):
+        return error
+    if error := _validate_safesearch(safesearch, _SAFESEARCH_WEB_VALUES):
+        return error
+    if error := _validate_freshness(freshness):
+        return error
+
     normalized = normalize_items(queries)
 
     if not normalized:
         return "Error: No queries provided"
+
+    # Fall back empty labels to query text
+    normalized = [(q, label or q) for q, label in normalized]
 
     with LogSpan(span="brave.batch", query_count=len(normalized), count=count) as s:
 
@@ -598,6 +620,8 @@ def search_batch(
                 count=count,
                 country=country,
                 search_lang=search_lang,
+                safesearch=safesearch,
+                freshness=freshness,
             )
             return label, result
 

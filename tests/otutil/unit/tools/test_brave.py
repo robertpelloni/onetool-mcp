@@ -10,15 +10,21 @@ from unittest.mock import patch
 import pytest
 
 from otutil.tools.brave import (
+    _FRESHNESS_VALUES,
+    _SAFESEARCH_IMAGE_VALUES,
+    _SAFESEARCH_WEB_VALUES,
     _clamp,
     _format_image_results,
-    _format_local_results_from_web,
     _format_news_results,
     _format_video_results,
     _format_web_results,
+    _validate_count,
+    _validate_country,
+    _validate_freshness,
+    _validate_offset,
     _validate_query,
+    _validate_safesearch,
     image,
-    local,
     news,
     search,
     search_batch,
@@ -88,6 +94,128 @@ class TestValidateQuery:
         result = _validate_query("   ")
         assert result is not None
         assert "empty" in result.lower()
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateFreshness:
+    """Test _validate_freshness validation function."""
+
+    def test_none_is_valid(self):
+        assert _validate_freshness(None) is None
+
+    def test_enum_values_valid(self):
+        for v in _FRESHNESS_VALUES:
+            assert _validate_freshness(v) is None
+
+    def test_date_range_valid(self):
+        assert _validate_freshness("2024-01-01to2024-06-30") is None
+
+    def test_invalid_value_returns_error(self):
+        result = _validate_freshness("yesterday")
+        assert result is not None
+        assert "Invalid freshness" in result
+
+    def test_malformed_date_range_returns_error(self):
+        result = _validate_freshness("2024-01-01-2024-06-30")
+        assert result is not None
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateSafesearch:
+    """Test _validate_safesearch validation function."""
+
+    def test_valid_web_values(self):
+        for v in _SAFESEARCH_WEB_VALUES:
+            assert _validate_safesearch(v, _SAFESEARCH_WEB_VALUES) is None
+
+    def test_valid_image_values(self):
+        for v in _SAFESEARCH_IMAGE_VALUES:
+            assert _validate_safesearch(v, _SAFESEARCH_IMAGE_VALUES) is None
+
+    def test_moderate_invalid_for_image(self):
+        result = _validate_safesearch("moderate", _SAFESEARCH_IMAGE_VALUES)
+        assert result is not None
+        assert "Invalid safesearch" in result
+
+    def test_invalid_value_returns_error(self):
+        result = _validate_safesearch("invalid", _SAFESEARCH_WEB_VALUES)
+        assert result is not None
+        assert "Invalid safesearch" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateCount:
+    """Test _validate_count validation function."""
+
+    def test_valid_count(self):
+        assert _validate_count(10) is None
+
+    def test_min_count(self):
+        assert _validate_count(1) is None
+
+    def test_max_count(self):
+        assert _validate_count(20) is None
+
+    def test_zero_returns_error(self):
+        result = _validate_count(0)
+        assert result is not None
+        assert "count" in result
+
+    def test_negative_returns_error(self):
+        result = _validate_count(-5)
+        assert result is not None
+        assert "count" in result
+
+    def test_over_max_returns_error(self):
+        result = _validate_count(21)
+        assert result is not None
+        assert "count" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateOffset:
+    """Test _validate_offset validation function."""
+
+    def test_valid_offset(self):
+        assert _validate_offset(0) is None
+        assert _validate_offset(9) is None
+
+    def test_negative_returns_error(self):
+        result = _validate_offset(-1)
+        assert result is not None
+        assert "offset" in result
+
+    def test_over_max_returns_error(self):
+        result = _validate_offset(10)
+        assert result is not None
+        assert "offset" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateCountry:
+    """Test _validate_country validation function."""
+
+    def test_valid_country(self):
+        assert _validate_country("US") is None
+        assert _validate_country("GB") is None
+
+    def test_lowercase_returns_error(self):
+        result = _validate_country("us")
+        assert result is not None
+        assert "Invalid country" in result
+
+    def test_too_long_returns_error(self):
+        result = _validate_country("USA")
+        assert result is not None
+
+    def test_empty_returns_error(self):
+        result = _validate_country("")
+        assert result is not None
 
 
 @pytest.mark.unit
@@ -190,65 +318,34 @@ class TestFormatNewsResults:
 
         assert "No news results found" in result
 
-
-@pytest.mark.unit
-@pytest.mark.tools
-class TestFormatLocalResults:
-    """Test _format_local_results_from_web formatting function."""
-
-    def test_formats_location_results(self):
+    def test_sorts_by_page_age_descending(self):
         data = {
-            "locations": {
-                "results": [
-                    {
-                        "title": "Coffee Shop",
-                        "address": {
-                            "streetAddress": "123 Main St",
-                            "addressLocality": "City",
-                            "addressRegion": "State",
-                        },
-                        "rating": {"ratingValue": "4.5", "ratingCount": "100"},
-                        "phone": "555-1234",
-                    }
-                ]
-            }
+            "results": [
+                {"title": "Older", "url": "https://a.com", "page_age": "2024-01-01T00:00:00"},
+                {"title": "Newest", "url": "https://b.com", "page_age": "2024-06-01T00:00:00"},
+                {"title": "Middle", "url": "https://c.com", "page_age": "2024-03-01T00:00:00"},
+            ]
         }
 
-        result = _format_local_results_from_web(data)
+        result = _format_news_results(data)
 
-        assert "Coffee Shop" in result
-        assert "123 Main St" in result
-        assert "4.5" in result
-        assert "555-1234" in result
+        newest_pos = result.find("Newest")
+        middle_pos = result.find("Middle")
+        older_pos = result.find("Older")
+        assert newest_pos < middle_pos < older_pos
 
-    def test_falls_back_to_web_results_with_warning(self):
+    def test_items_without_page_age_go_last(self):
         data = {
-            "locations": {"results": []},
-            "web": {
-                "results": [
-                    {
-                        "title": "Web Result",
-                        "url": "https://example.com",
-                        "description": "",
-                    }
-                ]
-            },
+            "results": [
+                {"title": "No Date", "url": "https://a.com"},
+                {"title": "Has Date", "url": "https://b.com", "page_age": "2024-01-01T00:00:00"},
+            ]
         }
 
-        result = _format_local_results_from_web(data)
+        result = _format_news_results(data)
 
-        assert "No local business data found" in result
-        assert "Web Result" in result
+        assert result.find("Has Date") < result.find("No Date")
 
-    def test_falls_back_no_warning_when_no_results(self):
-        data = {
-            "locations": {"results": []},
-            "web": {"results": []},
-        }
-
-        result = _format_local_results_from_web(data)
-
-        assert result == "No results found."
 
 
 @pytest.mark.unit
@@ -280,6 +377,38 @@ class TestFormatImageResults:
         result = _format_image_results(data)
 
         assert "No image results found" in result
+
+    def test_blank_title_shows_no_title(self):
+        data = {
+            "results": [
+                {"title": "", "url": "https://example.com/img.jpg", "properties": {}}
+            ]
+        }
+
+        result = _format_image_results(data)
+
+        assert "No title" in result
+
+    def test_includes_direct_image_url(self):
+        data = {
+            "results": [
+                {
+                    "title": "Photo",
+                    "url": "https://example.com/page",
+                    "source": "example.com",
+                    "properties": {
+                        "url": "https://cdn.example.com/photo.jpg",
+                        "width": 800,
+                        "height": 600,
+                    },
+                }
+            ]
+        }
+
+        result = _format_image_results(data)
+
+        assert "Image: https://cdn.example.com/photo.jpg" in result
+        assert "https://example.com/page" in result
 
 
 @pytest.mark.unit
@@ -379,14 +508,25 @@ class TestSearch:
 
         assert "400 character" in result
 
-    @patch("otutil.tools.brave._make_request")
-    def test_clamps_count(self, mock_request):
-        mock_request.return_value = (True, {"web": {"results": []}})
+    def test_rejects_count_too_high(self):
+        result = search(query="test", count=21)
+        assert "count" in result
 
-        search(query="test", count=100)  # Above max of 20
+    def test_rejects_count_zero(self):
+        result = search(query="test", count=0)
+        assert "count" in result
 
-        call_args = mock_request.call_args
-        assert call_args[0][1]["count"] == 20
+    def test_rejects_count_negative(self):
+        result = search(query="test", count=-1)
+        assert "count" in result
+
+    def test_rejects_invalid_safesearch(self):
+        result = search(query="test", safesearch="invalid")
+        assert "Invalid safesearch" in result
+
+    def test_rejects_invalid_country(self):
+        result = search(query="test", country="INVALID")
+        assert "Invalid country" in result
 
     @patch("otutil.tools.brave._make_request")
     def test_includes_freshness(self, mock_request):
@@ -396,6 +536,19 @@ class TestSearch:
 
         call_args = mock_request.call_args
         assert call_args[0][1]["freshness"] == "pw"
+
+    @patch("otutil.tools.brave._make_request")
+    def test_accepts_date_range_freshness(self, mock_request):
+        mock_request.return_value = (True, {"web": {"results": []}})
+
+        search(query="test", freshness="2024-01-01to2024-06-30")
+
+        call_args = mock_request.call_args
+        assert call_args[0][1]["freshness"] == "2024-01-01to2024-06-30"
+
+    def test_rejects_invalid_freshness(self):
+        result = search(query="test", freshness="yesterday")
+        assert "Invalid freshness" in result
 
 
 @pytest.mark.unit
@@ -431,26 +584,28 @@ class TestNews:
         call_args = mock_request.call_args
         assert "/news/search" in call_args[0][0]
 
+    @patch("otutil.tools.brave._make_request")
+    def test_accepts_py_freshness(self, mock_request):
+        mock_request.return_value = (True, {"results": []})
 
-@pytest.mark.unit
-@pytest.mark.tools
-class TestLocal:
-    """Test local function with mocked HTTP."""
+        news(query="test", freshness="py")
+
+        call_args = mock_request.call_args
+        assert call_args[0][1]["freshness"] == "py"
 
     @patch("otutil.tools.brave._make_request")
-    def test_successful_local_search(self, mock_request):
-        mock_request.return_value = (
-            True,
-            {
-                "locations": {
-                    "results": [{"title": "Coffee Shop", "address": {}, "rating": {}}]
-                }
-            },
-        )
+    def test_accepts_date_range_freshness(self, mock_request):
+        mock_request.return_value = (True, {"results": []})
 
-        result = local(query="coffee near me")
+        news(query="test", freshness="2024-01-01to2024-06-30")
 
-        assert "Coffee Shop" in result
+        call_args = mock_request.call_args
+        assert call_args[0][1]["freshness"] == "2024-01-01to2024-06-30"
+
+    def test_rejects_invalid_freshness(self):
+        result = news(query="test", freshness="last_week")
+        assert "Invalid freshness" in result
+
 
 
 @pytest.mark.unit
@@ -481,6 +636,14 @@ class TestImage:
 
         call_args = mock_request.call_args
         assert "/images/search" in call_args[0][0]
+
+    def test_rejects_moderate_safesearch(self):
+        result = image(query="test", safesearch="moderate")
+        assert "Invalid safesearch" in result
+
+    def test_rejects_invalid_safesearch(self):
+        result = image(query="test", safesearch="invalid")
+        assert "Invalid safesearch" in result
 
 
 @pytest.mark.unit
@@ -548,6 +711,46 @@ class TestSearchBatch:
 
         assert "Error" in result
         assert "No queries provided" in result
+
+    @patch("otutil.tools.brave.search")
+    def test_forwards_safesearch(self, mock_search):
+        mock_search.return_value = "Result"
+
+        search_batch(queries=["test"], safesearch="strict")
+
+        call_kwargs = mock_search.call_args.kwargs
+        assert call_kwargs["safesearch"] == "strict"
+
+    @patch("otutil.tools.brave.search")
+    def test_forwards_freshness(self, mock_search):
+        mock_search.return_value = "Result"
+
+        search_batch(queries=["test"], freshness="pw")
+
+        call_kwargs = mock_search.call_args.kwargs
+        assert call_kwargs["freshness"] == "pw"
+
+    def test_rejects_invalid_freshness(self):
+        result = search_batch(queries=["test"], freshness="yesterday")
+
+        assert "Invalid freshness" in result
+
+    @patch("otutil.tools.brave.search")
+    def test_empty_label_falls_back_to_query(self, mock_search):
+        mock_search.return_value = "Result"
+
+        result = search_batch(queries=[("rust programming", "")])
+
+        assert "rust programming" in result
+        assert "===  ===" not in result
+
+    def test_rejects_invalid_count(self):
+        result = search_batch(queries=["test"], count=0)
+        assert "count" in result
+
+    def test_rejects_invalid_safesearch(self):
+        result = search_batch(queries=["test"], safesearch="invalid")
+        assert "Invalid safesearch" in result
 
 
 # -----------------------------------------------------------------------------
