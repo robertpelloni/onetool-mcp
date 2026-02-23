@@ -115,6 +115,7 @@ demo/tmp/
 .claude/
 .opencode/
 .codex/
+.chunkhound/
 .mcp.json
 
 # Worktree state files

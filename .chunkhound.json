@@ -1,0 +1,14 @@
+{
+  "database": {
+    "type": "duckdb",
+    "path": ".chunkhound/db"
+  },
+  "embedding": {
+    "provider": "openai",
+    "base_url": "https://openrouter.ai/api/v1",
+    "model": "text-embedding-3-small"
+  },
+  "llm": {
+    "provider": "claude-code-cli"
+  }
+}
