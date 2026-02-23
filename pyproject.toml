@@ -37,6 +37,8 @@ dependencies = [
     "openai>=2.15.0",             # mem embeddings, LLM tools
     "tiktoken>=0.9.0",            # Token counting for embedding truncation
     "pillow>=12.1.0",
+    "pyrage>=1.3.0",
+    "keyring>=25",
 ]
 
 [project.urls]
@@ -61,8 +63,8 @@ dev = [
     "sqlalchemy>=2.0.46",
     "trafilatura>=2.0.0",
 ]
-xero = []
-all = ["onetool-mcp[util,dev,xero]"]
+secrets = []  # kept for backward compatibility; encryption deps are now in core
+all = ["onetool-mcp[util,dev]"]
 
 [project.scripts]
 onetool = "onetool.cli:cli"

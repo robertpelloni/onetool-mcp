@@ -1292,3 +1292,53 @@ The Playwright server entry SHALL include an `instructions` field summarising ca
 - **THEN** it includes `playwright_util` element highlighting API and best-use-case guidance
 - **AND** it notes that `playwright_util` is independent from `chrome_devtools_util` (no fallback between them)
 
+### Requirement: Transparent Per-Value Decryption of Secrets
+
+The secrets loader SHALL transparently decrypt `age1enc:`-prefixed values in `secrets.yaml` using an age X25519 identity from the OS keychain, without requiring any change to the `--secrets` flag or file path.
+
+#### Scenario: Plain secrets file loads unchanged
+- **WHEN** `secrets.yaml` contains no `age1enc:` prefixed values
+- **AND** the server starts with `--secrets secrets.yaml`
+- **THEN** it SHALL load values exactly as before
+- **AND** it SHALL NOT attempt to access the OS keychain
+- **AND** startup behavior SHALL be identical to the current implementation
+
+#### Scenario: Encrypted value is transparently decrypted
+- **WHEN** `secrets.yaml` contains a value prefixed `age1enc:<base64-ciphertext>`
+- **AND** an age identity is stored in the OS keychain under service `"onetool"`, key `"age_identity"`
+- **WHEN** the server loads secrets
+- **THEN** it SHALL decrypt the value in memory using the identity
+- **AND** the decrypted plaintext SHALL be available via `${VAR}` expansion as normal
+- **AND** the decrypted value SHALL NOT be written to disk
+
+#### Scenario: Mixed file — encrypted and plain values coexist
+- **WHEN** `secrets.yaml` contains a mix of `age1enc:` and plain values
+- **WHEN** secrets are loaded
+- **THEN** encrypted values SHALL be decrypted in memory
+- **AND** plain values SHALL be passed through unchanged
+- **AND** all values SHALL be available for `${VAR}` expansion
+
+#### Scenario: Encrypted values present but identity not in keychain
+- **WHEN** `secrets.yaml` contains at least one `age1enc:` value
+- **AND** no age identity is found in the OS keychain
+- **WHEN** secrets are loaded
+- **THEN** loading SHALL fail with a clear error
+- **AND** the error SHALL instruct the user to run `ot_secrets.init()`
+
+#### Scenario: Decrypted values are never logged
+- **WHEN** `age1enc:` values are decrypted
+- **THEN** the plaintext values SHALL NOT appear in any log output (LogSpan, debug, error, or otherwise)
+- **AND** the existing JSON-RPC isolation architecture SHALL be preserved (secrets not passed via env vars or process logs)
+
+#### Scenario: Keychain access is lazy
+- **WHEN** the secrets file is loaded
+- **AND** no values start with `age1enc:`
+- **THEN** `keyring.get_password()` SHALL NOT be called
+- **AND** users without the `[secrets]` extra installed SHALL experience no error
+
+#### Scenario: Missing keyring package with encrypted values
+- **WHEN** `secrets.yaml` contains at least one `age1enc:` value
+- **AND** the `keyring` package is not installed
+- **WHEN** secrets are loaded
+- **THEN** it SHALL raise an error with an install hint: `"pip install 'onetool[secrets]'"`
+

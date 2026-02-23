@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
+import sys
 from typing import TYPE_CHECKING
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -355,3 +358,144 @@ API_SECRET: "secret456"
 
         # Cleanup
         secrets_module._secrets = None
+
+
+# ---------------------------------------------------------------------------
+# Helpers for age decryption tests
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_keyring(identity: str | None = "AGE-SECRET-KEY-fake") -> MagicMock:
+    kr = MagicMock()
+    kr.get_password.side_effect = lambda s, k: (
+        identity if k == "age_identity" else None
+    )
+    return kr
+
+
+def _make_mock_pyrage(plaintext: bytes = b"decrypted_secret") -> MagicMock:
+    pr = MagicMock()
+    loaded_identity = MagicMock()
+    pr.x25519.Identity.from_str.return_value = loaded_identity
+    pr.decrypt.return_value = plaintext
+    return pr
+
+
+def _age_encoded(ciphertext: bytes = b"fake_cipher") -> str:
+    return "age1enc:" + base64.b64encode(ciphertext).decode()
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestLoadSecretsAgeDecryption:
+    """Tests for age-encrypted value decryption in load_secrets()."""
+
+    def test_plain_file_loads_unchanged_no_keychain(self, tmp_path: Path) -> None:
+        """Plain secrets.yaml with no age1enc: values loads normally without keychain."""
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text('API_KEY: "plain-value"\n')
+
+        mock_kr = MagicMock()
+
+        with patch.dict("sys.modules", {"keyring": mock_kr, "pyrage": MagicMock()}):
+            result = load_secrets(secrets_file)
+
+        assert result["API_KEY"] == "plain-value"
+        # keyring.get_password must not be called for plain files
+        mock_kr.get_password.assert_not_called()
+
+    def test_encrypted_value_is_decrypted(self, tmp_path: Path) -> None:
+        """age1enc: prefixed values are decrypted transparently."""
+        encoded = _age_encoded(b"fake_cipher")
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(f"SECRET: '{encoded}'\n")
+
+        mock_kr = _make_mock_keyring()
+        mock_pr = _make_mock_pyrage(plaintext=b"my_real_secret")
+
+        with patch.dict("sys.modules", {"keyring": mock_kr, "pyrage": mock_pr}):
+            result = load_secrets(secrets_file)
+
+        assert result["SECRET"] == "my_real_secret"
+
+    def test_mixed_file_encrypted_and_plain(self, tmp_path: Path) -> None:
+        """Mixed file: encrypted values decrypted, plain values pass through."""
+        encoded = _age_encoded(b"cipher")
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(
+            f"ENCRYPTED: '{encoded}'\nPLAIN: 'plaintext_value'\n"
+        )
+
+        mock_kr = _make_mock_keyring()
+        mock_pr = _make_mock_pyrage(plaintext=b"decrypted")
+
+        with patch.dict("sys.modules", {"keyring": mock_kr, "pyrage": mock_pr}):
+            result = load_secrets(secrets_file)
+
+        assert result["ENCRYPTED"] == "decrypted"
+        assert result["PLAIN"] == "plaintext_value"
+
+    def test_missing_identity_raises_secret_decryption_error(
+        self, tmp_path: Path
+    ) -> None:
+        """SecretDecryptionError raised when identity not in keychain."""
+        from ot.config.secrets import SecretDecryptionError
+
+        encoded = _age_encoded()
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(f"KEY: '{encoded}'\n")
+
+        # keyring returns None for identity
+        mock_kr = _make_mock_keyring(identity=None)
+        mock_pr = _make_mock_pyrage()
+
+        with patch.dict("sys.modules", {"keyring": mock_kr, "pyrage": mock_pr}):
+            with pytest.raises(SecretDecryptionError, match="ot_secrets.init()"):
+                load_secrets(secrets_file)
+
+    def test_missing_keyring_raises_import_error(self, tmp_path: Path) -> None:
+        """ImportError with install hint when keyring not installed and encrypted values present."""
+        encoded = _age_encoded()
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(f"KEY: '{encoded}'\n")
+
+        # Remove keyring from sys.modules to simulate it not being installed
+        filtered = {k: v for k, v in sys.modules.items() if k != "keyring"}
+        with patch.dict("sys.modules", filtered, clear=True):
+            # Make keyring importable as None so ImportError triggers
+            with patch.dict("sys.modules", {"keyring": None}):
+                with pytest.raises(ImportError, match="onetool\\[secrets\\]"):
+                    load_secrets(secrets_file)
+
+    def test_missing_pyrage_raises_import_error(self, tmp_path: Path) -> None:
+        """ImportError with install hint when pyrage not installed and encrypted values present."""
+        encoded = _age_encoded()
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(f"KEY: '{encoded}'\n")
+
+        mock_kr = _make_mock_keyring()
+
+        with patch.dict(
+            "sys.modules", {"keyring": mock_kr, "pyrage": None}
+        ):
+            with pytest.raises(ImportError, match="onetool\\[secrets\\]"):
+                load_secrets(secrets_file)
+
+    def test_decrypted_values_not_logged(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Decrypted values never appear in log output."""
+        encoded = _age_encoded()
+        secrets_file = tmp_path / "secrets.yaml"
+        secrets_file.write_text(f"SECRET: '{encoded}'\n")
+
+        mock_kr = _make_mock_keyring()
+        mock_pr = _make_mock_pyrage(plaintext=b"ultra_secret_value_xyz")
+
+        import logging
+
+        with caplog.at_level(logging.DEBUG):
+            with patch.dict("sys.modules", {"keyring": mock_kr, "pyrage": mock_pr}):
+                load_secrets(secrets_file)
+
+        assert "ultra_secret_value_xyz" not in caplog.text

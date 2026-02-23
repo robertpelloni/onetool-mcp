@@ -6,6 +6,10 @@ Secrets are passed to workers via JSON-RPC, not exposed as environment variables
 Pass the secrets file explicitly via ``--secrets <file>``.
 If --secrets is not provided, no secrets are loaded.
 
+Values prefixed with ``age1enc:`` are transparently decrypted in memory using an
+age X25519 identity stored in the OS keychain. Plain values are passed through
+unchanged. Keychain access is lazy — only triggered when encrypted values are present.
+
 Example secrets.yaml:
 
     BRAVE_API_KEY: "your-brave-api-key"
@@ -15,6 +19,7 @@ Example secrets.yaml:
 
 from __future__ import annotations
 
+import base64
 import os
 import re
 import threading
@@ -22,6 +27,13 @@ from pathlib import Path
 
 import yaml
 from loguru import logger
+
+_AGE_PREFIX = "age1enc:"
+
+
+class SecretDecryptionError(Exception):
+    """Raised when an age-encrypted secret cannot be decrypted."""
+
 
 # Single global secrets cache
 _secrets: dict[str, str] | None = None
@@ -92,6 +104,42 @@ def load_secrets(
 
         # Store as literal string - no ${VAR} expansion
         secrets[key] = str(value)
+
+    # Transparent per-value decryption: only triggered when age1enc: values present
+    encrypted_keys = [k for k, v in secrets.items() if v.startswith(_AGE_PREFIX)]
+    if encrypted_keys:
+        try:
+            import keyring
+        except ImportError as e:
+            raise ImportError(
+                "Encrypted secrets detected but keyring is not installed. "
+                "Run: pip install 'onetool[secrets]'"
+            ) from e
+
+        try:
+            import pyrage  # type: ignore[import-not-found]
+        except ImportError as e:
+            raise ImportError(
+                "Encrypted secrets detected but pyrage is not installed. "
+                "Run: pip install 'onetool[secrets]'"
+            ) from e
+
+        private_key = keyring.get_password("onetool", "age_identity")
+        if not private_key:
+            raise SecretDecryptionError(
+                "Encrypted secrets found in secrets file but no age identity is "
+                "stored in the OS keychain. Run: >>> ot_secrets.init()"
+            )
+
+        identity = pyrage.x25519.Identity.from_str(private_key)
+        for key in encrypted_keys:
+            encoded = secrets[key][len(_AGE_PREFIX):]
+            ciphertext = base64.b64decode(encoded)
+            # Decrypt — plaintext never logged
+            plaintext_bytes = pyrage.decrypt(ciphertext, [identity])
+            secrets[key] = plaintext_bytes.decode()
+
+        logger.debug(f"Decrypted {len(encrypted_keys)} encrypted secret(s)")
 
     logger.info(f"Loaded {len(secrets)} secrets")
     return secrets
