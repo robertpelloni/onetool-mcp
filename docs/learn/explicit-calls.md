@@ -2,9 +2,9 @@
 
 OneTool's `>>>` prefix gives you explicit control over tool invocation. You write the code — the agent doesn't have to guess which tool or which parameters.
 
-## Two Modes
+## Snippet Mode vs Code Mode
 
-### Mode 1: Snippets
+### Snippet Mode
 
 Jinja2 templates invoked with `$name`. Values are plain strings; Python syntax does not apply.
 
@@ -18,13 +18,13 @@ Jinja2 templates invoked with `$name`. Values are plain strings; Python syntax d
 - Param names support prefix abbreviation (`q` resolves to `query` if defined)
 - Per-template features (e.g. pipe batch) are not snippet language features
 
-### Mode 2: Code
+### Code Mode
 
 Python executed directly against the tool namespace.
 
 ```
 >>> brave.search(q="AI news")
->>> x = sha256(text="hello"); x
+>>> x = foo(text="hello"); x
 ```
 
 - Python syntax applies: strings must be quoted
@@ -49,7 +49,7 @@ Python executed directly against the tool namespace.
 Direct function call after the prefix:
 
 ```
->>> sha256(text="hello")
+>>> foo(text="hello")
 >>> multiply(a=8472, b=9384)
 ```
 
@@ -57,7 +57,7 @@ Direct function call after the prefix:
 
 Multi-line code in a fenced block:
 
-```
+````
 >>>
 ```python
 metals = ["Gold", "Silver"]
@@ -66,14 +66,14 @@ for metal in metals:
     results[metal] = brave.web_search(query=f"{metal} price")
 results
 ```
-```
+````
 
 ## Direct MCP Call
 
 For programmatic or explicit MCP invocation:
 
 ```
-mcp__onetool__run(command='sha256(text="hello")')
+mcp__onetool__run foo(text="hello")
 ```
 
 ## Complete Examples
@@ -81,28 +81,28 @@ mcp__onetool__run(command='sha256(text="hello")')
 ### Simple Hash Computation
 
 ```
->>> sha256(text="hello world")
+>>> foo(text="hello world")
 ```
 
 ### Multi-step Computation with Variables
 
-```
+````
 >>>
 ```python
 msg = "Hello World"
-sha256(text=msg)
+foo(text=msg)
 ```
-```
+````
 
 ### Loop with Multiple Tool Calls
 
-```
+````
 >>>
 ```python
 primes = [is_prime(n=i) for i in range(11, 21)]
 primes
 ```
-```
+````
 
 ---
 
@@ -113,8 +113,8 @@ primes
 Add context before the tool call to guide the agent:
 
 ```
-Calculate the SHA-256 hash of the following text:
->>> sha256(text="hello world")
+Process the following text:
+>>> foo(text="hello world")
 ```
 
 ### Post-Call Processing
@@ -131,58 +131,17 @@ Summarise the top 3 results in bullet points.
 
 Combine tool execution with output formatting:
 
-    >>>
-    ```python
-    results = {
-        "hash": sha256(text="hello"),
-        "reversed": reverse(text="hello"),
-        "length": count_chars(text="hello")
-    }
-    results
-    ```
-
-    Return the results as a markdown table.
-
----
-
-## Best Practices
-
-Your system prompt should include instructions for reliable tool execution:
-
-```yaml
-system_prompt: |
-  Never retry successful tool calls to get "better" results.
-  If a tool call fails, report the error - do not compute the result yourself.
+````
+>>>
+```python
+results = {
+    "hash": foo(text="hello"),
+    "reversed": reverse(text="hello"),
+    "length": count_chars(text="hello")
+}
+results
 ```
+````
 
-**Why these matter:**
+Return the results as a markdown table.
 
-- **No retries on success:** Agents sometimes want to "improve" results by calling the same tool again. This wastes tokens and can cause loops.
-- **No manual computation on failure:** When a tool fails, agents often try to compute the answer themselves (e.g., calculating a hash or Fibonacci number). This defeats the purpose of using tools and may produce incorrect results.
-
----
-
-## Troubleshooting
-
-### "Syntax error at line 1: invalid syntax"
-
-The prefix wasn't stripped properly. Ensure:
-
-1. There's whitespace or a newline after the prefix
-2. The code itself is valid Python
-
-### Tool call returns unexpected result
-
-Check that:
-
-1. Function arguments match the expected signature
-2. String arguments are properly quoted
-3. For multi-line code, the last expression is what you want returned
-
-### Code fence not recognized
-
-Ensure:
-
-1. Opening ` ``` ` is on its own line after the prefix
-2. Closing ` ``` ` is on its own line
-3. Language hint (e.g., `python`) is optional but recommended

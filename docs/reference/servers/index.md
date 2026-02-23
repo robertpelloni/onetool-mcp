@@ -9,9 +9,9 @@ Proxy servers extend OneTool with external capabilities — browsers, APIs, code
 | Server | Type | Description |
 |--------|------|-------------|
 | [Chrome DevTools](chrome-devtools.md) | stdio | Browser automation and debugging via Chrome DevTools Protocol |
-| [Playwright](playwright.md) | stdio | Browser automation via accessibility tree (no vision needed) |
-| [GitHub](github.md) | http | Official GitHub API — repos, issues, PRs, Actions |
 | [ChunkHound](chunkhound.md) | stdio | Regex and semantic code search for large codebases |
+| [GitHub](github.md) | http | Official GitHub API — repos, issues, PRs, Actions |
+| [Playwright](playwright.md) | stdio | Browser automation via accessibility tree (no vision needed) |
 
 ## Enabling a Server
 

@@ -1334,11 +1334,11 @@ The secrets loader SHALL transparently decrypt `age1enc:`-prefixed values in `se
 - **WHEN** the secrets file is loaded
 - **AND** no values start with `age1enc:`
 - **THEN** `keyring.get_password()` SHALL NOT be called
-- **AND** users without the `[secrets]` extra installed SHALL experience no error
+- **AND** `keyring.get_password()` SHALL NOT be called for users without encrypted values
 
 #### Scenario: Missing keyring package with encrypted values
 - **WHEN** `secrets.yaml` contains at least one `age1enc:` value
 - **AND** the `keyring` package is not installed
 - **WHEN** secrets are loaded
-- **THEN** it SHALL raise an error with an install hint: `"pip install 'onetool[secrets]'"`
+- **THEN** it SHALL raise an error with an install hint: `"pip install keyring"`
 

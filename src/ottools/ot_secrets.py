@@ -3,8 +3,6 @@
 Provides agent-callable functions to manage age-encrypted secrets in secrets.yaml.
 Values prefixed with `age1enc:` are encrypted with an age X25519 identity stored
 in the OS keychain.
-
-Requires: pip install 'onetool[secrets]'
 """
 
 from __future__ import annotations
@@ -42,7 +40,7 @@ def _require_keyring() -> Any:
         return keyring
     except ImportError as e:
         raise ImportError(
-            "keyring is not installed. Run: pip install 'onetool[secrets]'"
+            "keyring is not installed. Run: pip install keyring"
         ) from e
 
 
@@ -53,7 +51,7 @@ def _require_pyrage() -> Any:
         return pyrage
     except ImportError as e:
         raise ImportError(
-            "pyrage is not installed. Run: pip install 'onetool[secrets]'"
+            "pyrage is not installed. Run: pip install pyrage"
         ) from e
 
 
