@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../results/mem-vs-file-20260210.md" class="md-tabs__link">
+        <a href="../../results/mem-vs-file-20260223/" class="md-tabs__link">
           
   
   
@@ -813,8 +813,6 @@
       
         
       
-        
-      
     
     
     
@@ -887,34 +885,6 @@
     
   
     Extension Tools
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="isolated-tools.md" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Isolated Tools
   
 
     
@@ -1649,14 +1619,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/scaffold.md" class="md-nav__link">
+      <a href="../../reference/tools/forge/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Scaffold
+    Forge
   
 
     
@@ -1804,7 +1774,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../results/mem-vs-file-20260210.md" class="md-nav__link">
+      <a href="../../results/mem-vs-file-20260223/" class="md-nav__link">
         
   
   
@@ -2099,15 +2069,9 @@
 <td>Most tools - no external dependencies</td>
 <td><code>from ot.*</code></td>
 </tr>
-<tr>
-<td><strong>Isolated Tool</strong></td>
-<td>Tools needing external packages (numpy, pandas, etc.)</td>
-<td>None (standalone)</td>
-</tr>
 </tbody>
 </table>
-<p><strong>Extension tools</strong> (recommended) run in-process with full access to OneTool's logging, config, and secrets APIs.</p>
-<p><strong>Isolated tools</strong> run in separate subprocesses via PEP 723, providing complete dependency isolation.</p>
+<p><strong>Extension tools</strong> run in-process with full access to OneTool's logging, config, and secrets APIs.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Create a tool file in <code>.onetool/tools/</code> or your own directory</li>
@@ -2134,7 +2098,6 @@
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="extension-tools/">Extension Tools</a> - In-process tools with OneTool API access</li>
-<li><a href="isolated-tools.md">Isolated Tools</a> - Standalone tools with external dependencies</li>
 </ul>
 
 
