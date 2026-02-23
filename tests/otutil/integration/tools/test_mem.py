@@ -19,7 +19,7 @@ def mem_db(tmp_path):
     Patches config to use tmp_path database and mocks embedding generation
     to return deterministic vectors.
     """
-    import otutil.tools.mem as mem_module
+    import otutil.tools._mem as mem_module
 
     db_path = tmp_path / "test_mem.sqlite"
 
@@ -47,14 +47,14 @@ def mem_db(tmp_path):
 
     import importlib
 
-    import otutil.tools.mem.cache as mem_cache
-    import otutil.tools.mem.config as mem_config
-    import otutil.tools.mem.content as mem_content
-    import otutil.tools.mem.db as mem_db_mod
-    import otutil.tools.mem.embedding as mem_embedding
-    import otutil.tools.mem.lifecycle as mem_lifecycle
+    import otutil.tools._mem.cache as mem_cache
+    import otutil.tools._mem.config as mem_config
+    import otutil.tools._mem.content as mem_content
+    import otutil.tools._mem.db as mem_db_mod
+    import otutil.tools._mem.embedding as mem_embedding
+    import otutil.tools._mem.lifecycle as mem_lifecycle
 
-    mem_search = importlib.import_module("otutil.tools.mem.search")
+    mem_search = importlib.import_module("otutil.tools._mem.search")
 
     with (
         patch.object(mem_config, "_get_config", return_value=mock_config),

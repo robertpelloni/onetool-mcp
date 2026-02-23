@@ -5,7 +5,6 @@ import builtins
 import contextlib
 import json
 import math
-import re
 import sqlite3
 import struct
 import threading
@@ -35,16 +34,6 @@ def _get_db_path():
     db_path = resolve_ot_path(config.db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return db_path
-
-
-def _regexp(pattern: str, text: str | None) -> bool:
-    """SQLite REGEXP function for use in WHERE clauses."""
-    if text is None:
-        return False
-    try:
-        return re.search(pattern, text) is not None
-    except re.error:
-        return False
 
 
 def _cosine_similarity(a_blob: bytes | None, b_blob: bytes | None) -> float | None:
@@ -86,7 +75,6 @@ def _get_connection() -> sqlite3.Connection:
 
         # Register UDFs
         conn.create_function("cosine_similarity", 2, _cosine_similarity)
-        conn.create_function("regexp", 2, _regexp)
 
         _connection = conn
         _ensure_tables(_connection)
@@ -227,7 +215,6 @@ __all__ = [
     "_get_db_path",
     "_has_column",
     "_migrate_tables",
-    "_regexp",
     "_serialize_embedding",
     "_serialize_meta",
     "_serialize_tags",

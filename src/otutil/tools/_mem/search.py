@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from ot.logging import LogSpan
+from otutil.tools._content_util import grep_lines
 
 from .config import _get_config
 from .content import _tags_filter_sql, _topic_filter
@@ -65,17 +66,8 @@ def grep(
 
             conn = _get_connection()
 
-            # Build query with REGEXP pre-filter
-            sql = """
-                SELECT id, topic, content
-                FROM memories
-                WHERE content REGEXP ?
-            """
-            # The Python _regexp function doesn't support flags,
-            # so for case-insensitive we use a (?i) prefix in the pattern
-            db_pattern = f"(?i){pattern}" if not case_sensitive else pattern
-
-            params: _builtins_list[Any] = [db_pattern]
+            sql = "SELECT id, topic, content FROM memories WHERE 1=1"
+            params: _builtins_list[Any] = []
 
             topic_sql, topic_params = _topic_filter(topic)
             sql += topic_sql
@@ -104,52 +96,23 @@ def grep(
             total_matches = 0
 
             for _row_id, row_topic, content in rows:
-                lines = content.split("\n")
-                match_line_nums: _builtins_list[int] = []
-
-                for i, line in enumerate(lines):
-                    if regex.search(line):
-                        match_line_nums.append(i)
-
-                if not match_line_nums:
+                groups = grep_lines(content, regex, context=context, max_groups=max_per_memory)
+                if not groups:
                     continue
 
-                # Build context ranges and merge overlapping
-                ranges: _builtins_list[tuple[int, int]] = []
-                for m in match_line_nums:
-                    start = max(0, m - context)
-                    end = min(len(lines) - 1, m + context)
-                    if ranges and start <= ranges[-1][1] + 1:
-                        # Merge with previous range
-                        ranges[-1] = (ranges[-1][0], end)
-                    else:
-                        ranges.append((start, end))
-
-                # Apply max_per_memory limit
-                if len(ranges) > max_per_memory:
-                    ranges = ranges[:max_per_memory]
-
-                # Convert to set once for O(1) lookups
-                match_set = set(match_line_nums)
-
-                match_count = sum(
-                    1 for r_start, r_end in ranges
-                    for i in range(r_start, r_end + 1)
-                    if i in match_set
-                )
+                match_count = sum(1 for group in groups for _, _, is_match in group if is_match)
                 total_matches += match_count
                 blocks: _builtins_list[str] = []
-                for r_start, r_end in ranges:
+                for group in groups:
                     block_lines: _builtins_list[str] = []
-                    for i in range(r_start, r_end + 1):
-                        ln = i + 1  # 1-based line numbers
-                        marker = ">" if i in match_set else " "
-                        block_lines.append(f"{marker} {ln:4d} | {lines[i]}")
+                    for ln, line, is_match in group:
+                        marker = ">" if is_match else " "
+                        block_lines.append(f"{marker} {ln:4d} | {line}")
                     blocks.append("\n".join(block_lines))
 
-                # Slice hint: overall line range
-                first_line = ranges[0][0] + 1
-                last_line = ranges[-1][1] + 1
+                # Slice hint: overall line range (lineno is already 1-based)
+                first_line = groups[0][0][0]
+                last_line = groups[-1][-1][0]
                 slice_hint = f"[slice: {first_line}-{last_line}]"
 
                 header = f"## {row_topic} ({match_count} match{'es' if match_count != 1 else ''}) {slice_hint}"

@@ -38,7 +38,6 @@ __all__ = [
     "_read_cache",
     "_read_cache_lock",
     "_redact",
-    "_regexp",
     "_resolve_line_range",
     "_serialize_meta",
     "_topic_filter",
@@ -109,7 +108,6 @@ from .db import (
     _close_connection,
     _deserialize_meta,
     _get_connection,
-    _regexp,
     _serialize_meta,
 )
 from .embedding import (

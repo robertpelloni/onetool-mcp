@@ -19,7 +19,7 @@ def test_import_package() -> None:
 @pytest.mark.smoke
 def test_import_tool_modules() -> None:
     """Test that all tool modules can be imported."""
-    from otutil.tools import brave, convert, excel, file, ground
+    from otutil.tools import brave, convert, excel, file, ground, mem
 
     # Check pack names
     assert file.pack == "file"
@@ -27,3 +27,4 @@ def test_import_tool_modules() -> None:
     assert convert.pack == "convert"
     assert brave.pack == "brave"
     assert ground.pack == "ground"
+    assert mem.pack == "mem"

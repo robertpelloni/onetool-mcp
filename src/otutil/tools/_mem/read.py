@@ -126,7 +126,7 @@ def _format_read_row(row: Any, *, meta: bool, mode: str) -> str:
 
     if mode == "toc":
         sections = _decode_sections(row_meta.get("sections", ""))
-        return _build_toc(sections, row[2])
+        return _build_toc(sections, row[2].count("\n") + 1)
 
     # mode == "content" or "all"
     content = row[2]

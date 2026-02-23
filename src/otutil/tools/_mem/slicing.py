@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import builtins
-import re
 from typing import Any
 
 from ot.logging import LogSpan
+from otutil.tools._content_util import LINE_RANGE_RE as _LINE_RANGE_RE
+from otutil.tools._content_util import resolve_line_range as _resolve_line_range
+from otutil.tools._content_util import resolve_slice as _resolve_slice
+from otutil.tools._content_util import selector_label as _selector_label
 
 from .cache import _cache_put
 from .content import _decode_sections
@@ -13,9 +16,6 @@ from .db import _deserialize_meta, _get_connection
 from .read import _READ_COLUMNS
 
 _builtins_list = builtins.list
-
-# Line range regex: matches patterns like ":50", "400:", "151:200", "-50:"
-_LINE_RANGE_RE = re.compile(r"^-?\d*:\d*$")
 
 
 def toc(
@@ -59,7 +59,7 @@ def toc(
 
             row_meta = _deserialize_meta(row[9])
             sections = _decode_sections(row_meta.get("sections", ""))
-            result = _build_toc(sections, row[2])
+            result = _build_toc(sections, row[2].count("\n") + 1)
 
             # Staleness detection
             status = _check_staleness(row_meta)
@@ -144,78 +144,6 @@ def slice(
         except Exception as e:
             s.add("error", str(e))
             return f"Error slicing memory: {e}"
-
-
-def _resolve_slice(
-    sel: int | str,
-    lines: list[str],
-    sections: list[dict[str, Any]],
-) -> str | None:
-    """Resolve a single slice selector to content."""
-    total = len(lines)
-
-    # int: section number (1-indexed)
-    if isinstance(sel, int):
-        if 1 <= sel <= len(sections):
-            sec = sections[sel - 1]
-            return "\n".join(lines[sec["start"] - 1 : sec["end"]])
-        return None
-
-    # str: check if line range
-    if _LINE_RANGE_RE.match(sel):
-        return _resolve_line_range(sel, lines, total)
-
-    # str: heading path lookup (case-insensitive substring)
-    sel_lower = sel.lower()
-    for sec in sections:
-        if sel_lower in sec["heading"].lower():
-            return "\n".join(lines[sec["start"] - 1 : sec["end"]])
-    return None
-
-
-def _resolve_line_range(spec: str, lines: list[str], total: int) -> str | None:
-    """Parse and resolve a line range spec like ':50', '400:', '151:200', '-50:'."""
-    parts = spec.split(":")
-    start_str, end_str = parts[0], parts[1]
-
-    if start_str == "" and end_str == "":
-        return None  # ":" alone is invalid
-
-    # Parse start
-    if start_str == "":
-        start = 1
-    else:
-        start = int(start_str)
-        if start < 0:
-            start = max(1, total + start + 1)
-
-    # Parse end
-    end = total if end_str == "" else int(end_str)
-
-    if start < 1:
-        start = 1
-    if end > total:
-        end = total
-    if start > end:
-        return None
-
-    return "\n".join(lines[start - 1 : end])
-
-
-def _selector_label(select: int | str | _builtins_list[int | str]) -> str:
-    """Build a human-readable label for a slice selector."""
-    if isinstance(select, int):
-        return f"Section {select}"
-    if isinstance(select, str):
-        return select
-    # list
-    parts = []
-    for s in select:
-        if isinstance(s, int):
-            parts.append(f"Section {s}")
-        else:
-            parts.append(str(s))
-    return ", ".join(parts)
 
 
 def slice_batch(

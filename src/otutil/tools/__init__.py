@@ -2,4 +2,4 @@
 
 from __future__ import annotations
 
-__all__ = ["brave", "convert", "excel", "file", "ground"]
+__all__ = ["brave", "convert", "excel", "file", "ground", "mem"]

@@ -7,12 +7,13 @@ import re
 from pathlib import Path
 from typing import Any
 
+from otutil.tools._content_util import HEADING_RE as _HEADING_RE
+from otutil.tools._content_util import build_toc as _build_toc
+from otutil.tools._content_util import parse_headings as _parse_headings
+
 from .config import _BUILTIN_REDACTION_PATTERNS, VALID_CATEGORIES, _get_config
 
 logger = logging.getLogger(__name__)
-
-# Matches ATX headings: # Heading, ## Heading, etc.
-_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$")
 
 
 def _content_hash(content: str) -> str:
@@ -112,33 +113,6 @@ def _validate_category(category: str) -> str:
     return category
 
 
-def _parse_headings(content: str, *, max_depth: int = 3) -> list[dict[str, Any]]:
-    """Parse markdown headings and compute line ranges for each section.
-
-    Returns a list of dicts with keys: heading, level, start, end.
-    Lines are 1-indexed. ``end`` is inclusive and points to the last line
-    of the section (the line before the next heading or EOF).
-    """
-    lines = content.split("\n")
-    headings: list[dict[str, Any]] = []
-
-    for i, line in enumerate(lines):
-        m = _HEADING_RE.match(line)
-        if m and len(m.group(1)) <= max_depth:
-            headings.append({
-                "heading": m.group(2).strip(),
-                "level": len(m.group(1)),
-                "start": i + 1,  # 1-indexed
-                "end": len(lines),  # will be adjusted below
-            })
-
-    # Adjust end lines: each section ends just before the next heading
-    for idx in range(len(headings) - 1):
-        headings[idx]["end"] = headings[idx + 1]["start"] - 1
-
-    return headings
-
-
 def _encode_sections(headings: list[dict[str, Any]]) -> str:
     """Encode parsed headings into pipe-delimited section index string.
 
@@ -184,17 +158,6 @@ def _decode_sections(encoded: str) -> list[dict[str, Any]]:
             continue
         sections.append({"heading": heading, "start": start, "end": end})
     return sections
-
-
-def _build_toc(sections: list[dict[str, Any]], content: str) -> str:
-    """Build a human-readable table of contents from section data."""
-    if not sections:
-        return "No sections found"
-    total_lines = len(content.split("\n"))
-    lines = [f"Table of Contents ({len(sections)} sections, {total_lines} lines)\n"]
-    for i, sec in enumerate(sections, 1):
-        lines.append(f"  {i}. {sec['heading']} (lines {sec['start']}-{sec['end']})")
-    return "\n".join(lines)
 
 
 def _check_staleness(meta: dict[str, str]) -> str:
