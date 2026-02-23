@@ -44,10 +44,10 @@ def _get_domain_tool_dirs() -> list[Path]:
     """Discover tool dirs from installed domain extras. Silently skips if not installed.
 
     Returns:
-        List of paths to domain tool directories (otdev, otutil, otxero).
+        List of paths to domain tool directories (otdev, otutil).
     """
     dirs = []
-    for pkg in ("otdev.tools", "otutil.tools", "otxero.tools"):
+    for pkg in ("otdev.tools", "otutil.tools"):
         try:
             mod = importlib.import_module(pkg)
             if mod.__file__:
@@ -130,7 +130,7 @@ def _get_tool_files(
         internal_files = {f.resolve() for f in bundled_files if f.exists()}
         logger.debug(f"Found {len(bundled_files)} bundled tools from {bundled_dir}")
 
-    # Include domain extra tools (otdev, otutil, otxero) if installed
+    # Include domain extra tools (otdev, otutil) if installed
     for extra_dir in _get_domain_tool_dirs():
         if extra_dir.exists():
             extra_files = [f for f in extra_dir.glob("*.py") if f.name != "__init__.py"]

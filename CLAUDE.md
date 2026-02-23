@@ -27,7 +27,7 @@ Use `/opsx:new` for changes that define new user-facing behaviour or modify
 existing contracts:
 
 ✅ Requires OpenSpec:
-- New tool packs or extras ([dev], [util], [xero])
+- New tool packs or extras ([dev], [util])
 - New CLI commands or flags
 - Changes to config format, file locations, or schema
 - Changes to MCP tool interface or server behaviour

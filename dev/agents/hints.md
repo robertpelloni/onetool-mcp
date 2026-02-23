@@ -154,11 +154,11 @@ openspec/       Specifications and proposals
 MCP servers may use non-Python-friendly naming (hyphens, camelCase). OneTool automatically resolves aliases:
 
 ```python
-# All these work for tool "list-organisation-details":
-xero.list_organisation_details()  # Python snake_case ✓
-xero.listOrganisationDetails()    # camelCase ✓
-xero.ListOrganisationDetails()    # PascalCase ✓
-xero.LIST_ORGANISATION_DETAILS()  # SCREAMING_SNAKE ✓
+# All these work for tool "list-repositories":
+github.list_repositories()        # Python snake_case ✓
+github.listRepositories()         # camelCase ✓
+github.ListRepositories()         # PascalCase ✓
+github.LIST_REPOSITORIES()        # SCREAMING_SNAKE ✓
 ```
 
 **How it works:**

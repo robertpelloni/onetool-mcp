@@ -67,33 +67,33 @@ The system SHALL support automatic aliasing for MCP tools with non-Python-friend
 MCP servers may use naming conventions incompatible with Python identifiers (e.g., hyphens in `list-accounts`). The system SHALL transparently resolve Python-friendly accessors to actual tool names via canonical normalization.
 
 #### Scenario: Hyphenated tool access via underscores
-- **GIVEN** MCP server `xero` with tool `list-organisation-details`
-- **WHEN** run() receives `xero.list_organisation_details()`
+- **GIVEN** MCP server `github` with tool `list-organisation-details`
+- **WHEN** run() receives `github.list_organisation_details()`
 - **THEN** it SHALL resolve to tool `list-organisation-details` and call it
 
 #### Scenario: Hyphenated tool access via camelCase
-- **GIVEN** MCP server `xero` with tool `list-organisation-details`
-- **WHEN** run() receives `xero.listOrganisationDetails()`
+- **GIVEN** MCP server `github` with tool `list-organisation-details`
+- **WHEN** run() receives `github.listOrganisationDetails()`
 - **THEN** it SHALL resolve to tool `list-organisation-details` and call it
 
 #### Scenario: Hyphenated tool access via PascalCase
-- **GIVEN** MCP server `xero` with tool `list-organisation-details`
-- **WHEN** run() receives `xero.ListOrganisationDetails()`
+- **GIVEN** MCP server `github` with tool `list-organisation-details`
+- **WHEN** run() receives `github.ListOrganisationDetails()`
 - **THEN** it SHALL resolve to tool `list-organisation-details` and call it
 
 #### Scenario: Exact match takes precedence
 - **GIVEN** MCP server has both `list_accounts` and `list-accounts`
-- **WHEN** run() receives `xero.list_accounts()`
+- **WHEN** run() receives `github.list_accounts()`
 - **THEN** it SHALL use exact match `list_accounts` (no fuzzy matching needed)
 
 #### Scenario: Ambiguous match error
 - **GIVEN** MCP server has tools `list-accounts` and `list_accounts` (both normalize to same canonical form)
-- **WHEN** run() receives `xero.listAccounts()`
+- **WHEN** run() receives `github.listAccounts()`
 - **THEN** it SHALL return an error: "Ambiguous tool name 'listAccounts': matches multiple tools: ['list-accounts', 'list_accounts']"
 
 #### Scenario: No match with suggestions
-- **GIVEN** MCP server `xero` with tool `list-organisation-details`
-- **WHEN** run() receives `xero.list_organisat()`
+- **GIVEN** MCP server `github` with tool `list-organisation-details`
+- **WHEN** run() receives `github.list_organisat()`
 - **THEN** it SHALL return an error with suggestions
 - **AND** suggestions SHALL include `list-organisation-details`
 

@@ -320,17 +320,17 @@ class TestProxyManagerStdio:
             command="npx",
             args=["-y", "some-mcp-server"],
             env={
-                "XERO_CLIENT_ID": "test_id_123",
-                "XERO_CLIENT_SECRET": "test_secret_456",
+                "GITHUB_TOKEN": "test_token_123",
+                "GITHUB_APP_ID": "test_app_456",
             },
         )
 
-        manager._create_stdio_client("xero", config)
+        manager._create_stdio_client("github", config)
 
         mock_transport.assert_called_once()
         env = mock_transport.call_args[1]["env"]
-        assert env["XERO_CLIENT_ID"] == "test_id_123"
-        assert env["XERO_CLIENT_SECRET"] == "test_secret_456"
+        assert env["GITHUB_TOKEN"] == "test_token_123"
+        assert env["GITHUB_APP_ID"] == "test_app_456"
 
     @patch("ot.proxy.manager.StdioTransport")
     @patch("ot.proxy.manager.Client")

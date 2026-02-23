@@ -58,8 +58,8 @@ class TestCanonicalizeName:
         """Handle string with only separators."""
         assert canonicalize_name("---___") == ""
 
-    def test_real_xero_example(self) -> None:
-        """Test real Xero MCP server tool name."""
+    def test_real_mcp_example(self) -> None:
+        """Test real MCP server tool name with hyphens and mixed case."""
         assert canonicalize_name("list-organisation-details") == "listorganisationdetails"
         assert canonicalize_name("list_organisation_details") == "listorganisationdetails"
         assert canonicalize_name("listOrganisationDetails") == "listorganisationdetails"
@@ -126,8 +126,8 @@ class TestFindCanonicalMatch:
         with pytest.raises(ValueError, match=r"\['get-user', 'get_user'\]"):
             find_canonical_match("getUser", available)
 
-    def test_real_xero_tools(self) -> None:
-        """Test with real Xero MCP server tool names."""
+    def test_real_mcp_tools(self) -> None:
+        """Test with real MCP server tool names using hyphenated naming."""
         available = [
             "list-organisation-details",
             "list-accounts",
@@ -198,8 +198,8 @@ class TestSuggestSimilarNames:
         suggestions = suggest_similar_names("list_acc", available)
         assert "list-accounts" in suggestions
 
-    def test_real_xero_typo(self) -> None:
-        """Test with realistic typo in Xero tool name."""
+    def test_real_mcp_typo(self) -> None:
+        """Test with realistic typo in an MCP tool name."""
         available = [
             "list-organisation-details",
             "list-accounts",

@@ -5,7 +5,6 @@
 ### Added
 - `[util]` extra: file, excel, convert, brave, ground tool packs
 - `[dev]` extra: db, ripgrep, web, diagram, package, context7 tool packs
-- `[xero]` extra: placeholder for future accounting tools
 - `[all]` convenience extra
 - `--secrets` flag on `onetool serve`
 - AST-based ToolRegistry with change detection

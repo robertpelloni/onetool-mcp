@@ -90,8 +90,8 @@ def _create_mcp_proxy_pack(server_name: str, tool_prefix: str | None = None) -> 
 
     Allows calling proxied MCP tools using dot notation with automatic aliasing:
     - context7.resolve_library_id(library_name="next.js")
-    - xero.list_organisation_details()  # matches list-organisation-details
-    - xero.listOrganisationDetails()    # also matches list-organisation-details
+    - github.list_repositories()        # matches list-repositories
+    - github.listRepositories()         # also matches list-repositories
 
     Supports fuzzy matching across naming conventions (snake_case, kebab-case, camelCase, PascalCase).
     Each call is tracked for execution-level stats.
