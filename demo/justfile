@@ -16,13 +16,14 @@ default:
 
 # Run MCP server with demo config
 serve *args:
-    OT_CWD={{ _dir }} uv run onetool {{ args }}
+    OT_CWD={{ _dir }} uv run onetool --config {{ _dir }}/.onetool/onetool.yaml {{ args }}
 
 # Run benchmark scenarios
-#   Pass a file to run directly: just demo::bench bench/compare.yaml
-#   Pass --tui for interactive picker: just demo::bench --tui
+#   Interactive picker (default): just demo::bench
+#   Run a file directly:          just demo::bench bench/compare.yaml
 bench *args:
     OT_CWD={{ _dir }} DEMO_DIR={{ _dir }} uv run bench run \
+        --tui \
         --config {{ _dir }}/.onetool/onetool.yaml \
         --secrets {{ _dir }}/.onetool/bench-secrets.yaml \
         --csv {{ args }}

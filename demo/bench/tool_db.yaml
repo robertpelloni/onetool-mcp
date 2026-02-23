@@ -31,9 +31,9 @@ servers:
   onetool:
     type: stdio
     command: uv
-    args: ["run", "onetool"]
+    args: ["run", "onetool", "--config", "${DEMO_DIR}/.onetool/onetool.yaml", "--secrets", "${DEMO_DIR}/.onetool/secrets.yaml"]
     env:
-      OT_CWD: .
+      OT_CWD: ${DEMO_DIR}
 
 scenarios:
   - name: "Database Demo"
