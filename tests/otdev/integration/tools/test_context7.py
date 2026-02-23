@@ -34,7 +34,7 @@ class TestContext7Live:
         """Verify Context7 library search works."""
         from otdev.tools.context7 import search
 
-        result = search(query="fastapi")
+        result = search(query="fastapi", library_name="fastapi")
 
         # Should get results or API key error
         assert "fastapi" in result.lower() or "Context7" in result

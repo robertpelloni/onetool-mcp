@@ -32,27 +32,27 @@ snippets:
   # ============================================================================
 
   c7:
-    description: Fetch library documentation for a topic
+    description: Fetch library documentation with optional semantic query
     params:
-      q: { default: "", description: "Topic to search for (e.g., 'hooks', 'routing')" }
-      lib: { description: "Library name or key (e.g., 'react', 'next.js', 'vercel/next.js')" }
+      lib: { description: "Library ID (e.g., '/vercel/next.js', 'react', 'nextjs')" }
+      q: { default: "", description: "Natural language question for semantic reranking (e.g., 'How do I configure middleware?')" }
     body: |
-      context7.doc(library_key="{{ lib }}", topic="{{ q }}", mode="info")
+      context7.doc(library_id="{{ lib }}", query="{{ q }}")
 
   c7_lib:
-    description: Search for a library to get its key
+    description: Search for a library to get its Context7 ID
     params:
       q: { description: "Library name to search for (e.g., 'react', 'fastapi')" }
     body: |
-      context7.search(query="{{ q }}")
+      context7.search(query="{{ q }}", library_name="{{ q }}")
 
   c7_eg:
-    description: Fetch code examples from library docs
+    description: Fetch library documentation (alias for c7)
     params:
-      lib: { description: "Library key in org/repo format (e.g., 'facebook/react')" }
-      q: { description: "Feature/API to get examples for" }
+      lib: { description: "Library ID (e.g., '/facebook/react', '/pallets/flask')" }
+      q: { description: "Natural language question (e.g., 'show me blueprint examples')" }
     body: |
-      context7.doc(library_key="{{ lib }}", topic="{{ q }}", mode="code")
+      context7.doc(library_id="{{ lib }}", query="{{ q }}")
 
   # ============================================================================
   # GROUND SEARCH (g_)

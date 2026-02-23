@@ -158,9 +158,9 @@ ground.reddit(query="best IDE for python", subreddit="python")
 ## Library Docs
 
 ```python
-context7.search(query="fastapi")
-context7.doc(library_key="fastapi/fastapi", topic="middleware")
-context7.doc(library_key="pallets/flask", topic="blueprints", mode="code")
+context7.search(query="how to use fastapi middleware", library_name="fastapi")
+context7.doc(library_id="/fastapi/fastapi", query="middleware")
+context7.doc(library_id="/pallets/flask", query="blueprints and code examples")
 ```
 
 ## Browser Annotation Utilities

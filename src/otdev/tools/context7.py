@@ -40,17 +40,11 @@ class Config(BaseModel):
         le=120.0,
         description="Request timeout in seconds",
     )
-    docs_limit: int = Field(
-        default=10,
-        ge=1,
-        le=20,
-        description="Maximum number of documentation items to return",
-    )
+
 
 # Context7 REST API configuration
-CONTEXT7_SEARCH_URL = "https://context7.com/api/v2/search"
-CONTEXT7_DOCS_CODE_URL = "https://context7.com/api/v2/docs/code"
-CONTEXT7_DOCS_INFO_URL = "https://context7.com/api/v2/docs/info"
+CONTEXT7_SEARCH_URL = "https://context7.com/api/v2/libs/search"
+CONTEXT7_CONTEXT_URL = "https://context7.com/api/v2/context"
 
 
 def _get_config() -> Config:
@@ -59,20 +53,12 @@ def _get_config() -> Config:
 
 
 # Shared HTTP client for connection pooling
-_client = httpx.Client(timeout=30.0)
+_client = httpx.Client(timeout=30.0, follow_redirects=True)
 
 
 def _get_api_key() -> str:
     """Get Context7 API key from secrets."""
     return get_secret("CONTEXT7_API_KEY") or ""
-
-
-def _get_headers() -> dict[str, str]:
-    """Get authorization headers for Context7 API."""
-    api_key = _get_api_key()
-    if api_key:
-        return {"Authorization": f"Bearer {api_key}"}
-    return {}
 
 
 def _make_request(
@@ -98,12 +84,14 @@ def _make_request(
     if timeout is None:
         timeout = _get_config().timeout
 
+    headers = {"Authorization": f"Bearer {api_key}"}
+
     with LogSpan(span="context7.request", url=url) as span:
         try:
             response = _client.get(
                 url,
                 params=params,
-                headers=_get_headers(),
+                headers=headers,
                 timeout=timeout,
             )
             response.raise_for_status()
@@ -123,159 +111,103 @@ def _make_request(
             return False, f"Request failed: {e}"
 
 
-@cache(ttl=3600)  # Cache library key resolutions for 1 hour
-def _normalize_library_key(library_key: str) -> str:
-    """Normalize library key to Context7 API format.
+def _normalize_library_id(library_id: str) -> str:
+    """Normalize library ID to Context7 format with leading slash.
 
-    Handles various input formats and common issues:
-    - "/vercel/next.js/v16.0.3" -> "vercel/next.js"
-    - "/vercel/next.js" -> "vercel/next.js"
-    - "vercel/next.js" -> "vercel/next.js"
-    - "next.js" -> "next.js" (search will be needed)
-    - "https://github.com/vercel/next.js" -> "vercel/next.js"
-    - Stray quotes: '"vercel/next.js"' -> "vercel/next.js"
-    - Double slashes: "vercel//next.js" -> "vercel/next.js"
-    - Trailing slashes: "vercel/next.js/" -> "vercel/next.js"
+    Handles various input formats:
+    - "/vercel/next.js" -> "/vercel/next.js"
+    - "vercel/next.js" -> "/vercel/next.js"
+    - "/vercel/next.js/v14.3.0-canary.87" -> "/vercel/next.js/v14.3.0-canary.87"
+    - "next.js" -> "/next.js" (search will be needed)
+    - "https://github.com/vercel/next.js" -> "/vercel/next.js"
+    - Stray quotes: '"vercel/next.js"' -> "/vercel/next.js"
+    - Double slashes: "vercel//next.js" -> "/vercel/next.js"
 
     Args:
-        library_key: Raw library key from user input
+        library_id: Raw library ID from user input
 
     Returns:
-        Normalized org/repo format for Context7 API
+        Normalized Context7 library ID with leading slash
     """
-    key = library_key.strip()
+    key = library_id.strip()
 
     # Remove stray quotes (single or double)
     key = key.strip("\"'")
 
     # Handle GitHub URLs
-    github_match = re.match(r"https?://(?:www\.)?github\.com/([^/]+)/([^/]+)/?.*", key)
+    github_match = re.match(r"https?://(?:www\.)?github\.com/([^/]+)/([^/?#]+).*", key)
     if github_match:
-        return f"{github_match.group(1)}/{github_match.group(2)}"
+        return f"/{github_match.group(1)}/{github_match.group(2)}"
 
-    # Handle Context7 URLs
-    context7_match = re.match(
-        r"https?://(?:www\.)?context7\.com/([^/]+)/([^/]+)/?.*", key
-    )
+    # Handle Context7 URLs: extract the path portion
+    context7_match = re.match(r"https?://(?:www\.)?context7\.com(/[^?#]+)", key)
     if context7_match:
-        return f"{context7_match.group(1)}/{context7_match.group(2)}"
+        return context7_match.group(1).rstrip("/")
 
     # Fix double slashes
-    while "//" in key:
-        key = key.replace("//", "/")
+    key = re.sub(r"//{1,}", "/", key)
 
-    # Strip leading and trailing slashes
-    key = key.strip("/")
+    # Remove trailing slash
+    key = key.rstrip("/")
 
-    # Extract org/repo (ignore version suffix like /v16.0.3)
-    parts = key.split("/")
-    if len(parts) >= 2:
-        # Check if third part looks like a version
-        if len(parts) > 2 and re.match(r"v?\d+", parts[2]):
-            return f"{parts[0]}/{parts[1]}"
-        # Otherwise just take first two parts
-        return f"{parts[0]}/{parts[1]}"
+    # Ensure leading slash
+    if not key.startswith("/"):
+        key = f"/{key}"
 
     return key
 
 
-def _normalize_topic(topic: str) -> str:
-    """Normalize topic string for search.
+def _has_title_overlap(query: str, title: str) -> bool:
+    """Return True if query and title share meaningful name overlap.
 
-    Handles:
-    - Stray quotes: '"PPR"' -> "PPR"
-    - Placeholder syntax: "<relevant topic>" -> ""
-    - Path-like topics: "app/partial-pre-rendering/index" -> "partial pre-rendering"
-    - Extra whitespace
-    - Escaped quotes: '\\"topic\\"' -> "topic"
+    Strips punctuation and checks if either string contains the other,
+    or if a 4+ character segment of the shorter string appears in the longer.
+    This prevents clearly irrelevant search results from being accepted.
 
-    Args:
-        topic: Raw topic from user input
-
-    Returns:
-        Cleaned topic string
+    Examples:
+        _has_title_overlap("nextjs", "Next.js") -> True  (strips to "nextjs"/"nextjs")
+        _has_title_overlap("react", "React")    -> True
+        _has_title_overlap("nonexistent-xyz", "paperless-ai") -> False
     """
-    topic = topic.strip()
 
-    # Remove stray quotes (single or double)
-    topic = topic.strip("\"'")
+    def clean(s: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", s.lower())
 
-    # Remove escaped quotes
-    topic = topic.replace('\\"', "").replace("\\'", "")
+    q = clean(query)
+    t = clean(title)
 
-    # Remove placeholder markers
-    if topic.startswith("<") and topic.endswith(">"):
-        topic = topic[1:-1].strip()
+    if not q or not t:
+        return False
 
-    # If it's a placeholder like "relevant topic", return empty to get general docs
-    if topic.lower() in ("relevant topic", "topic", "extract from question", ""):
-        return ""
+    if q in t or t in q:
+        return True
 
-    # Convert path-like topics to search terms
-    # "app/partial-pre-rendering/index" -> "partial pre-rendering"
-    if "/" in topic and not topic.startswith("http"):
-        # Take the most specific part (usually the last meaningful segment)
-        parts = [p for p in topic.split("/") if p and p != "index"]
-        if parts:
-            topic = parts[-1]
-
-    # Convert kebab-case to spaces
-    topic = topic.replace("-", " ").replace("_", " ")
-
-    # Clean up whitespace
-    topic = " ".join(topic.split())
-
-    return topic
+    # Check if any 4+ char segment of the shorter appears in the longer
+    shorter, longer = (q, t) if len(q) <= len(t) else (t, q)
+    seg_len = max(4, len(shorter) // 2)
+    return any(
+        shorter[i : i + seg_len] in longer for i in range(len(shorter) - seg_len + 1)
+    )
 
 
-def search(*, query: str, output_format: str = "str") -> str:
-    """Search for libraries by name in Context7.
-
-    Args:
-        query: The search query (e.g., 'next.js', 'react', 'vue')
-        output_format: Response format - 'str' for string (default), 'dict' for JSON string
-
-    Returns:
-        Search results with matching libraries and their IDs.
-        If output_format='dict', returns JSON string of the API response.
-        If output_format='str', returns a formatted string representation.
-
-    Example:
-        context7.search(query="fastapi")
-        context7.search(query="react hooks")
-        context7.search(query="flask", output_format="dict")  # Returns JSON string
-    """
-    if output_format not in ("str", "dict"):
-        return f"Invalid output_format '{output_format}'. Valid options: 'str', 'dict'."
-
-    with LogSpan(span="context7.search", query=query, output_format=output_format) as s:
-        success, result = _make_request(CONTEXT7_SEARCH_URL, params={"query": query})
-
-        s.add(success=success)
-        if not success:
-            return f"{result} query={query}"
-
-        if output_format == "dict":
-            s.add(resultType=type(result).__name__)
-            return json.dumps(result)
-
-        result_str = str(result)
-        s.add(resultLen=len(result_str))
-        return result_str
-
-
-def _pick_best_library(data: dict[str, Any] | list[Any] | None, query: str) -> str | None:
+def _pick_best_library(
+    data: dict[str, Any] | list[Any] | None, query: str
+) -> str | None:
     """Pick the best library from Context7 search response.
 
     Handles {"results": [...]} and [...] response formats.
+    Returns None if no result has meaningful name overlap with the query,
+    preventing silent wrong-library resolution.
 
     Scoring:
     - Exact title match: +100
     - Title contains query: +50
-    - VIP library: +30
-    - Verified: +20
-    - Trust score: +trustScore * 2
+    - VIP library: +60
+    - Verified: +40
+    - Trust score: +trustScore * 5
     - Large corpus (>100k tokens): +5
+    - Stars (capped at 20): +stars/1000
+    - Benchmark score (capped at ~10): +benchmarkScore/10
     """
     # Unwrap response
     if isinstance(data, dict):
@@ -300,13 +232,13 @@ def _pick_best_library(data: dict[str, Any] | list[Any] | None, query: str) -> s
             score += 50
 
         if r.get("vip"):
-            score += 30
+            score += 60
         if r.get("verified"):
-            score += 20
+            score += 40
 
         trust = r.get("trustScore", 0)
         if trust > 0:
-            score += trust * 2
+            score += trust * 5
 
         if r.get("totalTokens", 0) > 100000:
             score += 5
@@ -323,175 +255,229 @@ def _pick_best_library(data: dict[str, Any] | list[Any] | None, query: str) -> s
 
         return score
 
-    sorted_results = sorted(results, key=score_result, reverse=True)
-    best = sorted_results[0]
-    lib_id = best.get("id", "").lstrip("/")
+    best = max(results, key=score_result)
 
-    return lib_id if "/" in lib_id else None
+    # Reject if no meaningful name overlap — prevents silently returning docs for
+    # a completely unrelated library when the query doesn't match anything real.
+    if not _has_title_overlap(query, best.get("title", "")):
+        return None
+
+    lib_id = best.get("id", "")
+
+    # Ensure leading slash
+    if lib_id and not lib_id.startswith("/"):
+        lib_id = f"/{lib_id}"
+
+    return lib_id if lib_id.count("/") >= 2 else None
 
 
-@cache(ttl=3600)  # Cache library key resolutions for 1 hour
-def _resolve_library_key(library_key: str) -> tuple[str, bool, bool]:
-    """Resolve a library key, searching if needed.
+@cache(ttl=3600)  # Cache library ID resolutions for 1 hour
+def _resolve_library_id(library_id: str) -> tuple[str, bool, bool]:
+    """Resolve a library ID, searching if needed.
 
-    If the key doesn't look like a valid org/repo format,
+    If the ID doesn't look like a valid /org/repo format,
     search Context7 to find the best match.
 
     Args:
-        library_key: Raw or partial library key
+        library_id: Raw or partial library ID
 
     Returns:
-        Tuple of (resolved org/repo library key, was_searched, found_match).
-        was_searched is True if a search was performed to resolve the key.
+        Tuple of (resolved library ID with leading slash, was_searched, found_match).
+        was_searched is True if a search was performed to resolve the ID.
         found_match is True if search found a valid library match.
     """
-    normalized = _normalize_library_key(library_key)
+    normalized = _normalize_library_id(library_id)
 
-    # If it looks like a valid org/repo, use it directly
-    if "/" in normalized and len(normalized.split("/")) == 2:
-        org, repo = normalized.split("/")
-        if org and repo and not org.startswith("http"):
-            return normalized, False, True
+    # If it looks like a valid /org/repo[/version], use it directly
+    # Strip leading slash and check for at least org/repo
+    parts = normalized.lstrip("/").split("/")
+    if len(parts) >= 2 and parts[0] and parts[1] and not parts[0].startswith("http"):
+        return normalized, False, True
 
-    # Otherwise, search for the library
-    success, data = _make_request(CONTEXT7_SEARCH_URL, params={"query": normalized})
+    # Otherwise, search for the library using the name portion
+    search_term = normalized.lstrip("/")
+    success, data = _make_request(
+        CONTEXT7_SEARCH_URL,
+        params={"query": search_term, "libraryName": search_term},
+    )
 
     if not success:
         return normalized, True, False
 
-    # Use smart scoring to pick the best match (data must be dict/list, not error string)
-    best = _pick_best_library(data if isinstance(data, (dict, list)) else None, normalized)
+    # Use smart scoring to pick the best match
+    best = _pick_best_library(
+        data if isinstance(data, (dict, list)) else None, search_term
+    )
     if best:
         return best, True, True
     return normalized, True, False
 
 
+def search(*, query: str, library_name: str, output_format: str = "str") -> str:
+    """Search for libraries by name in Context7.
+
+    Args:
+        query: The user's task or question — used for LLM relevance ranking
+               (e.g., 'How do I set up JWT auth?')
+        library_name: The library to find (e.g., 'express', 'react', 'fastapi')
+        output_format: Response format - 'str' for string (default), 'dict' for JSON string
+
+    Returns:
+        Search results with matching libraries and their IDs.
+        If output_format='dict', returns JSON string of the API response.
+        If output_format='str', returns a formatted string representation.
+
+    Example:
+        context7.search(query="How do I set up JWT auth?", library_name="express")
+        context7.search(query="react hooks tutorial", library_name="react")
+        context7.search(query="fastapi", library_name="fastapi", output_format="dict")
+    """
+    if not query or not query.strip():
+        return "query is required — used for LLM relevance ranking of search results."
+
+    if output_format not in ("str", "dict"):
+        return f"Invalid output_format '{output_format}'. Valid options: 'str', 'dict'."
+
+    with LogSpan(
+        span="context7.search",
+        query=query,
+        library_name=library_name,
+        output_format=output_format,
+    ) as s:
+        success, result = _make_request(
+            CONTEXT7_SEARCH_URL,
+            params={"query": query, "libraryName": library_name},
+        )
+
+        s.add(success=success)
+        if not success:
+            return f"{result} query={query}"
+
+        if output_format == "dict":
+            s.add(resultType=type(result).__name__)
+            return json.dumps(result)
+
+        # Format as a human-readable markdown list
+        results = result.get("results", []) if isinstance(result, dict) else []
+        if not results:
+            result_str = "No libraries found."
+        else:
+            # Filter to results with meaningful name overlap
+            matched = [
+                r for r in results if _has_title_overlap(library_name, r.get("title", ""))
+            ]
+
+            lines = []
+            if not matched:
+                lines.append(
+                    f"No libraries matching '{library_name}' were found. "
+                    f"The following results may not be relevant:"
+                )
+                matched = results  # Show all with warning
+
+            for r in matched:
+                title = r.get("title", "")
+                lib_id = r.get("id", "")
+                desc = r.get("description", "")
+                if not lib_id.startswith("/"):
+                    lib_id = f"/{lib_id}"
+                lines.append(f"- **{title}** (`{lib_id}`)")
+                if desc:
+                    lines.append(f"  {desc}")
+            result_str = "\n".join(lines)
+        s.add(resultLen=len(result_str))
+        return result_str
+
+
 def doc(
     *,
-    library_key: str,
-    topic: str = "",
-    mode: str = "info",
-    page: int = 1,
-    limit: int | None = None,
-    doc_type: str = "txt",
-    version: str | None = None,
+    library_id: str,
+    query: str,
 ) -> str:
     """Fetch documentation for a library from Context7.
 
+    Uses semantic reranking on the server side based on the query.
+
     Args:
-        library_key: The library key - can be flexible format:
-            - Full: 'vercel/next.js'
-            - With version: '/vercel/next.js/v16.0.3'
-            - Shorthand: 'next.js', 'nextjs', 'react'
-            - URL: 'https://github.com/vercel/next.js'
-        topic: Topic to focus documentation on (e.g., 'routing', 'hooks', 'ssr').
-               Default: empty string for general docs
-        mode: Documentation mode - 'info' for conceptual guides and narrative documentation (default),
-              'code' for API references and code examples
-        page: Page number for pagination (default: 1, max: 10)
-        limit: Number of results per page (defaults to config, max: config docs_limit)
-        doc_type: Response format 'txt' or 'json' (default: 'txt')
-        version: Optional version suffix (e.g., 'v16.0.3'). If provided, appended to library key.
+        library_id: The library ID - can be flexible format:
+            - Context7 format: '/vercel/next.js'
+            - With version: '/vercel/next.js/v14.3.0-canary.87'
+            - Without leading slash: 'vercel/next.js'
+            - Shorthand: 'next.js', 'nextjs', 'react' (resolved via search)
+            - GitHub URL: 'https://github.com/vercel/next.js'
+        query: The user's natural-language question for server-side semantic
+               reranking (e.g., 'How do I configure middleware for JWT?').
+               Required — the Context7 API does not accept empty queries.
 
     Returns:
-        Documentation content and code examples for the requested topic
+        Documentation content for the requested library and query.
+        If the library ID was resolved via search, a note is prepended:
+        "[Resolved 'nextjs' → '/vercel/next.js']"
 
     Example:
-        # Get general docs
-        context7.doc(library_key="fastapi/fastapi")
+        # Get docs on a specific topic with semantic reranking
+        context7.doc(library_id="/vercel/next.js", query="How do I configure middleware for JWT?")
 
-        # Get docs on a specific topic
-        context7.doc(library_key="vercel/next.js", topic="routing")
+        # Version-specific docs
+        context7.doc(library_id="/vercel/next.js/v14.3.0-canary.87", query="app router migration")
 
-        # Get code examples
-        context7.doc(library_key="pallets/flask", topic="blueprints", mode="code")
-
-        # Get version-specific docs
-        context7.doc(library_key="vercel/next.js", topic="routing", version="v14")
+        # Shorthand — resolved via search
+        context7.doc(library_id="react", query="How do hooks work?")
     """
-    # Validate mode parameter
-    if mode not in ("info", "code"):
-        return f"Invalid mode '{mode}'. Valid options: 'info', 'code'."
+    if not query or not query.strip():
+        return "query is required — the Context7 API does not accept empty queries."
 
-    # Validate doc_type parameter
-    if doc_type not in ("txt", "json"):
-        return f"Invalid doc_type '{doc_type}'. Valid options: 'txt', 'json'."
-
-    with LogSpan(span="context7.doc", library_key=library_key, topic=topic, mode=mode) as s:
-        # Normalize and resolve library key (searches if needed)
-        resolved_key, was_searched, found_match = _resolve_library_key(library_key)
-        s.add(resolvedKey=resolved_key, wasSearched=was_searched, foundMatch=found_match)
+    with LogSpan(span="context7.doc", library_id=library_id, query=query) as s:
+        # Normalize and resolve library ID (searches if needed)
+        resolved_id, was_searched, found_match = _resolve_library_id(library_id)
+        s.add(resolvedId=resolved_id, wasSearched=was_searched, foundMatch=found_match)
 
         # If search was performed but found no match, library doesn't exist
         if was_searched and not found_match:
             return (
-                f"Library '{library_key}' not found. "
-                f"Use context7.search(query=\"{library_key}\") to find available libraries."
+                f"Library '{library_id}' not found. "
+                f'Use context7.search(query="{library_id}", library_name="{library_id}") '
+                f"to find available libraries."
             )
 
-        # Validate resolved key has org/repo format
-        if "/" not in resolved_key:
-            return (
-                f"Could not resolve library '{library_key}' to org/repo format. "
-                f"Please use full format like 'facebook/react' or 'vercel/next.js'. "
-                f"Use context7.search(query=\"{library_key}\") to find the correct library key."
-            )
+        # Build resolution note if library was found via search
+        note = ""
+        if was_searched and found_match:
+            note = f"[Resolved '{library_id}' → '{resolved_id}']\n\n"
 
-        # Append version suffix if provided
-        api_key = resolved_key
-        if version:
-            # Ensure version has 'v' prefix if it starts with a number
-            if version[0].isdigit():
-                version = f"v{version}"
-            api_key = f"{resolved_key}/{version}"
-            s.add(apiKey=api_key)
+        # Fetch context
+        params: dict[str, str] = {"libraryId": resolved_id}
+        if query:
+            params["query"] = query
 
-        # Normalize topic
-        normalized_topic = _normalize_topic(topic)
-
-        # Clamp page and limit to valid ranges
-        config_docs_limit = _get_config().docs_limit
-        page = max(1, min(page, 10))
-        if limit is None:
-            limit = config_docs_limit
-        limit = max(1, min(limit, config_docs_limit))
-
-        # Select endpoint based on mode
-        base_url = CONTEXT7_DOCS_INFO_URL if mode == "info" else CONTEXT7_DOCS_CODE_URL
-        url = f"{base_url}/{api_key}"
-        params: dict[str, str | int] = {
-            "type": doc_type,
-            "page": page,
-            "limit": limit,
-        }
-        # Only include topic if non-empty
-        if normalized_topic:
-            params["topic"] = normalized_topic
-
-        success, data = _make_request(url, params=params)
+        success, data = _make_request(CONTEXT7_CONTEXT_URL, params=params)
         s.add(success=success)
 
         if not success:
-            return f"{data} library_key={library_key}"
+            error_str = str(data)
+            if "404" in error_str:
+                return (
+                    f"Library '{resolved_id}' was not found in Context7. "
+                    f'Use context7.search(query="...", library_name="...") '
+                    f"to find the correct library ID."
+                )
+            return f"{data} library_id={library_id}"
 
         # Handle response
         if isinstance(data, str):
-            # Check for "no content" responses
             if data in ("No content available", "No context data available", ""):
-                other_mode = "info" if mode == "code" else "code"
-                topic_hint = f" on topic '{topic}'" if topic else ""
                 return (
-                    f"No {mode} documentation found for '{resolved_key}'{topic_hint}. "
-                    f"Try mode='{other_mode}' or a different topic."
+                    f"No documentation found for '{resolved_id}'. "
+                    f"Try a different library ID or query."
                 )
             s.add(resultLen=len(data))
-            return data
+            return note + data
 
         if isinstance(data, dict):
             result = str(data.get("content", data.get("text", str(data))))
             s.add(resultLen=len(result))
-            return result
+            return note + result
 
         result = str(data)
         s.add(resultLen=len(result))
-        return result
+        return note + result
