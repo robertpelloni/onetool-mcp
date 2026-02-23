@@ -826,6 +826,47 @@ def test_grep_glob_double_star_same_as_simple(grep_dir: Path) -> None:
     assert result_simple == result_double
 
 
+@pytest.mark.unit
+@pytest.mark.tools
+def test_grep_gitignore_true_skips_ignored(tmp_path: Path) -> None:
+    """gitignore=True skips files matched by .gitignore."""
+    from otutil.tools.file import grep
+
+    (tmp_path / ".gitignore").write_text("ignored.py\n")
+    (tmp_path / "ignored.py").write_text("secret = 'hunter2'\n")
+    (tmp_path / "visible.py").write_text("secret = 'hunter2'\n")
+
+    result = grep(pattern="secret", path=str(tmp_path), gitignore=True)
+    assert "visible.py" in result
+    assert "ignored.py" not in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_grep_gitignore_false_includes_ignored(tmp_path: Path) -> None:
+    """gitignore=False includes files matched by .gitignore."""
+    from otutil.tools.file import grep
+
+    (tmp_path / ".gitignore").write_text("logs/\n")
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "logs" / "app.log").write_text("error: something failed\n")
+
+    result = grep(pattern="error", path=str(tmp_path), gitignore=False)
+    assert "app.log" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_grep_gitignore_no_gitignore_file(tmp_path: Path) -> None:
+    """gitignore=True is a no-op when no .gitignore exists."""
+    from otutil.tools.file import grep
+
+    (tmp_path / "main.py").write_text("hello = 1\n")
+
+    result = grep(pattern="hello", path=str(tmp_path), gitignore=True)
+    assert "main.py" in result
+
+
 # =============================================================================
 # TOC
 # =============================================================================

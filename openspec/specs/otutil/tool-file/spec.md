@@ -245,6 +245,22 @@ The `file.grep()` function SHALL search file contents using pure-Python regex (n
 - **WHEN** matches exceed `max_matches` (default: 500)
 - **THEN** it SHALL stop and append a truncation notice
 
+#### Scenario: Gitignore respected by default
+- **GIVEN** a `.gitignore` at the search root listing `ignored.py`
+- **WHEN** `file.grep(pattern="foo", path=".")` is called (default `gitignore=True`)
+- **THEN** it SHALL skip files matched by `.gitignore`
+- **AND** non-ignored files SHALL still be searched
+
+#### Scenario: Gitignore opt-out
+- **GIVEN** a `.gitignore` at the search root
+- **WHEN** `file.grep(pattern="foo", path=".", gitignore=False)` is called
+- **THEN** it SHALL search all files regardless of `.gitignore`
+
+#### Scenario: No gitignore file
+- **GIVEN** no `.gitignore` exists at the search root
+- **WHEN** `file.grep(pattern="foo", path=".", gitignore=True)` is called
+- **THEN** it SHALL search all files normally (no-op)
+
 ### Requirement: Batch File Reading
 
 The `file.read_batch()` function SHALL read multiple files in a single call.

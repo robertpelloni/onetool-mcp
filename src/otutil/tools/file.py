@@ -51,6 +51,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import pathspec
 from pydantic import BaseModel, Field
 
 from ot.config import get_tool_config
@@ -115,6 +116,23 @@ except ImportError:
 # Includes common control chars (bell, backspace, tab, newline, formfeed, carriage return, escape)
 # plus all printable ASCII and extended ASCII
 _TEXT_CHARS = frozenset({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)))
+
+
+# ============================================================================
+# Gitignore
+# ============================================================================
+
+
+def _load_gitignore(root: Path) -> pathspec.PathSpec | None:
+    """Load a PathSpec from .gitignore at root, or None if not present."""
+    gitignore = root / ".gitignore"
+    if not gitignore.is_file():
+        return None
+    try:
+        lines = gitignore.read_text(encoding="utf-8").splitlines()
+        return pathspec.PathSpec.from_lines("gitignore", lines)
+    except OSError:
+        return None
 
 
 # ============================================================================
@@ -847,6 +865,7 @@ def grep(
     case_sensitive: bool = True,
     max_matches: int = 500,
     fixed_strings: bool = False,
+    gitignore: bool = True,
 ) -> str:
     """Search file contents with regex (pure Python, no external tools required).
 
@@ -862,6 +881,8 @@ def grep(
         case_sensitive: Case-sensitive matching (default: True)
         max_matches: Stop after this many total matches (default: 500)
         fixed_strings: If True, treat pattern as a literal string (default: False)
+        gitignore: If True, skip files matched by .gitignore at the
+            search root (default: True)
 
     Returns:
         Ripgrep-style output with match markers, or error message
@@ -870,6 +891,7 @@ def grep(
         file.grep(pattern="LogSpan", path="src/", glob="*.py")
         file.grep(pattern="TODO", path=".", fixed_strings=True)
         file.grep(pattern="def \\w+\\(", path="src/", glob="**/*.py", context=1)
+        file.grep(pattern="secret", path=".", gitignore=True)
     """
     with LogSpan(span="file.grep", pattern=pattern, path=path, glob=glob) as s:
         resolved, error = _validate_path(path, must_exist=True)
@@ -894,6 +916,7 @@ def grep(
 
         cfg = _get_file_config()
         cwd = resolved
+        gi_spec = _load_gitignore(cwd) if gitignore else None
 
         output_parts: list[str] = []
         total_matches = 0
@@ -909,6 +932,14 @@ def grep(
 
             if is_path_excluded(entry, cfg.exclude_patterns):
                 continue
+
+            if gi_spec is not None:
+                try:
+                    rel = entry.relative_to(cwd)
+                except ValueError:
+                    rel = entry
+                if gi_spec.match_file(str(rel)):
+                    continue
 
             # Skip oversized files
             if _check_file_size(entry):

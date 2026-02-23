@@ -9,7 +9,7 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 - Recursive directory operations with pattern filtering
 - Line-numbered file reading with pagination
 - Text replacement with occurrence control
-- Pure-Python content search (no `rg` binary required)
+- Pure-Python content search (no `rg` binary required) with `.gitignore` support
 - Section-aware navigation: TOC, slice, and batch slice for markdown files
 
 ## Read Operations
@@ -24,7 +24,7 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 
 | Function | Description |
 |----------|-------------|
-| `file.grep(pattern, path, glob, context, case_sensitive, max_matches, fixed_strings)` | Search file contents with regex (pure Python) |
+| `file.grep(pattern, path, glob, context, case_sensitive, max_matches, fixed_strings, gitignore)` | Search file contents with regex (pure Python) |
 
 ## Section Navigation
 
@@ -75,6 +75,7 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 | `context` | int | Context lines before/after each match in grep (default: 2) |
 | `max_matches` | int | Max total grep matches before stopping (default: 500) |
 | `fixed_strings` | bool | Treat grep pattern as a literal string, not regex |
+| `gitignore` | bool | Honour `.gitignore` when searching — pass `False` to include all files (default: True) |
 | `max_files` | int | Maximum files to read in read_batch (default: 20) |
 | `select` | int\|str\|list | Slice selector: section number, heading substring, line range, or list |
 | `items` | list[dict] | List of `{path, select}` dicts for slice_batch (max 20) |
@@ -159,6 +160,12 @@ file.grep(pattern="print(", path="src/", fixed_strings=True)
 
 # Recursive with glob filter
 file.grep(pattern="def \\w+\\(", path="src/", glob="**/*.py", context=1)
+
+# Include gitignored files (e.g. search logs or build output)
+file.grep(pattern="error", path=".", gitignore=False)
+
+# Explicitly opt in (same as default)
+file.grep(pattern="secret", path=".", gitignore=True)
 ```
 
 ### Navigating Sections
