@@ -69,20 +69,20 @@ def test_materialise_file_unknown(tmp_path: Path) -> None:
 @pytest.mark.unit
 @pytest.mark.core
 def test_materialise_servers_yaml_subset(tmp_path: Path) -> None:
-    """--servers devtools,playwright creates servers.yaml with only those blocks."""
+    """--servers chrome-devtools,playwright creates servers.yaml with only those blocks."""
     from onetool.cli import _materialise_servers_yaml
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _materialise_servers_yaml(ot_dir, ["devtools", "playwright"])
+    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "playwright"])
 
     servers_yaml = ot_dir / "servers.yaml"
     assert servers_yaml.exists()
 
     data = yaml.safe_load(servers_yaml.read_text())
     servers = data.get("servers", {})
-    assert "devtools" in servers
+    assert "chrome-devtools" in servers
     assert "playwright" in servers
     assert "github" not in servers
 
@@ -96,7 +96,7 @@ def test_materialise_servers_yaml_all(tmp_path: Path) -> None:
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _materialise_servers_yaml(ot_dir, ["devtools", "playwright", "github"])
+    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "playwright", "github"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
@@ -113,11 +113,11 @@ def test_materialise_servers_yaml_unknown_skipped(tmp_path: Path) -> None:
     ot_dir.mkdir()
 
     # Should not raise
-    _materialise_servers_yaml(ot_dir, ["devtools", "unknown-server"])
+    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "unknown-server"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
-    assert "devtools" in servers
+    assert "chrome-devtools" in servers
     assert "unknown-server" not in servers
 
 

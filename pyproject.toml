@@ -63,7 +63,6 @@ dev = [
     "sqlalchemy>=2.0.46",
     "trafilatura>=2.0.0",
 ]
-secrets = []  # kept for backward compatibility; encryption deps are now in core
 all = ["onetool-mcp[util,dev]"]
 
 [project.scripts]

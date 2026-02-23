@@ -113,7 +113,7 @@ def load_secrets(
         except ImportError as e:
             raise ImportError(
                 "Encrypted secrets detected but keyring is not installed. "
-                "Run: pip install keyring"
+                "Run: pip install onetool-mcp"
             ) from e
 
         try:
@@ -121,7 +121,7 @@ def load_secrets(
         except ImportError as e:
             raise ImportError(
                 "Encrypted secrets detected but pyrage is not installed. "
-                "Run: pip install pyrage"
+                "Run: pip install onetool-mcp"
             ) from e
 
         private_key = keyring.get_password("onetool", "age_identity")
