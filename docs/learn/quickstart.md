@@ -23,17 +23,16 @@ uv tool install onetool-mcp
 ## 3. Initialize
 
 ```bash
-onetool init
+onetool init -c ~/.onetool
 ```
 
-This creates configuration files in `~/.onetool/config/`:
+An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, snippets, skills). Press space to toggle, enter to confirm.
 
-- `onetool.yaml` - Global settings
-- `secrets.yaml` - API keys (gitignored)
+This creates `~/.onetool/onetool.yaml` with `include:` entries for your selected extensions.
 
 ## 4. Set Up Secrets
 
-Edit `~/.onetool/config/secrets.yaml` to add your API keys:
+Edit `~/.onetool/secrets.yaml` to add your API keys:
 
 ```yaml
 # Brave Search API
@@ -70,7 +69,7 @@ Uncomment and add keys for the tools you want to use.
 ## 5. Validate
 
 ```bash
-onetool init validate
+onetool init validate -c ~/.onetool/onetool.yaml
 ```
 
 This checks your configuration is correct.
@@ -78,7 +77,7 @@ This checks your configuration is correct.
 ## 6. Connect to Claude Code
 
 ```bash
-claude mcp add onetool onetool
+claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
 ```
 
 Or manually add to `~/.claude/mcp.json`:
@@ -87,7 +86,8 @@ Or manually add to `~/.claude/mcp.json`:
 {
   "mcpServers": {
     "onetool": {
-      "command": "onetool"
+      "command": "onetool",
+      "args": ["--config", "/Users/yourname/.onetool/onetool.yaml", "--secrets", "/Users/yourname/.onetool/secrets.yaml"]
     }
   }
 }
@@ -126,7 +126,7 @@ Commands:
 
 ```
 
-That's it. 
+That's it.
 
-🧿 One MCP for developers - No tool tax, no context rot. 
+🧿 One MCP for developers - No tool tax, no context rot.
 100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.

@@ -18,7 +18,6 @@ tags: [browser, devtools, automation]
 ## Connection Modes
 
 - **Isolated** (default): temp profile, auto-launched and auto-cleaned. Best for most tasks.
-  `args: ["--isolated"]`
 - **Remote**: connect to existing Chrome (preserves login sessions).
   `args: ["--browserUrl=http://127.0.0.1:9222"]`
   Requires Chrome launched with: `--remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug`
@@ -41,7 +40,6 @@ tags: [browser, devtools, automation]
 - Standard flow: `navigate_page` → `wait_for` → `click/fill` → `take_screenshot`
 - For forms: `fill_form` is more reliable than multiple `fill` calls
 - Debug JS errors: `list_console_messages` after page interactions
-- Performance analysis: `performance_start_trace` → actions → `performance_stop_trace` → `performance_analyze_insight`
 - Network debugging: `list_network_requests` after page load
 
 ## Common Mistakes to Avoid
@@ -49,3 +47,5 @@ tags: [browser, devtools, automation]
 - Don't assume elements exist — use `wait_for` before interacting
 - Don't skip screenshots — they're essential for debugging failures
 - Don't use multiple `fill` calls when `fill_form` would work better
+
+Full reference: https://onetool.beycom.online/reference/servers/chrome-devtools/

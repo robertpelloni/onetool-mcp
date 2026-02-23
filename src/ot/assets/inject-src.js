@@ -318,9 +318,14 @@ import { select } from "optimal-select";
 
     // Use user-provided label or fallback to tag name if empty
     const label = userLabel.trim() || defaultLabel;
-    const selector = getSelector(el);
     const id = `sel-${++annotationCounter}`;
-    addAnnotation(selector, id, label, DEFAULT_COLOR);
+
+    // Annotate the specific clicked element directly — do NOT use
+    // addAnnotation(selector) here as querySelectorAll may match multiple elements
+    el.setAttribute("x-inspect", id);
+    el.setAttribute("x-inspect-color", DEFAULT_COLOR);
+    el.setAttribute("x-inspect-label", label);
+    renderAll();
     disableSelectionMode();
   }
 

@@ -161,6 +161,18 @@ DATABASE_URL: "${PROD_DB_URL}"
 - Never logged or exposed in errors
 - Accessed via `get_secret()` API only
 
+**Optional: Encrypt secrets at rest**
+
+Values can be encrypted using [age](https://age-encryption.org) encryption (opt-in). The private key is stored in the OS keychain; `age1enc:` prefixed values are decrypted transparently in memory at load time — no code changes required:
+
+```python
+# One-time setup
+>>> ot_secrets.init(label="my-machine")      # Generate identity, store in OS keychain
+>>> ot_secrets.encrypt(file="~/.onetool/secrets.yaml")  # Encrypt values in-place
+```
+
+Once encrypted, `secrets.yaml` is safe to inspect and commit — values cannot be recovered without the OS keychain key. See [Encrypting Secrets at Rest](../reference/cli/onetool-config.md#encrypting-secrets-at-rest) for full setup and usage.
+
 ### 8. Worker Process Isolation
 
 Tools run in isolated worker processes:
@@ -288,4 +300,5 @@ OneTool is a developer tool, not a sandbox. It does not:
 3. **Add allowlist entries sparingly** - Only allow what you actually need
 4. **Restrict paths to project scope** - `allowed_dirs: ["."]`
 5. **Keep secrets separate** - Never commit `secrets.yaml`
-6. **Use introspection** - `ot.security(check="module")` before adding to allowlist
+6. **Encrypt secrets at rest** - Use `ot_secrets.init()` + `ot_secrets.encrypt()` to protect against filesystem and git exposure (opt-in)
+7. **Use introspection** - `ot.security(check="module")` before adding to allowlist

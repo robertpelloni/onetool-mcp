@@ -65,13 +65,13 @@ Requires [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install onetool-mcp
-onetool init
+onetool init -c ~/.onetool
 ```
 
 Add to Claude Code:
 
 ```bash
-claude mcp add onetool onetool
+claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml
 ```
 
 Or manually add to `~/.claude/mcp.json`:
@@ -80,7 +80,8 @@ Or manually add to `~/.claude/mcp.json`:
 {
   "mcpServers": {
     "onetool": {
-      "command": "onetool"
+      "command": "onetool",
+      "args": ["--config", "/Users/yourname/.onetool/onetool.yaml"]
     }
   }
 }
@@ -88,7 +89,7 @@ Or manually add to `~/.claude/mcp.json`:
 
 That's it. All 100+ tools work out of the box.
 
-Verify: `onetool init validate`
+Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 
 [📖 Full installation guide](https://onetool.beycom.online/learn/installation/)
 
@@ -140,11 +141,13 @@ Wrap any existing MCP server and call it explicitly - without the tool tax:
 
 ```yaml
 # .onetool/onetool.yaml
-mcp_servers:
+servers:
   chrome-devtools:
+    type: stdio
     command: npx
     args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]
   github:
+    type: stdio
     command: npx
     args: ["-y", "@anthropic-ai/github-mcp-server@latest"]
 ```

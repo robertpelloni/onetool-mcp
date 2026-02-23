@@ -267,7 +267,7 @@ When users want to use your extension, they add it to their `tools_dir`:
 ### Global Installation
 
 ```yaml
-# ~/.onetool/config/onetool.yaml
+# ~/.onetool/onetool.yaml
 tools_dir:
   - ~/extensions/my-extension/src/*.py
 ```

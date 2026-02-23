@@ -1,6 +1,6 @@
-# ot.* Internal Tools
+# OT Core
 
-Internal tools for OneTool introspection and management.
+Core tools for OneTool introspection and management.
 
 ## Highlights
 
@@ -8,6 +8,7 @@ Internal tools for OneTool introspection and management.
 - Check system health and API connectivity
 - Access configuration, aliases, and snippets
 - Publish messages to configured topics
+- Query stored large outputs with pagination and search
 
 ## Functions
 
@@ -17,18 +18,21 @@ Internal tools for OneTool introspection and management.
 | `ot.tools(pattern, info)` | List tools, filter by pattern |
 | `ot.packs(pattern, info)` | List packs (local + MCP), filter by pattern |
 | `ot.servers(pattern, info)` | List MCP proxy servers, filter by pattern |
+| `ot.server(status, enable, disable, restart)` | Manage runtime proxy server state |
 | `ot.aliases(pattern, info)` | List aliases, filter by pattern |
 | `ot.snippets(pattern, info)` | List snippets, filter by pattern |
+| `ot.skills(name, pattern, info)` | List bundled skills or retrieve a skill body |
 | `ot.config()` | Show aliases, snippets, and server names |
 | `ot.health()` | Check tool dependencies and API connectivity |
 | `ot.stats(period, tool, output, info)` | Get runtime usage statistics |
+| `ot.result(handle, ...)` | Query stored large output with pagination and search |
 | `ot.notify(topic, message)` | Publish message to configured topic |
 | `ot.reload()` | Force configuration reload |
 | `ot.security(check)` | Check security rules and allowlists |
 
 ## Info Levels
 
-All discovery functions (`help`, `tools`, `packs`, `aliases`, `snippets`) support an `info` parameter:
+All discovery functions (`help`, `tools`, `packs`, `aliases`, `snippets`, `skills`) support an `info` parameter:
 
 | Level | Description |
 |-------|-------------|
@@ -161,6 +165,29 @@ With `info="full"`, also shows:
 - List of available tools (if connected)
 - URL or command details
 
+## ot.server()
+
+Manage runtime proxy server state. All changes are in-memory only and reset when OneTool restarts.
+
+```python
+# List all servers with status
+ot.server()
+
+# Show detailed status for a server
+ot.server(status="devtools")
+
+# Enable a disabled server and connect it
+ot.server(enable="devtools-auto")
+
+# Disable an enabled server and disconnect it
+ot.server(disable="devtools")
+
+# Reconnect a server
+ot.server(restart="playwright")
+```
+
+Only one action (`status`, `enable`, `disable`, `restart`) can be provided per call.
+
 ## ot.aliases()
 
 List aliases, filter by pattern.
@@ -220,6 +247,27 @@ snippets:
           results.append(brave.search(query=q))
       "\n---\n".join(results)
 ```
+
+## ot.skills()
+
+List available bundled skill stubs or retrieve a skill's body content.
+
+```python
+# List all skills
+ot.skills()
+
+# Filter by pattern
+ot.skills(pattern="ot-")
+
+# Full info for each skill
+ot.skills(info="full")
+
+# Retrieve the body of a specific skill
+ot.skills(name="ot-chrome-devtools-mcp")
+ot.skills(name="ot-guide")
+```
+
+Skills are bundled `.md` files that can be installed as context prompts for AI tools. Use `ot_forge.install_skill()` to write them to disk.
 
 ## ot.config()
 
@@ -286,6 +334,55 @@ Returns JSON with:
 - `time_saved_ms` - Estimated time saved in milliseconds
 - `tools` - Per-tool breakdown (info="min" or "full")
 
+## ot.result()
+
+Query stored large output with pagination, search, and filtering. When a tool output exceeds `max_inline_size`, OneTool stores it and returns a handle. Use `ot.result()` to retrieve the content — you do not need to page through everything.
+
+```python
+# First 100 lines (default)
+ot.result(handle="abc123")
+
+# Paginate
+ot.result(handle="abc123", offset=101, limit=50)
+
+# Filter to matching lines only
+ot.result(handle="abc123", search="error")
+
+# Matches + 3 lines of context around each (like grep -C 3)
+ot.result(handle="abc123", search="fail", context=3)
+
+# Fuzzy match instead of regex
+ot.result(handle="abc123", search="config", fuzzy=True)
+
+# Last 20 lines (useful for logs/output)
+ot.result(handle="abc123", tail=20)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `handle` | str | required | Result handle from stored output |
+| `offset` | int | 1 | Starting line (1-indexed, like Claude's Read tool) |
+| `limit` | int | 100 | Max lines to return |
+| `search` | str | `""` | Regex pattern to filter lines |
+| `fuzzy` | bool | `False` | Use fuzzy matching instead of regex |
+| `tail` | int | 0 | Return last N lines (ignores offset/search when set) |
+| `context` | int | 0 | Lines before/after each search match |
+
+**Response fields:**
+
+| Field | Description |
+|-------|-------------|
+| `lines` | List of matching lines |
+| `total_lines` | Total lines in stored result (after search filter) |
+| `returned` | Number of lines returned in this chunk |
+| `offset` | Starting offset used |
+| `has_more` | True if more lines exist after this chunk |
+| `progress` | Human-readable position, e.g. `"lines 1-50 of 343 (15%)"` |
+| `total_size_bytes` | Full size of stored result in bytes |
+| `next_query` | Ready-to-run call to fetch the next chunk (omitted when `has_more=False`) |
+
 ## ot.notify()
 
 Publish a message to a configured topic.
@@ -337,4 +434,3 @@ Returns:
 - With `check`: Status dict with `pattern`, `status` (allowed/blocked/warned), `category`, and `reason`
 
 Use this to understand why code is being blocked or to verify security configuration.
-

@@ -1,39 +1,47 @@
 # Context7
 
-Library documentation search and retrieval with extensive key normalization.
+Library documentation search and retrieval. Uses Context7 v2 API with semantic reranking.
 
 ## Highlights
 
-- Flexible library key formats (org/repo, shorthand names, GitHub URLs)
-- Topic normalization for path-like topics and kebab-case
-- Auto-resolution of shorthand names via search with smart scoring
-- Mode and doc_type validation with helpful error messages
-- Version-specific documentation support
+- Flexible library ID formats (org/repo, shorthand names, GitHub URLs)
+- Semantic reranking — query drives relevance, not just keyword match
+- Smart auto-resolution of shorthand names via scored library search
+- Version-aware ID support (e.g. `/vercel/next.js/v14`)
 
 ## Functions
 
 | Function | Description |
 |----------|-------------|
-| `context7.search(query, format)` | Search for libraries by name |
-| `context7.doc(library_key, ...)` | Fetch documentation for a library |
+| `context7.search(query, library_name, ...)` | Search for libraries by name |
+| `context7.doc(library_id, query)` | Fetch semantically-reranked docs for a library |
 
 ## Search Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `query` | str | Search query (e.g., "react", "fastapi") |
-| `output_format` | str | "str" (default) for string, "dict" for raw API response |
+| `query` | str | Your task or question — used for LLM relevance ranking (e.g. "How do I set up JWT auth?") |
+| `library_name` | str | The library to find (e.g. `"express"`, `"react"`, `"fastapi"`) |
+| `output_format` | str | `"str"` (default) for formatted string, `"dict"` for raw API JSON |
 
 ## Doc Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `library_key` | str | Library identifier - "vercel/next.js", "next.js", or GitHub URL |
-| `topic` | str | Focus area (optional, default: general docs) |
-| `mode` | str | "info" (default) for guides, "code" for API references |
-| `page` | int | Pagination (1-10) |
-| `doc_type` | str | "txt" (default) or "json" |
-| `version` | str | Optional version suffix (e.g., "v14", "14.0.0") |
+| `library_id` | str | Library identifier — flexible formats accepted (see below) |
+| `query` | str | Natural-language question for server-side semantic reranking |
+
+**Accepted `library_id` formats:**
+
+| Format | Example |
+|--------|---------|
+| Context7 path | `/vercel/next.js` |
+| With version | `/vercel/next.js/v14.3.0-canary.87` |
+| Without leading slash | `vercel/next.js` |
+| Shorthand | `next.js`, `nextjs`, `react` |
+| GitHub URL | `https://github.com/vercel/next.js` |
+
+When a shorthand is given, Context7 resolves it via a search call. A note is prepended to the result if resolution occurred: `[Resolved 'nextjs' → '/vercel/next.js']`.
 
 ## Requires
 
@@ -42,19 +50,30 @@ Library documentation search and retrieval with extensive key normalization.
 ## Examples
 
 ```python
-# Search for libraries
-context7.search(query="react state management")
+# Search for libraries matching a name
+context7.search(query="How do I set up JWT auth?", library_name="express")
+context7.search(query="react hooks tutorial", library_name="react")
 
-# Get raw dict response for programmatic use
-context7.search(query="flask", output_format="dict")
+# Raw dict output for programmatic use
+context7.search(query="fastapi", library_name="fastapi", output_format="dict")
 
-# Fetch docs with flexible key format
-context7.doc(library_key="vercel/next.js", topic="routing")
-context7.doc(library_key="next.js", mode="code")
+# Fetch docs with semantic reranking
+context7.doc(library_id="/vercel/next.js", query="How do I configure middleware for JWT?")
+context7.doc(library_id="react", query="useEffect cleanup")
 
 # Use GitHub URL
-context7.doc(library_key="https://github.com/vercel/next.js")
+context7.doc(library_id="https://github.com/vercel/next.js", query="app router setup")
 
-# Get version-specific documentation
-context7.doc(library_key="vercel/next.js", topic="app router", version="v14")
+# Version-specific docs
+context7.doc(library_id="/vercel/next.js/v14", query="app router migration")
+```
+
+## Typical Workflow
+
+```python
+# 1. Find the library ID
+context7.search(query="django rest framework", library_name="djangorestframework")
+
+# 2. Fetch docs using the ID from search results
+context7.doc(library_id="/encode/django-rest-framework", query="serializer validation")
 ```

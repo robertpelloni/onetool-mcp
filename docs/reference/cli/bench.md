@@ -115,10 +115,12 @@ Use `---PROMPT---` delimiter to split a task into sequential prompts. Each promp
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `bench.yaml` | `.onetool/bench.yaml` or `~/.onetool/bench.yaml` | Benchmark harness config |
-| `bench-secrets.yaml` | `.onetool/bench-secrets.yaml` or `~/.onetool/bench-secrets.yaml` | LLM API keys (OPENAI_API_KEY, etc.) |
+| `bench.yaml` | `.onetool/bench.yaml` | Benchmark harness config |
+| `bench-secrets.yaml` | Passed via `-s` flag | LLM API keys (OPENAI_API_KEY, etc.) |
 
-**Resolution:** `BENCH_CONFIG` env var → project → global
+**`bench.yaml` resolution:** `BENCH_CONFIG` env var → `cwd/.onetool/bench.yaml` → defaults
+
+**`onetool.yaml` resolution:** `-c` flag → `cwd/.onetool/onetool.yaml` → no config (logging only)
 
 **Note:** Benchmark API keys (for running LLMs) go in `bench-secrets.yaml`, not `secrets.yaml` (which is for tool API keys).
 

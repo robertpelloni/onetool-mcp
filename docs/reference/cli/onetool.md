@@ -12,14 +12,15 @@ onetool [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| `-c, --config PATH` | Path to onetool.yaml configuration file |
+| `-c, --config PATH` | Path to onetool.yaml configuration file (required) |
+| `-s, --secrets PATH` | Path to secrets file. If omitted, no secrets are loaded |
 | `-v, --version` | Show version and exit |
 
 ## Commands
 
 ### init
 
-Initialize and manage global configuration in `~/.onetool/`.
+Initialize and manage the OneTool configuration directory.
 
 ```bash
 onetool init [subcommand]
@@ -52,24 +53,24 @@ onetool init validate -c .onetool/onetool.yaml
 ## Examples
 
 ```bash
-# Start MCP server (stdio)
-onetool
+# Start MCP server with explicit config
+onetool --config .onetool/onetool.yaml
 
-# Use specific config
-onetool --config config/onetool.yaml
+# Start with config and secrets
+onetool --config .onetool/onetool.yaml --secrets .onetool/secrets.yaml
 ```
 
 ## Configuration
 
-Configuration files: `.onetool/onetool.yaml` (project) or `~/.onetool/onetool.yaml` (global)
+Config is specified via `--config`. All relative paths inside the config file resolve from the config file's parent directory.
 
 See [onetool Configuration](onetool-config.md) for full schema reference.
 
 ### Quick Setup
 
 ```bash
-onetool init           # Interactive TUI setup
-onetool init validate  # Check for errors
+onetool init -c .onetool           # Interactive TUI setup
+onetool init validate -c .onetool/onetool.yaml  # Check for errors
 ```
 
 ### Environment Variables

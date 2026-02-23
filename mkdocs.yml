@@ -145,9 +145,7 @@ nav:
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
       - Comparison: learn/comparison.md
-      - Guides:
-          - learn/guides/index.md
-          - Chrome DevTools: learn/guides/chrome-devtools.md
+      - Guides: learn/guides/index.md
       - Extending:
           - learn/extending/index.md
           - Extension Tools: learn/extending/extension-tools.md
@@ -155,27 +153,37 @@ nav:
       - reference/index.md
       - CLIs:
           - reference/cli/index.md
+          - bench: reference/cli/bench.md
           - onetool: reference/cli/onetool.md
           - onetool Configuration: reference/cli/onetool-config.md
-          - bench: reference/cli/bench.md
       - Tools:
           - reference/tools/index.md
+          - AWS: reference/tools/aws.md
           - Brave: reference/tools/brave.md
+          - Chrome DevTools Util: reference/tools/chrome-devtools-util.md
           - Context7: reference/tools/context7.md
           - Convert: reference/tools/convert.md
           - DB: reference/tools/db.md
           - Diagram: reference/tools/diagram.md
           - Excel: reference/tools/excel.md
           - File: reference/tools/file.md
+          - Forge: reference/tools/forge.md
           - Ground: reference/tools/ground.md
           - LLM: reference/tools/llm.md
           - Mem: reference/tools/mem.md
-          - OT (Meta): reference/tools/ot.md
+          - OT Core: reference/tools/ot.md
           - Package: reference/tools/package.md
+          - Playwright Util: reference/tools/playwright-util.md
           - Ripgrep: reference/tools/ripgrep.md
-          - Forge: reference/tools/forge.md
           - Timer: reference/tools/timer.md
           - Web: reference/tools/web.md
+          - Worktree: reference/tools/worktree.md
+      - Servers:
+          - reference/servers/index.md
+          - Chrome DevTools: reference/servers/chrome-devtools.md
+          - ChunkHound: reference/servers/chunkhound.md
+          - GitHub: reference/servers/github.md
+          - Playwright: reference/servers/playwright.md
   - Results:
       - Mem vs File Benchmark: results/mem-vs-file-20260223.md
   - About:

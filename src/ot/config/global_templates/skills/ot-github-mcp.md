@@ -17,7 +17,7 @@ tags: [github, vcs, issues, prs]
 ## Setup
 
 1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens
-2. Add to secrets.yaml: `GITHUB_TOKEN: ghp_your_token_here`
+2. Add to `~/.onetool/secrets.yaml`: `GITHUB_TOKEN: ghp_your_token_here`
 3. Ensure the `github` server is in your servers.yaml and enabled
 
 ## Usage Patterns
@@ -33,3 +33,5 @@ tags: [github, vcs, issues, prs]
 - Don't forget to specify the repository (owner/repo format)
 - Don't make multiple API calls when a single list/search call works
 - Check PR status before attempting to merge
+
+Full reference: https://onetool.beycom.online/reference/servers/github/

@@ -4,10 +4,7 @@
 # These are common MCP server configurations that can be included
 # in project-specific onetool.yaml files.
 #
-# Server usage guides are available as on-demand skills:
-#   >>> ot.skills(name="ot-chrome-devtools-mcp")
-#   >>> ot.skills(name="ot-playwright-mcp")
-#   >>> ot.skills(name="ot-github-mcp")
+# Full setup guides: https://onetool.beycom.online/reference/servers/
 
 servers:
 
@@ -16,63 +13,47 @@ servers:
   # =============================================================================
   # Browser automation, debugging, and inspection via Chrome DevTools Protocol.
   # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
-  # Guide:  >>> ot.skills(name="ot-chrome-devtools-mcp")
+  # Guide:  https://onetool.beycom.online/reference/servers/chrome-devtools/
   #
-  # CONNECTION MODES:
-  #
-  #   Isolated (default) — temporary profile, cleaned on close.
-  #     args: ["--isolated"]
-  #
-  #   Remote — connect to an existing Chrome with remote debugging enabled.
-  #     args: ["--browserUrl=http://localhost:9222"]
-  #     Requires Chrome launched with:
-  #       macOS:   /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
-  #       Linux:   google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
-  #       Windows: chrome.exe --remote-debugging-port=9222 --user-data-dir=C:\temp\chrome-debug
-  #     Verify:  curl http://localhost:9222/json/version
-  #     Note:    --user-data-dir is required since Chrome 136+
-  #
-  #   autoConnect (experimental) — connect to any Chrome with remote debugging.
-  #     args: ["--autoConnect", "--channel=beta"]
-  #     Requires beta channel until M144 reaches stable.
-  #
-  # OPTIONS (add to args array):
-  #   --autoConnect      Connect to existing Chrome
-  #   --headless=true    Run without visible browser window
-  #   --isolated         Use temp profile (cleared on close)
-  #   --channel=beta     Use Chrome beta channel
-  #   --browserUrl=URL   Connect to remote Chrome (e.g., http://localhost:9222)
-  #   --viewport=WxH     Browser window size (default: 1280x720)
-  #
-  # ELEMENT HIGHLIGHTING (devtools_util pack):
-  #   devtools_util.inject_annotations()                                    # Load inject.js
-  #   devtools_util.highlight_element(selector=".btn", label="Click here")  # Highlight
-  #   devtools_util.scan_annotations()                                      # Read all annotations
-  #   devtools_util.clear_annotations()                                     # Remove all
-  #   Ctrl+I / Cmd+I in browser - prompts for custom annotation name when clicking elements.
-  #
-  devtools:
+  chrome-devtools:
     type: stdio
     command: npx
     args:
       - "-y"
       - "chrome-devtools-mcp@latest"
-      - "--isolated"           # Temporary profile, auto-cleaned
-      - "--viewport=1280x720"  # Consistent window size
-      - "--no-usage-statistics" # Disable Data Collection
-    timeout: 120               # Browser launch can be slow
+      - "--isolated"            # Temporary profile, auto-cleaned
+      - "--viewport=1280x720"   # Consistent window size
+      - "--no-usage-statistics" # Disable data collection
+    timeout: 120  
+    enabled: false
+
+  # =============================================================================
+  # MULTI-INSTANCE EXAMPLE
+  # =============================================================================
+  # You can run multiple named instances of the same server binary.
+  # Useful for having one browser session per task, or mixing connection modes.
+  #
+  # chrome-devtools-isolated:
+  #   type: stdio
+  #   command: npx
+  #   args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720"]
+  #   timeout: 120
+  #   enabled: false  # Enable with: ot.server(enable="chrome-devtools-isolated")
+  #
+  # chrome-devtools-auto:
+  #   type: stdio
+  #   command: npx
+  #   args: ["-y", "chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"]
+  #   timeout: 120
+  #   enabled: false  # Enable with: ot.server(enable="chrome-devtools-auto")
+
 
   # =============================================================================
   # PLAYWRIGHT MCP
   # =============================================================================
   # Browser automation via Playwright accessibility tree (no vision needed).
   # Source: https://github.com/microsoft/playwright-mcp
-  # Guide:  >>> ot.skills(name="ot-playwright-mcp")
-  #
-  # OPTIONS (add to args array):
-  #   --headless         Run without visible browser window
-  #   --browser=firefox  Use Firefox or WebKit instead of Chromium
-  #   --viewport=WxH     Set viewport size (e.g., 1280x720)
+  # Guide:  https://onetool.beycom.online/reference/servers/playwright/
   #
   playwright:
     type: stdio
@@ -80,22 +61,17 @@ servers:
     args:
       - "@playwright/mcp@latest"
     timeout: 120
+    enabled: false
 
   # =============================================================================
   # GITHUB MCP (HTTP)
   # =============================================================================
-  # GitHub's official MCP Server for repository management, issues, PRs, and more.
+  # GitHub's official MCP server for repos, issues, PRs, Actions, and more.
   # Source: https://github.com/github/github-mcp-server
-  # Guide:  >>> ot.skills(name="ot-github-mcp")
+  # Guide:  https://onetool.beycom.online/reference/servers/github/
   #
   # SETUP:
-  #   1. Create a GitHub Personal Access Token (PAT) at https://github.com/settings/tokens
-  #   2. Add to ~/.onetool/secrets.yaml:
-  #      GITHUB_TOKEN: ghp_your_token_here
-  #   3. Uncomment the github server config below
-  #
-  # TOOLSETS (configure via X-MCP-Tools header if needed):
-  #   repos, issues, pull_requests, actions, code_security, experiments
+  #   Add GITHUB_TOKEN to ~/.onetool/secrets.yaml before enabling.
   #
   github:
     type: http
@@ -104,24 +80,24 @@ servers:
       Authorization: "Bearer ${GITHUB_TOKEN}"
       Accept: "application/json, text/event-stream"
     timeout: 120
+    enabled: false
 
   # =============================================================================
-  # MULTI-INSTANCE EXAMPLE
+  # CHUNKHOUND MCP
   # =============================================================================
-  # You can run multiple named instances of the same server binary.
-  # Useful for having one browser session per task, or mixing connection modes.
+  # Regex and semantic code search for large codebases.
+  # Source: https://github.com/casualjim/chunkhound
+  # Guide:  https://onetool.beycom.online/reference/servers/chunkhound/
   #
-  # Example: devtools with isolated profile + devtools connected to existing Chrome
+  # SETUP:
+  #   pip install chunkhound && chunkhound index   (run from project root)
   #
-  # devtools-isolated:
-  #   type: stdio
-  #   command: npx
-  #   args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720"]
-  #   timeout: 120
-  #
-  # devtools-auto:
-  #   type: stdio
-  #   command: npx
-  #   args: ["-y", "chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"]
-  #   timeout: 120
-  #   enabled: false  # Enable with: ot.server(enable="devtools-auto")
+  chunkhound:
+    type: stdio
+    command: chunkhound
+    args:
+      - "mcp"
+    timeout: 30
+    inherit_env: true  # Required: passes CHUNKHOUND_EMBEDDING__API_KEY set during indexing
+    enabled: false
+

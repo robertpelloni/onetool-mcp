@@ -38,7 +38,8 @@ Create, validate, and install extension tools and skill stubs.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `install` | str | Skill name to install, or `"all"` for all skills |
+| `install` | str | Skill name to install, or `"all"` for all skills (default: `"all"`) |
+| `exclude` | list[str] | Skill names to skip when `install="all"` |
 | `tool` | str | Target AI tool: `"claude"` (default), `"codex"`, `"opencode"` |
 
 ## Requires
@@ -71,6 +72,9 @@ ot_forge.install_skill(install="ot-guide")
 # Install for a different AI tool
 ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")
 
-# Install all skills at once
-ot_forge.install_skill(install="all")
+# Install all skills at once (default)
+ot_forge.install_skill()
+
+# Install all skills except specific ones
+ot_forge.install_skill(exclude=["ot-aws-mcp", "ot-chrome-devtools-mcp"])
 ```

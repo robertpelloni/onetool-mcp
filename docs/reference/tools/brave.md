@@ -13,7 +13,7 @@ Web, news, image, and video search via Brave Search API.
 | Function | Description |
 |----------|-------------|
 | `brave.search(query, ...)` | General web search |
-| `brave.news(query, ...)` | News articles |
+| `brave.news(query, ...)` | News articles (sorted by recency, most recent first) |
 | `brave.image(query, ...)` | Image search |
 | `brave.video(query, ...)` | Video search |
 | `brave.search_batch(queries, ...)` | Multiple searches concurrently |

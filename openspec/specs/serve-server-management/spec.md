@@ -80,3 +80,53 @@ The system SHALL support restarting a named proxy server.
 - **AND** the server is currently disconnected
 - **THEN** it SHALL attempt to connect the server
 - **AND** report success or failure
+
+### Requirement: Incremental server connect
+The `ProxyManager` SHALL support connecting a single new server without disconnecting or reconnecting any existing server connections.
+
+#### Scenario: Connect one new server
+- **WHEN** `proxy_manager.connect_additional_sync(name, config)` is called
+- **AND** `name` is not already in the connected servers
+- **AND** `config.enabled` is true
+- **THEN** the server SHALL be connected and its tools registered
+- **AND** no other connected server SHALL be disconnected or restarted
+- **AND** the method SHALL return a result string including tool count (e.g., `"ok (12 tools)"`)
+
+#### Scenario: Server already connected
+- **WHEN** `proxy_manager.connect_additional_sync(name, config)` is called
+- **AND** `name` is already in the connected servers
+- **THEN** the method SHALL return `"already connected"` without reconnecting
+
+#### Scenario: Server disabled in config
+- **WHEN** `proxy_manager.connect_additional_sync(name, config)` is called
+- **AND** `config.enabled` is false
+- **THEN** the method SHALL return `"disabled"` without connecting
+
+#### Scenario: Connection failure
+- **WHEN** `proxy_manager.connect_additional_sync(name, config)` is called
+- **AND** the server process fails to start
+- **THEN** the method SHALL record the error and return a `"failed: <reason>"` string
+- **AND** no other connected server SHALL be affected
+
+### Requirement: Incremental server disconnect
+The `ProxyManager` SHALL support disconnecting a single server without affecting any other server connections.
+
+#### Scenario: Disconnect one server
+- **WHEN** `proxy_manager.disconnect_server_sync(name)` is called
+- **AND** `name` is currently connected
+- **THEN** the server SHALL be disconnected and its tools unregistered
+- **AND** no other connected server SHALL be disconnected
+- **AND** the method SHALL return `"disconnected"`
+
+#### Scenario: Disconnect server not connected
+- **WHEN** `proxy_manager.disconnect_server_sync(name)` is called
+- **AND** `name` is not in the connected servers
+- **THEN** the method SHALL return `"not connected"` without error
+
+#### Scenario: Namespace cache invalidates after connect
+- **WHEN** `proxy_manager.connect_additional_sync(name, config)` succeeds
+- **THEN** the namespace cache SHALL reflect the newly connected server's tools on the next resolution
+
+#### Scenario: Namespace cache invalidates after disconnect
+- **WHEN** `proxy_manager.disconnect_server_sync(name)` succeeds
+- **THEN** the namespace cache SHALL no longer include the disconnected server's tools on the next resolution

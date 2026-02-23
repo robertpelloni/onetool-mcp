@@ -38,7 +38,7 @@ Python executed directly against the tool namespace.
 | `>>>`               | Recommended; Python REPL symbol     |
 | `__run`             | Systematic short form (`__(tool)`)  |
 | `mcp__onetool__run` | Canonical MCP name                  |
-| `__ot`, `__onetool` | Legacy; kept for backward compat    |
+| `__ot`, `__onetool` | **Deprecated** — kept for backward compat, use `>>>` instead |
 
 **Note:** `mcp__ot__run` is NOT a valid prefix.
 

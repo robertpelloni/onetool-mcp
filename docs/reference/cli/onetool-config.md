@@ -2,33 +2,34 @@
 
 Complete reference for `onetool.yaml` configuration.
 
-## Two-Tier System
+## CLI Flags
 
-```text
-┌──────────────────┐     ┌──────────────────┐
-│     Global       │ --> │    Project       │
-│  (~/.onetool/)   │     │ (cwd/.onetool/)  │
-└──────────────────┘     └──────────────────┘
-   User preferences        Project overrides
-```
+Configuration is specified via CLI flags — there is no automatic global or project config discovery.
 
-| Location | Purpose | Scope |
-|----------|---------|-------|
-| `~/.onetool/onetool.yaml` | Global config | User |
-| `.onetool/onetool.yaml` | Project config | Project |
+| Flag | Short | Required | Description |
+|------|-------|----------|-------------|
+| `--config PATH` | `-c` | Yes (server) | Path to `onetool.yaml` config file or directory |
+| `--secrets PATH` | `-s` | No | Path to `secrets.yaml`. If omitted, no secrets are loaded |
 
-**Resolution order:** CLI flags → project → global
+**Config path resolution:** If `PATH` ends in `.yaml`/`.yml` it is used as the config file directly; otherwise `onetool.yaml` is appended to the directory path.
 
-**Windows paths:** Replace `~/.onetool/` with `%USERPROFILE%\.onetool\`
+**Include path resolution:** All relative paths in `include:`, `tools_dir:`, etc. resolve from the **parent directory of the config file** (i.e., the directory containing `onetool.yaml`).
+
+**Windows paths:** Use backslashes or forward slashes, e.g., `C:\Users\name\.onetool\onetool.yaml`.
 
 ## First Run Setup
 
-Run `onetool init` to set up a config directory interactively:
+Run `onetool init` to create a config interactively:
 
 ```bash
-onetool init           # Interactive setup (uses current directory)
-onetool init validate  # Check for errors
+onetool init                          # Create onetool.yaml in current directory
+onetool init -c .onetool              # Create .onetool/onetool.yaml
+onetool init -c .onetool/onetool.yaml # Explicit file path
+
+onetool init validate -c .onetool/onetool.yaml  # Validate + show status
 ```
+
+`onetool init` opens a TUI (interactive checkbox) to select which extensions to materialise. Existing files are backed up to `.bak` automatically. Running non-interactively (e.g., in CI) writes a minimal `onetool.yaml` with `version: 2`.
 
 ## YAML Schema
 
@@ -42,6 +43,9 @@ include:                      # External config files to merge
 
 tools_dir:                    # Tool discovery patterns
   - src/ottools/*.py
+
+env:                          # Default subprocess environment variables
+  LANG: en_US.UTF-8
 
 log_level: INFO               # DEBUG, INFO, WARNING, ERROR
 
@@ -64,7 +68,7 @@ Compose configuration from multiple files:
 version: 2
 
 include:
-  - config/prompts.yaml     # Relative to OT_DIR (.onetool/)
+  - config/prompts.yaml     # Relative to config parent dir
   - config/snippets.yaml
   - local-snippets.yaml     # Project-only additions
 
@@ -74,10 +78,11 @@ servers:
     command: python
 ```
 
-**Include resolution (two-tier fallback):**
+**Include resolution:**
 
-1. OT_DIR (project `.onetool/` or wherever the config is)
-2. Global (`~/.onetool/`)
+1. Absolute paths: used as-is
+2. Tilde paths (`~/...`): expanded to home directory
+3. Relative paths: checked in config parent dir first, then falls back to package-bundled defaults
 
 **Merge behaviour:**
 
@@ -106,10 +111,6 @@ servers:
 | stats | persist_dir | string | stats | - | Stats directory path |
 | stats | persist_path | string | stats.jsonl | - | Stats file path |
 | stats | time_overhead_per_call_ms | int | 4000 | ≥0 | Time overhead saved (ms) |
-| ot_llm | base_url | string | "" | - | OpenAI-compatible API base URL |
-| ot_llm | max_tokens | int | null | - | Max output tokens (null=no limit) |
-| ot_llm | model | string | "" | - | Model for transformations |
-| ot_llm | timeout | int | 30 | - | API timeout in seconds |
 | web | max_length | int | 50000 | 1K-500K | Max content characters |
 | web | timeout | float | 30.0 | 1-120 | Page fetch timeout (seconds) |
 
@@ -128,23 +129,22 @@ tools:
 
 ## Secrets Configuration
 
-API keys stored separately in `secrets.yaml` (gitignored):
+API keys stored separately in `secrets.yaml` (gitignored). Pass the path via `--secrets`:
 
-| Location | Purpose | Scope |
-|----------|---------|-------|
-| `.onetool/secrets.yaml` | Project secrets | Project |
-| `~/.onetool/secrets.yaml` | Global secrets | User |
-
-**Resolution:** project → global (pass `--secrets` flag to override)
+```bash
+onetool --config .onetool/onetool.yaml --secrets .onetool/secrets.yaml
+```
 
 ```yaml
-# API keys for tools (values are literal, no ${VAR} expansion)
+# secrets.yaml — values are literal, no ${VAR} expansion
 BRAVE_API_KEY: "your-brave-api-key"
 OPENAI_API_KEY: "sk-..."
 CONTEXT7_API_KEY: "your-context7-key"
 GEMINI_API_KEY: "your-gemini-key"
 DATABASE_URL: "postgresql://user:pass@localhost/db"
 ```
+
+If `--secrets` is omitted, no secrets file is loaded. Tools that require API keys will report a configuration error when called.
 
 ### Accessing Secrets in Tools
 
@@ -155,6 +155,52 @@ api_key = get_secret("BRAVE_API_KEY")
 if not api_key:
     return "Error: BRAVE_API_KEY not configured in secrets.yaml"
 ```
+
+### Encrypting Secrets at Rest
+
+Values in `secrets.yaml` can be encrypted using [age](https://age-encryption.org) encryption. This is **opt-in** — plain files continue to work without any changes. Once set up, decryption is transparent: OneTool decrypts values in memory when secrets are loaded, and your tools see the plaintext as normal.
+
+**Setup (once per machine):**
+
+```python
+# 1. Generate an age X25519 identity and store it in the OS keychain
+>>> ot_secrets.init(label="my-machine")
+
+# 2. Encrypt all plain values in your secrets file
+>>> ot_secrets.encrypt(file="~/.onetool/secrets.yaml")
+```
+
+After encryption, `secrets.yaml` looks like:
+
+```yaml
+# Encrypt values with: >>> ot_secrets.encrypt(file=<this file>)
+BRAVE_API_KEY: "age1enc:YWdlLWVuY3J5cHRpb24ub3JnL3Yx..."
+OPENAI_API_KEY: "age1enc:YWdlLWVuY3J5cHRpb24ub3JnL3Yy..."
+```
+
+The file is safe to inspect — values cannot be recovered without the private key in your OS keychain. Encrypted values are safe to commit to version control if needed.
+
+**How it works:**
+
+- The private key is stored in the OS keychain (macOS Keychain, Windows Credential Locker, GNOME libsecret) — never on disk
+- `age1enc:` values are decrypted in memory automatically when `secrets.yaml` is loaded
+- Plain and encrypted values can coexist in the same file
+- Keychain access is lazy: if no `age1enc:` values are present, the keychain is never touched
+
+**Managing encrypted secrets:**
+
+```python
+# Check identity status and count encrypted/plain values
+>>> ot_secrets.status(file="~/.onetool/secrets.yaml")
+
+# Scan for any unencrypted values (safe to run before committing)
+>>> ot_secrets.audit(file="~/.onetool/secrets.yaml")
+
+# Rotate to a new key (re-encrypts all values)
+>>> ot_secrets.rotate(file="~/.onetool/secrets.yaml")
+```
+
+**Headless / CI environments:** This is a local-dev security feature. CI/CD should continue using environment variables (existing behavior). Plain `secrets.yaml` files are completely unaffected — encryption only triggers when `age1enc:` values are present.
 
 ## External MCP Servers
 
@@ -176,7 +222,16 @@ servers:
     type: stdio
     command: npx
     args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]
+
+  aws:
+    type: stdio
+    command: uvx
+    args: ["awslabs.core-mcp-server@latest"]
+    tool_prefix: "aws_"      # Strip this prefix so aws_knowledge.search() → knowledge.search()
+    inherit_env: true
 ```
+
+**`tool_prefix`:** When set, callers may omit the prefix. For example, with `tool_prefix: "aws_"` you can call `knowledge.search_documentation()` instead of `aws_knowledge.search_documentation()`. Prefix stripping is resolved automatically at call time.
 
 ### HTTP Servers
 
@@ -249,7 +304,7 @@ External snippet files:
 
 ```yaml
 include:
-  - config/snippets.yaml       # Falls back to global
+  - config/snippets.yaml       # Falls back to package default
   - local-snippets.yaml        # Project-specific additions
 
 snippets:
@@ -286,14 +341,15 @@ ot.stats(output="stats_report.html") # HTML report
 
 ## Transform Configuration
 
-Configure the `ot_llm.transform()` tool for LLM-powered text transformations:
+Configure the `ot_llm.transform()` tool for LLM-powered text transformations. Add under `tools:`:
 
 ```yaml
 tools:
   ot_llm:
-    model: "gpt-4o-mini"                    # Model for transformations
-    base_url: "https://api.openai.com/v1"   # OpenAI-compatible API endpoint
-    max_tokens: 4096                        # Max output tokens
+    model: "openai/gpt-5-mini"                  # Model for transformations
+    base_url: "https://openrouter.ai/api/v1"    # OpenAI-compatible API endpoint
+    max_tokens: 4096                            # Max output tokens (optional)
+    timeout: 30                                 # API timeout in seconds
 ```
 
 Requires `OPENAI_API_KEY` in secrets.yaml (or compatible provider key).
@@ -401,7 +457,7 @@ See [Security Model](../../learn/security.md) for full documentation.
 
 ## Environment Variable Expansion
 
-Config values support `${VAR}` and `${VAR:-default}` syntax:
+Config values support `${VAR}` and `${VAR:-default}` syntax. Variables are expanded at runtime from `secrets.yaml`:
 
 ```yaml
 servers:
@@ -446,6 +502,9 @@ security:
   validate_code: true
 
 tools:
+  ot_llm:
+    model: "openai/gpt-5-mini"
+    base_url: "https://openrouter.ai/api/v1"
   brave:
     timeout: 120.0
   context7:

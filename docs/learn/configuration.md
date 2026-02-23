@@ -1,15 +1,15 @@
 # Configuration
 
-OneTool uses YAML configuration files stored in the global directory (`~/.onetool/config/`).
+OneTool uses YAML configuration files. The config file path is always specified explicitly via the `--config` flag.
 
 ## Quick Start
 
 ```bash
-# Initialize global config
-onetool init
+# Initialize config (interactive TUI)
+onetool init -c .onetool
 
 # Validate configuration
-onetool init validate
+onetool init validate -c .onetool/onetool.yaml
 ```
 
 ## Key Files
@@ -17,7 +17,7 @@ onetool init validate
 | File | Purpose |
 |------|---------|
 | `onetool.yaml` | Main configuration (tools, servers, snippets) |
-| `secrets.yaml` | API keys (gitignored) |
+| `secrets.yaml` | API keys (gitignored, passed via `--secrets`) |
 | `bench.yaml` | Benchmark harness config |
 
 ## Security Configuration
@@ -25,11 +25,11 @@ onetool init validate
 OneTool uses an allowlist-based security model. Everything is blocked by
 default; you must explicitly allow what's safe.
 
-Include `security.yaml` in your config (paths resolve from `.onetool/` directory):
+Include `security.yaml` in your config (paths resolve from the directory containing `onetool.yaml`):
 
 ```yaml
 include:
-  - config/security.yaml  # Resolves to ~/.onetool/config/security.yaml
+  - security.yaml  # Resolves from config parent dir, falls back to package default
 ```
 
 Or define inline:
@@ -66,4 +66,3 @@ ot.security(check="pickle.load") # Check qualified call
 
 - **[onetool Configuration](../reference/cli/onetool-config.md)** - Full YAML schema, pack settings, secrets, MCP servers, aliases, snippets, security
 - **[bench Configuration](../reference/cli/bench.md#configuration)** - Benchmark harness settings
-- **[Chrome DevTools Guide](guides/chrome-devtools.md)** - Browser automation, connection modes, and element annotation

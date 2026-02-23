@@ -40,12 +40,30 @@ irm https://astral.sh/uv/install.ps1 | iex
 uv tool install onetool-mcp
 ```
 
-This installs `onetool` and `bench` commands globally.
+This installs `onetool` and `bench` commands globally with the core tool set.
 
-**Optional:** For safe file deletion (moves to trash instead of permanent delete):
+### Optional Tool Packs
+
+Tools are split into optional extras for leaner installs:
+
+| Extra | Tools | Install |
+|-------|-------|---------|
+| `[util]` | `brave`, `convert`, `excel`, `ground` | `uv tool install 'onetool-mcp[util]'` |
+| `[dev]` | `context7`, `db`, `diagram`, `package`, `ripgrep`, `web`, `worktree` | `uv tool install 'onetool-mcp[dev]'` |
+| `[all]` | Everything | `uv tool install 'onetool-mcp[all]'` |
 
 ```bash
-uv tool install onetool-mcp --with send2trash
+# Install with all tools
+uv tool install 'onetool-mcp[all]'
+
+# Install with specific extras
+uv tool install 'onetool-mcp[util,dev]'
+```
+
+**Optional:** For safe file deletion (moves to trash instead of permanent delete), add `send2trash`:
+
+```bash
+uv tool install 'onetool-mcp[all]' --with send2trash
 ```
 
 ## Upgrade
@@ -66,20 +84,7 @@ uv tool upgrade --all
 uv tool uninstall onetool-mcp
 ```
 
-This removes the tool and its isolated environment. **Config is preserved.**
-
-| Location | Preserved on Uninstall? |
-|----------|------------------------|
-| `~/.onetool/` (global config) | Yes |
-| `.onetool/` (project config) | Yes |
-| Tool environment | No (removed) |
-
-To fully reset (including config):
-
-```bash
-uv tool uninstall onetool-mcp
-rm -rf ~/.onetool/  # Optional: remove global config
-```
+This removes the tool and its isolated environment. Any config directories you created are preserved.
 
 ## From Source (Development)
 
@@ -99,7 +104,7 @@ Code changes are picked up immediately. Reinstall only for new entry points, dep
 
 ## API Keys
 
-API keys are stored in `secrets.yaml` (gitignored):
+API keys are stored in `secrets.yaml` (gitignored) and passed to the server via `--secrets`:
 
 | Key | Service | Used By |
 |-----|---------|---------|
@@ -110,13 +115,13 @@ API keys are stored in `secrets.yaml` (gitignored):
 ### Example secrets.yaml
 
 ```yaml
-# .onetool/config/secrets.yaml
+# secrets.yaml
 BRAVE_API_KEY: "BSA..."
 OPENAI_API_KEY: "sk-..."
 CONTEXT7_API_KEY: "c7-..."
 ```
 
-**Resolution order:** `OT_SECRETS_FILE` > `.onetool/config/secrets.yaml` > `~/.onetool/config/secrets.yaml`
+Pass it to the server via `--secrets /path/to/secrets.yaml`. If omitted, no secrets are loaded.
 
 ### Configuration Variables
 
@@ -127,13 +132,13 @@ CONTEXT7_API_KEY: "c7-..."
 
 ### Transform Tool Configuration
 
-The transform tool requires explicit configuration in `onetool.yaml`:
+The transform tool requires explicit configuration in `onetool.yaml` under the top-level `llm:` key:
 
 ```yaml
 tools:
-  transform:
+  ot_llm:
     base_url: "https://openrouter.ai/api/v1"  # Required
-    model: "openai/gpt-5-mini"                 # Required
+    model: "openai/gpt-5-mini"                # Required
 ```
 
 The tool is not available until both `base_url` and `model` are configured, plus `OPENAI_API_KEY` in secrets.
@@ -142,26 +147,24 @@ The tool is not available until both `base_url` and `model` are configured, plus
 
 ### Claude Code
 
-Add to `~/.claude/settings.json`:
+Add to `~/.claude/mcp.json` (or use `claude mcp add`):
 
 ```json
 {
   "mcpServers": {
     "onetool": {
-      "command": "onetool"
+      "command": "onetool",
+      "args": ["--config", "/path/to/.onetool/onetool.yaml", "--secrets", "/path/to/.onetool/secrets.yaml"]
     }
   }
 }
 ```
 
-### Project Setup
+Or using the CLI:
 
-Create a `.onetool/` directory in your project:
-
-| Platform | Global Config | Project Config |
-|----------|--------------|----------------|
-| macOS/Linux | `~/.onetool/` | `.onetool/` |
-| Windows | `%USERPROFILE%\.onetool\` | `.onetool\` |
+```bash
+claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
+```
 
 ## External Tools
 
@@ -184,8 +187,9 @@ winget install BurntSushi.ripgrep.MSVC
 # Check version
 onetool --version
 
-# Start MCP server
-onetool
+# Initialize and validate config
+onetool init -c ~/.onetool
+onetool init validate -c ~/.onetool/onetool.yaml
 
 # Run benchmarks (from source)
 bench run demo/bench/compare.yaml

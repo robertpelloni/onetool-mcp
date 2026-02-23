@@ -29,7 +29,7 @@ tags: [browser, playwright, automation]
 - Use `browser_evaluate` for custom JS execution
 - Use `browser_screenshot` for visual verification when needed
 
-## Options (add to args array in servers.yaml)
+## Options (add to args in servers.yaml)
 
 - `--headless` — Run without visible browser window
 - `--browser=firefox` — Use Firefox or WebKit instead of Chromium
@@ -40,3 +40,5 @@ tags: [browser, playwright, automation]
 - Don't assume elements exist — use `browser_snapshot` first
 - Don't skip snapshots between actions
 - Don't use `browser_screenshot` when `browser_snapshot` (accessibility tree) is sufficient
+
+Full reference: https://onetool.beycom.online/reference/servers/playwright/
