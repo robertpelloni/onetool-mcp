@@ -536,6 +536,9 @@ def serve(
             console.print(f"OneTool not initialized. Run: onetool init --config {config}")
             raise typer.Exit(1)
 
+    # Remove loguru's default stderr handler before any logging occurs
+    import ot.logging  # noqa: F401
+
     # Load config (secrets threaded through load_config)
     from ot.config.loader import get_config
 
