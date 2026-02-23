@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../results/mem-vs-file-20260210/" class="md-tabs__link">
+        <a href="../../../results/mem-vs-file-20260210.md" class="md-tabs__link">
           
   
   
@@ -894,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learn/extending/isolated-tools/" class="md-nav__link">
+      <a href="../../../learn/extending/isolated-tools.md" class="md-nav__link">
         
   
   
@@ -1762,7 +1762,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../scaffold/" class="md-nav__link">
+      <a href="../scaffold.md" class="md-nav__link">
         
   
   
@@ -1917,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../results/mem-vs-file-20260210/" class="md-nav__link">
+      <a href="../../../results/mem-vs-file-20260210.md" class="md-nav__link">
         
   
   
@@ -2245,11 +2245,11 @@
 </thead>
 <tbody>
 <tr>
-<td><code>llm.transform(data, prompt, ...)</code></td>
+<td><code>ot_llm.transform(data, prompt, ...)</code></td>
 <td>Transform data using LLM instructions</td>
 </tr>
 <tr>
-<td><code>llm.transform_file(prompt, in_file, out_file, ...)</code></td>
+<td><code>ot_llm.transform_file(prompt, in_file, out_file, ...)</code></td>
 <td>Transform file content and write to output</td>
 </tr>
 </tbody>
@@ -2287,7 +2287,7 @@
 <tr>
 <td><code>model</code></td>
 <td>str</td>
-<td>AI model to use (uses <code>transform.model</code> from config)</td>
+<td>AI model to use (uses <code>ot_llm.model</code> from config)</td>
 </tr>
 <tr>
 <td><code>json_mode</code></td>
@@ -2299,36 +2299,36 @@
 <h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
 <p>Configuration (tool not available until all are set):
 - <code>OPENAI_API_KEY</code> in secrets.yaml
-- <code>transform.base_url</code> in onetool.yaml (e.g., <code>https://openrouter.ai/api/v1</code>)
-- <code>transform.model</code> in onetool.yaml (e.g., <code>openai/gpt-5-mini</code>)</p>
+- <code>ot_llm.base_url</code> in onetool.yaml (e.g., <code>https://openrouter.ai/api/v1</code>)
+- <code>ot_llm.model</code> in onetool.yaml (e.g., <code>openai/gpt-5-mini</code>)</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Extract structured data from search results</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">ot_llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">data</span><span class="o">=</span><span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;gold price today&quot;</span><span class="p">),</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Extract the current gold price in USD/oz as a single number&quot;</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">)</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Convert to YAML format</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">ot_llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">data</span><span class="o">=</span><span class="n">some_data</span><span class="p">,</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Return ONLY valid YAML with fields: name, price, url&quot;</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># Summarize content</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">ot_llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">data</span><span class="o">=</span><span class="n">web</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://example.com/article&quot;</span><span class="p">),</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Summarize the main points in 3 bullet points&quot;</span>
 </span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="p">)</span>
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="c1"># Get JSON output with json_mode</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="n">ot_llm</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>    <span class="n">data</span><span class="o">=</span><span class="n">raw_data</span><span class="p">,</span>
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Extract name and email fields&quot;</span><span class="p">,</span>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>    <span class="n">json_mode</span><span class="o">=</span><span class="kc">True</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="p">)</span>
 </span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="c1"># Transform a file</span>
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="n">llm</span><span class="o">.</span><span class="n">transform_file</span><span class="p">(</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="n">ot_llm</span><span class="o">.</span><span class="n">transform_file</span><span class="p">(</span>
 </span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Convert this markdown to reStructuredText format&quot;</span><span class="p">,</span>
 </span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>    <span class="n">in_file</span><span class="o">=</span><span class="s2">&quot;README.md&quot;</span><span class="p">,</span>
 </span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    <span class="n">out_file</span><span class="o">=</span><span class="s2">&quot;README.rst&quot;</span>
@@ -2337,7 +2337,7 @@
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <p>Add to <code>onetool.yaml</code>:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">transform</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://openrouter.ai/api/v1</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-5-mini</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">        </span><span class="c1"># API timeout in seconds (default: 30)</span>

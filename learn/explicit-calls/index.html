@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../results/mem-vs-file-20260210/" class="md-tabs__link">
+        <a href="../../results/mem-vs-file-20260210.md" class="md-tabs__link">
           
   
   
@@ -699,10 +699,49 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#trigger-prefixes" class="md-nav__link">
+  <a href="#two-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger Prefixes
+        Two Modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-1-snippets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 1: Snippets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-2-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 2: Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trigger-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trigger Hierarchy
       
     </span>
   </a>
@@ -722,10 +761,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-simple-call" class="md-nav__link">
+  <a href="#simple-call" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Simple Call
+        Simple Call
       
     </span>
   </a>
@@ -733,21 +772,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-inline-backticks" class="md-nav__link">
+  <a href="#code-fence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Inline Backticks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-code-fence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Code Fence
+        Code Fence
       
     </span>
   </a>
@@ -1063,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../extending/isolated-tools/" class="md-nav__link">
+      <a href="../extending/isolated-tools.md" class="md-nav__link">
         
   
   
@@ -1805,7 +1833,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/scaffold/" class="md-nav__link">
+      <a href="../../reference/tools/scaffold.md" class="md-nav__link">
         
   
   
@@ -1960,7 +1988,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../results/mem-vs-file-20260210/" class="md-nav__link">
+      <a href="../../results/mem-vs-file-20260210.md" class="md-nav__link">
         
   
   
@@ -2119,10 +2147,49 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#trigger-prefixes" class="md-nav__link">
+  <a href="#two-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Trigger Prefixes
+        Two Modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Two Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-1-snippets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 1: Snippets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-2-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 2: Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trigger-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trigger Hierarchy
       
     </span>
   </a>
@@ -2142,10 +2209,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-simple-call" class="md-nav__link">
+  <a href="#simple-call" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Simple Call
+        Simple Call
       
     </span>
   </a>
@@ -2153,21 +2220,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-inline-backticks" class="md-nav__link">
+  <a href="#code-fence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Inline Backticks
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-code-fence" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Code Fence
+        Code Fence
       
     </span>
   </a>
@@ -2298,95 +2354,97 @@
 
 
 <h1 id="explicit-tool-calls">Explicit Tool Calls<a class="headerlink" href="#explicit-tool-calls" title="Permanent link">&para;</a></h1>
-<p>OneTool's <code>__ot</code> prefix gives you explicit control over tool invocation. You write the code - the agent doesn't have to guess which tool or which parameters.</p>
-<h2 id="trigger-prefixes">Trigger Prefixes<a class="headerlink" href="#trigger-prefixes" title="Permanent link">&para;</a></h2>
-<p>OneTool supports five trigger prefixes. All prefixes support the same three invocation styles.</p>
+<p>OneTool's <code>&gt;&gt;&gt;</code> prefix gives you explicit control over tool invocation. You write the code — the agent doesn't have to guess which tool or which parameters.</p>
+<h2 id="two-modes">Two Modes<a class="headerlink" href="#two-modes" title="Permanent link">&para;</a></h2>
+<h3 id="mode-1-snippets">Mode 1: Snippets<a class="headerlink" href="#mode-1-snippets" title="Permanent link">&para;</a></h3>
+<p>Jinja2 templates invoked with <code>$name</code>. Values are plain strings; Python syntax does not apply.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&gt;&gt;&gt; $g q=latest AI tools
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>&gt;&gt;&gt; $pkg_npm packages=react lodash
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>&gt;&gt;&gt; $g q=&quot;AI news&quot;
+</span></code></pre></div>
+<ul>
+<li>Quotes are optional and stripped (<code>q=abc</code> ≡ <code>q="abc"</code>)</li>
+<li>Param names support prefix abbreviation (<code>q</code> resolves to <code>query</code> if defined)</li>
+<li>Per-template features (e.g. pipe batch) are not snippet language features</li>
+</ul>
+<h3 id="mode-2-code">Mode 2: Code<a class="headerlink" href="#mode-2-code" title="Permanent link">&para;</a></h3>
+<p>Python executed directly against the tool namespace.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>&gt;&gt;&gt; brave.search(q=&quot;AI news&quot;)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>&gt;&gt;&gt; x = sha256(text=&quot;hello&quot;); x
+</span></code></pre></div>
+<ul>
+<li>Python syntax applies: strings must be quoted</li>
+<li>Short param names work: <code>q</code> resolves to <code>query</code> (pack proxy prefix resolution)</li>
+<li>Keyword arguments only: <code>fn(key="val")</code> not <code>fn("val")</code></li>
+</ul>
+<h2 id="trigger-hierarchy">Trigger Hierarchy<a class="headerlink" href="#trigger-hierarchy" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
 <th>Prefix</th>
-<th>Description</th>
-<th>Recommended</th>
+<th>Role</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>__onetool__run</code></td>
-<td>Full name, explicit tool call</td>
-<td>Yes</td>
+<td><code>&gt;&gt;&gt;</code></td>
+<td>Recommended; Python REPL symbol</td>
 </tr>
 <tr>
-<td><code>__ot</code></td>
-<td>Short form</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td><code>__onetool</code></td>
-<td>Full name, default tool</td>
-<td></td>
-</tr>
-<tr>
-<td><code>__ot__run</code></td>
-<td>Short name, explicit tool call</td>
-<td></td>
+<td><code>__run</code></td>
+<td>Systematic short form (<code>__(tool)</code>)</td>
 </tr>
 <tr>
 <td><code>mcp__onetool__run</code></td>
-<td>Explicit MCP call</td>
-<td></td>
+<td>Canonical MCP name</td>
+</tr>
+<tr>
+<td><code>__ot</code>, <code>__onetool</code></td>
+<td>Legacy; kept for backward compat</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Recommended:</strong> Use <code>__onetool__run</code> for clarity or <code>__ot</code> for brevity.</p>
 <p><strong>Note:</strong> <code>mcp__ot__run</code> is NOT a valid prefix.</p>
 <h2 id="invocation-styles">Invocation Styles<a class="headerlink" href="#invocation-styles" title="Permanent link">&para;</a></h2>
-<p>Each prefix supports three ways to pass code:</p>
-<h3 id="1-simple-call">1. Simple Call<a class="headerlink" href="#1-simple-call" title="Permanent link">&para;</a></h3>
+<h3 id="simple-call">Simple Call<a class="headerlink" href="#simple-call" title="Permanent link">&para;</a></h3>
 <p>Direct function call after the prefix:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>__ot sha256(text=&quot;hello&quot;)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>__onetool__run multiply(a=8472, b=9384)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>&gt;&gt;&gt; sha256(text=&quot;hello&quot;)
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>&gt;&gt;&gt; multiply(a=8472, b=9384)
 </span></code></pre></div>
-<h3 id="2-inline-backticks">2. Inline Backticks<a class="headerlink" href="#2-inline-backticks" title="Permanent link">&para;</a></h3>
-<p>Code wrapped in backticks:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>__ot `sha256(text=&quot;hello&quot;)`
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>__onetool__run `multiply(a=8472, b=9384)`
-</span></code></pre></div>
-<h3 id="3-code-fence">3. Code Fence<a class="headerlink" href="#3-code-fence" title="Permanent link">&para;</a></h3>
+<h3 id="code-fence">Code Fence<a class="headerlink" href="#code-fence" title="Permanent link">&para;</a></h3>
 <p>Multi-line code in a fenced block:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>__onetool__run
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>```python
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>metals = [&quot;Gold&quot;, &quot;Silver&quot;]
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>results = {}
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>for metal in metals:
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    results[metal] = brave.web_search(query=f&quot;{metal} price&quot;)
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>results
+<p><div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>&gt;&gt;&gt;
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>```python
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>metals = [&quot;Gold&quot;, &quot;Silver&quot;]
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>results = {}
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>for metal in metals:
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    results[metal] = brave.web_search(query=f&quot;{metal} price&quot;)
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>results
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>## Direct MCP Call
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>For programmatic or explicit MCP invocation:
-</span></code></pre></div>
-<p>mcp__onetool__run(command='sha256(text="hello")')</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>## Complete Examples
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>## Direct MCP Call
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>### Simple Hash Computation
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>For programmatic or explicit MCP invocation:
 </span></code></pre></div>
-<p>__ot sha256(text="hello world")</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>### Multi-step Computation with Variables
+mcp__onetool__run(command='sha256(text="hello")')
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>## Complete Examples
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>### Simple Hash Computation
+</span></code></pre></div></p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>sha256(text="hello world")
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>### Multi-step Computation with Variables
+</span></code></pre></div></p>
+<p><div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Hello World&quot;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">sha256</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span>
 </span></code></pre></div>
-<p>__onetool__run</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Hello World&quot;</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">sha256</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>### Loop with Multiple Tool Calls
+</span></code></pre></div></p>
+<p><div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">primes</span> <span class="o">=</span> <span class="p">[</span><span class="n">is_prime</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">21</span><span class="p">)]</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">primes</span>
 </span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>### Loop with Multiple Tool Calls
-</span></code></pre></div>
-<p>__ot</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">primes</span> <span class="o">=</span> <span class="p">[</span><span class="n">is_prime</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">21</span><span class="p">)]</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">primes</span>
-</span></code></pre></div>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>### Chained Operations
-</span></code></pre></div>
-<p>__ot__run <code>upper(text=reverse(text="hello"))</code></p>
-<p><div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>---
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>---
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>## Prompt Engineering for Tool Calls
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
@@ -2395,18 +2453,21 @@
 </span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>Add context before the tool call to guide the agent:
 </span></code></pre></div>
 Calculate the SHA-256 hash of the following text:
-__onetool__run sha256(text="hello world")
+sha256(text="hello world")
 <div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>### Post-Call Processing
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Request specific formatting or analysis after the tool result:
 </span></code></pre></div>
-__onetool__run brave.web_search(query="latest AI news", count=5)</p>
+brave.web_search(query="latest AI news", count=5)</p>
+</blockquote>
+</blockquote>
+</blockquote>
 <p>Summarise the top 3 results in bullet points.
 <div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>### Structured Output Requests
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Combine tool execution with output formatting:
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    __onetool__run
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    &gt;&gt;&gt;
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    ```python
 </span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    results = {
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        &quot;hash&quot;: sha256(text=&quot;hello&quot;),

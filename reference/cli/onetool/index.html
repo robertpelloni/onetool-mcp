@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../results/mem-vs-file-20260210/" class="md-tabs__link">
+        <a href="../../../results/mem-vs-file-20260210.md" class="md-tabs__link">
           
   
   
@@ -894,7 +894,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../learn/extending/isolated-tools/" class="md-nav__link">
+      <a href="../../../learn/extending/isolated-tools.md" class="md-nav__link">
         
   
   
@@ -1212,17 +1212,6 @@
     <span class="md-ellipsis">
       
         init validate
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#init-reset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        init reset
       
     </span>
   </a>
@@ -1857,7 +1846,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/scaffold/" class="md-nav__link">
+      <a href="../../tools/scaffold.md" class="md-nav__link">
         
   
   
@@ -2012,7 +2001,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../results/mem-vs-file-20260210/" class="md-nav__link">
+      <a href="../../../results/mem-vs-file-20260210.md" class="md-nav__link">
         
   
   
@@ -2238,17 +2227,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#init-reset" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        init reset
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2446,7 +2424,7 @@
 <p>Initialize and manage global configuration in <code>~/.onetool/</code>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>onetool<span class="w"> </span>init<span class="w"> </span><span class="o">[</span>subcommand<span class="o">]</span>
 </span></code></pre></div>
-<p>Running <code>onetool init</code> without a subcommand creates the global config directory.</p>
+<p>Running <code>onetool init</code> without a subcommand runs an interactive TUI to select which extensions to materialise. Existing files are backed up to <code>.bak</code> automatically.</p>
 <table>
 <thead>
 <tr>
@@ -2459,37 +2437,31 @@
 <td><code>validate</code></td>
 <td>Validate config and show status</td>
 </tr>
-<tr>
-<td><code>reset</code></td>
-<td>Reset global config to default templates</td>
-</tr>
 </tbody>
 </table>
 <h4 id="init-default">init (default)<a class="headerlink" href="#init-default" title="Permanent link">&para;</a></h4>
-<p>Creates the global config directory and copies template files if they don't already exist.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init
+<p>Interactive setup — select which extensions to materialise into the config directory. Pass <code>-c</code> to specify a directory or config file path.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init<span class="w">                     </span><span class="c1"># uses current directory</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool<span class="w">         </span><span class="c1"># explicit directory</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool/ot.yaml<span class="w"> </span><span class="c1"># explicit file path</span>
 </span></code></pre></div>
 <h4 id="init-validate">init validate<a class="headerlink" href="#init-validate" title="Permanent link">&para;</a></h4>
 <p>Validates configuration files and displays status including packs, secrets (names only), snippets, aliases, and MCP servers.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate
-</span></code></pre></div>
-<h4 id="init-reset">init reset<a class="headerlink" href="#init-reset" title="Permanent link">&para;</a></h4>
-<p>Resets config files in <code>~/.onetool/</code> to fresh templates. Prompts for each existing file before overwriting, with option to create backups. Backups are named <code>file.bak</code>, <code>file.bak.1</code>, <code>file.bak.2</code>, etc.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>reset
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>.onetool/onetool.yaml
 </span></code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Start MCP server (stdio)</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>onetool
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Use specific config</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>onetool<span class="w"> </span>--config<span class="w"> </span>config/onetool.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Start MCP server (stdio)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>onetool
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Use specific config</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>onetool<span class="w"> </span>--config<span class="w"> </span>config/onetool.yaml
 </span></code></pre></div>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>Configuration files: <code>.onetool/config/onetool.yaml</code> (project) or <code>~/.onetool/config/onetool.yaml</code> (global)</p>
+<p>Configuration files: <code>.onetool/onetool.yaml</code> (project) or <code>~/.onetool/onetool.yaml</code> (global)</p>
 <p>See <a href="../onetool-config/">onetool Configuration</a> for full schema reference.</p>
 <h3 id="quick-setup">Quick Setup<a class="headerlink" href="#quick-setup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>onetool<span class="w"> </span>init<span class="w">           </span><span class="c1"># Create ~/.onetool/ with defaults</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w">  </span><span class="c1"># Check for errors</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>onetool<span class="w"> </span>init<span class="w">           </span><span class="c1"># Interactive TUI setup</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w">  </span><span class="c1"># Check for errors</span>
 </span></code></pre></div>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
 <table>
@@ -2500,10 +2472,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>ONETOOL_CONFIG</code></td>
-<td>Config file path override</td>
-</tr>
 <tr>
 <td><code>OT_LOG_LEVEL</code></td>
 <td>Log level (DEBUG/INFO/WARNING/ERROR)</td>
@@ -2516,14 +2484,14 @@
 </table>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Loads tools from <code>src/ot_tools/</code> via AST-based discovery</li>
+<li>Loads tools from <code>src/ottools/</code> via AST-based discovery</li>
 <li>Exposes a single <code>run</code> tool that executes Python code</li>
 <li>Communicates via stdio using the MCP protocol</li>
 </ol>
 <h2 id="tool-discovery">Tool Discovery<a class="headerlink" href="#tool-discovery" title="Permanent link">&para;</a></h2>
 <p>Tools are discovered statically from <code>tools_dir</code> patterns in config:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">tools_dir</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ot_tools/*.py</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">tools_dir</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ottools/*.py</span>
 </span></code></pre></div>
 <p>Benefits:
 - No code execution during discovery

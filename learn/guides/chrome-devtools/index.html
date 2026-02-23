@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../../results/mem-vs-file-20260210/" class="md-tabs__link">
+        <a href="../../../results/mem-vs-file-20260210.md" class="md-tabs__link">
           
   
   
@@ -1314,7 +1314,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../extending/isolated-tools/" class="md-nav__link">
+      <a href="../../extending/isolated-tools.md" class="md-nav__link">
         
   
   
@@ -2056,7 +2056,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../reference/tools/scaffold/" class="md-nav__link">
+      <a href="../../../reference/tools/scaffold.md" class="md-nav__link">
         
   
   
@@ -2211,7 +2211,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../results/mem-vs-file-20260210/" class="md-nav__link">
+      <a href="../../../results/mem-vs-file-20260210.md" class="md-nav__link">
         
   
   
@@ -2826,8 +2826,8 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">devtools</span><span class="o">.</span><span class="n">take_screenshot</span><span class="p">()</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># 3. Highlight an element</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;h1&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Main heading&quot;</span><span class="p">)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;h1&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Main heading&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>That's it. The DevTools MCP server is pre-configured in OneTool's <code>servers.yaml</code> template.</p>
 <h2 id="concepts">Concepts<a class="headerlink" href="#concepts" title="Permanent link">&para;</a></h2>
@@ -2872,7 +2872,7 @@
 </tr>
 <tr>
 <td>Element annotation</td>
-<td><code>devtools_util</code> pack</td>
+<td><code>chrome_devtools_util</code> pack</td>
 <td><code>playwright_util</code> pack</td>
 </tr>
 </tbody>
@@ -2990,7 +2990,7 @@
 <h2 id="element-highlighting">Element Highlighting<a class="headerlink" href="#element-highlighting" title="Permanent link">&para;</a></h2>
 <p>OneTool includes inject.js v2.0, a visual annotation system that overlays labels and coloured borders on page elements. Two independent tool packs provide Python access:</p>
 <ul>
-<li><strong><code>devtools_util</code></strong> — for the Chrome DevTools MCP server</li>
+<li><strong><code>chrome_devtools_util</code></strong> — for the Chrome DevTools MCP server</li>
 <li><strong><code>playwright_util</code></strong> — for the Playwright MCP server</li>
 </ul>
 <div class="admonition important">
@@ -2999,18 +2999,18 @@
 </div>
 <h3 id="injection">Injection<a class="headerlink" href="#injection" title="Permanent link">&para;</a></h3>
 <p>Before highlighting, inject the annotation script into the page:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;ready&quot;: True, &quot;version&quot;: &quot;2.0.0&quot;}</span>
 </span></code></pre></div>
 <p>This is idempotent — calling it again on an already-injected page returns success without re-injecting.</p>
 <h3 id="programmatic-highlighting-claude-to-user">Programmatic Highlighting (Claude-to-User)<a class="headerlink" href="#programmatic-highlighting-claude-to-user" title="Permanent link">&para;</a></h3>
 <p>Highlight elements to show the user what to interact with:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Highlight a button</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;button.submit&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Click here&quot;</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;button.submit&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Click here&quot;</span><span class="p">)</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Use colour to indicate meaning</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Error field&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.success&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Done&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Error field&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.success&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Done&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;green&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Available colours: <code>orange</code> (default), <code>red</code>, <code>blue</code>, <code>green</code>.</p>
 <h3 id="manual-annotation-user-to-claude">Manual Annotation (User-to-Claude)<a class="headerlink" href="#manual-annotation-user-to-claude" title="Permanent link">&para;</a></h3>
@@ -3021,17 +3021,17 @@
 <li>Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-i">I</kbd></span> again to exit selection mode</li>
 </ol>
 <p>Claude can then read what the user selected:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">devtools_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Returns: [{&quot;id&quot;: &quot;sel-1&quot;, &quot;label&quot;: &quot;button&quot;, &quot;selector&quot;: &quot;.submit-btn&quot;, ...}]</span>
 </span></code></pre></div>
 <h3 id="clearing-annotations">Clearing Annotations<a class="headerlink" href="#clearing-annotations" title="Permanent link">&para;</a></h3>
 <p>Remove all annotations when done:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;cleared&quot;: 3}</span>
 </span></code></pre></div>
 <h3 id="guided-workflows">Guided Workflows<a class="headerlink" href="#guided-workflows" title="Permanent link">&para;</a></h3>
 <p>Highlight multiple elements at once to walk the user through a task:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
 </span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Complete checkout&quot;</span><span class="p">,</span>
 </span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
 </span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;email&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Enter email&quot;</span><span class="p">},</span>
@@ -3072,7 +3072,7 @@
 </tr>
 </tbody>
 </table>
-<p>For Chrome DevTools, use <code>devtools_util.*</code>. For Playwright, use <code>playwright_util.*</code>.</p>
+<p>For Chrome DevTools, use <code>chrome_devtools_util.*</code>. For Playwright, use <code>playwright_util.*</code>.</p>
 <h2 id="common-tasks">Common Tasks<a class="headerlink" href="#common-tasks" title="Permanent link">&para;</a></h2>
 <h3 id="1-fill-a-form">1. Fill a Form<a class="headerlink" href="#1-fill-a-form" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Automate form submission on a web page.</p>
@@ -3119,8 +3119,8 @@
 <h3 id="5-guide-a-user-through-a-workflow">5. Guide a User Through a Workflow<a class="headerlink" href="#5-guide-a-user-through-a-workflow" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Visually walk the user through a multi-step process.</p>
 <p><strong>Prerequisites:</strong> inject.js loaded on the page.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
 </span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Update profile&quot;</span><span class="p">,</span>
 </span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
 </span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;a[href=&#39;/settings&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Open Settings&quot;</span><span class="p">},</span>
@@ -3171,7 +3171,7 @@
 <h3 id="highlights-not-showing">Highlights not showing<a class="headerlink" href="#highlights-not-showing" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom:</strong> <code>highlight_element</code> returns success but no visual overlay.</p>
 <p><strong>Diagnostic:</strong>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">devtools_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">chrome_devtools_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
 </span></code></pre></div></p>
 <p><strong>Solutions:</strong></p>
 <ul>
@@ -3206,10 +3206,10 @@
 <p>Use <code>devtools.handle_dialog(action="accept")</code> or <code>action="dismiss"</code>. Set this up before triggering the dialog.</p>
 <p><strong>Q: Can I upload files?</strong></p>
 <p>Yes. Use <code>devtools.upload_file(selector="input[type='file']", paths=["/path/to/file.pdf"])</code>.</p>
-<p><strong>Q: What's the difference between <code>devtools_util</code> and <code>playwright_util</code>?</strong></p>
-<p>They provide the same 5 annotation functions but target different MCP servers. <code>devtools_util</code> uses Chrome DevTools (<code>devtools.evaluate_script</code>), <code>playwright_util</code> uses Playwright (<code>playwright.evaluate</code>). They are completely independent — there is no fallback between them. Use whichever matches your connected server.</p>
+<p><strong>Q: What's the difference between <code>chrome_devtools_util</code> and <code>playwright_util</code>?</strong></p>
+<p>They provide the same 5 annotation functions but target different MCP servers. <code>chrome_devtools_util</code> uses Chrome DevTools (<code>chrome-devtools.evaluate_script</code>), <code>playwright_util</code> uses Playwright (<code>playwright.evaluate</code>). They are completely independent — there is no fallback between them. Use whichever matches your connected server.</p>
 <p><strong>Q: Can I use both DevTools and Playwright at the same time?</strong></p>
-<p>Yes, if both servers are configured and connected. They control separate browser instances. Use <code>devtools_util.*</code> for the DevTools browser and <code>playwright_util.*</code> for the Playwright browser.</p>
+<p>Yes, if both servers are configured and connected. They control separate browser instances. Use <code>chrome_devtools_util.*</code> for the DevTools browser and <code>playwright_util.*</code> for the Playwright browser.</p>
 <p><strong>Q: How do I resize the browser window?</strong></p>
 <p>Use <code>devtools.resize_page(width=1920, height=1080)</code>. The default is set by <code>--viewport</code> in servers.yaml (1280x720).</p>
 
