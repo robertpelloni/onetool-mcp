@@ -183,27 +183,34 @@ def _materialise_file(ot_dir: Path, filename: str) -> bool:
     return True
 
 
-def _materialise_skills(ot_dir: Path) -> bool:
-    """Materialise skills/ directory from package templates. Returns True if success."""
+def _materialise_diagram(ot_dir: Path) -> bool:
+    """Materialise diagram.yaml and diagram-templates/ directory. Returns True if success."""
     import shutil
 
     from ot.paths import get_global_templates_dir
 
     templates_dir = get_global_templates_dir()
-    src_skills = templates_dir / "skills"
-    if not src_skills.exists():
-        console.print("  [red]✗[/red] skills/ not found in package templates")
+    src_yaml = templates_dir / "diagram.yaml"
+    if not src_yaml.exists():
+        console.print("  [red]✗[/red] diagram.yaml not found in package templates")
         return False
 
-    dest_skills = ot_dir / "skills"
-    if dest_skills.exists():
-        bak = _next_bak(dest_skills)
-        dest_skills.rename(bak)
-        console.print(f"  [yellow]![/yellow]  skills/ exists → backed up as {bak.name}")
+    dest_yaml = ot_dir / "diagram.yaml"
+    _safe_copy(src_yaml, dest_yaml)
+    console.print("  [green]✓[/green] diagram.yaml")
 
-    shutil.copytree(src_skills, dest_skills, ignore=shutil.ignore_patterns("__pycache__", "*.py"))
-    console.print("  [green]✓[/green] skills/")
+    src_templates = templates_dir / "diagram-templates"
+    if src_templates.exists():
+        dest_templates = ot_dir / "diagram-templates"
+        if dest_templates.exists():
+            bak = _next_bak(dest_templates)
+            dest_templates.rename(bak)
+            console.print(f"  [yellow]![/yellow]  diagram-templates/ exists → backed up as {bak.name}")
+        shutil.copytree(src_templates, dest_templates)
+        console.print("  [green]✓[/green] diagram-templates/")
+
     return True
+
 
 
 @init_app.callback()
@@ -241,37 +248,50 @@ def init_callback(
         ot_dir = Path()
         config_path = ot_dir / "onetool.yaml"
 
-    ot_dir.mkdir(parents=True, exist_ok=True)
-
     includes: list[str] = []
 
     if _stdin_is_tty():
         import questionary
 
-        console.print(f"Setting up OneTool config at [bold]{ot_dir}/[/bold]\n")
-        choices = [
-            questionary.Choice("prompts.yaml   - prompt templates", value="prompts.yaml"),
-            questionary.Choice("servers.yaml   - MCP proxy server configs", value="servers.yaml"),
-            questionary.Choice("security.yaml  - custom security rules", value="security.yaml"),
-            questionary.Choice("diagram.yaml   - diagram tool config", value="diagram.yaml"),
-            questionary.Choice("snippets.yaml  - code snippets", value="snippets.yaml"),
-            questionary.Choice("worktree.yaml  - git worktree config", value="worktree.yaml"),
-            questionary.Choice("skills/        - agent skill stubs", value="skills"),
+        from ot._tui import ask_checkbox, ask_text_sync
+
+        confirmed = ask_text_sync("Config file", default=str(config_path))
+        if confirmed is None:
+            console.print("[dim]Cancelled.[/dim]")
+            raise typer.Exit(0)
+        config_path = Path(confirmed)
+        ot_dir = config_path.parent
+
+        console.print(f"\nSetting up OneTool config at [bold]{ot_dir}/[/bold]\n")
+        _exts = [
+            ("prompts.yaml",  "prompt templates"),
+            ("servers.yaml",  "MCP proxy server configs"),
+            ("security.yaml", "custom security rules"),
+            ("diagram.yaml",  "diagram tool config"),
+            ("snippets.yaml", "code snippets"),
+            ("worktree.yaml", "git worktree config"),
         ]
-        selected_ext = questionary.checkbox(
-            "Which extensions to materialise? (space to toggle, enter to confirm)",
-            choices=choices,
-        ).ask()
+        choices = [
+            questionary.Choice(
+                f"{v:<14}  {desc}",
+                value=v,
+            )
+            for v, desc in _exts
+        ]
+        selected_ext = ask_checkbox("Which extensions to materialise?", choices)
 
         if selected_ext is None:
-            # User cancelled (Ctrl+C)
-            raise typer.Exit(1)
+            console.print("[dim]Cancelled.[/dim]")
+            raise typer.Exit(0)
+
+        ot_dir.mkdir(parents=True, exist_ok=True)
 
         if selected_ext:
             console.print(f"\nMaterialising into {ot_dir}/")
             for ext in selected_ext:
-                if ext == "skills":
-                    _materialise_skills(ot_dir)
+                if ext == "diagram.yaml":
+                    if _materialise_diagram(ot_dir):
+                        includes.append(ext)
                 elif _materialise_file(ot_dir, ext):
                     includes.append(ext)
 
@@ -282,6 +302,7 @@ def init_callback(
         return
 
     # Non-interactive: write minimal onetool.yaml
+    ot_dir.mkdir(parents=True, exist_ok=True)
     _write_onetool_yaml(config_path, includes)
     console.print(f"\n[green]✓[/green] {config_path} written")
 
