@@ -278,7 +278,7 @@ Short names for common tool functions:
 
 ```yaml
 alias:
-  ws: brave.web_search
+  ws: brave.search
   ns: brave.news
   wf: web.fetch
 ```
@@ -296,7 +296,7 @@ snippets:
     body: |
       results = []
       for q in {{ queries }}:
-          results.append(brave.web_search(query=q))
+          results.append(brave.search(query=q))
       "\n---\n".join(results)
 ```
 

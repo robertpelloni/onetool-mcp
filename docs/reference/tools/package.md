@@ -13,6 +13,7 @@ Check latest versions for npm, PyPI packages and search OpenRouter AI models.
 
 | Function | Description |
 |----------|-------------|
+| `package.audit(packages, registry)` | Security audit for npm or PyPI packages |
 | `package.npm(packages)` | Check latest npm package versions |
 | `package.pypi(packages)` | Check latest PyPI package versions |
 | `package.models(query, provider, limit)` | Search OpenRouter AI models |

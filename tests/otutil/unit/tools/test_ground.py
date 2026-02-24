@@ -435,29 +435,34 @@ class TestEmptyQueryValidation:
     """Test empty query validation across all search functions."""
 
     def test_search_rejects_empty_query(self):
-        """search() should raise ValueError for empty query."""
-        with pytest.raises(ValueError, match="query cannot be empty"):
-            search(query="")
+        """search() should return error string for empty query."""
+        result = search(query="")
+        assert "Error" in result
+        assert "query cannot be empty" in result
 
     def test_search_rejects_whitespace_query(self):
-        """search() should raise ValueError for whitespace-only query."""
-        with pytest.raises(ValueError, match="query cannot be empty"):
-            search(query="   ")
+        """search() should return error string for whitespace-only query."""
+        result = search(query="   ")
+        assert "Error" in result
+        assert "query cannot be empty" in result
 
     def test_dev_rejects_empty_query(self):
-        """dev() should raise ValueError for empty query."""
-        with pytest.raises(ValueError, match="query cannot be empty"):
-            dev(query="")
+        """dev() should return error string for empty query."""
+        result = dev(query="")
+        assert "Error" in result
+        assert "query cannot be empty" in result
 
     def test_docs_rejects_empty_query(self):
-        """docs() should raise ValueError for empty query."""
-        with pytest.raises(ValueError, match="query cannot be empty"):
-            docs(query="")
+        """docs() should return error string for empty query."""
+        result = docs(query="")
+        assert "Error" in result
+        assert "query cannot be empty" in result
 
     def test_reddit_rejects_empty_query(self):
-        """reddit() should raise ValueError for empty query."""
-        with pytest.raises(ValueError, match="query cannot be empty"):
-            reddit(query="")
+        """reddit() should return error string for empty query."""
+        result = reddit(query="")
+        assert "Error" in result
+        assert "query cannot be empty" in result
 
 
 @pytest.mark.unit
@@ -466,9 +471,10 @@ class TestEmptyBatchValidation:
     """Test empty batch validation for search_batch."""
 
     def test_search_batch_rejects_empty_list(self):
-        """search_batch() should raise ValueError for empty queries list."""
-        with pytest.raises(ValueError, match="queries list cannot be empty"):
-            search_batch(queries=[])
+        """search_batch() should return error string for empty queries list."""
+        result = search_batch(queries=[])
+        assert "Error" in result
+        assert "queries list cannot be empty" in result
 
 
 # -----------------------------------------------------------------------------

@@ -350,7 +350,8 @@ def search(
             or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
 
     Returns:
-        YAML flow style search results or error message
+        Formatted search results as numbered list with titles, URLs, and
+        descriptions, or error message
 
     Example:
         # Basic search

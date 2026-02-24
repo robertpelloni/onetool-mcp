@@ -31,8 +31,7 @@ Database introspection and query execution via SQLAlchemy. Supports any SQLAlche
 ## Examples
 
 ```python
-# Get database URL from project config
-db_url = proj.attr("myproject", "db_url")
+db_url = "postgresql://localhost/myapp"
 
 # List all tables
 db.tables(db_url=db_url)

@@ -149,9 +149,7 @@ convert.auto(pattern="input/**/*", output_dir="output")
 | PDF        | `.pdf`    | PyMuPDF      | included                |
 | Word       | `.docx`   | python-docx  | included                |
 | PowerPoint | `.pptx`   | python-pptx  | included                |
-| Excel      | `.xlsx`   | openpyxl     | `pip install openpyxl`  |
-
-Excel conversion requires the `openpyxl` package. Install it before using `convert.excel()`.
+| Excel      | `.xlsx`   | openpyxl     | included                |
 
 For formula evaluation with `compute_formulas=True`, install the optional `formulas` package: `pip install formulas`
 

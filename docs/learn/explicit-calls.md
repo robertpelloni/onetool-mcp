@@ -63,7 +63,7 @@ Multi-line code in a fenced block:
 metals = ["Gold", "Silver"]
 results = {}
 for metal in metals:
-    results[metal] = brave.web_search(query=f"{metal} price")
+    results[metal] = brave.search(query=f"{metal} price")
 results
 ```
 ````
@@ -122,7 +122,7 @@ Process the following text:
 Request specific formatting or analysis after the tool result:
 
 ```
->>> brave.web_search(query="latest AI news", count=5)
+>>> brave.search(query="latest AI news", count=5)
 
 Summarise the top 3 results in bullet points.
 ```

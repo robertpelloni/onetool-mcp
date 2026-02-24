@@ -20,7 +20,7 @@ The fundamental security mechanism: **you see what runs**.
 
 ```python
 # The agent generates this code - you see it before execution
->>> brave.web_search(query="AI security best practices")
+>>> brave.search(query="AI security best practices")
 ```
 
 Unlike hidden tool calls, OneTool's explicit execution means:

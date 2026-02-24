@@ -48,8 +48,8 @@ Tools are split into optional extras for leaner installs:
 
 | Extra | Tools | Install |
 |-------|-------|---------|
-| `[util]` | `brave`, `convert`, `excel`, `ground` | `uv tool install 'onetool-mcp[util]'` |
-| `[dev]` | `context7`, `db`, `diagram`, `package`, `ripgrep`, `web`, `worktree` | `uv tool install 'onetool-mcp[dev]'` |
+| `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem` | `uv tool install 'onetool-mcp[util]'` |
+| `[dev]` | `aws`, `chrome_devtools_util`, `context7`, `db`, `diagram`, `package`, `playwright_util`, `ripgrep`, `web`, `worktree` | `uv tool install 'onetool-mcp[dev]'` |
 | `[all]` | Everything | `uv tool install 'onetool-mcp[all]'` |
 
 ```bash
@@ -90,7 +90,7 @@ This removes the tool and its isolated environment. Any config directories you c
 
 ```bash
 git clone https://github.com/beycom/onetool-mcp.git
-cd onetool
+cd onetool-mcp
 uv sync --group dev
 ```
 
@@ -108,7 +108,7 @@ API keys are stored in `secrets.yaml` (gitignored) and passed to the server via 
 
 | Key | Service | Used By |
 |-----|---------|---------|
-| `OPENAI_API_KEY` | OpenRouter | `ot_llm.transform`, `code.*` |
+| `OPENAI_API_KEY` | OpenRouter | `ot_llm.transform` |
 | `BRAVE_API_KEY` | [Brave Search](https://brave.com/search/api/) | `brave.*` tools |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) | `context7.*` tools |
 

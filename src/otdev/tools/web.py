@@ -73,38 +73,40 @@ def _create_config(timeout: float) -> Any:
     return config
 
 
-def _validate_url(url: str) -> None:
+def _validate_url(url: str) -> str | None:
     """Validate URL format.
 
     Args:
         url: The URL to validate
 
-    Raises:
-        ValueError: If URL is empty or malformed
+    Returns:
+        Error string if invalid, None if valid
     """
     if not url or not url.strip():
-        raise ValueError("URL cannot be empty")
+        return "Error: URL cannot be empty"
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
-        raise ValueError(f"Invalid URL format: {url}")
+        return f"Error: Invalid URL format: {url}"
+    return None
 
 
-def _validate_options(favor_precision: bool, favor_recall: bool) -> None:
+def _validate_options(favor_precision: bool, favor_recall: bool) -> str | None:
     """Validate mutually exclusive options.
 
     Args:
         favor_precision: Whether precision is favored
         favor_recall: Whether recall is favored
 
-    Raises:
-        ValueError: If both options are True
+    Returns:
+        Error string if invalid, None if valid
     """
     if favor_precision and favor_recall:
-        raise ValueError(
-            "Cannot set both favor_precision and favor_recall to True. "
+        return (
+            "Error: Cannot set both favor_precision and favor_recall to True. "
             "Choose one extraction mode: precision (less text, more accurate) "
             "or recall (more text, may include noise)."
         )
+    return None
 
 
 def _format_error(
@@ -231,8 +233,10 @@ def fetch(
     """
     # Validate inputs before starting the span
     _require_trafilatura()
-    _validate_url(url)
-    _validate_options(favor_precision, favor_recall)
+    if error := _validate_url(url):
+        return error
+    if error := _validate_options(favor_precision, favor_recall):
+        return error
 
     with LogSpan(span="web.fetch", url=url, output_format=output_format) as s:
         try:
@@ -400,9 +404,6 @@ def fetch_batch(
     Returns:
         Concatenated content with section separators
 
-    Raises:
-        ValueError: If both favor_precision and favor_recall are True
-
     Example:
         # Simple list of URLs
         content = web.fetch_batch([
@@ -417,7 +418,8 @@ def fetch_batch(
         ])
     """
     # Validate mutually exclusive options upfront
-    _validate_options(favor_precision, favor_recall)
+    if error := _validate_options(favor_precision, favor_recall):
+        return error
 
     normalized = normalize_items(urls)
 

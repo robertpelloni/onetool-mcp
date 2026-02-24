@@ -308,10 +308,7 @@ def search(
         output_format: Output format - "full" (default), "text_only", or "sources_only"
 
     Returns:
-        Search results with content and source citations
-
-    Raises:
-        ValueError: If query is empty or whitespace-only
+        Search results with content and source citations, or error message
 
     Example:
         # Basic search
@@ -336,7 +333,7 @@ def search(
         ground.search(query="machine learning", max_sources=5)
     """
     if not query or not query.strip():
-        raise ValueError("query cannot be empty")
+        return "Error: query cannot be empty"
 
     # Build the search prompt
     focus_instructions = {
@@ -397,10 +394,7 @@ def search_batch(
         output_format: Output format - "full" (default), "text_only", or "sources_only"
 
     Returns:
-        Combined formatted results with labels
-
-    Raises:
-        ValueError: If queries list is empty
+        Combined formatted results with labels, or error message
 
     Example:
         # Simple list of queries
@@ -430,7 +424,7 @@ def search_batch(
     normalized = normalize_items(queries)
 
     if not normalized:
-        raise ValueError("queries list cannot be empty")
+        return "Error: queries list cannot be empty"
 
     with LogSpan(span="ground.batch", query_count=len(normalized), focus=focus) as s:
 
@@ -476,10 +470,7 @@ def dev(
         output_format: Output format - "full" (default), "text_only", or "sources_only"
 
     Returns:
-        Developer resources with content and source citations
-
-    Raises:
-        ValueError: If query is empty or whitespace-only
+        Developer resources with content and source citations, or error message
 
     Example:
         # Basic developer search
@@ -492,7 +483,7 @@ def dev(
         ground.dev(query="dependency injection", framework="FastAPI")
     """
     if not query or not query.strip():
-        raise ValueError("query cannot be empty")
+        return "Error: query cannot be empty"
 
     prompt_parts = [
         f"Developer search: {query}",
@@ -543,10 +534,7 @@ def docs(
         output_format: Output format - "full" (default), "text_only", or "sources_only"
 
     Returns:
-        Documentation content with source citations
-
-    Raises:
-        ValueError: If query is empty or whitespace-only
+        Documentation content with source citations, or error message
 
     Example:
         # Basic documentation search
@@ -556,7 +544,7 @@ def docs(
         ground.docs(query="hooks lifecycle", technology="React")
     """
     if not query or not query.strip():
-        raise ValueError("query cannot be empty")
+        return "Error: query cannot be empty"
 
     prompt_parts = [f"Documentation search: {query}"]
 
@@ -611,10 +599,7 @@ def reddit(
         output_format: Output format - "full" (default), "text_only", or "sources_only"
 
     Returns:
-        Reddit discussion content with source citations
-
-    Raises:
-        ValueError: If query is empty or whitespace-only
+        Reddit discussion content with source citations, or error message
 
     Example:
         # General Reddit search
@@ -624,7 +609,7 @@ def reddit(
         ground.reddit(query="FastAPI vs Flask", subreddit="python")
     """
     if not query or not query.strip():
-        raise ValueError("query cannot be empty")
+        return "Error: query cannot be empty"
 
     prompt_parts = [f"Reddit search: {query}"]
 
