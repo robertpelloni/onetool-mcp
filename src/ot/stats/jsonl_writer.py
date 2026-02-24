@@ -108,19 +108,27 @@ class JsonlStatsWriter:
         await writer.stop()
     """
 
-    def __init__(self, path: Path, flush_interval: int = 30) -> None:
+    def __init__(
+        self,
+        path: Path,
+        flush_interval: int = 30,
+        max_buffer_records: int = 10000,
+    ) -> None:
         """Initialize writer.
 
         Args:
             path: Path to JSONL file
             flush_interval: Seconds between flushes
+            max_buffer_records: Maximum in-memory records to retain when writes fail.
         """
         self._path = path
         self._flush_interval = flush_interval
+        self._max_buffer_records = max_buffer_records
         self._buffer: list[dict[str, Any]] = []
         self._lock = asyncio.Lock()
         self._task: asyncio.Task[None] | None = None
         self._running = False
+        self._dropped_records = 0
 
     @property
     def path(self) -> Path:
@@ -145,7 +153,7 @@ class JsonlStatsWriter:
             success=success,
             error_type=error_type,
         )
-        self._buffer.append(record)
+        self._append_record(record)
 
     def record_tool(
         self,
@@ -163,7 +171,22 @@ class JsonlStatsWriter:
             success=success,
             error_type=error_type,
         )
+        self._append_record(record)
+
+    def _append_record(self, record: dict[str, Any]) -> None:
+        """Append a record with bounded-memory protection."""
         self._buffer.append(record)
+        if self._max_buffer_records > 0 and len(self._buffer) > self._max_buffer_records:
+            # Drop oldest records first to cap memory usage under persistent write failures.
+            overflow = len(self._buffer) - self._max_buffer_records
+            del self._buffer[:overflow]
+            self._dropped_records += overflow
+            # Log occasionally to avoid noisy logs under sustained failure.
+            if self._dropped_records in {1, 10, 100} or self._dropped_records % 1000 == 0:
+                logger.warning(
+                    f"Stats buffer overflow; dropped {self._dropped_records} oldest record(s) "
+                    f"(buffer capped at {self._max_buffer_records})"
+                )
 
     async def start(self) -> None:
         """Start the background flush task."""

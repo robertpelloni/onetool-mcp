@@ -163,67 +163,155 @@ class StatsReader:
         Returns:
             Aggregated statistics
         """
-        records = self._load_records()
-        filtered = self._filter_records(records, period, tool)
-        return self._aggregate(filtered, period)
+        # Stream records to avoid loading full JSONL into memory.
+        return self._aggregate_stream(period, tool)
 
-    def _load_records(self) -> list[dict[str, Any]]:
-        """Load all records from JSONL."""
+    def _aggregate_stream(
+        self,
+        period: Period,
+        tool: str | None,
+    ) -> AggregatedStats:
+        """Aggregate records directly from file stream for bounded memory usage."""
         if not self._path.exists():
             logger.debug(f"Stats file not found: {self._path}")
-            return []
+            return AggregatedStats(
+                period=period,
+                start_time=None,
+                end_time=None,
+                total_calls=0,
+                success_count=0,
+                error_count=0,
+                total_chars_in=0,
+                total_chars_out=0,
+                total_duration_ms=0,
+                context_saved=0,
+                time_saved_ms=0,
+                tools=[],
+            )
 
-        records: list[dict[str, Any]] = []
+        cutoff = self._get_period_cutoff(period)
+
+        start_time: str | None = None
+        end_time: str | None = None
+
+        run_count = 0
+        run_success = 0
+        total_chars_in = 0
+        total_chars_out = 0
+        run_duration = 0
+
+        # tool_name -> [calls, success, duration_ms]
+        tool_acc: dict[str, list[int]] = {}
+
         try:
             with self._path.open() as f:
                 for line in f:
                     line = line.strip()
-                    if line:
+                    if not line:
+                        continue
+                    try:
+                        record = json.loads(line)
+                    except json.JSONDecodeError:
+                        logger.debug(f"Skipping malformed JSON line: {line[:50]}")
+                        continue
+
+                    ts = record.get("ts")
+                    if not isinstance(ts, str):
+                        # Records without a valid timestamp are malformed; skip
+                        # regardless of period (including "all").
+                        continue
+
+                    if cutoff is not None:
                         try:
-                            records.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            logger.debug(f"Skipping malformed JSON line: {line[:50]}")
+                            ts_dt = datetime.fromisoformat(ts)
+                        except ValueError:
+                            continue
+                        if ts_dt < cutoff:
+                            continue
+
+                    if start_time is None or ts < start_time:
+                        start_time = ts
+                    if end_time is None or ts > end_time:
+                        end_time = ts
+
+                    record_type = record.get("type", "run")
+                    if record_type == "run":
+                        run_count += 1
+                        if record.get("success") is True:
+                            run_success += 1
+                        total_chars_in += int(record.get("chars_in", 0))
+                        total_chars_out += int(record.get("chars_out", 0))
+                        run_duration += int(record.get("duration_ms", 0))
+                    elif record_type == "tool":
+                        tool_name = record.get("tool", "unknown")
+                        if tool is not None and tool_name != tool:
+                            continue
+                        acc = tool_acc.setdefault(tool_name, [0, 0, 0])
+                        acc[0] += 1
+                        if record.get("success") is True:
+                            acc[1] += 1
+                        acc[2] += int(record.get("duration_ms", 0))
         except Exception as e:
             logger.warning(f"Failed to read stats: {e}")
-            return []
+            return AggregatedStats(
+                period=period,
+                start_time=None,
+                end_time=None,
+                total_calls=0,
+                success_count=0,
+                error_count=0,
+                total_chars_in=0,
+                total_chars_out=0,
+                total_duration_ms=0,
+                context_saved=0,
+                time_saved_ms=0,
+                tools=[],
+            )
 
-        return records
+        tool_stats: list[ToolStats] = []
+        for tool_name in sorted(tool_acc):
+            calls, success, duration = tool_acc[tool_name]
+            tool_stats.append(
+                ToolStats(
+                    tool=tool_name,
+                    total_calls=calls,
+                    success_count=success,
+                    error_count=calls - success,
+                    total_chars_in=0,
+                    total_chars_out=0,
+                    total_duration_ms=duration,
+                    avg_duration_ms=duration / calls if calls > 0 else 0,
+                )
+            )
 
-    def _filter_records(
-        self,
-        records: list[dict[str, Any]],
-        period: Period,
-        tool: str | None,
-    ) -> list[dict[str, Any]]:
-        """Filter records by period and tool."""
-        if not records:
-            return []
+        run_error = run_count - run_success
+        context_saved = run_count * self._context_per_call
+        time_saved = run_count * self._time_overhead_ms
+        input_tokens = total_chars_in / self._chars_per_token
+        output_tokens = total_chars_out / self._chars_per_token
+        cost_estimate = (
+            (input_tokens / 1_000_000) * self._cost_per_m_input
+            + (output_tokens / 1_000_000) * self._cost_per_m_output
+        )
+        savings_usd = (context_saved / 1_000_000) * self._cost_per_m_input
 
-        # Calculate period cutoff
-        cutoff = self._get_period_cutoff(period)
-
-        filtered: list[dict[str, Any]] = []
-        for record in records:
-            # Filter by period
-            if cutoff is not None:
-                try:
-                    ts = datetime.fromisoformat(record["ts"])
-                    if ts < cutoff:
-                        continue
-                except (KeyError, ValueError):
-                    continue
-
-            # Filter by tool (only applies to tool-type records)
-            if (
-                tool is not None
-                and record.get("type") == "tool"
-                and record.get("tool") != tool
-            ):
-                continue
-
-            filtered.append(record)
-
-        return filtered
+        return AggregatedStats(
+            period=period,
+            start_time=start_time,
+            end_time=end_time,
+            total_calls=run_count,
+            success_count=run_success,
+            error_count=run_error,
+            total_chars_in=total_chars_in,
+            total_chars_out=total_chars_out,
+            total_duration_ms=run_duration,
+            context_saved=context_saved,
+            time_saved_ms=time_saved,
+            tools=tool_stats,
+            model=self._model,
+            cost_estimate_usd=cost_estimate,
+            savings_usd=savings_usd,
+        )
 
     def _get_period_cutoff(self, period: Period) -> datetime | None:
         """Get cutoff datetime for period."""
@@ -240,115 +328,3 @@ class StatsReader:
 
         return None
 
-    def _aggregate(
-        self, records: list[dict[str, Any]], period: Period
-    ) -> AggregatedStats:
-        """Aggregate records into summary stats.
-
-        Records are split by type:
-        - "run" records: contain chars_in/chars_out, used for run counts and savings
-        - "tool" records: contain tool name, used for per-tool breakdown
-        """
-        if not records:
-            return AggregatedStats(
-                period=period,
-                start_time=None,
-                end_time=None,
-                total_calls=0,
-                success_count=0,
-                error_count=0,
-                total_chars_in=0,
-                total_chars_out=0,
-                total_duration_ms=0,
-                context_saved=0,
-                time_saved_ms=0,
-                tools=[],
-            )
-
-        # Separate run-level and tool-level records
-        run_records: list[dict[str, Any]] = []
-        tool_records_by_name: dict[str, list[dict[str, Any]]] = {}
-        timestamps: list[str] = []
-
-        for record in records:
-            record_type = record.get("type", "run")
-            ts = record.get("ts")
-            if ts:
-                timestamps.append(ts)
-
-            if record_type == "run":
-                run_records.append(record)
-            elif record_type == "tool":
-                tool_name = record.get("tool", "unknown")
-                if tool_name not in tool_records_by_name:
-                    tool_records_by_name[tool_name] = []
-                tool_records_by_name[tool_name].append(record)
-
-        # Sort timestamps for range
-        timestamps.sort()
-
-        # Aggregate run-level stats
-        run_count = len(run_records)
-        run_success = sum(1 for r in run_records if r.get("success") is True)
-        run_error = run_count - run_success
-        total_chars_in = sum(int(r.get("chars_in", 0)) for r in run_records)
-        total_chars_out = sum(int(r.get("chars_out", 0)) for r in run_records)
-        run_duration = sum(int(r.get("duration_ms", 0)) for r in run_records)
-
-        # Aggregate per-tool stats
-        tool_stats: list[ToolStats] = []
-        total_tool_duration = 0
-
-        for tool_name, tool_records in sorted(tool_records_by_name.items()):
-            calls = len(tool_records)
-            success = sum(1 for r in tool_records if r.get("success") is True)
-            errors = calls - success
-            duration = sum(int(r.get("duration_ms", 0)) for r in tool_records)
-
-            tool_stats.append(
-                ToolStats(
-                    tool=tool_name,
-                    total_calls=calls,
-                    success_count=success,
-                    error_count=errors,
-                    total_chars_in=0,  # Tool records don't have chars
-                    total_chars_out=0,
-                    total_duration_ms=duration,
-                    avg_duration_ms=duration / calls if calls > 0 else 0,
-                )
-            )
-
-            total_tool_duration += duration
-
-        # Calculate savings (context and time saved by consolidating run calls)
-        context_saved = run_count * self._context_per_call
-        time_saved = run_count * self._time_overhead_ms
-
-        # Calculate cost estimate (actual cost of tokens used)
-        input_tokens = total_chars_in / self._chars_per_token
-        output_tokens = total_chars_out / self._chars_per_token
-        cost_estimate = (
-            (input_tokens / 1_000_000) * self._cost_per_m_input
-            + (output_tokens / 1_000_000) * self._cost_per_m_output
-        )
-
-        # Calculate savings estimate (cost of context overhead avoided)
-        savings_usd = (context_saved / 1_000_000) * self._cost_per_m_input
-
-        return AggregatedStats(
-            period=period,
-            start_time=timestamps[0] if timestamps else None,
-            end_time=timestamps[-1] if timestamps else None,
-            total_calls=run_count,
-            success_count=run_success,
-            error_count=run_error,
-            total_chars_in=total_chars_in,
-            total_chars_out=total_chars_out,
-            total_duration_ms=run_duration,
-            context_saved=context_saved,
-            time_saved_ms=time_saved,
-            tools=tool_stats,
-            model=self._model,
-            cost_estimate_usd=cost_estimate,
-            savings_usd=savings_usd,
-        )

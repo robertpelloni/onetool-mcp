@@ -25,11 +25,12 @@ logger = logging.getLogger(__name__)
 _TOKEN_SAFETY_MARGIN = 100
 
 # Bounded queue: stores only memory IDs (not content) to avoid memory bloat.
-# maxsize=1000 provides backpressure - enqueue blocks if queue is full.
+# maxsize=1000 bounds memory usage.
 _embedding_queue: queue.Queue[str] = queue.Queue(maxsize=1000)
 _embedding_worker_started = False
 _embedding_worker_lock = threading.Lock()
 _embedding_errors: int = 0  # Surfaced in mem.stats()
+_embedding_dropped: int = 0  # Count dropped jobs when queue is saturated
 
 
 def _get_openai_client() -> OpenAI:
@@ -137,8 +138,18 @@ def _generate_embedding(text: str) -> list[float]:
 
 def _enqueue_embedding(memory_id: str) -> None:
     """Queue a memory ID for background embedding generation."""
+    global _embedding_dropped
     _ensure_embedding_worker()
-    _embedding_queue.put(memory_id)
+    try:
+        # Non-blocking to avoid stalling write paths under sustained load.
+        _embedding_queue.put_nowait(memory_id)
+    except queue.Full:
+        _embedding_dropped += 1
+        if _embedding_dropped in {1, 10, 100} or _embedding_dropped % 1000 == 0:
+            logger.warning(
+                "Embedding queue full; dropped %s pending job(s)",
+                _embedding_dropped,
+            )
 
 
 def _ensure_embedding_worker() -> None:
@@ -208,6 +219,7 @@ def _maybe_embed(memory_id: str, content: str) -> list[float] | None:
 __all__ = [
     "_TOKEN_SAFETY_MARGIN",
     "_chunk_text_by_tokens",
+    "_embedding_dropped",
     "_embedding_errors",
     "_embedding_queue",
     "_embedding_worker",

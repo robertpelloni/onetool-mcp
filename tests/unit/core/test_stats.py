@@ -118,6 +118,36 @@ async def test_jsonl_writer_appends() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
+@pytest.mark.asyncio
+async def test_jsonl_writer_bounds_buffer_on_repeated_write_failures() -> None:
+    """JsonlStatsWriter caps in-memory buffer when flush keeps failing."""
+    from ot.stats import JsonlStatsWriter
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        jsonl_path = Path(tmpdir) / "test_stats.jsonl"
+        writer = JsonlStatsWriter(path=jsonl_path, flush_interval=1, max_buffer_records=3)
+
+        async def always_fail(_records):  # type: ignore[no-untyped-def]
+            raise OSError("disk full")
+
+        writer._write_records = always_fail  # type: ignore[assignment,method-assign]
+
+        for i in range(5):
+            writer.record_run(
+                client=f"client-{i}",
+                chars_in=1,
+                chars_out=1,
+                duration_ms=1,
+                success=True,
+            )
+            await writer._flush()
+
+        assert len(writer._buffer) == 3
+        assert writer._dropped_records == 2
+
+
+@pytest.mark.unit
+@pytest.mark.core
 def test_stats_reader_empty_file() -> None:
     """StatsReader returns empty stats for missing file."""
     from ot.stats import StatsReader
@@ -570,5 +600,4 @@ def test_ot_stats_html_write_error() -> None:
             assert isinstance(result, str)
             assert result.startswith("Error: Cannot write to")
             assert "report.html" in result
-
 

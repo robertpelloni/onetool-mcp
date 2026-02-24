@@ -63,6 +63,16 @@ def _get_conversion_executor() -> ThreadPoolExecutor:
     return _conversion_executor
 
 
+def _get_conversion_concurrency() -> int:
+    """Get effective conversion concurrency."""
+    executor = _get_conversion_executor()
+    # ThreadPoolExecutor always exposes _max_workers; keep guarded for safety.
+    workers = getattr(executor, "_max_workers", None)
+    if isinstance(workers, int) and workers > 0:
+        return workers
+    return 4
+
+
 def _shutdown_executor() -> None:
     """Shutdown the conversion thread pool on exit."""
     global _conversion_executor
@@ -174,25 +184,30 @@ async def _convert_batch_async(
     **kwargs: Any,
 ) -> dict[str, Any]:
     """Convert multiple files in parallel."""
-    tasks = []
-    for path in files:
-        source_rel = _get_source_rel(path)
-        tasks.append(_convert_file_async(converter, path, output_dir, source_rel, **kwargs))
-
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
     converted = 0
     failed = 0
     outputs: list[str] = []
     errors: list[str] = []
+    concurrency = _get_conversion_concurrency()
 
-    for path, res in zip(files, results, strict=True):
-        if isinstance(res, BaseException):
-            failed += 1
-            errors.append(f"{path.name}: {res}")
-        else:
-            converted += 1
-            outputs.append(res["output"])
+    # Process in bounded chunks to avoid creating unbounded task/result lists.
+    for i in range(0, len(files), concurrency):
+        chunk = files[i:i + concurrency]
+        tasks = []
+        for path in chunk:
+            source_rel = _get_source_rel(path)
+            tasks.append(
+                _convert_file_async(converter, path, output_dir, source_rel, **kwargs)
+            )
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for path, res in zip(chunk, results, strict=True):
+            if isinstance(res, BaseException):
+                failed += 1
+                errors.append(f"{path.name}: {res}")
+            else:
+                converted += 1
+                outputs.append(res["output"])
 
     return {
         "converted": converted,
@@ -208,8 +223,7 @@ async def _convert_auto_batch_async(
     converters: dict[str, ConverterFunc],
 ) -> dict[str, Any]:
     """Convert multiple files in parallel with auto-detection."""
-    tasks = []
-    task_paths: list[Path] = []
+    work: list[tuple[Path, ConverterFunc]] = []
     skipped = 0
 
     for path in files:
@@ -218,12 +232,9 @@ async def _convert_auto_batch_async(
             skipped += 1
             continue
 
-        source_rel = _get_source_rel(path)
-        converter = converters[ext]
-        tasks.append(_convert_file_async(converter, path, output_dir, source_rel))
-        task_paths.append(path)
+        work.append((path, converters[ext]))
 
-    if not tasks:
+    if not work:
         return {
             "converted": 0,
             "failed": 0,
@@ -232,20 +243,27 @@ async def _convert_auto_batch_async(
             "errors": [],
         }
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
     converted = 0
     failed = 0
     outputs: list[str] = []
     errors: list[str] = []
+    concurrency = _get_conversion_concurrency()
 
-    for path, res in zip(task_paths, results, strict=True):
-        if isinstance(res, BaseException):
-            failed += 1
-            errors.append(f"{path.name}: {res}")
-        else:
-            converted += 1
-            outputs.append(res["output"])
+    for i in range(0, len(work), concurrency):
+        chunk = work[i:i + concurrency]
+        tasks = []
+        for path, converter in chunk:
+            source_rel = _get_source_rel(path)
+            tasks.append(_convert_file_async(converter, path, output_dir, source_rel))
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for (path, _converter), res in zip(chunk, results, strict=True):
+            if isinstance(res, BaseException):
+                failed += 1
+                errors.append(f"{path.name}: {res}")
+            else:
+                converted += 1
+                outputs.append(res["output"])
 
     return {
         "converted": converted,

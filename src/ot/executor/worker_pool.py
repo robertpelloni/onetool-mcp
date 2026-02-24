@@ -11,13 +11,14 @@ from __future__ import annotations
 import atexit
 import json
 import os
+import select
 import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from loguru import logger
 
@@ -69,14 +70,23 @@ class Worker:
             return ""
 
         try:
-            # Use thread pool for non-blocking read
-            executor = _get_io_executor()
-            future = executor.submit(self.process.stderr.read)
-            try:
-                stderr = future.result(timeout=timeout)
-            except TimeoutError:
-                future.cancel()
-                return ""
+            if os.name != "nt":
+                # POSIX: use select + os.read to avoid blocking worker-io threads.
+                fd = self.process.stderr.fileno()
+                ready, _, _ = select.select([fd], [], [], timeout)
+                if not ready:
+                    return ""
+                data = os.read(fd, 64 * 1024)
+                stderr = data.decode("utf-8", errors="replace")
+            else:
+                # Windows fallback: use thread pool (pipes are not select()-able).
+                executor = _get_io_executor()
+                future = executor.submit(self.process.stderr.read)
+                try:
+                    stderr = future.result(timeout=timeout)
+                except TimeoutError:
+                    future.cancel()
+                    return ""
 
             if stderr:
                 # Truncate very long output, keep last lines (most relevant)
@@ -87,6 +97,28 @@ class Worker:
         except Exception:
             pass
         return ""
+
+
+def _readline_with_timeout(stream: IO[str] | None, timeout: float) -> str:
+    """Read one line with timeout without orphaning blocked pool threads on POSIX."""
+    if stream is None:
+        raise RuntimeError("Worker stdout is None")
+
+    if os.name != "nt":
+        fd = stream.fileno()
+        ready, _, _ = select.select([fd], [], [], timeout)
+        if not ready:
+            raise TimeoutError(f"Worker call timed out after {timeout}s")
+        return stream.readline()
+
+    # Windows fallback: use thread pool for compatibility.
+    executor = _get_io_executor()
+    future = executor.submit(stream.readline)
+    try:
+        return future.result(timeout=timeout)
+    except TimeoutError:
+        future.cancel()
+        raise TimeoutError(f"Worker call timed out after {timeout}s") from None
 
 
 class WorkerPool:
@@ -280,18 +312,7 @@ class WorkerPool:
 
         # Read response with timeout using thread pool (non-blocking, cross-platform)
         try:
-            if worker.process.stdout is None:
-                raise RuntimeError("Worker stdout is None")
-
-            # Use thread pool for readline to avoid blocking main thread
-            # This is more portable than select.select() and works on Windows
-            executor = _get_io_executor()
-            future = executor.submit(worker.process.stdout.readline)
-            try:
-                response_line = future.result(timeout=timeout)
-            except TimeoutError:
-                future.cancel()
-                raise TimeoutError(f"Worker call timed out after {timeout}s") from None
+            response_line = _readline_with_timeout(worker.process.stdout, timeout)
 
             if not response_line:
                 # Worker closed stdout (crashed) - capture stderr for debugging

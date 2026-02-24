@@ -26,6 +26,15 @@ __all__ = ["clear", "elapsed", "list", "start"]
 # Module-level state: active timers and stored results
 _timers: dict[str, tuple[float, datetime]] = {}
 _results: dict[str, dict[str, Any]] = {}
+_MAX_TIMERS = 1000
+_MAX_RESULTS = 1000
+
+
+def _evict_oldest(d: dict[str, Any], limit: int) -> None:
+    """Keep dict size bounded by evicting oldest inserted keys."""
+    while len(d) > limit:
+        oldest_key = next(iter(d))
+        del d[oldest_key]
 
 
 def start(*, name: str = "_default") -> dict[str, Any]:
@@ -41,6 +50,7 @@ def start(*, name: str = "_default") -> dict[str, Any]:
         now_perf = perf_counter()
         now_wall = datetime.now(UTC)
         _timers[name] = (now_perf, now_wall)
+        _evict_oldest(_timers, _MAX_TIMERS)
         return {"status": "started", "name": name, "started_at": now_wall.isoformat()}
 
 
@@ -71,6 +81,7 @@ def elapsed(*, name: str = "_default", store_as: str | None = None) -> dict[str,
 
         if store_as is not None:
             _results[store_as] = result
+            _evict_oldest(_results, _MAX_RESULTS)
 
         return result
 
