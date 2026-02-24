@@ -47,11 +47,20 @@ Existing files in the target directory SHALL be backed up to `<filename>.bak` (o
 - **GIVEN** `onetool init` or `onetool init -c <path>` is run
 - **AND** stdin is a TTY
 - **WHEN** init runs
-- **THEN** it SHALL display a checkbox multi-select TUI listing all available extensions:
-  - `prompts.yaml`, `servers.yaml`, `security.yaml`, `diagram.yaml`, `snippets.yaml`, `worktree.yaml`, `skills/`
+- **THEN** it SHALL first prompt the user to confirm or edit the resolved config file path (e.g. `Config file: onetool.yaml`)
+  - The default shown is the fully-resolved `config_path`; pressing enter accepts it; typing a new path overrides it
+  - Ctrl+C at this prompt cancels without writing any files
+- **AND** it SHALL display a checkbox multi-select TUI listing all available extensions:
+  - `prompts.yaml`, `servers.yaml`, `security.yaml`, `diagram.yaml`, `snippets.yaml`, `worktree.yaml`
 - **AND** materialise only the extensions selected by the user
 - **AND** write an `onetool.yaml` that includes only the materialised YAML files
-- **AND** if the user cancels (Ctrl+C), exit with code 1 without writing any files
+- **AND** if the user cancels (Ctrl+C) at the checkbox, exit with code 0 without writing any files
+
+#### Scenario: diagram.yaml sidecar directory
+- **GIVEN** the user selects `diagram.yaml` during init
+- **WHEN** init materialises `diagram.yaml`
+- **THEN** it SHALL also copy the `diagram-templates/` directory from package templates into the config dir alongside `diagram.yaml`
+- **AND** if `diagram-templates/` already exists it SHALL be backed up using the standard `.bak` scheme before overwriting
 
 #### Scenario: Conflict handling
 - **GIVEN** a file already exists in the target directory

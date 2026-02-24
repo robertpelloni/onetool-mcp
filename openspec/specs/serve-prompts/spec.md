@@ -32,7 +32,7 @@ The system SHALL load MCP prompts from a YAML configuration file.
 
 ### Requirement: Server Instructions
 
-The system SHALL support externalised server instructions with two-mode execution framing and a minimal footprint.
+The system SHALL support externalised server instructions with a minimal footprint.
 
 #### Scenario: Instructions loaded
 - **GIVEN** prompts.yaml with `instructions: "Custom instructions..."`
@@ -54,27 +54,12 @@ The system SHALL support externalised server instructions with two-mode executio
 - **WHEN** default instructions are used
 - **THEN** they SHALL include the `>>>` trigger and `mcp__onetool__run` canonical name
 
-#### Scenario: Slim mode active (default)
-- **GIVEN** `prompts.yaml` with `slim: true` (or no `slim` key)
+#### Scenario: Instructions are concise
 - **WHEN** the server builds the handshake instructions
-- **THEN** it SHALL use the `instructions_slim` value from `prompts.yaml`
-- **AND** the resulting prompt SHALL contain at most 25 lines
+- **THEN** the resulting prompt SHALL contain at most 25 lines
 - **AND** SHALL include: identity line, trigger aliases (`>>>`, `__run`, `mcp__onetool__run`), pass-through rule, keyword-args rule, batch rule, discovery hint (`>>> ot.help()`), external content boundary warning, and tool output directive
-- **AND** SHALL NOT include full discovery reference, error recovery patterns, security/allowlist guide, output format/sanitisation controls, aliases & snippets reference, or per-server usage guides
 
-#### Scenario: Full mode active
-- **GIVEN** `prompts.yaml` with `slim: false`
-- **WHEN** the server builds the handshake instructions
-- **THEN** it SHALL use the `instructions` value from `prompts.yaml`
-- **AND** the resulting prompt SHALL be the complete reference prompt
-
-#### Scenario: Slim default when key absent
-- **GIVEN** `prompts.yaml` with no `slim` key
-- **WHEN** the server builds the handshake instructions
-- **THEN** it SHALL behave as if `slim: true`
-
-#### Scenario: Discovery hint present in slim mode
-- **GIVEN** `slim: true`
+#### Scenario: Discovery hint present
 - **WHEN** an agent is lost or encountering errors
 - **THEN** the prompt SHALL direct the agent to run `>>> ot.help()` for discovery
 
