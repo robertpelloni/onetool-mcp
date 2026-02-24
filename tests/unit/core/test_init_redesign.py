@@ -53,6 +53,45 @@ def test_materialise_file_security(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
+def test_materialise_diagram_copies_yaml_and_templates(tmp_path: Path) -> None:
+    """_materialise_diagram copies diagram.yaml and diagram-templates/ directory."""
+    from onetool.cli import _materialise_diagram
+
+    ot_dir = tmp_path / ".onetool"
+    ot_dir.mkdir()
+
+    result = _materialise_diagram(ot_dir)
+
+    assert result is True
+    assert (ot_dir / "diagram.yaml").exists()
+    assert (ot_dir / "diagram-templates").is_dir()
+    # At least one template file should be present
+    templates = list((ot_dir / "diagram-templates").iterdir())
+    assert len(templates) > 0
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_materialise_diagram_backs_up_existing_templates(tmp_path: Path) -> None:
+    """_materialise_diagram backs up existing diagram-templates/ before overwriting."""
+    from onetool.cli import _materialise_diagram
+
+    ot_dir = tmp_path / ".onetool"
+    ot_dir.mkdir()
+    existing_templates = ot_dir / "diagram-templates"
+    existing_templates.mkdir()
+    (existing_templates / "custom.mmd").write_text("# custom")
+
+    _materialise_diagram(ot_dir)
+
+    assert (ot_dir / "diagram-templates").is_dir()
+    bak = ot_dir / "diagram-templates.bak"
+    assert bak.exists()
+    assert (bak / "custom.mmd").read_text() == "# custom"
+
+
+@pytest.mark.unit
+@pytest.mark.core
 def test_materialise_file_unknown(tmp_path: Path) -> None:
     """Unknown file returns False (not a fatal error)."""
     from onetool.cli import _materialise_file
@@ -241,6 +280,54 @@ def test_materialise_file_backs_up_existing(tmp_path: Path) -> None:
     bak = ot_dir / "security.yaml.bak"
     assert bak.exists()
     assert bak.read_text() == "# my custom rules\n"
+
+
+# =============================================================================
+# Path confirmation prompt
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_init_tty_path_confirmation_default_accepted(tmp_path: Path) -> None:
+    """In TTY mode, pressing enter accepts the default config path."""
+    from unittest.mock import patch
+
+    from typer.testing import CliRunner
+
+    from onetool.cli import app
+
+    ot_dir = tmp_path / ".onetool"
+    config_path = ot_dir / "onetool.yaml"
+
+    runner = CliRunner()
+    with patch("onetool.cli._stdin_is_tty", return_value=True):
+        with patch("ot._tui.ask_text_sync", return_value=str(config_path)) as mock_ask:
+            with patch("ot._tui.ask_checkbox", return_value=[]):
+                result = runner.invoke(app, ["init", "-c", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    mock_ask.assert_called_once()
+    assert config_path.exists()
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_init_tty_path_confirmation_cancelled(tmp_path: Path) -> None:
+    """In TTY mode, Ctrl+C on the path prompt cancels init."""
+    from unittest.mock import patch
+
+    from typer.testing import CliRunner
+
+    from onetool.cli import app
+
+    runner = CliRunner()
+    with patch("onetool.cli._stdin_is_tty", return_value=True):
+        with patch("ot._tui.ask_text_sync", return_value=None):
+            result = runner.invoke(app, ["init"])
+
+    assert result.exit_code == 0
+    assert "Cancelled" in result.output
 
 
 # =============================================================================
