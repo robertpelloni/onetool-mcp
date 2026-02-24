@@ -1340,5 +1340,10 @@ The secrets loader SHALL transparently decrypt `age1enc:`-prefixed values in `se
 - **WHEN** `secrets.yaml` contains at least one `age1enc:` value
 - **AND** the `keyring` package is not installed
 - **WHEN** secrets are loaded
-- **THEN** it SHALL raise an error with an install hint: `"pip install keyring"`
+- **THEN** it SHALL raise an error with an install hint: `"pip install onetool-mcp"`
 
+#### Scenario: Missing pyrage package with encrypted values
+- **WHEN** `secrets.yaml` contains at least one `age1enc:` value
+- **AND** the `pyrage` package is not installed
+- **WHEN** secrets are loaded
+- **THEN** it SHALL raise an error with an install hint: `"pip install onetool-mcp"`

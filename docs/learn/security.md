@@ -151,13 +151,13 @@ API keys and credentials are isolated from code:
 ```yaml
 # secrets.yaml (gitignored)
 BRAVE_API_KEY: "your-key"
-DATABASE_URL: "${PROD_DB_URL}"
+DATABASE_URL: "postgresql://user:pass@db.internal:5432/app"
 ```
 
 **Security properties:**
 
 - Separate file, not in main config
-- Environment variable expansion
+- Literal values only (no env var expansion inside `secrets.yaml`)
 - Never logged or exposed in errors
 - Accessed via `get_secret()` API only
 
