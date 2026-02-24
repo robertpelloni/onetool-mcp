@@ -62,20 +62,10 @@ _stats_writer: JsonlStatsWriter | None = None
 def _get_instructions() -> str:
     """Generate MCP server instructions.
 
-    Uses slim mode (default) for a minimal ~20-line prompt, or full mode when
-    prompts.slim=false. Server instructions from servers.yaml are no longer
-    included in the handshake (moved to on-demand skills).
-
     Note: Tool descriptions are NOT included here - they come through
     the MCP tool definitions which the client converts to function calling format.
     """
-    # Load prompts from config (loaded via include: or inline prompts:)
     prompts = get_prompts(inline_prompts=_config.prompts)
-
-    # Branch on slim mode: use instructions_slim when slim=True (default)
-    if prompts.slim and prompts.instructions_slim:
-        return prompts.instructions_slim.strip()
-
     return prompts.instructions.strip()
 
 
@@ -317,7 +307,9 @@ async def run(command: str, ctx: Context) -> ToolResult:  # noqa: ARG001
 
     # Return ToolResult with content only — prevents FastMCP from auto-generating
     # structuredContent (which Claude Code prefers over content text)
-    text = sanitize_output(result.result, enabled=result.should_sanitize, fmt=result.format)
+    text = sanitize_output(
+        result.result, enabled=result.should_sanitize, fmt=result.format
+    )
     return ToolResult(content=text)
 
 
