@@ -798,11 +798,11 @@ class TestOutputConfigDefaults:
     """Test OutputConfig default values."""
 
     def test_max_inline_size_default(self) -> None:
-        """OutputConfig.max_inline_size defaults to 5000."""
+        """OutputConfig.max_inline_size defaults to 10000."""
         from ot.config.models import OutputConfig
 
         cfg = OutputConfig()
-        assert cfg.max_inline_size == 5000
+        assert cfg.max_inline_size == 10000
 
     def test_preview_max_chars_default(self) -> None:
         """OutputConfig.preview_max_chars defaults to 500."""

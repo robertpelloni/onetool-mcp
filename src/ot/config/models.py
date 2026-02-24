@@ -331,7 +331,7 @@ class OutputConfig(BaseModel):
     """
 
     max_inline_size: int = Field(
-        default=5000,
+        default=10000,
         ge=0,
         description="Max output size in bytes before storing to disk. Set to 0 to disable.",
     )

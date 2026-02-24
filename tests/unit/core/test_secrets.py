@@ -464,7 +464,7 @@ class TestLoadSecretsAgeDecryption:
         with patch.dict("sys.modules", filtered, clear=True):
             # Make keyring importable as None so ImportError triggers
             with patch.dict("sys.modules", {"keyring": None}):
-                with pytest.raises(ImportError, match="onetool\\[secrets\\]"):
+                with pytest.raises(ImportError, match="pip install onetool-mcp"):
                     load_secrets(secrets_file)
 
     def test_missing_pyrage_raises_import_error(self, tmp_path: Path) -> None:
@@ -478,7 +478,7 @@ class TestLoadSecretsAgeDecryption:
         with patch.dict(
             "sys.modules", {"keyring": mock_kr, "pyrage": None}
         ):
-            with pytest.raises(ImportError, match="onetool\\[secrets\\]"):
+            with pytest.raises(ImportError, match="pip install onetool-mcp"):
                 load_secrets(secrets_file)
 
     def test_decrypted_values_not_logged(

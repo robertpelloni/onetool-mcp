@@ -117,7 +117,7 @@ def load_secrets(
             ) from e
 
         try:
-            import pyrage  # type: ignore[import-not-found]
+            import pyrage  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
                 "Encrypted secrets detected but pyrage is not installed. "
