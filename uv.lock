@@ -1835,6 +1835,7 @@ dev = [
     { name = "types-pyyaml" },
 ]
 docs = [
+    { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocs-redirects" },
     { name = "mkdocs-section-index" },
@@ -1845,7 +1846,7 @@ requires-dist = [
     { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "boto3", marker = "extra == 'dev'", specifier = ">=1.42.55" },
     { name = "docstring-parser", specifier = ">=0.17" },
-    { name = "fastmcp", specifier = ">=2.14.4" },
+    { name = "fastmcp", specifier = ">=2,<3" },
     { name = "filelock", marker = "extra == 'dev'", specifier = ">=3.24.3" },
     { name = "google-genai", marker = "extra == 'util'", specifier = ">=1.64.0" },
     { name = "httpx", specifier = ">=0.28.1" },
@@ -1889,6 +1890,7 @@ dev = [
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
 docs = [
+    { name = "mkdocs", specifier = ">=1,<2" },
     { name = "mkdocs-material", specifier = ">=9.7.2" },
     { name = "mkdocs-redirects", specifier = ">=1.2.2" },
     { name = "mkdocs-section-index", specifier = ">=0.3.10" },

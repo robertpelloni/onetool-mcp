@@ -20,7 +20,7 @@ classifiers = [
 ]
 dependencies = [
     # === Core ===
-    "fastmcp>=2.14.4",
+    "fastmcp>=2,<3",              # v3 rearchitected by PrefectHQ - breaking changes unclear; audit before upgrading
     "httpx>=0.28.1",
     "loguru>=0.7.3",
     "mcp>=1.26.0",
@@ -80,6 +80,7 @@ packages = ["src/ot", "src/ottools", "src/onetool", "src/bench", "src/otdev", "s
 
 [dependency-groups]
 docs = [
+    "mkdocs>=1,<2",              # v2 drops plugin system and YAML config; incompatible with mkdocs-material
     "mkdocs-material>=9.7.2",
     "mkdocs-section-index>=0.3.10",
     "mkdocs-redirects>=1.2.2",
