@@ -175,6 +175,7 @@ nav:
           - Playwright Util: reference/tools/playwright-util.md
           - Ripgrep: reference/tools/ripgrep.md
           - Timer: reference/tools/timer.md
+          - WB (Whiteboard): reference/tools/wb.md
           - Web: reference/tools/web.md
           - Worktree: reference/tools/worktree.md
       - Servers:

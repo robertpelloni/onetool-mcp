@@ -97,6 +97,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-context7](otdev/tool-context7/spec.md) | Context7 library documentation API |
 | [tool-db](otdev/tool-db/spec.md) | SQL database queries via SQLAlchemy |
 | [tool-diagram](otdev/tool-diagram/spec.md) | Diagram generation |
+| [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via Playwright (`wb` pack) |
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
 | [tool-web](otdev/tool-web/spec.md) | Web content extraction via trafilatura |
@@ -131,9 +132,9 @@ CLI for testing and benchmarking MCP servers.
 | Built-in Tools (core) | 1 |
 | Built-in Tools (ottools) | 6 |
 | Domain Tools [util] | 5 |
-| Domain Tools [dev] | 6 |
+| Domain Tools [dev] | 7 |
 | bench | 8 |
-| **Total** | **41** |
+| **Total** | **42** |
 
 ---
 
@@ -157,3 +158,5 @@ Specs that have been consolidated into other specs:
 - `tool-web-fetch` → renamed to [tool-web](otdev/tool-web/spec.md)
 - `tool-notify` → consolidated into [tool-ot](tool-ot/spec.md)
 - `tool-sdk` → removed (extensions use `ot.*` imports directly)
+- `changes/add-excalidraw-pack` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (spec updated to match final implementation: pack renamed `wb`, tools renamed, file format changed, new tools added)
+- `changes/excalidraw-ascii-note` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (note tool requirements merged; `Swim` type replaced by `seq`)

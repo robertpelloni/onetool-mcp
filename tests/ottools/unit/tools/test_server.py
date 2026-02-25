@@ -35,6 +35,8 @@ def _make_mock_env(servers: dict, connected: list[str] | None = None, tool_count
     mock_proxy.list_tools = list_tools
     mock_proxy.get_error = MagicMock(return_value=None)
     mock_proxy.reconnect_sync = MagicMock()
+    mock_proxy.connect_additional_sync = MagicMock()
+    mock_proxy.disconnect_server_sync = MagicMock()
 
     return mock_cfg, mock_proxy
 
@@ -162,7 +164,8 @@ def test_server_enable_disabled_server() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(enable="devtools-auto")
 
-    assert mock_proxy.reconnect_sync.called
+    assert mock_proxy.connect_additional_sync.called
+    assert not mock_proxy.reconnect_sync.called
     assert srv_cfg.enabled is True
     assert "enabled" in result.lower()
 
@@ -180,6 +183,7 @@ def test_server_enable_already_enabled() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(enable="devtools")
 
+    assert not mock_proxy.connect_additional_sync.called
     assert not mock_proxy.reconnect_sync.called
     assert "already" in result
 
@@ -217,7 +221,8 @@ def test_server_disable_enabled_server() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(disable="devtools")
 
-    assert mock_proxy.reconnect_sync.called
+    assert mock_proxy.disconnect_server_sync.called
+    assert not mock_proxy.reconnect_sync.called
     assert srv_cfg.enabled is False
     assert "disabled" in result.lower()
 
@@ -235,6 +240,7 @@ def test_server_disable_already_disabled() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(disable="devtools-auto")
 
+    assert not mock_proxy.disconnect_server_sync.called
     assert not mock_proxy.reconnect_sync.called
     assert "already" in result
 
@@ -257,7 +263,9 @@ def test_server_restart_connected() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(restart="playwright")
 
-    assert mock_proxy.reconnect_sync.called
+    assert mock_proxy.disconnect_server_sync.called
+    assert mock_proxy.connect_additional_sync.called
+    assert not mock_proxy.reconnect_sync.called
     assert "restarted" in result.lower() or "playwright" in result
 
 
@@ -274,5 +282,7 @@ def test_server_restart_disconnected() -> None:
     with _patch_env(mock_cfg, mock_proxy):
         result = server(restart="playwright")
 
-    assert mock_proxy.reconnect_sync.called
+    assert mock_proxy.disconnect_server_sync.called
+    assert mock_proxy.connect_additional_sync.called
+    assert not mock_proxy.reconnect_sync.called
     assert "playwright" in result

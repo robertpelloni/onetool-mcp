@@ -131,7 +131,7 @@ def server(
                     s.add(server=enable, action="enable", noop=True)
                     return f"Server '{enable}' is already enabled and connected ({info['tool_count']} tools)."
             srv_cfg.enabled = True
-            proxy.reconnect_sync(configured)
+            proxy.connect_additional_sync(enable, srv_cfg)
             info = _get_server_info(enable)
             connected_str = "connected" if info["connected"] else "connection failed"
             tool_str = f" ({info['tool_count']} tools)" if info["connected"] else ""
@@ -147,7 +147,7 @@ def server(
                 s.add(server=disable, action="disable", noop=True)
                 return f"Server '{disable}' is already disabled."
             srv_cfg.enabled = False
-            proxy.reconnect_sync(configured)
+            proxy.disconnect_server_sync(disable)
             s.add(server=disable, action="disable")
             return f"Server '{disable}' disabled."
 
@@ -160,7 +160,8 @@ def server(
             was_disabled = not srv_cfg.enabled
             if was_disabled:
                 srv_cfg.enabled = True
-            proxy.reconnect_sync(configured)
+            proxy.disconnect_server_sync(restart)
+            proxy.connect_additional_sync(restart, srv_cfg)
             info = _get_server_info(restart)
             connected_str = "connected" if info["connected"] else "connection failed"
             tool_str = f" ({info['tool_count']} tools)" if info["connected"] else ""

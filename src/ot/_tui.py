@@ -61,12 +61,13 @@ def ask_checkbox(
 ) -> list[str] | None:
     """Synchronous checkbox prompt. Returns None on Ctrl+C."""
     try:
-        return questionary.checkbox(
+        result: list[str] | None = questionary.checkbox(
             prompt,
             choices=choices,
             instruction="(space to toggle, enter to confirm, ctrl+c to exit)",
             style=APP_STYLE,
         ).ask()
+        return result
     except KeyboardInterrupt:
         return None
 
