@@ -103,7 +103,7 @@ def _safe_copy(src: Path, dest: Path) -> None:
     if dest.exists():
         bak = _next_bak(dest)
         dest.rename(bak)
-        console.print(f"  [yellow]![/yellow]  {dest.name} exists → backed up as {bak.name}")
+        console.print(f"  [yellow]![/yellow] {dest.name} exists → backed up as {bak.name}")
     shutil.copy(src, dest)
 
 
@@ -112,25 +112,34 @@ def _safe_write(dest: Path, content: str) -> None:
     if dest.exists():
         bak = _next_bak(dest)
         dest.rename(bak)
-        console.print(f"  [yellow]![/yellow]  {dest.name} exists → backed up as {bak.name}")
+        console.print(f"  [yellow]![/yellow] {dest.name} exists → backed up as {bak.name}")
     dest.write_text(content)
 
 
 def _write_onetool_yaml(config_path: Path, includes: list[str]) -> None:
-    """Write a minimal onetool.yaml with the given includes."""
-    import yaml
+    """Write onetool.yaml from the package template with the given includes."""
+    import re
 
-    data: dict[str, object] = {"version": 2}
+    from ot.paths import get_global_templates_dir
+
+    template_path = get_global_templates_dir() / "onetool.yaml"
+    template_text = template_path.read_text()
+
+    # Build the replacement include block (omit entirely when no includes)
     if includes:
-        data["include"] = includes
+        new_include = "include:\n" + "".join(f"  - {inc}\n" for inc in includes)
+    else:
+        new_include = ""
 
-    _safe_write(config_path, yaml.dump(data, default_flow_style=False, sort_keys=False))
+    # Replace the existing include: block (all lines starting with "  -" after "include:")
+    updated = re.sub(r"include:\n(?:  - [^\n]+\n)*", new_include, template_text)
+    _safe_write(config_path, updated)
 
 
-def _materialise_servers_yaml(
+def _copy_servers_yaml(
     ot_dir: Path, server_names: list[str]
 ) -> None:
-    """Materialise servers.yaml with only the requested server blocks."""
+    """Copy servers.yaml with only the requested server blocks."""
     import yaml
 
     from ot.paths import get_global_templates_dir
@@ -163,8 +172,8 @@ def _materialise_servers_yaml(
     console.print(f"  [green]✓[/green] servers.yaml (servers: {', '.join(selected.keys())})")
 
 
-def _materialise_file(ot_dir: Path, filename: str) -> bool:
-    """Materialise a single file from global_templates. Returns True if success."""
+def _copy_file(ot_dir: Path, filename: str) -> bool:
+    """Copy a single file from global_templates. Returns True if success."""
     from ot.paths import get_global_templates_dir
 
     templates_dir = get_global_templates_dir()
@@ -183,8 +192,8 @@ def _materialise_file(ot_dir: Path, filename: str) -> bool:
     return True
 
 
-def _materialise_diagram(ot_dir: Path) -> bool:
-    """Materialise diagram.yaml and diagram-templates/ directory. Returns True if success."""
+def _copy_diagram(ot_dir: Path) -> bool:
+    """Copy diagram.yaml and diagram-templates/ directory. Returns True if success."""
     import shutil
 
     from ot.paths import get_global_templates_dir
@@ -205,7 +214,7 @@ def _materialise_diagram(ot_dir: Path) -> bool:
         if dest_templates.exists():
             bak = _next_bak(dest_templates)
             dest_templates.rename(bak)
-            console.print(f"  [yellow]![/yellow]  diagram-templates/ exists → backed up as {bak.name}")
+            console.print(f"  [yellow]![/yellow] diagram-templates/ exists → backed up as {bak.name}")
         shutil.copytree(src_templates, dest_templates)
         console.print("  [green]✓[/green] diagram-templates/")
 
@@ -225,7 +234,7 @@ def init_callback(
 ) -> None:
     """Initialize OneTool configuration directory.
 
-    Runs an interactive TUI to select which extensions to materialise.
+    Runs an interactive TUI to select which extensions to configure.
     Existing files are backed up to .bak before overwriting.
 
     Examples:
@@ -262,6 +271,14 @@ def init_callback(
         config_path = Path(confirmed)
         ot_dir = config_path.parent
 
+        if config_path.exists():
+            overwrite = questionary.confirm(
+                "onetool.yaml already exists. Overwrite?", default=False
+            ).ask()
+            if not overwrite:
+                console.print("[dim]Cancelled.[/dim]")
+                raise typer.Exit(0)
+
         console.print(f"\nSetting up OneTool config at [bold]{ot_dir}/[/bold]\n")
         _exts = [
             ("prompts.yaml",  "prompt templates"),
@@ -272,27 +289,30 @@ def init_callback(
             ("worktree.yaml", "git worktree config"),
         ]
         choices = [
-            questionary.Choice(
-                f"{v:<14}  {desc}",
-                value=v,
-            )
-            for v, desc in _exts
+            questionary.Choice("None           (no extensions)", value=None),
+            *[
+                questionary.Choice(f"{v:<14}  {desc}", value=v)
+                for v, desc in _exts
+            ],
         ]
-        selected_ext = ask_checkbox("Which extensions to materialise?", choices)
+        selected_ext = ask_checkbox("Which extensions to configure?", choices)
 
         if selected_ext is None:
             console.print("[dim]Cancelled.[/dim]")
             raise typer.Exit(0)
 
+        # Filter out the explicit "None" choice
+        selected_ext = [x for x in selected_ext if x is not None]
+
         ot_dir.mkdir(parents=True, exist_ok=True)
 
         if selected_ext:
-            console.print(f"\nMaterialising into {ot_dir}/")
+            console.print(f"\nCopying files into {ot_dir}/")
             for ext in selected_ext:
                 if ext == "diagram.yaml":
-                    if _materialise_diagram(ot_dir):
+                    if _copy_diagram(ot_dir):
                         includes.append(ext)
-                elif _materialise_file(ot_dir, ext):
+                elif _copy_file(ot_dir, ext):
                     includes.append(ext)
 
         _write_onetool_yaml(config_path, includes)

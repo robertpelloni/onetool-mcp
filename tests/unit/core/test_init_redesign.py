@@ -38,14 +38,14 @@ def test_write_onetool_yaml_with_includes(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_file_security(tmp_path: Path) -> None:
+def test_copy_file_security(tmp_path: Path) -> None:
     """--file security.yaml copies security.yaml from package templates."""
-    from onetool.cli import _materialise_file
+    from onetool.cli import _copy_file
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    result = _materialise_file(ot_dir, "security.yaml")
+    result = _copy_file(ot_dir, "security.yaml")
 
     assert result is True
     assert (ot_dir / "security.yaml").exists()
@@ -53,14 +53,14 @@ def test_materialise_file_security(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_diagram_copies_yaml_and_templates(tmp_path: Path) -> None:
-    """_materialise_diagram copies diagram.yaml and diagram-templates/ directory."""
-    from onetool.cli import _materialise_diagram
+def test_copy_diagram_copies_yaml_and_templates(tmp_path: Path) -> None:
+    """_copy_diagram copies diagram.yaml and diagram-templates/ directory."""
+    from onetool.cli import _copy_diagram
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    result = _materialise_diagram(ot_dir)
+    result = _copy_diagram(ot_dir)
 
     assert result is True
     assert (ot_dir / "diagram.yaml").exists()
@@ -72,9 +72,9 @@ def test_materialise_diagram_copies_yaml_and_templates(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_diagram_backs_up_existing_templates(tmp_path: Path) -> None:
-    """_materialise_diagram backs up existing diagram-templates/ before overwriting."""
-    from onetool.cli import _materialise_diagram
+def test_copy_diagram_backs_up_existing_templates(tmp_path: Path) -> None:
+    """_copy_diagram backs up existing diagram-templates/ before overwriting."""
+    from onetool.cli import _copy_diagram
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
@@ -82,7 +82,7 @@ def test_materialise_diagram_backs_up_existing_templates(tmp_path: Path) -> None
     existing_templates.mkdir()
     (existing_templates / "custom.mmd").write_text("# custom")
 
-    _materialise_diagram(ot_dir)
+    _copy_diagram(ot_dir)
 
     assert (ot_dir / "diagram-templates").is_dir()
     bak = ot_dir / "diagram-templates.bak"
@@ -92,14 +92,14 @@ def test_materialise_diagram_backs_up_existing_templates(tmp_path: Path) -> None
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_file_unknown(tmp_path: Path) -> None:
+def test_copy_file_unknown(tmp_path: Path) -> None:
     """Unknown file returns False (not a fatal error)."""
-    from onetool.cli import _materialise_file
+    from onetool.cli import _copy_file
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    result = _materialise_file(ot_dir, "nonexistent_xyz.yaml")
+    result = _copy_file(ot_dir, "nonexistent_xyz.yaml")
 
     assert result is False
     assert not (ot_dir / "nonexistent_xyz.yaml").exists()
@@ -107,14 +107,14 @@ def test_materialise_file_unknown(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_servers_yaml_subset(tmp_path: Path) -> None:
+def test_copy_servers_yaml_subset(tmp_path: Path) -> None:
     """--servers chrome-devtools,playwright creates servers.yaml with only those blocks."""
-    from onetool.cli import _materialise_servers_yaml
+    from onetool.cli import _copy_servers_yaml
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "playwright"])
+    _copy_servers_yaml(ot_dir, ["chrome-devtools", "playwright"])
 
     servers_yaml = ot_dir / "servers.yaml"
     assert servers_yaml.exists()
@@ -128,14 +128,14 @@ def test_materialise_servers_yaml_subset(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_servers_yaml_all(tmp_path: Path) -> None:
+def test_copy_servers_yaml_all(tmp_path: Path) -> None:
     """All servers materialised when all known names requested."""
-    from onetool.cli import _materialise_servers_yaml
+    from onetool.cli import _copy_servers_yaml
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "playwright", "github"])
+    _copy_servers_yaml(ot_dir, ["chrome-devtools", "playwright", "github"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
@@ -144,15 +144,15 @@ def test_materialise_servers_yaml_all(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_servers_yaml_unknown_skipped(tmp_path: Path) -> None:
+def test_copy_servers_yaml_unknown_skipped(tmp_path: Path) -> None:
     """Unknown server names are skipped without raising."""
-    from onetool.cli import _materialise_servers_yaml
+    from onetool.cli import _copy_servers_yaml
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
     # Should not raise
-    _materialise_servers_yaml(ot_dir, ["chrome-devtools", "unknown-server"])
+    _copy_servers_yaml(ot_dir, ["chrome-devtools", "unknown-server"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
@@ -265,16 +265,16 @@ def test_safe_write_backs_up_existing_file(tmp_path: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_materialise_file_backs_up_existing(tmp_path: Path) -> None:
-    """_materialise_file renames existing file to .bak before writing."""
-    from onetool.cli import _materialise_file
+def test_copy_file_backs_up_existing(tmp_path: Path) -> None:
+    """_copy_file renames existing file to .bak before writing."""
+    from onetool.cli import _copy_file
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
     existing = ot_dir / "security.yaml"
     existing.write_text("# my custom rules\n")
 
-    _materialise_file(ot_dir, "security.yaml")
+    _copy_file(ot_dir, "security.yaml")
 
     assert existing.exists()
     bak = ot_dir / "security.yaml.bak"
