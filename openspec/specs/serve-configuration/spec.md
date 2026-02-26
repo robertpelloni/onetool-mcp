@@ -1253,7 +1253,7 @@ The `servers.yaml` global template SHALL include comprehensive inline documentat
 #### Scenario: Element highlighting reference
 - **GIVEN** a user wanting to use element annotations via Chrome DevTools
 - **WHEN** they read the DevTools section comments
-- **THEN** they find a quick reference for `chrome_devtools_util` functions (inject, highlight, scan, clear)
+- **THEN** they find a quick reference for `chrome_util` functions (inject, highlight, scan, clear)
 - **AND** a note about Ctrl+I / Cmd+I for manual annotation
 
 ### Requirement: Playwright Server Template
@@ -1270,8 +1270,8 @@ The `servers.yaml` global template SHALL include a commented-out Playwright MCP 
 #### Scenario: Playwright element highlighting reference
 - **GIVEN** a user wanting to use element annotations via Playwright
 - **WHEN** they read the Playwright section comments
-- **THEN** they find a quick reference for `playwright_util` functions (inject, highlight, scan, clear)
-- **AND** a note that `playwright_util` is the Playwright equivalent of `chrome_devtools_util`
+- **THEN** they find a quick reference for `play_util` functions (inject, highlight, scan, clear)
+- **AND** a note that `play_util` is the Playwright equivalent of `chrome_util`
 
 ### Requirement: DevTools Server Instructions Field
 
@@ -1280,7 +1280,7 @@ The DevTools server entry SHALL include an `instructions` field summarising capa
 #### Scenario: DevTools instructions content
 - **GIVEN** the DevTools server `instructions` field
 - **WHEN** read by an AI assistant
-- **THEN** it includes tool count, `chrome_devtools_util` element highlighting API, connection modes, and best-use-case guidance
+- **THEN** it includes tool count, `chrome_util` element highlighting API, connection modes, and best-use-case guidance
 
 ### Requirement: Playwright Server Instructions Field
 
@@ -1289,8 +1289,8 @@ The Playwright server entry SHALL include an `instructions` field summarising ca
 #### Scenario: Playwright instructions content
 - **GIVEN** the Playwright server `instructions` field
 - **WHEN** read by an AI assistant
-- **THEN** it includes `playwright_util` element highlighting API and best-use-case guidance
-- **AND** it notes that `playwright_util` is independent from `chrome_devtools_util` (no fallback between them)
+- **THEN** it includes `play_util` element highlighting API and best-use-case guidance
+- **AND** it notes that `play_util` is independent from `chrome_util` (no fallback between them)
 
 ### Requirement: Transparent Per-Value Decryption of Secrets
 

@@ -59,14 +59,37 @@ configure_logging(log_name="serve")
 _stats_writer: JsonlStatsWriter | None = None
 
 
+def _build_pack_summary() -> str:
+    """Build a pack summary string from installed packs for injection into instructions."""
+    try:
+        from ot.meta._discovery import packs as _packs
+        pack_list = _packs(info="default")
+        lines = []
+        for pack in pack_list:
+            if isinstance(pack, dict):
+                name = pack.get("name", "")
+                desc = pack.get("description", "")
+                if desc and desc != "(no description)":
+                    lines.append(f"- **{name}**: {desc}")
+                else:
+                    lines.append(f"- **{name}**")
+        return "\n".join(lines)
+    except Exception:
+        return "(pack list unavailable)"
+
+
 def _get_instructions() -> str:
-    """Generate MCP server instructions.
+    """Generate MCP server instructions with dynamic pack summary.
 
     Note: Tool descriptions are NOT included here - they come through
     the MCP tool definitions which the client converts to function calling format.
     """
     prompts = get_prompts(inline_prompts=_config.prompts)
-    return prompts.instructions.strip()
+    instructions = prompts.instructions
+    if "{pack_summary}" in instructions:
+        pack_summary = _build_pack_summary()
+        instructions = instructions.replace("{pack_summary}", pack_summary)
+    return instructions.strip()
 
 
 @asynccontextmanager
@@ -263,7 +286,7 @@ def _get_run_description() -> str:
 @mcp.tool(
     description=_get_run_description(),
     annotations={
-        "title": "🧿>>>",
+        "title": "🧿",
         "readOnlyHint": False,
         "destructiveHint": False,
         "idempotentHint": False,

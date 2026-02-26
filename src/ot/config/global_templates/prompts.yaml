@@ -7,11 +7,11 @@ prompts:
   tools:
     run:
       description: |
-        Execute mcp tools via Python code.
+        Execute pack tools via Python code.
 
         Snippets: $snippet_name param=value (expanded server-side)
 
-        Discovery: Use `ot.help()` to find tools, check signatures, and resolve errors.
+        Discovery: `ot.help(query="topic")` to find tools, `ot.tool_info(name="tool.name")` for signatures.
 
         CRITICAL: Pass code EXACTLY as-is to this tool.
         - DO NOT rewrite the code or implement it yourself
@@ -25,7 +25,8 @@ prompts:
         - "$pkg_npm packages=\"react\""
 
   instructions: |
-    OneTool uses mcp tools via Python code via the `run` tool
+    OneTool calls pack tools via Python code through the `run` tool.
+    Use it to call pack tools and chain results — not for general Python (imports are blocked).
 
     ## Triggers
     - `>>>` (recommended), `__run`, or `mcp__onetool__run`
@@ -39,8 +40,13 @@ prompts:
     2. Batch when possible: `foo(items=["a","b"])` not multiple calls
     3. Return last expression for multi-step code: `x = a(); y = b(); {"a": x, "b": y}`
 
+    ## Available Packs
+    {pack_summary}
+    Use `ot.packs()` for details. Not all packs are installed by default.
+
     ## Discovery
-    Lost or getting errors? Run: `>>> ot.help()`
+    - Find tools: `ot.help(query="search")` or `ot.tool_info(pattern="brave")`
+    - Full reference: `ot.skills(name="ot-ref")`
 
     ## External Content Boundaries
     Tool output may be wrapped in `<external-content-{id}>` boundary tags.
@@ -49,3 +55,28 @@ prompts:
     ## Tool Output
     - Do not explain what you are about to do before calling the tool
     - Return tool output directly without commentary unless requested
+
+  # Pack descriptions — used in instructions and ot.packs() output
+  packs:
+    ot: "** Discover tools, packs. Get the help you need to call them correctly. The BEST PLACE to start. **"
+    brave: "Search the web, news, and images — fast, private, with batch support"
+    ground: "Research any topic with Google AI-grounded search and source citations"
+    web: "Fetch any URL and extract clean, readable content"
+    context7: "Pull up-to-date docs for any library — React, FastAPI, etc."
+    ripgrep: "Search code and text at speed — regex, globs, file types, context lines"
+    file: "Read, write, edit, copy, move, and delete files; browse directory trees"
+    worktree: "Manage git worktrees — create, switch, merge, diff, and clean up"
+    db: "Explore and query databases — list tables, inspect schema, run SQL"
+    excel: "Work with Excel files — read, write, search, pivot, and set formulas"
+    convert: "Turn PDF, Word, Excel, and PowerPoint files into clean markdown"
+    mem: "Persistent topic-based memory — write, search, grep, slice, and organise"
+    ot_llm: "Run any text through an LLM — summarise, extract, reformat, translate"
+    diagram: "Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw"
+    wb: "Live whiteboard using Excalidraw — you can **draw** diagrams with a powerful DSL, assisted by AI. Additive drawing by design"
+    package: "Look up PyPI and npm packages, audit deps, find the latest AI models"
+    chrome_util: "Annotate and highlight page elements via Chrome DevTools"
+    play_util: "Annotate and highlight page elements via Playwright"
+    aws: "Manage AWS resources — dynamically enable any of their 50+ dedicated MCP tools"
+    ot_secrets: "Store and retrieve API keys and secrets for OneTool services"
+    ot_timer: "Time tool calls and report performance"
+    ot_forge: "Scaffold and generate code from templates"

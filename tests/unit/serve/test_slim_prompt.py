@@ -8,11 +8,11 @@ import pytest
 @pytest.mark.unit
 @pytest.mark.serve
 def test_instructions_is_short() -> None:
-    """instructions prompt is at most 25 lines."""
+    """instructions prompt template is at most 35 lines (before pack_summary substitution)."""
     from ot.prompts import load_prompts
 
     prompts = load_prompts()
-    assert len(prompts.instructions.strip().splitlines()) <= 25
+    assert len(prompts.instructions.strip().splitlines()) <= 35
 
 
 @pytest.mark.unit
@@ -25,7 +25,7 @@ def test_instructions_has_required_elements() -> None:
     text = prompts.instructions
 
     assert ">>>" in text, "Missing trigger in instructions"
-    assert "ot.help()" in text, "Missing discovery hint in instructions"
+    assert "ot.help(" in text, "Missing discovery hint in instructions"
     assert "external-content" in text or "boundary" in text.lower(), (
         "Missing external content boundary warning in instructions"
     )

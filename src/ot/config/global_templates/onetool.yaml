@@ -1,10 +1,6 @@
 # OneTool Configuration
-# ~/.onetool/onetool.yaml — edit to customize your setup
-# Uncomment and modify settings as needed.
-
 version: 2
 
-# Include external config files (merged left-to-right)
 # Paths are relative to this file's directory (the .onetool/ directory)
 include:
   - snippets.yaml   # Snippet workflows
@@ -21,7 +17,9 @@ tools_dir: []
 
 # Tool-specific configuration
 # tools:
-#   # Transform tool (LLM for code generation)
-#   transform:
+#   # ot_llm — LLM calls from within OneTool (code generation, transforms, etc.)
+#   ot_llm:
 #     model: google/gemini-3-flash-preview
 #     base_url: https://openrouter.ai/api/v1
+#   # mem — persistent memory (semantic search and recall)
+#   # mem: {}
