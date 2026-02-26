@@ -3,12 +3,12 @@
 Provides high-level functions to interact with the inject.js v2.0 annotation
 system via the Playwright MCP server (``playwright.evaluate``).
 
-For Chrome DevTools, use the ``chrome_devtools_util`` pack instead.
+For Chrome DevTools, use the ``chrome_util`` pack instead.
 """
 
 from __future__ import annotations
 
-pack = "playwright_util"
+pack = "play_util"
 
 __all__ = [
     "clear_annotations",
@@ -38,7 +38,7 @@ from otdev._inject_base import (
 
 _SERVER = "playwright"
 _TOOL = "browser_evaluate"
-_PACK = "playwright_util"
+_PACK = "play_util"
 
 
 def inject_annotations() -> dict[str, Any]:
@@ -54,7 +54,7 @@ def inject_annotations() -> dict[str, Any]:
         Dict with ``success``, ``ready``, and ``version`` fields.
 
     Example:
-        playwright_util.inject_annotations()
+        play_util.inject_annotations()
     """
     return _inject(_SERVER, _TOOL, _PACK)
 
@@ -81,7 +81,7 @@ def highlight_element(
         Dict with ``success``, ``count``, and ``ids`` fields.
 
     Example:
-        playwright_util.highlight_element(selector="button.submit", label="Click here")
+        play_util.highlight_element(selector="button.submit", label="Click here")
     """
     return _highlight(
         _SERVER, _TOOL, _PACK,
@@ -101,7 +101,7 @@ def scan_annotations() -> list[dict[str, Any]]:
         ``tagName``, and ``color`` fields. Empty list if none exist.
 
     Example:
-        playwright_util.scan_annotations()
+        play_util.scan_annotations()
     """
     return _scan(_SERVER, _TOOL, _PACK)
 
@@ -116,7 +116,7 @@ def clear_annotations() -> dict[str, Any]:
         Dict with ``success`` and ``cleared`` count.
 
     Example:
-        playwright_util.clear_annotations()
+        play_util.clear_annotations()
     """
     return _clear(_SERVER, _TOOL, _PACK)
 
@@ -142,7 +142,7 @@ def guide_user(
         and per-step ``results``.
 
     Example:
-        playwright_util.guide_user(
+        play_util.guide_user(
             task="Fill form",
             steps=[
                 {"selector": "input[name='name']", "label": "Enter name"},

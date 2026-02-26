@@ -1,6 +1,6 @@
-"""Unit tests for chrome_devtools_util and playwright_util tool packs.
+"""Unit tests for chrome_util and play_util tool packs.
 
-Tests the shared _inject_base logic via the chrome_devtools_util pack,
+Tests the shared _inject_base logic via the chrome_util pack,
 plus pack structure for both packs.
 """
 
@@ -11,8 +11,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from otdev.tools import chrome_devtools_util, playwright_util
+from otdev.tools import chrome_util, play_util
 from otdev._inject_base import _check_server, _exec_js, _extract_result
+
+# Ready state returned by _ensure_injected check call
+_READY = json.dumps({"ready": True, "version": "2.0.0"})
 
 
 # =============================================================================
@@ -24,10 +27,10 @@ from otdev._inject_base import _check_server, _exec_js, _extract_result
 @pytest.mark.tools
 class TestChromeDevtoolsUtilPack:
     def test_pack_name(self):
-        assert chrome_devtools_util.pack == "chrome_devtools_util"
+        assert chrome_util.pack == "chrome_util"
 
     def test_all_exports(self):
-        assert set(chrome_devtools_util.__all__) == {
+        assert set(chrome_util.__all__) == {
             "inject_annotations",
             "highlight_element",
             "scan_annotations",
@@ -36,18 +39,18 @@ class TestChromeDevtoolsUtilPack:
         }
 
     def test_functions_exist(self):
-        for name in chrome_devtools_util.__all__:
-            assert callable(getattr(chrome_devtools_util, name))
+        for name in chrome_util.__all__:
+            assert callable(getattr(chrome_util, name))
 
 
 @pytest.mark.unit
 @pytest.mark.tools
 class TestPlaywrightUtilPack:
     def test_pack_name(self):
-        assert playwright_util.pack == "playwright_util"
+        assert play_util.pack == "play_util"
 
     def test_all_exports(self):
-        assert set(playwright_util.__all__) == {
+        assert set(play_util.__all__) == {
             "inject_annotations",
             "highlight_element",
             "scan_annotations",
@@ -56,8 +59,8 @@ class TestPlaywrightUtilPack:
         }
 
     def test_functions_exist(self):
-        for name in playwright_util.__all__:
-            assert callable(getattr(playwright_util, name))
+        for name in play_util.__all__:
+            assert callable(getattr(play_util, name))
 
 
 # =============================================================================
@@ -138,7 +141,7 @@ class TestCheckServer:
 class TestInjectAnnotations:
     def test_server_not_connected(self, mock_proxy_manager):
         mock_proxy_manager.servers = []
-        result = chrome_devtools_util.inject_annotations()
+        result = chrome_util.inject_annotations()
         assert result["success"] is False
         assert "error" in result
 
@@ -146,7 +149,7 @@ class TestInjectAnnotations:
         state = json.dumps({"ready": True, "version": "2.0.0"})
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = state
-        result = chrome_devtools_util.inject_annotations()
+        result = chrome_util.inject_annotations()
         assert result["success"] is True
         assert result["version"] == "2.0.0"
         # Should only call once (check), not inject
@@ -158,7 +161,7 @@ class TestInjectAnnotations:
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.side_effect = [not_ready, "undefined", ready]
         with patch("otdev._inject_base.get_inject_script", return_value="// inject.js"):
-            result = chrome_devtools_util.inject_annotations()
+            result = chrome_util.inject_annotations()
             assert result["success"] is True
             assert result["version"] == "2.0.0"
             # check + inject + verify = 3 calls
@@ -175,15 +178,15 @@ class TestInjectAnnotations:
 class TestHighlightElement:
     def test_server_not_connected(self, mock_proxy_manager):
         mock_proxy_manager.servers = []
-        result = chrome_devtools_util.highlight_element(selector=".btn", label="Click")
+        result = chrome_util.highlight_element(selector=".btn", label="Click")
         assert result["success"] is False
         assert result["count"] == 0
 
     def test_successful_highlight(self, mock_proxy_manager):
         response = json.dumps({"success": True, "count": 1, "ids": ["ann-1"]})
         mock_proxy_manager.servers = ["chrome-devtools"]
-        mock_proxy_manager.call_tool_sync.return_value = response
-        result = chrome_devtools_util.highlight_element(selector=".btn", label="Click")
+        mock_proxy_manager.call_tool_sync.side_effect = [_READY, response]
+        result = chrome_util.highlight_element(selector=".btn", label="Click")
         assert result["success"] is True
         assert result["count"] == 1
 
@@ -192,7 +195,7 @@ class TestHighlightElement:
         response = json.dumps({"success": True, "count": 1, "ids": ["ann-1"]})
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = response
-        chrome_devtools_util.highlight_element(selector=".btn", label="Click")
+        chrome_util.highlight_element(selector=".btn", label="Click")
         call_args = mock_proxy_manager.call_tool_sync.call_args
         assert call_args[0][0] == "chrome-devtools"
         assert call_args[0][1] == "evaluate_script"
@@ -205,7 +208,7 @@ class TestHighlightElement:
         response = json.dumps({"success": False, "count": 0, "ids": [], "error": "No elements match selector"})
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = response
-        result = chrome_devtools_util.highlight_element(selector=".nonexistent", label="Test")
+        result = chrome_util.highlight_element(selector=".nonexistent", label="Test")
         assert result["success"] is False
         assert result["count"] == 0
 
@@ -220,21 +223,21 @@ class TestHighlightElement:
 class TestScanAnnotations:
     def test_server_not_connected(self, mock_proxy_manager):
         mock_proxy_manager.servers = []
-        result = chrome_devtools_util.scan_annotations()
+        result = chrome_util.scan_annotations()
         assert result == []
 
     def test_returns_annotations(self, mock_proxy_manager):
         annotations = [{"id": "ann-1", "label": "Test", "selector": ".btn"}]
         mock_proxy_manager.servers = ["chrome-devtools"]
-        mock_proxy_manager.call_tool_sync.return_value = json.dumps(annotations)
-        result = chrome_devtools_util.scan_annotations()
+        mock_proxy_manager.call_tool_sync.side_effect = [_READY, json.dumps(annotations)]
+        result = chrome_util.scan_annotations()
         assert len(result) == 1
         assert result[0]["id"] == "ann-1"
 
     def test_empty_annotations(self, mock_proxy_manager):
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = json.dumps([])
-        result = chrome_devtools_util.scan_annotations()
+        result = chrome_util.scan_annotations()
         assert result == []
 
 
@@ -248,14 +251,14 @@ class TestScanAnnotations:
 class TestClearAnnotations:
     def test_server_not_connected(self, mock_proxy_manager):
         mock_proxy_manager.servers = []
-        result = chrome_devtools_util.clear_annotations()
+        result = chrome_util.clear_annotations()
         assert result["success"] is False
 
     def test_successful_clear(self, mock_proxy_manager):
         response = json.dumps({"success": True, "cleared": 3})
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = response
-        result = chrome_devtools_util.clear_annotations()
+        result = chrome_util.clear_annotations()
         assert result["success"] is True
         assert result["cleared"] == 3
 
@@ -270,7 +273,7 @@ class TestClearAnnotations:
 class TestGuideUser:
     def test_server_not_connected(self, mock_proxy_manager):
         mock_proxy_manager.servers = []
-        result = chrome_devtools_util.guide_user(
+        result = chrome_util.guide_user(
             task="Test", steps=[{"selector": ".a", "label": "A"}]
         )
         assert result["highlighted"] == 0
@@ -279,8 +282,9 @@ class TestGuideUser:
     def test_successful_guide(self, mock_proxy_manager):
         step_result = json.dumps({"success": True, "count": 1, "ids": ["guide-0"]})
         mock_proxy_manager.servers = ["chrome-devtools"]
-        mock_proxy_manager.call_tool_sync.return_value = step_result
-        result = chrome_devtools_util.guide_user(
+        # ready check + 2 step calls
+        mock_proxy_manager.call_tool_sync.side_effect = [_READY, step_result, step_result]
+        result = chrome_util.guide_user(
             task="Fill form",
             steps=[
                 {"selector": "input[name='name']", "label": "Enter name"},
@@ -321,20 +325,22 @@ class TestDevtoolsWrappedResponses:
     """Verify functions correctly parse DevTools markdown-wrapped responses."""
 
     def test_highlight_with_devtools_wrapper(self, mock_proxy_manager):
+        ready_wrapped = _devtools_wrap('{"ready":true,"version":"2.0.0"}')
         wrapped = _devtools_wrap('{"success":true,"count":1,"ids":["ann-1"]}')
         mock_proxy_manager.servers = ["chrome-devtools"]
-        mock_proxy_manager.call_tool_sync.return_value = wrapped
-        result = chrome_devtools_util.highlight_element(selector=".btn", label="Click")
+        mock_proxy_manager.call_tool_sync.side_effect = [ready_wrapped, wrapped]
+        result = chrome_util.highlight_element(selector=".btn", label="Click")
         assert result["success"] is True
         assert result["count"] == 1
         assert result["ids"] == ["ann-1"]
 
     def test_scan_with_devtools_wrapper(self, mock_proxy_manager):
         annotations = [{"id": "ann-1", "label": "Test"}]
+        ready_wrapped = _devtools_wrap('{"ready":true,"version":"2.0.0"}')
         wrapped = _devtools_wrap(json.dumps(annotations))
         mock_proxy_manager.servers = ["chrome-devtools"]
-        mock_proxy_manager.call_tool_sync.return_value = wrapped
-        result = chrome_devtools_util.scan_annotations()
+        mock_proxy_manager.call_tool_sync.side_effect = [ready_wrapped, wrapped]
+        result = chrome_util.scan_annotations()
         assert len(result) == 1
         assert result[0]["id"] == "ann-1"
 
@@ -342,7 +348,7 @@ class TestDevtoolsWrappedResponses:
         wrapped = _devtools_wrap('{"ready":true,"version":"2.0.0"}')
         mock_proxy_manager.servers = ["chrome-devtools"]
         mock_proxy_manager.call_tool_sync.return_value = wrapped
-        result = chrome_devtools_util.inject_annotations()
+        result = chrome_util.inject_annotations()
         assert result["success"] is True
         assert result["version"] == "2.0.0"
 
@@ -353,10 +359,11 @@ class TestPlaywrightWrappedResponses:
     """Verify functions correctly parse Playwright markdown-wrapped responses."""
 
     def test_highlight_with_playwright_wrapper(self, mock_proxy_manager):
+        ready_wrapped = _playwright_wrap('{"ready":true,"version":"2.0.0"}')
         wrapped = _playwright_wrap('{"success":true,"count":2,"ids":["a","b"]}')
         mock_proxy_manager.servers = ["playwright"]
-        mock_proxy_manager.call_tool_sync.return_value = wrapped
-        result = playwright_util.highlight_element(selector="button", label="Go")
+        mock_proxy_manager.call_tool_sync.side_effect = [ready_wrapped, wrapped]
+        result = play_util.highlight_element(selector="button", label="Go")
         assert result["success"] is True
         assert result["count"] == 2
 
@@ -364,7 +371,7 @@ class TestPlaywrightWrappedResponses:
         wrapped = _playwright_wrap('{"success":true,"cleared":3}')
         mock_proxy_manager.servers = ["playwright"]
         mock_proxy_manager.call_tool_sync.return_value = wrapped
-        result = playwright_util.clear_annotations()
+        result = play_util.clear_annotations()
         assert result["success"] is True
         assert result["cleared"] == 3
 
@@ -407,7 +414,7 @@ class TestPlaywrightRouting:
         response = json.dumps({"success": True, "cleared": 0})
         mock_proxy_manager.servers = ["playwright"]
         mock_proxy_manager.call_tool_sync.return_value = response
-        playwright_util.clear_annotations()
+        play_util.clear_annotations()
         mock_proxy_manager.call_tool_sync.assert_called_once()
         call_args = mock_proxy_manager.call_tool_sync.call_args
         assert call_args[0][0] == "playwright"

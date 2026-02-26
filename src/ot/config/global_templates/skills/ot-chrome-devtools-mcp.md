@@ -24,13 +24,13 @@ tags: [browser, devtools, automation]
 - **autoConnect** (experimental): auto-attach to any Chrome with remote debugging.
   `args: ["--autoConnect", "--channel=beta"]`
 
-## Element Highlighting (chrome_devtools_util pack)
+## Element Highlighting (chrome_util pack)
 
-- `chrome_devtools_util.inject_annotations()` — load inject.js into the page
-- `chrome_devtools_util.highlight_element(selector=".btn", label="Click")` — annotate elements
-- `chrome_devtools_util.scan_annotations()` — read user/Claude annotations
-- `chrome_devtools_util.clear_annotations()` — remove all highlights
-- `chrome_devtools_util.guide_user(task="...", steps=[...])` — multi-step guidance
+- `chrome_util.inject_annotations()` — load inject.js into the page
+- `chrome_util.highlight_element(selector=".btn", label="Click")` — annotate elements
+- `chrome_util.scan_annotations()` — read user/Claude annotations
+- `chrome_util.clear_annotations()` — remove all highlights
+- `chrome_util.guide_user(task="...", steps=[...])` — multi-step guidance
 - Users can annotate manually with Ctrl+I / Cmd+I in the browser.
 
 ## Usage Patterns

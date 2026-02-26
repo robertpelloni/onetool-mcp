@@ -41,11 +41,11 @@ Add to the `args` array to customise behaviour:
 - **Performance**: `performance_start_trace`, `performance_stop_trace`, `performance_analyze_insight`
 - **Viewport**: `resize_page`, `emulate`
 
-## Element Annotations (`chrome_devtools_util`)
+## Element Annotations (`chrome_util`)
 
-The `chrome_devtools_util` pack adds visual annotation tools on top of this server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+The `chrome_util` pack adds visual annotation tools on top of this server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
 
-See [chrome_devtools_util reference](../tools/chrome-devtools-util.md) for the full API.
+See [chrome_util reference](../tools/chrome-util.md) for the full API.
 
 ## Usage Patterns
 
@@ -144,8 +144,8 @@ Visually walk the user through a multi-step process with labelled overlays.
 
 ```python
 chrome_devtools.navigate_page(url="https://example.com/settings")
-chrome_devtools_util.inject_annotations()
-chrome_devtools_util.guide_user(
+chrome_util.inject_annotations()
+chrome_util.guide_user(
     task="Update profile",
     steps=[
         {"selector": "input[name='display_name']", "label": "1. Edit name"},

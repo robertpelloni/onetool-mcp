@@ -1,6 +1,6 @@
-# playwright_util
+# chrome_util
 
-Visual element annotation for the [Playwright MCP](../servers/playwright.md) server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+Visual element annotation for the [Chrome DevTools MCP](../servers/chrome-devtools.md) server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
 
 ## Tools
 
@@ -9,7 +9,7 @@ Visual element annotation for the [Playwright MCP](../servers/playwright.md) ser
 Loads inject.js v2.0 into the current page. Must be called before any other annotation function. Idempotent — re-calling on an already-injected page returns success without re-injecting.
 
 ```python
-playwright_util.inject_annotations()
+chrome_util.inject_annotations()
 # Returns: {"success": True, "ready": True, "version": "2.0.0"}
 ```
 
@@ -18,8 +18,8 @@ playwright_util.inject_annotations()
 Highlights all elements matching a CSS selector with a labelled overlay box.
 
 ```python
-playwright_util.highlight_element(selector="button.submit", label="Click here")
-playwright_util.highlight_element(selector=".error", label="Fix this", color="red")
+chrome_util.highlight_element(selector="button.submit", label="Click here")
+chrome_util.highlight_element(selector=".error", label="Fix this", color="red")
 ```
 
 Available colours: `orange` (default), `red`, `blue`, `green`.
@@ -29,7 +29,7 @@ Available colours: `orange` (default), `red`, `blue`, `green`.
 Returns all current annotations on the page — both those added programmatically and those added by the user via selection mode.
 
 ```python
-annotations = playwright_util.scan_annotations()
+annotations = chrome_util.scan_annotations()
 # Returns: [{"id": "sel-1", "label": "My note", "selector": ".some-el",
 #            "content": "...", "tagName": "span", "color": "orange"}, ...]
 ```
@@ -39,7 +39,7 @@ annotations = playwright_util.scan_annotations()
 Removes all annotations and overlays from the page.
 
 ```python
-playwright_util.clear_annotations()
+chrome_util.clear_annotations()
 # Returns: {"success": True, "cleared": 3}
 ```
 
@@ -48,7 +48,7 @@ playwright_util.clear_annotations()
 Highlights a sequence of elements at once so the user can see a full workflow in one view.
 
 ```python
-playwright_util.guide_user(
+chrome_util.guide_user(
     task="Complete checkout",
     steps=[
         {"selector": "input[name='email']", "label": "1. Enter email"},
@@ -70,9 +70,9 @@ Users can annotate elements directly in the browser without writing any code:
 Claude reads the result with `scan_annotations()`:
 
 ```python
-playwright_util.inject_annotations()
+chrome_util.inject_annotations()
 # ... tell user to press Ctrl+I and click the element they mean ...
-annotations = playwright_util.scan_annotations()
+annotations = chrome_util.scan_annotations()
 # Use annotations[0]["selector"] to interact with what they picked
 ```
 
@@ -89,9 +89,9 @@ annotations = playwright_util.scan_annotations()
 ### Guide a user through a form
 
 ```python
-playwright.browser_navigate(url="https://example.com/settings")
-playwright_util.inject_annotations()
-playwright_util.guide_user(
+chrome_devtools.navigate_page(url="https://example.com/settings")
+chrome_util.inject_annotations()
+chrome_util.guide_user(
     task="Update your profile",
     steps=[
         {"selector": "input[name='display_name']", "label": "1. Edit name"},
@@ -99,23 +99,23 @@ playwright_util.guide_user(
         {"selector": "button[type='submit']",        "label": "3. Save", "color": "green"},
     ],
 )
-playwright.browser_take_screenshot()
+chrome_devtools.take_screenshot()
 ```
 
 ### Let a user point Claude to an element
 
 ```python
-playwright_util.inject_annotations()
+chrome_util.inject_annotations()
 # Ask user to press Ctrl+I and click the element they want
-annotations = playwright_util.scan_annotations()
+annotations = chrome_util.scan_annotations()
 # annotations[0]["selector"] contains the CSS selector of what they clicked
 ```
 
 ### Highlight an error field
 
 ```python
-playwright_util.inject_annotations()
-playwright_util.highlight_element(selector="#email-error", label="Fix this", color="red")
-playwright.browser_take_screenshot()
-playwright_util.clear_annotations()
+chrome_util.inject_annotations()
+chrome_util.highlight_element(selector="#email-error", label="Fix this", color="red")
+chrome_devtools.take_screenshot()
+chrome_util.clear_annotations()
 ```

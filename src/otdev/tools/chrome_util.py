@@ -3,12 +3,12 @@
 Provides high-level functions to interact with the inject.js v2.0 annotation
 system via the Chrome DevTools MCP server (``chrome-devtools.evaluate_script``).
 
-For Playwright, use the ``playwright_util`` pack instead.
+For Playwright, use the ``play_util`` pack instead.
 """
 
 from __future__ import annotations
 
-pack = "chrome_devtools_util"
+pack = "chrome_util"
 
 __all__ = [
     "clear_annotations",
@@ -38,7 +38,7 @@ from otdev._inject_base import (
 
 _SERVER = "chrome-devtools"
 _TOOL = "evaluate_script"
-_PACK = "chrome_devtools_util"
+_PACK = "chrome_util"
 
 
 def inject_annotations() -> dict[str, Any]:
@@ -54,7 +54,7 @@ def inject_annotations() -> dict[str, Any]:
         Dict with ``success``, ``ready``, and ``version`` fields.
 
     Example:
-        chrome_devtools_util.inject_annotations()
+        chrome_util.inject_annotations()
     """
     return _inject(_SERVER, _TOOL, _PACK)
 
@@ -81,7 +81,7 @@ def highlight_element(
         Dict with ``success``, ``count``, and ``ids`` fields.
 
     Example:
-        chrome_devtools_util.highlight_element(selector="button.submit", label="Click here")
+        chrome_util.highlight_element(selector="button.submit", label="Click here")
     """
     return _highlight(
         _SERVER, _TOOL, _PACK,
@@ -101,7 +101,7 @@ def scan_annotations() -> list[dict[str, Any]]:
         ``tagName``, and ``color`` fields. Empty list if none exist.
 
     Example:
-        chrome_devtools_util.scan_annotations()
+        chrome_util.scan_annotations()
     """
     return _scan(_SERVER, _TOOL, _PACK)
 
@@ -116,7 +116,7 @@ def clear_annotations() -> dict[str, Any]:
         Dict with ``success`` and ``cleared`` count.
 
     Example:
-        chrome_devtools_util.clear_annotations()
+        chrome_util.clear_annotations()
     """
     return _clear(_SERVER, _TOOL, _PACK)
 
@@ -142,7 +142,7 @@ def guide_user(
         and per-step ``results``.
 
     Example:
-        chrome_devtools_util.guide_user(
+        chrome_util.guide_user(
             task="Fill form",
             steps=[
                 {"selector": "input[name='name']", "label": "Enter name"},

@@ -32,11 +32,11 @@ Add to the `args` array to customise behaviour:
 - **State**: `browser_snapshot`, `browser_screenshot`, `browser_evaluate`
 - **Tabs**: `browser_tab_list`, `browser_tab_new`, `browser_tab_select`, `browser_tab_close`
 
-## Element Annotations (`playwright_util`)
+## Element Annotations (`play_util`)
 
-The `playwright_util` pack adds visual annotation tools on top of this server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+The `play_util` pack adds visual annotation tools on top of this server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
 
-See [playwright_util reference](../tools/playwright-util.md) for the full API.
+See [play_util reference](../tools/play-util.md) for the full API.
 
 ## Usage Patterns
 
@@ -130,8 +130,8 @@ Use the annotation overlay to visually guide a user through a workflow.
 
 ```python
 playwright.browser_navigate(url="https://example.com/settings")
-playwright_util.inject_annotations()
-playwright_util.guide_user(
+play_util.inject_annotations()
+play_util.guide_user(
     task="Update your profile",
     steps=[
         {"selector": "input[name='display_name']", "label": "1. Edit name"},

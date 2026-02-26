@@ -13,13 +13,13 @@ tags: [browser, playwright, automation]
 - **State**: browser_snapshot, browser_screenshot, browser_evaluate
 - **Tabs**: browser_tab_list, browser_tab_new, browser_tab_select, browser_tab_close
 
-## Element Highlighting (playwright_util pack)
+## Element Highlighting (play_util pack)
 
-- `playwright_util.inject_annotations()` — load inject.js into the page
-- `playwright_util.highlight_element(selector=".btn", label="Click")` — annotate elements
-- `playwright_util.scan_annotations()` — read user/Claude annotations
-- `playwright_util.clear_annotations()` — remove all highlights
-- `playwright_util.guide_user(task="...", steps=[...])` — multi-step guidance
+- `play_util.inject_annotations()` — load inject.js into the page
+- `play_util.highlight_element(selector=".btn", label="Click")` — annotate elements
+- `play_util.scan_annotations()` — read user/Claude annotations
+- `play_util.clear_annotations()` — remove all highlights
+- `play_util.guide_user(task="...", steps=[...])` — multi-step guidance
 - Users can annotate manually with Ctrl+I / Cmd+I in the browser.
 
 ## Usage Patterns

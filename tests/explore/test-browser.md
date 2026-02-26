@@ -1,6 +1,6 @@
 # Test Browser Annotation Packs
 
-Smoke test `chrome_devtools_util` and `playwright_util` packs against live browser MCP servers.
+Smoke test `chrome_util` and `play_util` packs against live browser MCP servers.
 
 ## IMPORTANT: Testing Environment
 
@@ -47,31 +47,31 @@ except:
     pass  # No dialog present, continue
 ```
 
-## Test: chrome_devtools_util
+## Test: chrome_util
 
 Run the full annotation cycle via Chrome DevTools:
 
 ```python
 # 1. Inject (fresh)
-r1 = chrome_devtools_util.inject_annotations()
+r1 = chrome_util.inject_annotations()
 # Expect: {success: true, ready: true, version: "2.0.0"}
 
 # 2. Inject (idempotent)
-r2 = chrome_devtools_util.inject_annotations()
+r2 = chrome_util.inject_annotations()
 # Expect: {success: true, ready: true, version: "2.0.0"}
 
 # 3. Highlight with custom element_id and color
-r3 = chrome_devtools_util.highlight_element(selector="a", label="Test link", color="blue", element_id="test-1")
+r3 = chrome_util.highlight_element(selector="a", label="Test link", color="blue", element_id="test-1")
 # Expect: {success: true, count: >= 1, ids: ["test-1-0", "test-1-1", ...]}
 # Note: Multiple matches get indexed IDs
 
 # 4. Scan annotations
-r4 = chrome_devtools_util.scan_annotations()
+r4 = chrome_util.scan_annotations()
 # Expect: list with annotations containing: id, label, selector, content, tagName, color
 # Verify: len(r4) >= 1
 
 # 5. Guide user (multi-step) - use simple selectors
-r5 = chrome_devtools_util.guide_user(
+r5 = chrome_util.guide_user(
     task="Navigate",
     steps=[
         {"selector": "h1", "label": "Step 1: Heading", "color": "orange"},
@@ -81,11 +81,11 @@ r5 = chrome_devtools_util.guide_user(
 # Expect: {task: "Navigate", total: 2, highlighted: 2, results: [...]}
 
 # 6. Clear all annotations
-r6 = chrome_devtools_util.clear_annotations()
+r6 = chrome_util.clear_annotations()
 # Expect: {success: true, cleared: >= 1}
 
 # 7. Verify cleared
-r7 = chrome_devtools_util.scan_annotations()
+r7 = chrome_util.scan_annotations()
 # Expect: empty list []
 
 # 8. Take screenshot for verification
@@ -103,30 +103,30 @@ devtools.take_screenshot()
 }
 ```
 
-## Test: playwright_util
+## Test: play_util
 
 Run the same cycle via Playwright:
 
 ```python
 # 1. Inject (fresh)
-p1 = playwright_util.inject_annotations()
+p1 = play_util.inject_annotations()
 # Expect: {success: true, ready: true, version: "2.0.0"}
 
 # 2. Inject (idempotent)
-p2 = playwright_util.inject_annotations()
+p2 = play_util.inject_annotations()
 # Expect: {success: true, ready: true, version: "2.0.0"}
 
 # 3. Highlight with custom element_id and color
-p3 = playwright_util.highlight_element(selector="a", label="Test link", color="blue", element_id="test-1")
+p3 = play_util.highlight_element(selector="a", label="Test link", color="blue", element_id="test-1")
 # Expect: {success: true, count: >= 1, ids: ["test-1-0", "test-1-1", ...]}
 
 # 4. Scan annotations
-p4 = playwright_util.scan_annotations()
+p4 = play_util.scan_annotations()
 # Expect: list with annotations containing: id, label, selector, content, tagName, color
 # Verify: len(p4) >= 1
 
 # 5. Guide user (multi-step) - use simple selectors
-p5 = playwright_util.guide_user(
+p5 = play_util.guide_user(
     task="Navigate",
     steps=[
         {"selector": "h1", "label": "Step 1: Heading", "color": "orange"},
@@ -136,11 +136,11 @@ p5 = playwright_util.guide_user(
 # Expect: {task: "Navigate", total: 2, highlighted: 2, results: [...]}
 
 # 6. Clear all annotations
-p6 = playwright_util.clear_annotations()
+p6 = play_util.clear_annotations()
 # Expect: {success: true, cleared: >= 1}
 
 # 7. Verify cleared
-p7 = playwright_util.scan_annotations()
+p7 = play_util.scan_annotations()
 # Expect: empty list []
 
 # 8. Take screenshot for verification
@@ -216,14 +216,14 @@ After tests complete, clean up the browser state:
 ```python
 # DevTools cleanup
 try:
-    chrome_devtools_util.clear_annotations()
+    chrome_util.clear_annotations()
     devtools.handle_dialog(action="dismiss")
 except:
     pass
 
 # Playwright cleanup
 try:
-    playwright_util.clear_annotations()
+    play_util.clear_annotations()
     playwright.handle_dialog(action="dismiss")
 except:
     pass
@@ -238,7 +238,7 @@ Write comprehensive findings to `wip/test-output/browser-util-test.md`
 2. **Test Results** - Pass/fail for each of 7 test steps per server
 3. **Feature Verification** - Confirm inject.js v2.0.0 loaded
 4. **Observations** - Strengths, issues, ID patterns
-5. **Comparison** - Differences between chrome_devtools_util and playwright_util (if both tested)
+5. **Comparison** - Differences between chrome_util and play_util (if both tested)
 6. **Screenshots** - Annotated states and clean final state
 7. **Manual Testing Notes** - CMD-I prompt UI requires separate manual verification
 8. **Conclusion** - Overall status, defects found (if any), recommendations
