@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Any
 
 from ot.config import get_config
@@ -15,10 +16,14 @@ if TYPE_CHECKING:
 log = LogSpan
 
 
+_VALID_INFO_LEVELS = {"min", "default", "full"}
+_VALID_SERVER_INFO_LEVELS = {"min", "default", "full", "resources", "prompts"}
+
+
 def tools(
     *,
     pattern: str = "",
-    info: InfoLevel = "list",
+    info: InfoLevel = "default",
 ) -> list[dict[str, Any] | str]:
     """List all available tools with optional filtering.
 
@@ -27,21 +32,23 @@ def tools(
 
     Args:
         pattern: Filter tools by name pattern (case-insensitive substring match)
-        info: Output verbosity level - "list" (names only, default), "min" (name +
-              description truncated to 100 chars), "core" (name + signature + truncated
-              description + args — recommended for tool discovery), or "full" (complete details)
+        info: Output verbosity level - "min" (names only), "default" (name +
+              description truncated to 200 chars, default), or "full" (name +
+              full description + source)
 
     Returns:
-        List of tool names (info="list") or tool dicts (info="min"/"full")
+        List of tool names (info="min") or tool dicts (info="default"/"full")
 
     Example:
         ot.tools()
         ot.tools(pattern="search")
         ot.tools(pattern="brave.")
-        ot.tools(info="list")
-        ot.tools(pattern="brave.search", info="core")
+        ot.tools(info="min")
         ot.tools(pattern="brave.search", info="full")
     """
+    if info not in _VALID_INFO_LEVELS:
+        raise ValueError(f"info={info!r} is not valid. Use 'min', 'default', or 'full'.")
+
     from ot.executor.tool_loader import load_tool_registry
 
     with log(span="ot.tools", pattern=pattern or None, info=info) as s:
@@ -92,10 +99,99 @@ def tools(
         return tools_list
 
 
+def tool_info(
+    *,
+    name: str = "",
+    pattern: str = "",
+    info: InfoLevel = "default",
+) -> dict[str, Any] | list[dict[str, Any]]:
+    """Get detailed info for one or more tools.
+
+    Returns signature, args, description, and source. Use name= for exact match
+    (returns dict), pattern= for substring match (returns list of dicts).
+
+    Args:
+        name: Exact tool name (e.g., "brave.search"). Returns a single dict.
+        pattern: Substring filter for tool names. Returns a list of dicts.
+        info: Output verbosity level - "min" (name + signature + args), "default"
+              (+ description truncated + source, default), or "full" (everything)
+
+    Returns:
+        Single dict if name= provided, list of dicts if pattern= provided
+
+    Example:
+        ot.tool_info(name="brave.search")
+        ot.tool_info(pattern="brave")
+        ot.tool_info(name="ot.tools", info="full")
+    """
+    from ot.executor.tool_loader import load_tool_registry
+
+    if info not in _VALID_INFO_LEVELS:
+        raise ValueError(f"info={info!r} is not valid. Use 'min', 'default', or 'full'.")
+
+    filter_pattern = name or pattern
+
+    with log(span="ot.tool_info", name=name or None, pattern=pattern or None, info=info) as s:
+        runner_registry = load_tool_registry()
+        proxy = get_proxy_manager()
+
+        results: list[dict[str, Any]] = []
+
+        # Local tools
+        from ot.executor.worker_proxy import WorkerPackProxy
+
+        for pack_name, pack_funcs in runner_registry.packs.items():
+            if isinstance(pack_funcs, WorkerPackProxy):
+                func_names = list(pack_funcs.functions)
+                func_items = [(n, getattr(pack_funcs, n)) for n in func_names]
+            else:
+                func_items = list(pack_funcs.items())
+
+            for func_name, func in func_items:
+                full_name = f"{pack_name}.{func_name}"
+
+                if filter_pattern and filter_pattern.lower() not in full_name.lower():
+                    continue
+
+                entry = _build_tool_info(full_name, func, "local", info, detail=True)
+                if isinstance(entry, dict):
+                    results.append(entry)
+
+        # Proxied tools
+        for proxy_tool in proxy.list_tools():
+            tool_name = f"{proxy_tool.server}.{proxy_tool.name}"
+
+            if filter_pattern and filter_pattern.lower() not in tool_name.lower():
+                continue
+
+            entry = _build_proxy_tool_info(
+                tool_name,
+                proxy_tool.description or "",
+                proxy_tool.input_schema,
+                f"mcp:{proxy_tool.server}",
+                info,
+                detail=True,
+            )
+            if isinstance(entry, dict):
+                results.append(entry)
+
+        results.sort(key=lambda t: t["name"])
+        s.add("count", len(results))
+
+        # Exact name match returns single dict
+        if name:
+            for result in results:
+                if result["name"] == name:
+                    return result
+            return {}
+
+        return results
+
+
 def packs(
     *,
     pattern: str = "",
-    info: InfoLevel = "min",
+    info: InfoLevel = "default",
 ) -> list[dict[str, Any] | str]:
     """List all packs with optional filtering.
 
@@ -104,27 +200,28 @@ def packs(
 
     Args:
         pattern: Filter packs by name pattern (case-insensitive substring)
-        info: Output verbosity level - "list" (names only), "min" (name + source + tool_count),
-              or "full" (detailed info with instructions and tool list)
+        info: Output verbosity level - "min" (names only), "default" (name +
+              description, default), or "full" (name + source + description +
+              tool_names)
 
     Returns:
-        List of pack names (info="list") or pack dicts/strings (info="min"/"full")
+        List of pack names (info="min") or pack dicts (info="default"/"full")
 
     Example:
         ot.packs()
         ot.packs(pattern="brav")
-        ot.packs(info="list")
-        ot.packs(pattern="brave", info="full")
+        ot.packs(info="min")
+        ot.packs(info="full")
     """
+    if info not in _VALID_INFO_LEVELS:
+        raise ValueError(f"info={info!r} is not valid. Use 'min', 'default', or 'full'.")
+
     from ot.executor.tool_loader import load_tool_registry
-    from ot.prompts import PromptsError, get_pack_instructions, get_prompts
+    from ot.prompts import PromptsError, get_prompts
 
     with log(span="ot.packs", pattern=pattern or None, info=info) as s:
         runner_registry = load_tool_registry()
         proxy = get_proxy_manager()
-
-        # Build lookup of extension packs (user-created, non-internal)
-        ext_lookup = {t.pack: t for t in runner_registry.extension_tools if t.pack}
 
         # Collect all packs
         local_packs = set(runner_registry.packs.keys())
@@ -135,139 +232,184 @@ def packs(
         if pattern:
             all_pack_names = [p for p in all_pack_names if pattern.lower() in p.lower()]
 
-        # info="list" - just names
-        if info == "list":
+        # info="min" - just names
+        if info == "min":
             s.add("count", len(all_pack_names))
             return all_pack_names  # type: ignore[return-value]
 
-        # info="full" - detailed info for each matching pack
-        if info == "full":
-            results: list[dict[str, Any] | str] = []
-            cfg = get_config()
+        # Load prompts for descriptions
+        try:
+            prompts_config = get_prompts()
+            packs_descriptions = prompts_config.packs
+        except PromptsError:
+            packs_descriptions = {}
 
-            for pack_name in all_pack_names:
-                is_local = pack_name in local_packs
-
-                # Build detailed pack info
-                lines = [f"# {pack_name} pack", ""]
-
-                # Show source type
-                if is_local:
-                    if pack_name in ext_lookup:
-                        lines.append("**Type:** Extension")
-                        lines.append(f"**Path:** {ext_lookup[pack_name].path}")
-                    else:
-                        lines.append("**Type:** Local")
-                else:
-                    lines.append("**Type:** MCP Proxy Server")
-                lines.append("")
-
-                # Get instructions from prompts.yaml
-                try:
-                    prompts_config = get_prompts()
-                    configured = get_pack_instructions(prompts_config, pack_name)
-                    if configured:
-                        lines.append("## Instructions")
-                        lines.append("")
-                        lines.append(configured)
-                        lines.append("")
-                except PromptsError:
-                    pass
-
-                # For proxy packs, also check server config for instructions
-                if not is_local and pack_name in cfg.servers:
-                    server_cfg = cfg.servers[pack_name]
-                    if server_cfg.instructions:
-                        # Only add header if not already added from prompts
-                        if "## Instructions" not in "\n".join(lines):
-                            lines.append("## Instructions")
-                            lines.append("")
-                        lines.append(server_cfg.instructions.strip())
-                        lines.append("")
-
-                # List tools in this pack
-                lines.append("## Tools")
-                lines.append("")
-
-                if is_local:
-                    from ot.executor.worker_proxy import WorkerPackProxy
-
-                    pack_funcs = runner_registry.packs[pack_name]
-                    if isinstance(pack_funcs, WorkerPackProxy):
-                        func_items = [(n, getattr(pack_funcs, n)) for n in pack_funcs.functions]
-                    else:
-                        func_items = list(pack_funcs.items())
-
-                    for func_name, func in sorted(func_items):
-                        doc = func.__doc__ or "(no description)"
-                        first_line = doc.split("\n")[0].strip()
-                        lines.append(f"- **{pack_name}.{func_name}**: {first_line}")
-                else:
-                    proxy_tools = proxy.list_tools(server=pack_name)
-                    for tool in sorted(proxy_tools, key=lambda t: t.name):
-                        desc = tool.description or "(no description)"
-                        first_line = desc.split("\n")[0].strip()
-                        lines.append(f"- **{pack_name}.{tool.name}**: {first_line}")
-
-                results.append("\n".join(lines))
-
-            s.add("count", len(results))
-            return results
-
-        # info="min" (default) - summary for each pack
         packs_list: list[dict[str, Any] | str] = []
 
         for pack_name in all_pack_names:
             is_local = pack_name in local_packs
             source = "local" if is_local else "mcp"
 
-            # Count tools in pack
-            if is_local:
-                from ot.executor.worker_proxy import WorkerPackProxy
+            # Get description from prompts.yaml packs section, fall back to module docstring
+            description = packs_descriptions.get(pack_name, "")
+            if not description and is_local:
+                description = _get_pack_module_description(runner_registry, pack_name)
 
-                pack_funcs = runner_registry.packs[pack_name]
-                if isinstance(pack_funcs, WorkerPackProxy):
-                    tool_count = len(pack_funcs.functions)
-                else:
-                    tool_count = len(pack_funcs)
+            if info == "default":
+                packs_list.append({"name": pack_name, "description": description or "(no description)"})
             else:
-                tool_count = len(proxy.list_tools(server=pack_name))
-
-            entry: dict[str, Any] = {
-                "name": pack_name,
-                "source": source,
-                "tool_count": tool_count,
-            }
-            if pack_name in ext_lookup:
-                entry["is_extension"] = True
-                entry["path"] = str(ext_lookup[pack_name].path)
-            packs_list.append(entry)
+                # info == "full"
+                tool_names = _get_pack_tool_names(runner_registry, proxy, pack_name, is_local)
+                packs_list.append({
+                    "name": pack_name,
+                    "source": source,
+                    "description": description or "(no description)",
+                    "tool_names": tool_names,
+                })
 
         s.add("count", len(packs_list))
         return packs_list
 
 
+def pack_info(
+    *,
+    name: str = "",
+    info: InfoLevel = "default",
+) -> dict[str, Any]:
+    """Get detailed info for a single pack.
+
+    Returns source, description, instructions, and tool names.
+
+    Args:
+        name: Pack name (e.g., "brave", "file")
+        info: Output verbosity level - "min" (name + source + tool_names),
+              "default" (+ description + instructions, default), or "full"
+              (same as default)
+
+    Returns:
+        Pack info dict
+
+    Example:
+        ot.pack_info(name="brave")
+        ot.pack_info(name="excel", info="full")
+    """
+    if info not in _VALID_INFO_LEVELS:
+        raise ValueError(f"info={info!r} is not valid. Use 'min', 'default', or 'full'.")
+
+    from ot.executor.tool_loader import load_tool_registry
+    from ot.prompts import PromptsError, get_pack_instructions, get_prompts
+
+    with log(span="ot.pack_info", name=name or None, info=info) as s:
+        runner_registry = load_tool_registry()
+        proxy = get_proxy_manager()
+        cfg = get_config()
+
+        local_packs = set(runner_registry.packs.keys())
+        proxy_packs = set(proxy.servers)
+
+        if name not in local_packs and name not in proxy_packs:
+            s.add("found", False)
+            return {"error": f"Pack '{name}' not found. Use ot.packs() to list available packs."}
+
+        is_local = name in local_packs
+        source = "local" if is_local else "mcp"
+        tool_names = _get_pack_tool_names(runner_registry, proxy, name, is_local)
+
+        s.add("found", True)
+        s.add("tool_count", len(tool_names))
+
+        if info == "min":
+            return {"name": name, "source": source, "tool_names": tool_names}
+
+        # default and full — include description and instructions
+        try:
+            prompts_config = get_prompts()
+            packs_descriptions = prompts_config.packs
+            instructions = get_pack_instructions(prompts_config, name)
+        except PromptsError:
+            packs_descriptions = {}
+            instructions = None
+
+        # Check server config for instructions (proxy packs)
+        if not instructions and not is_local and name in cfg.servers:
+            server_cfg = cfg.servers[name]
+            instructions = server_cfg.instructions or None
+
+        description = packs_descriptions.get(name, "")
+        if not description and is_local:
+            description = _get_pack_module_description(runner_registry, name)
+
+        return {
+            "name": name,
+            "source": source,
+            "description": description or "(no description)",
+            "instructions": instructions or "",
+            "tool_names": tool_names,
+        }
+
+
+def _get_pack_module_description(runner_registry: Any, pack_name: str) -> str:
+    """Get description from the pack module docstring first line."""
+    from ot.executor.worker_proxy import WorkerPackProxy
+
+    pack_funcs = runner_registry.packs.get(pack_name)
+    if not pack_funcs:
+        return ""
+
+    # Try to get module docstring from the first function's module
+    if isinstance(pack_funcs, WorkerPackProxy):
+        return ""
+
+    func = next(iter(pack_funcs.values()), None)
+    if func is None:
+        return ""
+
+    module = getattr(func, "__module__", None)
+    if module:
+        mod = sys.modules.get(module)
+        if mod and mod.__doc__:
+            return mod.__doc__.strip().split("\n")[0].strip()
+
+    return ""
+
+
+def _get_pack_tool_names(
+    runner_registry: Any, proxy: Any, pack_name: str, is_local: bool
+) -> list[str]:
+    """Get list of tool names for a pack."""
+    from ot.executor.worker_proxy import WorkerPackProxy
+
+    if is_local:
+        pack_funcs = runner_registry.packs[pack_name]
+        if isinstance(pack_funcs, WorkerPackProxy):
+            return sorted(f"{pack_name}.{n}" for n in pack_funcs.functions)
+        return sorted(f"{pack_name}.{n}" for n in pack_funcs)
+    else:
+        proxy_tools = proxy.list_tools(server=pack_name)
+        return sorted(f"{pack_name}.{t.name}" for t in proxy_tools)
+
+
 def servers(
     *,
     pattern: str = "",
-    info: ServerInfoLevel = "min",
+    info: ServerInfoLevel = "default",
 ) -> list[dict[str, Any] | str]:
     """List configured MCP proxy servers with optional filtering.
 
     Shows all MCP servers configured in servers.yaml, including their
-    connection status, tool count, and instructions.
+    connection status and instructions.
 
     Args:
         pattern: Filter servers by name pattern (case-insensitive substring)
         info: Output verbosity level:
-            - "list": names only
-            - "min": name + status + tool_count (default)
+            - "min": names only
+            - "default": name + type + enabled + status (default)
             - "full": detailed info with instructions and tools
             - "resources": list resources per server
             - "prompts": list prompts per server
 
     Returns:
-        List of server names (info="list") or server dicts/strings (info="min"/"full"/"resources"/"prompts")
+        List of server names (info="min") or server dicts/strings
 
     Example:
         ot.servers()
@@ -276,6 +418,11 @@ def servers(
         ot.servers(info="resources")
         ot.servers(pattern="chrome-devtools", info="prompts")
     """
+    if info not in _VALID_SERVER_INFO_LEVELS:
+        raise ValueError(
+            f"info={info!r} is not valid. Use 'min', 'default', 'full', 'resources', or 'prompts'."
+        )
+
     proxy = get_proxy_manager()
     cfg = get_config()
 
@@ -289,8 +436,8 @@ def servers(
                 name for name in all_server_names if pattern.lower() in name.lower()
             ]
 
-        # info="list" - just names
-        if info == "list":
+        # info="min" - just names
+        if info == "min":
             s.add("count", len(all_server_names))
             return all_server_names  # type: ignore[return-value]
 
@@ -302,7 +449,8 @@ def servers(
                 server_cfg = cfg.servers[server_name]
                 conn = proxy.get_connection(server_name)
                 status = "connected" if conn else "disconnected"
-                tool_count = len(proxy.list_tools(server=server_name)) if conn else 0
+                proxy_tools = proxy.list_tools(server=server_name) if conn else []
+                tool_count = len(proxy_tools)
 
                 lines = [f"# {server_name} server", ""]
                 lines.append(f"**Type:** MCP Proxy Server ({server_cfg.type})")
@@ -322,7 +470,6 @@ def servers(
                         lines.append(f"**Resources:** {resource_count}")
                         lines.append(f"**Prompts:** {prompt_count}")
                     except Exception:
-                        # Silently skip if resources/prompts not supported
                         pass
 
                 lines.append("")
@@ -338,7 +485,6 @@ def servers(
                 if conn:
                     lines.append(f"## Tools ({tool_count})")
                     lines.append("")
-                    proxy_tools = proxy.list_tools(server=server_name)
                     for tool in sorted(proxy_tools, key=lambda t: t.name):
                         desc = tool.description or "(no description)"
                         first_line = desc.split("\n")[0].strip()
@@ -347,7 +493,6 @@ def servers(
                     lines.append("## Tools")
                     lines.append("")
                     lines.append("(not connected)")
-                    # Show error if available
                     error = proxy.get_error(server_name)
                     if error:
                         lines.append("")
@@ -426,21 +571,19 @@ def servers(
             s.add("count", len(results_prompts))
             return results_prompts
 
-        # info="min" (default) - summary for each server
+        # info="default" - summary for each server
         servers_list: list[dict[str, Any] | str] = []
 
         for server_name in all_server_names:
             server_cfg = cfg.servers[server_name]
             conn = proxy.get_connection(server_name)
             status = "connected" if conn else "disconnected"
-            tool_count = len(proxy.list_tools(server=server_name)) if conn else 0
 
             server_info: dict[str, Any] = {
                 "name": server_name,
                 "type": server_cfg.type,
                 "enabled": server_cfg.enabled,
                 "status": status,
-                "tool_count": tool_count,
             }
             # Include error if disconnected
             if not conn:

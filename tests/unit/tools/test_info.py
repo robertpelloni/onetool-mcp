@@ -76,10 +76,10 @@ def mock_proxy_manager() -> MagicMock:
 @pytest.mark.unit
 @pytest.mark.serve
 def test_tools_returns_correct_signatures_for_same_named_functions() -> None:
-    """Verify ot.tools() returns correct signatures for functions with same name."""
+    """Verify ot.tools() returns correct info for functions with same name."""
     from ot.meta import tools
 
-    result = tools(pattern="search", info="min")
+    result = tools(pattern="search", info="default")
 
     # Result is now a list of dicts
     tool_names = [t["name"] for t in result]
@@ -99,28 +99,25 @@ def test_tools_info_levels() -> None:
     """Verify info levels control output verbosity."""
     from ot.meta import tools
 
-    # info="min" - name + description only
-    min_output = tools(info="min")
-    assert isinstance(min_output, list)
-    for tool in min_output:
+    # info="default" - name + description only (default)
+    default_output = tools(info="default")
+    assert isinstance(default_output, list)
+    for tool in default_output:
         assert "name" in tool
         assert "description" in tool
         assert "signature" not in tool
         assert "source" not in tool
 
-    # info="full" - includes signature, source, args, etc.
+    # info="full" - includes source (list function, no signature)
     full_output = tools(info="full")
     assert isinstance(full_output, list)
-    # At least some tools should have signature and source
-    has_signature = any("signature" in t for t in full_output if isinstance(t, dict))
     has_source = any("source" in t for t in full_output if isinstance(t, dict))
-    assert has_signature
     assert has_source
 
-    # info="list" - names only
-    list_output = tools(info="list")
-    assert isinstance(list_output, list)
-    assert all(isinstance(t, str) for t in list_output)
+    # info="min" - names only
+    min_output = tools(info="min")
+    assert isinstance(min_output, list)
+    assert all(isinstance(t, str) for t in min_output)
 
 
 @pytest.mark.unit
@@ -129,7 +126,7 @@ def test_tools_pattern_filter_by_pack() -> None:
     """Verify pattern filter works to filter by pack prefix."""
     from ot.meta import tools
 
-    result = tools(pattern="ot.", info="min")
+    result = tools(pattern="ot.", info="default")
     # Result is a list of dicts
     tool_names = [t["name"] for t in result]
 
@@ -144,11 +141,11 @@ def test_tools_pattern_filter_by_pack() -> None:
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_tools_pattern_with_full_info() -> None:
-    """Verify pattern with info=full returns detailed tool info."""
-    from ot.meta import tools
+def test_tool_info_pattern_with_full_info() -> None:
+    """Verify tool_info with info=full returns detailed info including signature."""
+    from ot.meta import tool_info
 
-    result = tools(pattern="ot.tools", info="full")
+    result = tool_info(pattern="ot.tools", info="full")
 
     # Should return a list with matching tools
     assert isinstance(result, list)
@@ -221,7 +218,7 @@ def test_packs_list_all() -> None:
 
     result = packs()
 
-    # Should return a list of pack dicts
+    # Should return a list of pack dicts (default level)
     assert isinstance(result, list)
     assert len(result) > 0
 
@@ -230,32 +227,33 @@ def test_packs_list_all() -> None:
     assert "ot" in pack_names
     assert "brave" in pack_names
 
-    # Each pack should have name, source, tool_count
+    # Each pack should have name, description (default level — no tool_count)
     for pack in result:
         assert "name" in pack
-        assert "source" in pack
-        assert "tool_count" in pack
+        assert "description" in pack
+        assert "tool_count" not in pack
 
 
 @pytest.mark.unit
 @pytest.mark.serve
 def test_packs_info_full() -> None:
-    """Verify ot.packs(info=full) returns detailed pack info."""
+    """Verify ot.packs(info=full) returns dicts with tool_names."""
     from ot.meta import packs
 
     result = packs(pattern="ot", info="full")
 
-    # Should return list of formatted strings
+    # Should return list of dicts
     assert isinstance(result, list)
     assert len(result) >= 1
 
-    # Find the ot pack result (should be a string with pack details)
-    ot_pack = result[0]  # pattern="ot" should match only "ot" pack
-    assert isinstance(ot_pack, str)
-    assert "# ot pack" in ot_pack
-    assert "## Tools" in ot_pack
-    assert "ot.tools" in ot_pack
-    assert "ot.packs" in ot_pack
+    # Find the ot pack result
+    ot_pack = next((p for p in result if isinstance(p, dict) and p.get("name") == "ot"), None)
+    assert ot_pack is not None
+    assert "source" in ot_pack
+    assert "description" in ot_pack
+    assert "tool_names" in ot_pack
+    assert "ot.tools" in ot_pack["tool_names"]
+    assert "ot.packs" in ot_pack["tool_names"]
 
 
 @pytest.mark.unit
@@ -266,7 +264,7 @@ def test_packs_pattern_filter() -> None:
 
     result = packs(pattern="brav")
 
-    # Should return filtered list
+    # Should return filtered list of dicts (default level)
     assert isinstance(result, list)
     pack_names = [p["name"] for p in result]
     assert "brave" in pack_names
@@ -317,10 +315,11 @@ def test_aliases_pattern_filter_exact(override_config: Any) -> None:
         OneToolConfig(alias={"ws": "brave.web_search", "gs": "ground.search"})
     ):
         result = aliases(pattern="ws")
-        # Result is list of strings in "name -> target" format
+        # Result is list of dicts in default level
         assert isinstance(result, list)
         assert len(result) == 1
-        assert "ws -> brave.web_search" in result[0]
+        assert result[0]["name"] == "ws"
+        assert result[0]["target"] == "brave.web_search"
 
 
 @pytest.mark.unit
@@ -333,11 +332,14 @@ def test_aliases_list_all(override_config: Any) -> None:
         OneToolConfig(alias={"ws": "brave.web_search", "gs": "ground.search"})
     ):
         result = aliases()
-        # Result is list of strings
+        # Result is list of dicts (default level)
         assert isinstance(result, list)
-        result_str = "\n".join(result)
-        assert "ws -> brave.web_search" in result_str
-        assert "gs -> ground.search" in result_str
+        names = [a["name"] for a in result]
+        targets = [a["target"] for a in result]
+        assert "ws" in names
+        assert "gs" in names
+        assert "brave.web_search" in targets
+        assert "ground.search" in targets
 
 
 @pytest.mark.unit
@@ -350,11 +352,11 @@ def test_aliases_pattern_filter(override_config: Any) -> None:
         OneToolConfig(alias={"ws": "brave.web_search", "gs": "ground.search"})
     ):
         result = aliases(pattern="brave")
-        # Result is list of strings
+        # Result is list of dicts
         assert isinstance(result, list)
-        result_str = "\n".join(result)
-        assert "ws -> brave.web_search" in result_str
-        assert "gs -> ground.search" not in result_str
+        names = [a["name"] for a in result]
+        assert "ws" in names
+        assert "gs" not in names
 
 
 @pytest.mark.unit
@@ -372,7 +374,7 @@ def test_aliases_pattern_no_match_returns_empty(override_config: Any) -> None:
 @pytest.mark.unit
 @pytest.mark.serve
 def test_snippets_info_full(override_config: Any) -> None:
-    """Verify ot.snippets(info=full) returns full definition."""
+    """Verify ot.snippets(info=full) returns dicts with name, description, params."""
     from ot.config import SnippetDef
     from ot.meta import snippets
 
@@ -387,14 +389,13 @@ def test_snippets_info_full(override_config: Any) -> None:
         )
     ):
         result = snippets(pattern="test_snip", info="full")
-        # Result is list of formatted strings
+        # Result is list of dicts
         assert isinstance(result, list)
         assert len(result) == 1
-        snippet_def = result[0]
-        assert "name: test_snip" in snippet_def
-        assert "description: Test snippet" in snippet_def
-        assert "body:" in snippet_def
-        assert "demo.call()" in snippet_def
+        snippet_entry = result[0]
+        assert isinstance(snippet_entry, dict)
+        assert snippet_entry["name"] == "test_snip"
+        assert snippet_entry["description"] == "Test snippet"
 
 
 @pytest.mark.unit
@@ -413,11 +414,14 @@ def test_snippets_list_all(override_config: Any) -> None:
         )
     ):
         result = snippets()
-        # Result is list of strings
+        # Result is list of dicts (default level)
         assert isinstance(result, list)
-        result_str = "\n".join(result)
-        assert "snip1: First snippet" in result_str
-        assert "snip2: Second snippet" in result_str
+        names = [s["name"] for s in result]
+        descs = [s["description"] for s in result]
+        assert "snip1" in names
+        assert "snip2" in names
+        assert "First snippet" in descs
+        assert "Second snippet" in descs
 
 
 @pytest.mark.unit
@@ -437,12 +441,12 @@ def test_snippets_pattern_filter(override_config: Any) -> None:
         )
     ):
         result = snippets(pattern="pkg")
-        # Result is list of strings
+        # Result is list of dicts (default level)
         assert isinstance(result, list)
-        result_str = "\n".join(result)
-        assert "pkg_pypi" in result_str
-        assert "pkg_npm" in result_str
-        assert "search_web" not in result_str
+        names = [s["name"] for s in result]
+        assert "pkg_pypi" in names
+        assert "pkg_npm" in names
+        assert "search_web" not in names
 
 
 @pytest.mark.unit
@@ -493,22 +497,22 @@ def test_packs_with_proxy(mock_proxy_manager: MagicMock) -> None:
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         result = packs(pattern="github", info="full")
 
-    # Should generate from proxy tool list
+    # Should generate from proxy tool list — returns dicts with tool_names
     assert isinstance(result, list)
     assert len(result) == 1
-    pack_info = result[0]
-    assert isinstance(pack_info, str)
-    assert "# github pack" in pack_info
-    assert "github.create_issue" in pack_info
-    assert "github.list_repos" in pack_info
+    pack_entry = result[0]
+    assert isinstance(pack_entry, dict)
+    assert pack_entry["name"] == "github"
+    assert "github.create_issue" in pack_entry["tool_names"]
+    assert "github.list_repos" in pack_entry["tool_names"]
 
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_packs_with_config_instructions(
+def test_packs_with_config_descriptions(
     override_prompts: Any, mock_proxy_manager: MagicMock
 ) -> None:
-    """Verify ot.packs() includes configured instructions."""
+    """Verify ot.packs() uses pack descriptions from prompts config."""
     from unittest.mock import patch
 
     from ot.meta import packs
@@ -520,21 +524,22 @@ def test_packs_with_config_instructions(
         PromptsConfig(
             instructions="Main instructions",
             packs={
-                "brave": "Custom brave instructions from config.\nUse brave.search() for web search."
+                "brave": "Search the web, news, and images — fast, private, with batch support"
             },
         )
     ):
         with patch(
             "ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager
         ):
-            result = packs(pattern="brave", info="full")
+            result = packs(pattern="brave", info="default")
 
-    # Should include configured instructions
+    # Should include configured description
     assert isinstance(result, list)
     assert len(result) == 1
-    pack_info = result[0]
-    assert "Custom brave instructions" in pack_info
-    assert "brave.search()" in pack_info
+    pack_entry = result[0]
+    assert isinstance(pack_entry, dict)
+    assert pack_entry["name"] == "brave"
+    assert "Search the web" in pack_entry["description"]
 
 
 # ============================================================================
@@ -712,8 +717,24 @@ def test_parse_input_schema_empty() -> None:
 
 @pytest.mark.unit
 @pytest.mark.serve
+def test_build_proxy_tool_info_default() -> None:
+    """Verify _build_proxy_tool_info returns default (list) format."""
+    from ot.meta import _build_proxy_tool_info
+
+    result = _build_proxy_tool_info(
+        "github.search",
+        "Search GitHub",
+        {"properties": {"query": {"type": "string"}}},
+        "mcp:github",
+        info="default",
+    )
+    assert result == {"name": "github.search", "description": "Search GitHub"}
+
+
+@pytest.mark.unit
+@pytest.mark.serve
 def test_build_proxy_tool_info_min() -> None:
-    """Verify _build_proxy_tool_info returns min format."""
+    """Verify _build_proxy_tool_info returns name only for min level (list mode)."""
     from ot.meta import _build_proxy_tool_info
 
     result = _build_proxy_tool_info(
@@ -723,29 +744,13 @@ def test_build_proxy_tool_info_min() -> None:
         "mcp:github",
         info="min",
     )
-    assert result == {"name": "github.search", "description": "Search GitHub"}
-
-
-@pytest.mark.unit
-@pytest.mark.serve
-def test_build_proxy_tool_info_list() -> None:
-    """Verify _build_proxy_tool_info returns name only for list level."""
-    from ot.meta import _build_proxy_tool_info
-
-    result = _build_proxy_tool_info(
-        "github.search",
-        "Search GitHub",
-        {"properties": {"query": {"type": "string"}}},
-        "mcp:github",
-        info="list",
-    )
     assert result == "github.search"
 
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_build_proxy_tool_info_full() -> None:
-    """Verify _build_proxy_tool_info returns full format with schema-derived info."""
+def test_build_proxy_tool_info_full_detail() -> None:
+    """Verify _build_proxy_tool_info returns full detail format with schema-derived info."""
     from ot.meta import _build_proxy_tool_info
 
     schema = {
@@ -761,6 +766,7 @@ def test_build_proxy_tool_info_full() -> None:
         schema,
         "mcp:github",
         info="full",
+        detail=True,
     )
     assert result["name"] == "github.search"
     assert result["description"] == "Search GitHub repositories"
@@ -774,10 +780,10 @@ def test_build_proxy_tool_info_full() -> None:
 @pytest.mark.unit
 @pytest.mark.serve
 def test_tools_proxy_returns_enriched_info(mock_proxy_manager: MagicMock) -> None:
-    """Verify ot.tools() returns enriched info for proxy tools."""
+    """Verify ot.tool_info() returns enriched info for proxy tools."""
     from unittest.mock import patch
 
-    from ot.meta import tools
+    from ot.meta import tool_info
 
     # Create mock proxy tool with input schema
     mock_tools = [
@@ -799,7 +805,7 @@ def test_tools_proxy_returns_enriched_info(mock_proxy_manager: MagicMock) -> Non
     mock_proxy_manager.servers = ["github"]
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
-        result = tools(pattern="github.search", info="full")
+        result = tool_info(pattern="github.search", info="full")
 
     assert isinstance(result, list)
     assert len(result) == 1
@@ -823,7 +829,7 @@ def test_tools_proxy_returns_enriched_info(mock_proxy_manager: MagicMock) -> Non
 @pytest.mark.unit
 @pytest.mark.serve
 def test_servers_list_info(mock_proxy_manager: MagicMock) -> None:
-    """Verify ot.servers(info='list') returns server names only."""
+    """Verify ot.servers(info='min') returns server names only."""
     from unittest.mock import MagicMock as MM
     from unittest.mock import patch
 
@@ -835,15 +841,15 @@ def test_servers_list_info(mock_proxy_manager: MagicMock) -> None:
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
-            result = servers(info="list")
+            result = servers(info="min")
 
     assert result == ["chrome-devtools", "github"]
 
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_servers_min_info(mock_proxy_manager: MagicMock) -> None:
-    """Verify ot.servers(info='min') returns server summaries."""
+def test_servers_default_info(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(info='default') returns server summaries."""
     from unittest.mock import MagicMock as MM
     from unittest.mock import patch
 
@@ -862,14 +868,14 @@ def test_servers_min_info(mock_proxy_manager: MagicMock) -> None:
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
-            result = servers(info="min")
+            result = servers(info="default")
 
     assert len(result) == 1
     assert result[0]["name"] == "chrome-devtools"
     assert result[0]["type"] == "stdio"
     assert result[0]["enabled"] is True
     assert result[0]["status"] == "disconnected"
-    assert result[0]["tool_count"] == 0
+    assert "tool_count" not in result[0]
 
 
 @pytest.mark.unit
@@ -920,7 +926,7 @@ def test_servers_pattern_filter(mock_proxy_manager: MagicMock) -> None:
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
-            result = servers(pattern="git", info="list")
+            result = servers(pattern="git", info="min")
 
     assert result == ["github", "gitlab"]
 
@@ -952,7 +958,49 @@ def test_help_server_lookup(mock_proxy_manager: MagicMock) -> None:
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
-            result = help(query="chrome-devtools")
+            with patch("ot.meta._help.get_config", return_value=mock_cfg):
+                result = help(query="chrome-devtools")
 
     assert "# chrome-devtools server" in result
     assert "Browser automation tools." in result
+
+
+# ============================================================================
+# InfoLevel Validation Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+class TestInfoLevelValidation:
+    """Verify removed info= values raise ValueError, not silently fallthrough."""
+
+    def test_tools_rejects_list(self) -> None:
+        from ot.meta import tools
+
+        with pytest.raises(ValueError, match="info='list' is not valid"):
+            tools(info="list")  # type: ignore[arg-type]
+
+    def test_tools_rejects_core(self) -> None:
+        from ot.meta import tools
+
+        with pytest.raises(ValueError, match="info='core' is not valid"):
+            tools(info="core")  # type: ignore[arg-type]
+
+    def test_tool_info_rejects_invalid(self) -> None:
+        from ot.meta import tool_info
+
+        with pytest.raises(ValueError, match="is not valid"):
+            tool_info(pattern="brave", info="list")  # type: ignore[arg-type]
+
+    def test_packs_rejects_invalid(self) -> None:
+        from ot.meta import packs
+
+        with pytest.raises(ValueError, match="is not valid"):
+            packs(info="core")  # type: ignore[arg-type]
+
+    def test_pack_info_rejects_invalid(self) -> None:
+        from ot.meta import pack_info
+
+        with pytest.raises(ValueError, match="is not valid"):
+            pack_info(name="brave", info="core")  # type: ignore[arg-type]

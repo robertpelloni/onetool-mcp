@@ -25,6 +25,8 @@ class TestHelp:
         assert "## Info Levels" in result
         assert "## Quick Examples" in result
         assert "## Tips" in result
+        assert "tool_info" in result
+        assert "pack_info" in result
 
     def test_tool_lookup_exact(self) -> None:
         """Exact tool name returns detailed tool help."""
@@ -63,14 +65,14 @@ class TestHelp:
         """Info parameter controls detail level for any number of matches."""
         from ot.meta import help
 
-        # Single match with info="list" should show minimal detail
-        result_list = help(query="ot.tools", info="list")
+        # Single match with info="min" should show minimal detail
         result_min = help(query="ot.tools", info="min")
+        result_default = help(query="ot.tools", info="default")
 
         # Exact matches show detailed help, fuzzy shows search results
         # Both should respect info level when showing search results
-        assert isinstance(result_list, str)
         assert isinstance(result_min, str)
+        assert isinstance(result_default, str)
 
     def test_no_matches_shows_suggestions(self) -> None:
         """No matches returns helpful suggestions."""
@@ -82,11 +84,11 @@ class TestHelp:
         assert "ot.tools()" in result
         assert "ot.packs()" in result
 
-    def test_info_level_list(self) -> None:
-        """info='list' returns names only in search results."""
+    def test_info_level_min(self) -> None:
+        """info='min' returns names only in search results."""
         from ot.meta import help
 
-        result = help(query="ot", info="list")
+        result = help(query="ot", info="min")
 
         # Should have search results or pack details
         assert isinstance(result, str)
@@ -207,10 +209,10 @@ class TestFormatHelpers:
         result = _format_search_results(
             query="test",
             tools_results=[{"name": "ot.tools", "description": "List tools"}],
-            packs_results=[{"name": "ot", "tool_count": 5}],
+            packs_results=[{"name": "ot", "description": "Discover tools and packs"}],
             snippets_results=[],
             aliases_results=[],
-            info="min",
+            info="default",
         )
 
         assert 'Search results for "test"' in result
@@ -228,7 +230,7 @@ class TestFormatHelpers:
             packs_results=[],
             snippets_results=[],
             aliases_results=[],
-            info="min",
+            info="default",
         )
 
         assert "No matches found" in result

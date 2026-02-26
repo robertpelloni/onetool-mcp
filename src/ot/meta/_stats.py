@@ -17,7 +17,7 @@ def stats(
     *,
     period: str = "all",
     tool: str = "",
-    info: InfoLevel = "min",
+    info: InfoLevel = "default",
     output: str = "",
 ) -> dict[str, Any] | str:
     """Get runtime statistics for OneTool usage.
@@ -28,14 +28,14 @@ def stats(
     Args:
         period: Time period to filter - "day", "week", "month", or "all" (default: "all")
         tool: Filter by tool name (e.g., "brave.search"). Empty for all tools.
-        info: Output verbosity level - "list" (summary only, no tools),
-              "min" (summary + top 10 tools, default), or "full" (everything)
+        info: Output verbosity level - "min" (summary only, no tools),
+              "default" (summary + top 10 tools, default), or "full" (everything)
         output: Path to write HTML report. Empty for JSON output only.
 
     Returns:
         Dict with aggregated statistics. Detail depends on info level:
-        - "list": total_calls, success_rate, error_count, savings_usd
-        - "min": summary stats + top 10 tools sorted by calls
+        - "min": total_calls, success_rate, error_count, savings_usd
+        - "default": summary stats + top 10 tools sorted by calls
         - "full": all fields including per-tool chars, durations, model info
 
     Example:
@@ -58,10 +58,10 @@ def stats(
             return f"Error: Invalid period '{period}'. Valid: day, week, month, all. Example: ot.stats(period='day')"
 
         # Validate info level
-        valid_info: list[InfoLevel] = ["list", "min", "full"]
+        valid_info: list[InfoLevel] = ["list", "min", "default", "full"]
         if info not in valid_info:
             s.add("error", "invalid_info")
-            return f"Error: Invalid info level '{info}'. Valid: list, min, full. Example: ot.stats(info='min')"
+            return f"Error: Invalid info level '{info}'. Valid: list, min, default, full. Example: ot.stats(info='default')"
 
         # Check if stats are enabled
         if not cfg.stats.enabled:
@@ -99,7 +99,7 @@ def stats(
                 "error_count": full_result["error_count"],
                 "savings_usd": full_result["savings_usd"],
             }
-        elif info == "min":
+        elif info == "min" or info == "default":
             # Summary + top 10 tools by calls
             top_tools = sorted(
                 full_result["tools"], key=lambda t: t["total_calls"], reverse=True

@@ -39,6 +39,7 @@ def _parse_docstring(doc: str | None) -> dict[str, Any]:
 
     return {
         "short": parsed.short_description or "",
+        "long": parsed.long_description or "",
         "args": args,
         "returns": parsed.returns.description if parsed.returns else "",
         "example": example,
@@ -51,7 +52,7 @@ def _truncate(s: str, n: int = 100) -> str:
 
 
 def _build_tool_info(
-    full_name: str, func: Any, source: str, info: InfoLevel
+    full_name: str, func: Any, source: str, info: InfoLevel, *, detail: bool = False
 ) -> dict[str, Any] | str:
     """Build tool info dict for a single tool.
 
@@ -59,14 +60,30 @@ def _build_tool_info(
         full_name: Full tool name (e.g., "brave.search")
         func: The function object
         source: Source identifier (e.g., "local", "mcp:github")
-        info: Output verbosity level ("list", "min", "full")
+        info: Output verbosity level ("min", "default", "full")
+        detail: When True, return detail (tool_info) shapes with signature+args.
+                When False, return list (tools) shapes.
 
     Returns:
-        Tool name string if info="list", otherwise dict with tool info
+        Tool name string if info="min" and not detail, otherwise dict with tool info
     """
-    if info == "list":
-        return full_name
+    if not detail:
+        # List function (tools) shapes
+        if info == "min":
+            return full_name
 
+        parsed = _parse_docstring(func.__doc__ if func else None)
+        description = parsed["short"]
+
+        if info == "default":
+            return {"name": full_name, "description": _truncate(description, 200)}
+
+        # info == "full" for list function
+        entry: dict[str, Any] = {"name": full_name, "description": description}
+        entry["source"] = source
+        return entry
+
+    # Detail function (tool_info) shapes — always includes signature
     if func:
         try:
             sig = inspect.signature(func)
@@ -75,16 +92,21 @@ def _build_tool_info(
             signature = f"{full_name}(...)"
         parsed = _parse_docstring(func.__doc__)
         description = parsed["short"]
+        if parsed["long"]:
+            description = description + "\n\n" + parsed["long"]
     else:
         signature = f"{full_name}(...)"
         description = ""
         parsed = _parse_docstring(None)
 
     if info == "min":
-        return {"name": full_name, "description": _truncate(description)}
+        tool_info: dict[str, Any] = {"name": full_name, "signature": signature}
+        if parsed["args"]:
+            tool_info["args"] = parsed["args"]
+        return tool_info
 
-    if info == "core":
-        tool_info: dict[str, Any] = {
+    if info == "default":
+        tool_info = {
             "name": full_name,
             "signature": signature,
             "description": _truncate(description, 200),
@@ -100,7 +122,6 @@ def _build_tool_info(
         "signature": signature,
         "description": description,
     }
-    # Include full documentation for LLM context
     if parsed["args"]:
         tool_info["args"] = parsed["args"]
     if parsed["returns"]:
@@ -197,6 +218,8 @@ def _build_proxy_tool_info(
     input_schema: dict[str, Any],
     source: str,
     info: InfoLevel,
+    *,
+    detail: bool = False,
 ) -> dict[str, Any] | str:
     """Build tool info dict for a proxy tool using its input schema.
 
@@ -205,24 +228,40 @@ def _build_proxy_tool_info(
         description: Tool description from MCP server
         input_schema: JSON Schema for tool input
         source: Source identifier (e.g., "mcp:github")
-        info: Output verbosity level ("list", "min", "full")
+        info: Output verbosity level ("min", "default", "full")
+        detail: When True, return detail (tool_info) shapes with signature+args.
+                When False, return list (tools) shapes.
 
     Returns:
-        Tool name string if info="list", otherwise dict with tool info
+        Tool name string if info="min" and not detail, otherwise dict with tool info
     """
-    if info == "list":
-        return full_name
+    if not detail:
+        # List function (tools) shapes
+        if info == "min":
+            return full_name
+
+        if info == "default":
+            return {"name": full_name, "description": _truncate(description, 200)}
+
+        # info == "full" for list function
+        return {"name": full_name, "description": description, "source": source}
+
+    # Detail function (tool_info) shapes
+    signature = _schema_to_signature(full_name, input_schema)
+    args = _parse_input_schema(input_schema)
 
     if info == "min":
-        return {"name": full_name, "description": _truncate(description)}
+        tool_info: dict[str, Any] = {"name": full_name, "signature": signature}
+        if args:
+            tool_info["args"] = args
+        return tool_info
 
-    if info == "core":
-        tool_info: dict[str, Any] = {
+    if info == "default":
+        tool_info = {
             "name": full_name,
-            "signature": _schema_to_signature(full_name, input_schema),
+            "signature": signature,
             "description": _truncate(description, 200),
         }
-        args = _parse_input_schema(input_schema)
         if args:
             tool_info["args"] = args
         tool_info["source"] = source
@@ -231,14 +270,10 @@ def _build_proxy_tool_info(
     # info == "full"
     tool_info = {
         "name": full_name,
-        "signature": _schema_to_signature(full_name, input_schema),
+        "signature": signature,
         "description": description,
     }
-
-    # Include args if schema has properties with descriptions
-    args = _parse_input_schema(input_schema)
     if args:
         tool_info["args"] = args
-
     tool_info["source"] = source
     return tool_info

@@ -58,18 +58,21 @@ def _format_general_help() -> str:
     return """# OneTool Help
 
 ## Discovery
-  ot.tools()              - List all tools
-  ot.tools(pattern="web") - Filter by pattern
-  ot.packs()              - List all packs (local + MCP)
-  ot.servers()            - List MCP proxy servers
-  ot.snippets()           - List all snippets
-  ot.aliases()            - List all aliases
-  ot.help(query="..")     - Search for help
+  ot.tools()                    - List all tools
+  ot.tools(pattern="web")       - Filter by pattern
+  ot.tool_info(name="brave.search") - Signature + args for a tool
+  ot.packs()                    - List all packs (local + MCP)
+  ot.pack_info(name="brave")    - Pack details + instructions
+  ot.servers()                  - List MCP proxy servers
+  ot.snippets()                 - List all snippets
+  ot.snippet_info(name="brv")   - Snippet details
+  ot.aliases()                  - List all aliases
+  ot.help(query="..")           - Search for help
 
 ## Info Levels
-  info="list" - Names only
-  info="min"  - Name + description (default)
-  info="full" - Everything (includes instructions)
+  info="min"     - Names only
+  info="default" - Name + description (default)
+  info="full"    - Everything (includes instructions)
 
 ## Quick Examples
   brave.search(query="AI news")
@@ -124,30 +127,97 @@ def _format_tool_help(tool_info: dict[str, Any], pack: str) -> str:
     return "\n".join(lines)
 
 
-def _format_pack_help(pack_name: str, pack_info: str) -> str:
+def _format_pack_help(pack_name: str, pack_info: dict[str, Any]) -> str:
     """Format detailed help for a pack.
 
     Args:
         pack_name: Name of the pack
-        pack_info: Pack info string from packs(info="full")
+        pack_info: Pack info dict from pack_info()
 
     Returns:
-        Formatted pack help text with doc URL appended
+        Formatted pack help text
     """
-    lines = [pack_info, "", "## Docs", _get_doc_url(pack_name)]
+    lines = [f"# {pack_name} pack", ""]
+
+    source = pack_info.get("source", "local")
+    lines.append(f"**Type:** {'Local' if source == 'local' else 'MCP Proxy Server'}")
+    lines.append("")
+
+    description = pack_info.get("description", "")
+    if description and description != "(no description)":
+        lines.append(description)
+        lines.append("")
+
+    instructions = pack_info.get("instructions", "")
+    if instructions:
+        lines.append("## Instructions")
+        lines.append("")
+        lines.append(instructions.strip())
+        lines.append("")
+
+    tool_names = pack_info.get("tool_names", [])
+    if tool_names:
+        lines.append("## Tools")
+        lines.append("")
+        for tn in tool_names:
+            lines.append(f"- {tn}")
+        lines.append("")
+
+    lines.append("## Docs")
+    lines.append(_get_doc_url(pack_name))
+
     return "\n".join(lines)
 
 
-def _format_snippet_help(snippet_info: str) -> str:
+def _format_snippet_help(snippet_info: dict[str, Any]) -> str:
     """Format detailed help for a snippet.
 
     Args:
-        snippet_info: Snippet info string from snippets(info="full")
+        snippet_info: Snippet info dict from snippet_info()
 
     Returns:
         Formatted snippet help text
     """
-    return f"# Snippet\n\n{snippet_info}"
+    name = snippet_info.get("name", "")
+    lines = [f"# Snippet: {name}", ""]
+
+    desc = snippet_info.get("description", "")
+    if desc and desc != "(no description)":
+        lines.append(desc)
+        lines.append("")
+
+    params = snippet_info.get("params", {})
+    if params:
+        lines.append("## Parameters")
+        lines.append("")
+        for param_name, param_def in params.items():
+            if isinstance(param_def, dict):
+                default = param_def.get("default")
+                desc_p = param_def.get("description", "")
+                param_str = f"- `{param_name}`"
+                if default is not None:
+                    param_str += f" (default: {default!r})"
+                if desc_p:
+                    param_str += f" — {desc_p}"
+                lines.append(param_str)
+            else:
+                lines.append(f"- `{param_name}`")
+        lines.append("")
+
+    body = snippet_info.get("body", "")
+    if body:
+        lines.append("## Body")
+        lines.append("```python")
+        lines.append(body.rstrip())
+        lines.append("```")
+        lines.append("")
+
+    example = snippet_info.get("example", "")
+    if example:
+        lines.append("## Example")
+        lines.append(f"`{example}`")
+
+    return "\n".join(lines)
 
 
 def _format_alias_help(alias_name: str, target: str) -> str:
@@ -182,14 +252,7 @@ def _item_matches(item: dict[str, Any] | str, matched_names: list[str], key: str
         True if item's name is in matched_names
     """
     if isinstance(item, str):
-        # For "name: desc" or "name -> target" formats, extract the name part
-        if ": " in item:
-            name = item.split(":")[0]
-        elif " ->" in item:
-            name = item.split(" ->")[0]
-        else:
-            name = item
-        return name in matched_names
+        return item in matched_names
     return item.get(key) in matched_names
 
 
@@ -206,10 +269,7 @@ def _snippet_matches(item: dict[str, Any] | str, matched_names: list[str]) -> bo
     if not matched_names:
         return False
     if isinstance(item, str):
-        name = item.split(":")[0]
-        if name in matched_names:
-            return True
-        return any(item == m or item.startswith(m + ":") for m in matched_names)
+        return item in matched_names
     return item.get("name") in matched_names
 
 
@@ -241,7 +301,7 @@ def _format_search_results(
         for tool in tools_results:
             if isinstance(tool, str):
                 lines.append(f"- {tool}")
-            elif info == "min":
+            elif info == "default":
                 lines.append(f"- {tool['name']}: {tool.get('description', '')}")
             else:
                 lines.append(f"- {tool['name']}")
@@ -252,8 +312,12 @@ def _format_search_results(
         for pack in packs_results:
             if isinstance(pack, str):
                 lines.append(f"- {pack}")
-            elif info == "min":
-                lines.append(f"- {pack['name']} ({pack.get('tool_count', 0)} tools)")
+            elif info == "default":
+                desc = pack.get("description", "")
+                if desc and desc != "(no description)":
+                    lines.append(f"- {pack['name']}: {desc}")
+                else:
+                    lines.append(f"- {pack['name']}")
             else:
                 lines.append(f"- {pack['name']}")
         lines.append("")
@@ -262,11 +326,14 @@ def _format_search_results(
         lines.append("## Snippets")
         for snippet in snippets_results:
             if isinstance(snippet, str):
-                # For info="min", format is "name: description"
-                snippet_name = snippet.split(":")[0] if ":" in snippet else snippet
-                lines.append(f"- ${snippet_name}")
-            else:
                 lines.append(f"- ${snippet}")
+            elif isinstance(snippet, dict):
+                name = snippet.get("name", "")
+                desc = snippet.get("description", "")
+                if desc and desc != "(no description)" and info == "default":
+                    lines.append(f"- ${name}: {desc}")
+                else:
+                    lines.append(f"- ${name}")
         lines.append("")
 
     if aliases_results:

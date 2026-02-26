@@ -14,7 +14,7 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **GIVEN** tools are registered
 - **WHEN** `ot.tools()` is called
 - **THEN** it SHALL return a list of all tools
-- **AND** default info level SHALL be `list` (names only)
+- **AND** default info level SHALL be `default` (name + description)
 
 #### Scenario: Filter by pattern
 - **GIVEN** a pattern parameter
@@ -22,36 +22,62 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **THEN** it SHALL return only tools with names containing the pattern (case-insensitive substring)
 - **AND** pattern SHALL always perform partial matching
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.tools(info="list")` is called
-- **THEN** it SHALL return only tool names as a list of strings
-
 #### Scenario: Info level min
 - **GIVEN** `info="min"` parameter
 - **WHEN** `ot.tools(info="min")` is called
+- **THEN** it SHALL return only tool names as a list of strings
+
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.tools()` or `ot.tools(info="default")` is called
 - **THEN** each entry SHALL include: `{name, description}`
-- **AND** description SHALL be truncated to 100 characters with `…` appended if cut
+- **AND** description SHALL be truncated to 200 characters with `…` appended if cut
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.tools(info="full")` is called
+- **THEN** each entry SHALL include: `{name, description, source}`
+- **AND** source SHALL be "local" or "mcp:{server}"
+
+---
+
+### Requirement: Tool Detail
+
+The `ot.tool_info()` function SHALL return detailed info (signature + args) for one or more tools.
+
+#### Scenario: Exact name lookup
+- **GIVEN** `name="brave.search"` parameter
+- **WHEN** `ot.tool_info(name="brave.search")` is called
+- **THEN** it SHALL return a single dict
+
+#### Scenario: Pattern lookup
+- **GIVEN** `pattern="brave"` parameter
+- **WHEN** `ot.tool_info(pattern="brave")` is called
+- **THEN** it SHALL return a list of dicts for all matching tools
+
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.tool_info(name="brave.search", info="min")` is called
+- **THEN** each entry SHALL include: `{name, signature, args}`
+
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.tool_info(name="brave.search")` is called
+- **THEN** each entry SHALL include: `{name, signature, args, description, source}`
+- **AND** description SHALL be truncated to 200 characters
+
+#### Scenario: Info level full
+- **GIVEN** `info="full"` parameter
+- **WHEN** `ot.tool_info(pattern="brave.search", info="full")` is called
 - **THEN** each entry SHALL include: `{name, signature, description, source}`
 - **AND** each entry SHALL include `{args, returns, example}` when available
-- **AND** source SHALL be "local" or "mcp:{server}"
 
 #### Scenario: Proxy tool signature from schema
 - **GIVEN** a proxy MCP server with tools exposing `inputSchema`
-- **WHEN** `ot.tools(info="full")` lists proxy tools
+- **WHEN** `ot.tool_info(pattern="github.search", info="full")` is called
 - **THEN** signature SHALL be derived from schema properties (e.g., `github.search(query: str, repo: str = '...')`)
 - **AND** required parameters SHALL appear without defaults
 - **AND** optional parameters SHALL show default values or `'...'` placeholder
-
-#### Scenario: Proxy tool arguments from schema
-- **GIVEN** a proxy tool with `inputSchema` containing property descriptions
-- **WHEN** `ot.tools(pattern="github.search", info="full")` is called
-- **THEN** the response SHALL include an `args` field
-- **AND** args SHALL be a list of `"param_name: description"` strings extracted from schema
 
 ---
 
@@ -133,15 +159,15 @@ The `ot.reload()` function SHALL force reload of all configuration.
 
 The `ot.stats()` function SHALL return aggregated runtime statistics with configurable detail level.
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.stats(info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.stats(info="min")` is called
 - **THEN** it SHALL return summary only: `{period, total_calls, success_rate, error_count, savings_usd}`
 - **AND** it SHALL NOT include tools breakdown
 
-#### Scenario: Info level min (default)
-- **GIVEN** `info="min"` parameter or no info parameter
-- **WHEN** `ot.stats()` or `ot.stats(info="min")` is called
+#### Scenario: Info level default (default)
+- **GIVEN** `info="default"` parameter or no info parameter
+- **WHEN** `ot.stats()` or `ot.stats(info="default")` is called
 - **THEN** it SHALL return summary stats: `{period, total_calls, success_rate, error_count, total_duration_ms, savings_usd, coffees}`
 - **AND** it SHALL include `top_tools` with the top 10 tools sorted by call count (descending)
 - **AND** each tool entry SHALL include: `{tool, calls, success_rate, avg_ms}`
@@ -188,7 +214,7 @@ The `ot.stats()` function SHALL return aggregated runtime statistics with config
 #### Scenario: Invalid info
 - **GIVEN** an invalid info value
 - **WHEN** `ot.stats(info="invalid")` is called
-- **THEN** it SHALL return: "Error: Invalid info level 'invalid'. Valid: list, min, full. Example: ot.stats(info='min')"
+- **THEN** it SHALL return: "Error: Invalid info level 'invalid'. Valid: min, default, full. Example: ot.stats(info='default')"
 
 ---
 
@@ -223,34 +249,61 @@ The tool SHALL follow [tool-conventions](../tool-conventions/spec.md) for loggin
 
 ### Requirement: Pack Discovery
 
-The `ot.packs()` function SHALL list packs with optional filtering.
+The `ot.packs()` function SHALL list packs with optional filtering. The `ot.pack_info()` function SHALL return detailed info for a specific pack.
 
 #### Scenario: List all packs
 - **GIVEN** packs are registered (local and proxy)
 - **WHEN** `ot.packs()` is called
 - **THEN** it SHALL return a list of all packs
-- **AND** default info level SHALL be `min`
+- **AND** default info level SHALL be `default` (name + description)
 
 #### Scenario: Filter by pattern
 - **GIVEN** a pattern parameter
 - **WHEN** `ot.packs(pattern="brav")` is called
 - **THEN** it SHALL return only packs with names containing the pattern (case-insensitive substring)
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.packs(info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.packs(info="min")` is called
 - **THEN** it SHALL return only pack names as a list of strings
 
-#### Scenario: Info level min
-- **GIVEN** `info="min"` parameter (or default)
-- **WHEN** `ot.packs()` or `ot.packs(info="min")` is called
-- **THEN** each entry SHALL include: `{name, source, tool_count}`
-- **AND** source SHALL be "local" or "mcp"
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.packs()` or `ot.packs(info="default")` is called
+- **THEN** each entry SHALL include: `{name, description}`
+- **AND** description SHALL be sourced from prompts.yaml `packs:` section
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.packs(pattern="brave", info="full")` is called
-- **THEN** it SHALL return detailed pack info including:
+- **THEN** each entry SHALL include: `{name, source, description, instructions, tool_names}`
+- **AND** source SHALL be "local" or "mcp:{server}"
+
+---
+
+### Requirement: Pack Detail
+
+The `ot.pack_info()` function SHALL return detailed info for one pack.
+
+#### Scenario: Exact name lookup
+- **GIVEN** `name="brave"` parameter
+- **WHEN** `ot.pack_info(name="brave")` is called
+- **THEN** it SHALL return a single dict
+
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.pack_info(name="brave", info="min")` is called
+- **THEN** it SHALL include: `{name, source, tool_names}`
+
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.pack_info(name="brave")` is called
+- **THEN** it SHALL include: `{name, source, description, instructions, tool_names}`
+
+#### Scenario: Info level full
+- **GIVEN** `info="full"` parameter
+- **WHEN** `ot.pack_info(name="brave", info="full")` is called
+- **THEN** it SHALL return markdown-formatted pack detail including:
   - Pack header with name
   - Type indicator ("Local" or "MCP Proxy Server")
   - Configured instructions (if present in prompts.yaml or server config)
@@ -258,12 +311,12 @@ The `ot.packs()` function SHALL list packs with optional filtering.
 
 #### Scenario: Pack with configured instructions
 - **GIVEN** prompts.yaml contains instructions for pack "excel"
-- **WHEN** `ot.packs(pattern="excel", info="full")` is called
+- **WHEN** `ot.pack_info(name="excel", info="full")` is called
 - **THEN** it SHALL include the configured instructions text
 
 #### Scenario: MCP server pack
 - **GIVEN** a proxy server "github" is configured
-- **WHEN** `ot.packs(pattern="github", info="full")` is called
+- **WHEN** `ot.pack_info(name="github", info="full")` is called
 - **THEN** it SHALL list tools from the proxy server
 - **AND** show type as "MCP Proxy Server"
 - **AND** include server instructions if configured in servers.yaml
@@ -278,22 +331,22 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
 - **GIVEN** MCP servers are configured in servers.yaml
 - **WHEN** `ot.servers()` is called
 - **THEN** it SHALL return a list of all configured servers
-- **AND** default info level SHALL be `min`
+- **AND** default info level SHALL be `default`
 
 #### Scenario: Filter by pattern
 - **GIVEN** a pattern parameter
 - **WHEN** `ot.servers(pattern="git")` is called
 - **THEN** it SHALL return only servers with names containing the pattern (case-insensitive substring)
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.servers(info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.servers(info="min")` is called
 - **THEN** it SHALL return only server names as a list of strings
 
-#### Scenario: Info level min
-- **GIVEN** `info="min"` parameter (or default)
-- **WHEN** `ot.servers()` or `ot.servers(info="min")` is called
-- **THEN** each entry SHALL include: `{name, type, enabled, status, tool_count}`
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.servers()` or `ot.servers(info="default")` is called
+- **THEN** each entry SHALL include: `{name, type, enabled, status}`
 - **AND** type SHALL be "stdio" or "http"
 - **AND** status SHALL be "connected" or "disconnected"
 
@@ -348,58 +401,75 @@ The `ot.aliases()` function SHALL list aliases with optional filtering.
 - **GIVEN** aliases are configured
 - **WHEN** `ot.aliases()` is called with no arguments
 - **THEN** it SHALL return all alias mappings
-- **AND** default info level SHALL be `min`
+- **AND** default info level SHALL be `default`
 
 #### Scenario: Filter by pattern
 - **GIVEN** aliases are configured
 - **WHEN** `ot.aliases(pattern="search")` is called
 - **THEN** it SHALL return only aliases where name or target matches the pattern (case-insensitive substring)
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.aliases(info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.aliases(info="min")` is called
 - **THEN** it SHALL return only alias names as a list of strings
 
-#### Scenario: Info level min
-- **GIVEN** `info="min"` parameter (or default)
-- **WHEN** `ot.aliases()` or `ot.aliases(info="min")` is called
-- **THEN** it SHALL return mappings as: `alias_name -> target`
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.aliases()` or `ot.aliases(info="default")` is called
+- **THEN** it SHALL return structured data: `[{name, target}]`
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.aliases(info="full")` is called
-- **THEN** it SHALL return structured data: `{name, target}`
+- **THEN** it SHALL return the same structured data: `[{name, target}]`
 
 ---
 
 ### Requirement: Snippet Introspection
 
-The `ot.snippets()` function SHALL list snippets with optional filtering.
+The `ot.snippets()` function SHALL list snippets with optional filtering. The `ot.snippet_info()` function SHALL return detailed info for a specific snippet.
 
 #### Scenario: List all snippets
 - **GIVEN** snippets are configured
 - **WHEN** `ot.snippets()` is called with no arguments
 - **THEN** it SHALL return all snippet names with descriptions
-- **AND** default info level SHALL be `min`
+- **AND** default info level SHALL be `default`
 
 #### Scenario: Filter snippets by pattern
 - **GIVEN** snippets are configured
 - **WHEN** `ot.snippets(pattern="pkg")` is called
 - **THEN** it SHALL return only snippets where name or description matches the pattern (case-insensitive substring)
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.snippets(info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.snippets(info="min")` is called
 - **THEN** it SHALL return only snippet names as a list of strings
 
-#### Scenario: Info level min
-- **GIVEN** `info="min"` parameter (or default)
-- **WHEN** `ot.snippets()` or `ot.snippets(info="min")` is called
-- **THEN** it SHALL return: `snippet_name: description`
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.snippets()` or `ot.snippets(info="default")` is called
+- **THEN** it SHALL return structured data: `[{name, description}]`
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
-- **WHEN** `ot.snippets(pattern="brv_research", info="full")` is called
+- **WHEN** `ot.snippets(info="full")` is called
+- **THEN** it SHALL return structured data: `[{name, description, params}]`
+- **AND** each params entry SHALL include type and default when available
+
+---
+
+### Requirement: Snippet Detail
+
+The `ot.snippet_info()` function SHALL return the full definition of a specific snippet.
+
+#### Scenario: Exact name lookup
+- **GIVEN** `name="brv_research"` parameter
+- **WHEN** `ot.snippet_info(name="brv_research")` is called
+- **THEN** it SHALL return a single dict
+
+#### Scenario: Info level default
+- **GIVEN** `info="default"` parameter (or no info parameter)
+- **WHEN** `ot.snippet_info(name="brv_research")` is called
 - **THEN** it SHALL return the snippet definition including:
   - description
   - params with types and defaults
@@ -408,7 +478,7 @@ The `ot.snippets()` function SHALL list snippets with optional filtering.
 
 #### Scenario: Snippet output format
 - **GIVEN** a valid snippet
-- **WHEN** definition is displayed with `info="full"`
+- **WHEN** definition is retrieved with `ot.snippet_info()`
 - **THEN** output SHALL be formatted as:
 ```yaml
 name: brv_research
@@ -418,13 +488,13 @@ params:
   count: {default: 5, description: "Number of sources"}
 body: |
   results = brave.search(query="{{ topic }}", count={{ count }})
-  llm.transform(data=results, prompt="Extract key findings")
+  ot_llm.transform(data=results, prompt="Extract key findings")
 
 # Example with defaults:
 # $brv_research topic=Python
 # Expands to:
 results = brave.search(query="Python", count=5)
-llm.transform(data=results, prompt="Extract key findings")
+ot_llm.transform(data=results, prompt="Extract key findings")
 ```
 
 ### Requirement: Unified Help
@@ -504,13 +574,13 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
 - **THEN** it SHALL use fuzzy matching to find close matches
 - **AND** return results sorted by match score
 
-#### Scenario: Info level list
-- **GIVEN** `info="list"` parameter
-- **WHEN** `ot.help(query="web", info="list")` is called
+#### Scenario: Info level min
+- **GIVEN** `info="min"` parameter
+- **WHEN** `ot.help(query="web", info="min")` is called
 - **THEN** it SHALL return only names of matching items
 
-#### Scenario: Info level min (default)
-- **GIVEN** `info="min"` parameter or no info parameter
+#### Scenario: Info level default (default)
+- **GIVEN** `info="default"` parameter or no info parameter
 - **WHEN** `ot.help(query="brave")` is called
 - **THEN** it SHALL return names with brief descriptions
 
@@ -529,7 +599,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - `code` -> `code-search`
   - `db` -> `database`
   - `ground` -> `grounding-search`
-  - `llm` -> `transform`
+  - `ot_llm` -> `ot_llm`
   - `web` -> `web-fetch`
 - **AND** packs not in override map SHALL use pack name as slug
 

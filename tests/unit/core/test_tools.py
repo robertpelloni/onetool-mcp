@@ -104,29 +104,29 @@ class TestTruncate:
 class TestOtToolsDefault:
     """Tests for ot.tools() default info level and description truncation."""
 
-    def test_default_info_is_list(self) -> None:
-        """ot.tools() defaults to info='list', returning strings not dicts."""
+    def test_default_info_is_default(self) -> None:
+        """ot.tools() defaults to info='default', returning dicts with name+description."""
         from ot.meta import tools
 
         result = tools()
         assert len(result) > 0
-        assert all(isinstance(item, str) for item in result)
+        assert all(isinstance(item, dict) for item in result)
+        assert all("name" in item and "description" in item for item in result)
 
-    def test_info_min_returns_dicts(self) -> None:
-        """ot.tools(info='min') returns dicts with name and description."""
+    def test_info_min_returns_strings(self) -> None:
+        """ot.tools(info='min') returns names only as strings."""
         from ot.meta import tools
 
         result = tools(info="min")
         assert len(result) > 0
-        assert all(isinstance(item, dict) for item in result)
-        assert all("name" in item and "description" in item for item in result)
+        assert all(isinstance(item, str) for item in result)
 
-    def test_info_min_truncates_long_descriptions(self) -> None:
-        """ot.tools(info='min') truncates descriptions to 100 chars."""
+    def test_info_default_truncates_long_descriptions(self) -> None:
+        """ot.tools(info='default') truncates descriptions to 200 chars."""
         from ot.meta import tools
 
-        result = tools(info="min")
+        result = tools(info="default")
         for item in result:
             assert isinstance(item, dict)
             desc = item["description"]
-            assert len(desc) <= 101, f"Description too long for {item['name']}: {len(desc)}"
+            assert len(desc) <= 201, f"Description too long for {item['name']}: {len(desc)}"

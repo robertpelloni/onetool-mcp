@@ -5,10 +5,13 @@ These are core introspection functions, not external tools, so they
 live in the core package rather than tools_dir.
 
 Functions:
-    ot.tools() - List or get tools with full documentation
-    ot.packs() - List or get packs with instructions
-    ot.aliases() - List or get alias definitions
-    ot.snippets() - List or get snippet definitions
+    ot.tools() - List tools
+    ot.tool_info() - Detailed info for a tool
+    ot.packs() - List packs
+    ot.pack_info() - Detailed info for a pack
+    ot.aliases() - List alias definitions
+    ot.snippets() - List snippet definitions
+    ot.snippet_info() - Detailed info for a snippet
     ot.config() - Show configuration summary
     ot.health() - Check system health
     ot.stats() - Get runtime statistics
@@ -27,7 +30,7 @@ from ot.logging import LogSpan
 from ot.meta._config_health import config, health, reload
 from ot.meta._constants import PACK_NAME, resolve_ot_path
 from ot.meta._debug import debug
-from ot.meta._discovery import packs, servers, tools
+from ot.meta._discovery import pack_info, packs, servers, tool_info, tools
 from ot.meta._help import help
 from ot.meta._help_formatting import (
     _format_general_help,
@@ -36,7 +39,7 @@ from ot.meta._help_formatting import (
     _fuzzy_match,
     _get_doc_url,
 )
-from ot.meta._introspection import aliases, snippets
+from ot.meta._introspection import aliases, snippet_info, snippets
 from ot.meta._messaging import _match_topic_to_file, _resolve_path, notify
 from ot.meta._server_mgmt import security, server, skills
 from ot.meta._stats import result, stats
@@ -73,6 +76,7 @@ __all__ = [
     "health",
     "help",
     "notify",
+    "pack_info",
     "packs",
     "reload",
     "resolve_ot_path",
@@ -81,8 +85,10 @@ __all__ = [
     "server",
     "servers",
     "skills",
+    "snippet_info",
     "snippets",
     "stats",
+    "tool_info",
     "tools",
     "version",
 ]
@@ -108,11 +114,14 @@ def get_ot_pack_functions() -> dict[str, Any]:
     """
     return {
         "tools": tools,
+        "tool_info": tool_info,
         "packs": packs,
+        "pack_info": pack_info,
         "server": server,
         "servers": servers,
         "aliases": aliases,
         "snippets": snippets,
+        "snippet_info": snippet_info,
         "skills": skills,
         "config": config,
         "debug": debug,
