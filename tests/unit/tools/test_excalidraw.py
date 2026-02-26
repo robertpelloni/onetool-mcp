@@ -143,6 +143,23 @@ class TestParseDsl:
         assert result["shapes"] == {}
         assert result["edges"] == []
 
+    def test_unquoted_label_rect(self) -> None:
+        result = parse_dsl("a[test]")
+        assert result["shapes"]["a"] == {"label": "test", "classes": []}
+
+    def test_unquoted_label_ellipse(self) -> None:
+        result = parse_dsl("a((test))")
+        assert result["shapes"]["a"] == {"label": "test", "classes": [], "type": "ellipse"}
+
+    def test_unquoted_label_diamond(self) -> None:
+        result = parse_dsl("a{test}")
+        assert result["shapes"]["a"] == {"label": "test", "classes": [], "type": "diamond"}
+
+    def test_unquoted_label_equivalent_to_quoted(self) -> None:
+        unquoted = parse_dsl("a[1];b[2]")
+        quoted = parse_dsl('a["1"];b["2"]')
+        assert unquoted["shapes"] == quoted["shapes"]
+
     def test_bare_id_becomes_shape(self) -> None:
         result = parse_dsl("mynode")
         assert "mynode" in result["shapes"]
@@ -1805,3 +1822,75 @@ class TestNodeIdNormalise:
             'A["A"]\nclassDef svc fill:#fff;\nclass A svc'
         )
         assert "svc" in result["shapes"]["a"]["classes"]
+
+
+# ===========================================================================
+# 6.x Whitespace tolerance
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestWhitespaceTolerance:
+    """DSL tokenizer must be whitespace-agnostic for all constructs."""
+
+    def test_shape_spaced_brackets(self) -> None:
+        result = parse_dsl('a [ "A" ]')
+        assert "a" in result["shapes"]
+        assert result["shapes"]["a"]["label"] == "A"
+
+    def test_shape_extra_spaces_around_brackets(self) -> None:
+        result = parse_dsl('a  [  "Hello World"  ]')
+        assert "a" in result["shapes"]
+        assert result["shapes"]["a"]["label"] == "Hello World"
+
+    def test_ellipse_shape_spaced(self) -> None:
+        result = parse_dsl('a ( ( "Node" ) )')
+        assert "a" in result["shapes"]
+        assert result["shapes"]["a"].get("type") == "ellipse"
+
+    def test_diamond_shape_spaced(self) -> None:
+        result = parse_dsl('a { "Decision" }')
+        assert "a" in result["shapes"]
+        assert result["shapes"]["a"].get("type") == "diamond"
+
+    def test_arrow_edge_no_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na-->b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "a"
+
+    def test_arrow_edge_with_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --> b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "a"
+
+    def test_arrow_edge_with_extra_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na  -->  b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "a"
+
+    def test_dot_edge_no_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na--ob')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["endArrowhead"] == "dot"
+
+    def test_dot_edge_with_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --o b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["endArrowhead"] == "dot"
+
+    def test_bar_edge_no_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na--xb')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["endArrowhead"] == "bar"
+
+    def test_bar_edge_with_spaces(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --x b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["endArrowhead"] == "bar"
+
+    def test_semicolon_and_newline_both_work(self) -> None:
+        r1 = parse_dsl('a["A"];b["B"];a-->b')
+        r2 = parse_dsl('a["A"]\nb["B"]\na-->b')
+        assert r1["shapes"] == r2["shapes"]
+        assert len(r1["edges"]) == len(r2["edges"]) == 1

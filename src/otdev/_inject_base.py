@@ -1,7 +1,7 @@
 """Shared implementation for browser annotation tool packs.
 
 Not a tool pack itself — provides the core logic used by
-``chrome_devtools_util`` and ``playwright_util``.
+``chrome_util`` and ``play_util``.
 
 Uses inject.js v2.0 (bundled in ``ot.assets``).
 """
@@ -120,6 +120,37 @@ _CHECK_JS = (
 )
 
 
+def _ensure_injected(server: str, tool: str) -> str | None:
+    """Ensure the annotation script is injected, injecting if missing.
+
+    Returns:
+        Error message string if injection failed, None if ready.
+    """
+    try:
+        check = _eval_js(server, tool, _CHECK_JS)
+        try:
+            state = json.loads(check)
+        except (json.JSONDecodeError, TypeError):
+            state = {"ready": False}
+
+        if state.get("ready"):
+            return None
+
+        # Not ready — inject now
+        _exec_js(server, tool, get_inject_script())
+        verify = _eval_js(server, tool, _CHECK_JS)
+        try:
+            result = json.loads(verify)
+        except (json.JSONDecodeError, TypeError):
+            result = {"ready": False}
+
+        if not result.get("ready"):
+            return "Error: Failed to auto-inject annotation script. Call inject_annotations() manually."
+        return None
+    except Exception as e:
+        return f"Error: Auto-inject failed: {e}"
+
+
 def inject_annotations(
     server: str, tool: str, pack_name: str
 ) -> dict[str, Any]:
@@ -211,6 +242,11 @@ def highlight_element(
             s.add(error=err)
             return {"success": False, "count": 0, "ids": [], "error": err}
 
+        inject_err = _ensure_injected(server, tool)
+        if inject_err:
+            s.add(error=inject_err)
+            return {"success": False, "count": 0, "ids": [], "error": inject_err}
+
         try:
             id_arg = json.dumps(element_id) if element_id else "null"
             js = (
@@ -247,6 +283,11 @@ def scan_annotations(
         err = _check_server(server)
         if err:
             s.add(error=err)
+            return []
+
+        inject_err = _ensure_injected(server, tool)
+        if inject_err:
+            s.add(error=inject_err)
             return []
 
         try:
@@ -327,6 +368,11 @@ def guide_user(
         if err:
             s.add(error=err)
             return {"task": task, "total": len(steps), "highlighted": 0, "results": [], "error": err}
+
+        inject_err = _ensure_injected(server, tool)
+        if inject_err:
+            s.add(error=inject_err)
+            return {"task": task, "total": len(steps), "highlighted": 0, "results": [], "error": inject_err}
 
         results = []
         highlighted = 0

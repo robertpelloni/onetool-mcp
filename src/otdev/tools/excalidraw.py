@@ -54,19 +54,13 @@ _max_rendered_y: float = 0.0
 # JS asset loader
 # ---------------------------------------------------------------------------
 
-_JS_CACHE: dict[str, str] = {}
-
-
 def _load_js(filename: str) -> str:
-    """Load a bundled JavaScript file once, cache for reuse."""
-    if filename not in _JS_CACHE:
-        content = (
-            resources.files("otdev.tools._excalidraw")
-            .joinpath(filename)
-            .read_text(encoding="utf-8")
-        )
-        _JS_CACHE[filename] = content
-    return _JS_CACHE[filename]
+    """Load a bundled JavaScript file from disk."""
+    return (
+        resources.files("otdev.tools._excalidraw")
+        .joinpath(filename)
+        .read_text(encoding="utf-8")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -183,7 +177,6 @@ def _ensure_ready() -> str | None:
         bootstrap_result = _browser_evaluate(_load_js("bootstrap.js"))
         if bootstrap_result.strip().lower() == "false":
             return "Error: excalidraw bootstrap failed — React API not found on page"
-        _browser_evaluate(_load_js("ops.js"))
         # Wait for __drawApi to be set — bootstrap may run before Excalidraw fully mounts (10s timeout)
         try:
             _browser_evaluate(
@@ -211,12 +204,13 @@ def _ensure_ready() -> str | None:
                     and not e.get("isDeleted", False)
                 ]
                 if untracked:
-                    return (
-                        "Warning: canvas has existing content not tracked by this session. "
-                        "Call wb.clear() to reset or wb.load() to restore state."
-                    )
+                    for e in untracked:
+                        _rendered_ids.add(e["id"])
         except Exception:
             pass
+
+    # Always re-inject ops.js so in-place code changes take effect without a page reload
+    _browser_evaluate(_load_js("ops.js"))
 
     return None
 
@@ -264,19 +258,19 @@ def _rerender_from_state() -> None:
 # ---------------------------------------------------------------------------
 
 _RE_HEADER = re.compile(r"^(?:flowchart|graph)\s+\w+$")
-_RE_SHAPE = re.compile(r'^([\w-]+)\["([^"]*)"\]$')
-_RE_SHAPE_ELLIPSE = re.compile(r'^([\w-]+)\(\("([^"]*)"\)\)$')
-_RE_SHAPE_DIAMOND = re.compile(r'^([\w-]+)\{"([^"]*)"\}$')
+_RE_SHAPE = re.compile(r'^([\w-]+)\s*\[\s*"?([^"\]]*)"?\s*\]$')
+_RE_SHAPE_ELLIPSE = re.compile(r'^([\w-]+)\s*\(\s*\(\s*"?([^")]*)"?\s*\)\s*\)$')
+_RE_SHAPE_DIAMOND = re.compile(r'^([\w-]+)\s*\{\s*"?([^"}]*)"?\s*\}$')
 _RE_CLASSDEF = re.compile(r"^classDef\s+([\w-]+)\s+(.+?);?$")
 _RE_CLASS = re.compile(r"^class\s+([\w,\s-]+)\s+([\w-]+)$")
 _RE_EDGE_ARR = re.compile(r"^([\w-]+)\s*-->(?:\|([^|]*)\|)?\s*([\w-]+)$")
 _RE_EDGE_BIDIR = re.compile(r"^([\w-]+)\s*<-->(?:\|([^|]*)\|)?\s*([\w-]+)$")
 _RE_EDGE_UND = re.compile(r"^([\w-]+)\s*---\s*([\w-]+)$")
-_RE_EDGE_DOT = re.compile(r"^([\w-]+)\s+--o(?:\|([^|]*)\|)?\s+([\w-]+)$")
-_RE_EDGE_BAR = re.compile(r"^([\w-]+)\s+--x(?:\|([^|]*)\|)?\s+([\w-]+)$")
+_RE_EDGE_DOT = re.compile(r"^([\w-]+)\s*--o(?:\|([^|]*)\|)?\s*([\w-]+)$")
+_RE_EDGE_BAR = re.compile(r"^([\w-]+)\s*--x(?:\|([^|]*)\|)?\s*([\w-]+)$")
 _RE_EDGE_DASHED_ARR = re.compile(r"^([\w-]+)\s*-\.->(?:\|([^|]*)\|)?\s*([\w-]+)$")
 _RE_EDGE_DASHED_UND = re.compile(r"^([\w-]+)\s*-\.-\s*([\w-]+)$")
-_RE_SUBGRAPH = re.compile(r'^subgraph\s+([\w-]+)(?:\s+\["([^"]+)"\])?$')
+_RE_SUBGRAPH = re.compile(r'^subgraph\s+([\w-]+)(?:\s+\[\s*"([^"]+)"\s*\])?$')
 
 
 def _norm_id(raw: str) -> str:
@@ -308,6 +302,10 @@ def parse_dsl(spec: str) -> dict[str, Any]:
     edges: list[dict[str, Any]] = []
     groups: dict[str, Any] = {}
     current_subgraph: dict[str, Any] | None = None
+
+    # Normalize real newlines inside quoted labels to the \n escape so they
+    # survive line-splitting. Both `\n` (literal) and actual newlines work.
+    spec = re.sub(r'"[^"]*"', lambda m: m.group(0).replace("\n", "\\n"), spec)
 
     for raw in re.split(r"[;\n]", spec):
         line = raw.strip()
@@ -614,21 +612,38 @@ def draw(*, input: str) -> str:
     New shapes get auto-layout positions. Existing shapes are untouched.
     Edges are deduplicated by (src, dst, label).
 
-    Syntax:
-        id["Label"]                           define a shape
-        id["Line1\\nLine2"]                   multiline label
-        classDef name fill:#hex,stroke:#hex;  define a style class
-        class id1,id2 className               assign style
-        a-->b                                 directed edge, arrow end
-        a-->|label|b                          directed edge with label
-        a---b                                 undirected edge, no arrowheads
+    Shapes:
+        id["Label"]                           rectangle (default)
+        id(("Label"))                         ellipse
+        id{"Label"}                           diamond
+        id["Line1
+Line2"]                             multiline label (preferred: use a real newline)
+        id["Line1\\nLine2"]                   multiline label (also accepted)
+
+    Edges:
+        a-->b                                 directed arrow
+        a-->|label|b                          directed arrow with label
+        a---b                                 undirected, no arrowheads
+        a<-->b                                arrows at both ends
         a --o b                               dot/circle arrowhead at end
         a --x b                               bar/cross arrowhead at end
-        a<-->b                                arrows at both ends
+        a-.->b                                dashed directed arrow
+        a-.->|label|b                         dashed directed arrow with label
+        a-.-b                                 dashed undirected
+
+    Styles:
+        classDef name fill:#hex,stroke:#hex,color:#fff;  define a style class
+        class id1,id2 className                          assign style to nodes
+
+    Subgraphs:
         subgraph name ["Label"]               bounding rect around members
           id1
           id2
         end
+
+    Headers (ignored):
+        flowchart TD
+        graph LR
 
     Args:
         input: DSL string describing shapes, edges, and style classes.
@@ -637,7 +652,7 @@ def draw(*, input: str) -> str:
         Summary of elements added, e.g. "+2 shapes, total 5 elements".
 
     Example:
-        excalidraw.draw(input='a["Service A"]\\nb["DB"]\\na-->b')
+        excalidraw.draw(input='a["Service A"]\nb["DB"]\na-->b')
     """
     with LogSpan(span="excalidraw.draw") as s:
         global _max_rendered_y
@@ -775,16 +790,46 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
     Parses tagged blocks and renders each as a code-font rectangle below
     any existing diagram content.
 
-    Supported block types:
-        table    CSV with header row
-        tree     Lines with '-' depth prefix
-        seq      'Actor -> Actor: label' lines
-        timeline 'name,start,duration' lines
-        note     Plain paragraph text (word-wrapped at 60 chars)
-
-    Syntax:
+    Each block uses the syntax:
         id[type:
         content...
+        ]
+
+    Block types:
+
+    table — CSV grid, first row is the header:
+        t[table:
+        Name,Role
+        Alice,Dev
+        Bob,QA
+        ]
+
+    tree — hierarchy with '-' depth prefix (one char = one level):
+        tr[tree:
+        root/
+        -src/
+        --main.py
+        -tests/
+        ]
+
+    seq — sequence diagram, one message per line:
+        s[seq:
+        Client -> Server: request
+        Server -> DB: query
+        DB -> Server: rows
+        Server -> Client:
+        ]
+
+    timeline — Gantt bars, one task per line as 'name,start,duration':
+        g[timeline:
+        Design,1,4
+        Build,3,8
+        Test,9,4
+        ]
+
+    note — plain word-wrapped paragraph text:
+        n[note:
+        This is a plain text annotation.
         ]
 
     Args:
@@ -1412,9 +1457,9 @@ def close() -> str:
 
     proxy = get_proxy_manager()
     try:
-        proxy.call_tool_sync(_PLAYWRIGHT_SERVER, "browser_tab_close", {})
+        proxy.call_tool_sync(_PLAYWRIGHT_SERVER, "browser_close", {})
     except Exception:
-        # Fall back to navigating away if tab close is unsupported
+        # Fall back to navigating away if browser_close is unsupported
         with contextlib.suppress(Exception):
             proxy.call_tool_sync(
                 _PLAYWRIGHT_SERVER, "browser_navigate", {"url": "about:blank"}

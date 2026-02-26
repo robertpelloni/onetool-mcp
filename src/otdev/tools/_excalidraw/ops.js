@@ -131,12 +131,13 @@
       }
     }
 
-    // Phase 3: frames (subgraphs)
+    // Phase 3: subgraphs — rendered as a bounding rectangle pushed to the back
     const pad = 40;
     for (const f of frames) {
       const { id, label, memberIds, savedBounds } = f;
-      // Erase previous frame if it exists (redraw always)
+      // Erase previous rect + label if they exist (redraw always)
       delete window.__drawElements[id];
+      delete window.__drawElements[id + '-label'];
 
       let x, y, w, h;
       if (savedBounds) {
@@ -157,30 +158,78 @@
         h = (maxY - minY) + pad * 3;
       }
 
-      const frameEl = {
-        id, type: 'frame',
+      const labelId = id + '-label';
+      const fontSize = 13;
+      const groupIds = [id];
+      const groupRect = {
+        id, type: 'rectangle',
         x, y, width: w, height: h,
-        name: label,
-        strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100,
-        fillStyle: 'solid', angle: 0, groupIds: [], frameId: null,
+        strokeColor: '#868e96',
+        backgroundColor: 'transparent',
+        strokeWidth: 1, strokeStyle: 'dashed', roughness: 0, opacity: 80,
+        fillStyle: 'solid', angle: 0, groupIds, frameId: null,
         isDeleted: false, link: null, locked: false,
         version: 1, versionNonce: rng(), updated: now,
-        boundElements: [],
+        boundElements: [{ type: 'text', id: labelId }], roundness: null,
+      };
+      // Container child — Excalidraw positions it; verticalAlign drives top placement
+      const labelEl = {
+        id: labelId, type: 'text',
+        x: x + 8, y: y + 8, width: w - 16, height: fontSize * 1.25,
+        text: label, fontSize,
+        fontFamily: 1, textAlign: 'center', verticalAlign: 'top',
+        strokeColor: '#868e96', backgroundColor: 'transparent',
+        fillStyle: 'solid', strokeWidth: 1, roughness: 0,
+        opacity: 80, angle: 0, groupIds, frameId: null,
+        isDeleted: false, link: null, locked: false,
+        version: 1, versionNonce: rng(), updated: now,
+        boundElements: [], containerId: id, lineHeight: 1.25, baseline: 13,
+        originalText: label, autoResize: true,
       };
 
-      // Set frameId on member elements (shape + bound text)
+      // Add every member (and its bound text) to the same groupIds so they
+      // move together with the bounding rect when selected as a group.
+      // Fall back to liveMap for elements not yet in __drawElements.
       for (const mid of memberIds) {
-        if (window.__drawElements[mid]) {
-          window.__drawElements[mid] = { ...window.__drawElements[mid], frameId: id };
+        const el = window.__drawElements[mid] || liveMap[mid];
+        if (el) {
+          window.__drawElements[mid] = {
+            ...el,
+            groupIds: [...(el.groupIds || []), id],
+          };
         }
         const tid = mid + '-text';
-        if (window.__drawElements[tid]) {
-          window.__drawElements[tid] = { ...window.__drawElements[tid], frameId: id };
+        const tel = window.__drawElements[tid] || liveMap[tid];
+        if (tel) {
+          window.__drawElements[tid] = {
+            ...tel,
+            groupIds: [...(tel.groupIds || []), id],
+          };
         }
       }
 
-      // Insert frame at BEGINNING so it renders behind all other elements
-      window.__drawElements = { [id]: frameEl, ...window.__drawElements };
+      // Insert rect + label at BEGINNING so they render behind all other elements
+      window.__drawElements = { [id]: groupRect, [labelId]: labelEl, ...window.__drawElements };
+
+      // NOTE: frame-based implementation (kept for reference, not active)
+      // const frameEl = {
+      //   id, type: 'frame',
+      //   x, y, width: w, height: h,
+      //   name: label,
+      //   strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100,
+      //   fillStyle: 'solid', angle: 0, groupIds: [], frameId: null,
+      //   isDeleted: false, link: null, locked: false,
+      //   version: 1, versionNonce: rng(), updated: now,
+      //   boundElements: [],
+      // };
+      // for (const mid of memberIds) {
+      //   if (window.__drawElements[mid])
+      //     window.__drawElements[mid] = { ...window.__drawElements[mid], frameId: id };
+      //   const tid = mid + '-text';
+      //   if (window.__drawElements[tid])
+      //     window.__drawElements[tid] = { ...window.__drawElements[tid], frameId: id };
+      // }
+      // window.__drawElements = { [id]: frameEl, ...window.__drawElements };
     }
 
     // Single updateScene for all phases
