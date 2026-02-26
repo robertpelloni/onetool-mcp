@@ -12,7 +12,7 @@ Tools are split into optional install extras. Install only what you need:
 |-------|---------------|
 | *(core, always included)* | `ot`, `forge`, `timer`, `llm` |
 | `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem` |
-| `[dev]` | `aws`, `chrome_devtools_util`, `context7`, `db`, `diagram`, `package`, `playwright_util`, `ripgrep`, `wb`, `web`, `worktree` |
+| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `wb`, `web`, `worktree` |
 | `[all]` | All of the above |
 
 ```bash

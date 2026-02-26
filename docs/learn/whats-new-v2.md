@@ -1,0 +1,272 @@
+# What's New in v2
+
+This guide covers what you gain in OneTool MCP v2, followed by upgrade steps and breaking changes.
+
+## New Tool Packs
+
+These packs are entirely new in v2.
+
+### ot_secrets — Secret encryption
+
+In v1, API keys sat in plain text in `secrets.yaml`. If that file was accidentally committed or shared, every key was exposed. v2 adds transparent age encryption backed by your OS keychain. You generate an identity once, encrypt your secrets file in-place, and from that point on OneTool decrypts values automatically at load time. You can audit which values are still plain, rotate keys, and check keychain status — all without leaving the tool.
+
+```python
+>>> ot_secrets.init()                          # generate key, store in keychain
+>>> ot_secrets.encrypt(file="secrets.yaml")    # encrypt plain values in-place
+>>> ot_secrets.audit(file="secrets.yaml")      # check which values are encrypted
+>>> ot_secrets.rotate(file="secrets.yaml")     # rotate to a new key
+>>> ot_secrets.status()                        # keychain status
+```
+
+### ot_timer — Named timers
+
+Simple named timers that persist across tool calls. Start a timer before a long operation, check elapsed time after, and compare results. Useful for profiling builds, API calls, or any workflow where you want to measure duration without leaving the conversation.
+
+```python
+>>> ot_timer.start(name="build")
+>>> ot_timer.elapsed(name="build")
+>>> ot_timer.list()
+```
+
+### ot_forge — Extension scaffolding
+
+Generates the boilerplate for new tool packs — file structure, type hints, keyword-only args, docstrings — so you can focus on the logic. Also validates extensions before reload, catching issues early.
+
+```python
+>>> ot_forge.create_ext(name="my_pack", pack_name="mypack", function="hello")
+>>> ot_forge.validate_ext(path="src/mypack.py")
+```
+
+### skills — Bundled skill guides
+
+v1 supported user-defined skill files but they were fragile and hard to maintain. v2 replaces them with curated, bundled skill guides covering AWS, Chrome DevTools, Playwright, and more. These are structured Markdown documents that give your LLM the context it needs to use external MCP servers correctly — no manual setup required.
+
+```python
+>>> skills.skills()                     # list all skills
+>>> skills.skills(name="ot-aws-mcp")   # get full skill content
+```
+
+### worktree — Parallel agent tasks `[dev]`
+
+Running multiple agents on the same repo is risky — they step on each other's files, create merge conflicts, and lose work. The worktree pack solves this by giving each task an isolated git worktree with its own branch and working directory. Agents can work in parallel without coordination. When a task is done, `commit` squashes, rebases, and pushes to main cleanly.
+
+```python
+>>> worktree.add(id="fix-login", description="Fix login timeout")
+>>> worktree.list()
+>>> worktree.commit(message="fix: resolve login timeout")
+>>> worktree.remove(id="fix-login")
+```
+
+Also provides `checkout`, `diff`, `status`, `log`, `mark`, `prepare`, and `clean`.
+
+### wb (excalidraw) — Live whiteboard `[dev]`
+
+Turns Excalidraw into a tool-driven canvas. Agents can generate architecture diagrams, flowcharts, and sketches using a Mermaid-compatible DSL, then screenshot or save the result — all without manual drawing. Useful for visual planning, documentation, and sharing ideas that are easier to show than describe.
+
+```python
+>>> wb.open()
+>>> wb.draw(input="A --> B --> C")
+>>> wb.screenshot()
+>>> wb.save(path="arch.json")
+>>> wb.close()
+```
+
+Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, and `hard_reset`.
+
+### aws — Dynamic proxy to all (57+) official AWSlabs MCP servers `[dev]`
+
+AWS publishes 57 official MCP servers (awslabs) covering everything from S3 and Lambda to Bedrock and Cost Explorer. Configuring them manually — credentials, profiles, SSO, MFA, server lifecycle — is a chore. This pack gives you dynamic access to all of them through a single interface. Pick servers individually or activate curated role-based bundles (finops, security, compute, data, ml, and 13 more). The pack handles credential pre-flight, SSO login, MFA sessions, and profile switching, then starts the servers on demand and tears them down when you're done.
+
+```python
+>>> aws_util.whoami()
+>>> aws_util.login(profile="dev")
+>>> aws_util.start_packs(role="finops")
+>>> aws_util.profiles()
+```
+
+Also provides `check`, `use`, `mfa`, `roles`, `packs`, `stop_packs`, `refresh_packs`, `services`, `regions`, `arn`, `attributes`, and `values`.
+
+### chrome_util / play_util — Browser annotations `[dev]`
+
+Two packs that bring visual annotation to browser automation. Inject overlays onto any page, highlight elements with labels and colours, and display step-by-step guidance panels — one driven by Chrome DevTools Protocol, the other by Playwright. The benefit is the same: agents can visually mark up a page to show users exactly what they're looking at or guide them through a multi-step UI workflow.
+
+```python
+>>> chrome_util.inject_annotations()
+>>> chrome_util.highlight_element(selector="h1", label="Title")
+>>> chrome_util.guide_user(instructions="Click the login button")
+>>> chrome_util.scan_annotations()
+```
+
+---
+
+## New and Changed Functions in Existing Packs
+
+### file `[util]`
+
+v1's file pack covered the basics — read, write, edit, list, search, delete, copy, move. v2 adds a proper grep with `.gitignore` awareness so searches don't drown in `node_modules` and build artifacts. Batch reads let agents load multiple files in a single call instead of one at a time. The new slice and toc functions bring structured navigation to large files — jump to a section by heading or line range, or get a numbered table of contents to orient before reading.
+
+| Function                   | What it does                                                |
+| -------------------------- | ----------------------------------------------------------- |
+| `file.grep(pattern, path)` | Regex search across files, respects `.gitignore` by default |
+| `file.read_batch(items)`   | Read multiple files in one call                             |
+| `file.slice(path, select)` | Extract sections by line range or heading                   |
+| `file.slice_batch(items)`  | Extract sections from multiple files                        |
+| `file.toc(path)`           | Table of contents for markdown files                        |
+
+### mem `[util]`
+
+v1's memory pack already had semantic search via embeddings. v2 adds `grep` for when you know what you're looking for — exact pattern matching across memory content with line numbers and context lines, like running ripgrep over your knowledge base. This is faster and more precise than semantic search for known terms, error messages, or specific code patterns.
+
+| Function            | What it does                                          |
+| ------------------- | ----------------------------------------------------- |
+| `mem.grep(pattern)` | Regex search across memory content with context lines |
+
+### context7 `[dev]`
+
+The Context7 integration has been simplified. `search()` now accepts a `limit` parameter to control how many results come back, and `doc()` has a cleaner signature — just pass the library identifier and your query. The underlying API was updated to v2 endpoints with better library resolution and semantic reranking.
+
+### diagram `[dev]`
+
+Adds `get_playground_url(source)` which generates a shareable Kroki playground link for any diagram source. Instead of rendering locally, you can hand someone a URL where they can view and edit the diagram interactively.
+
+---
+
+## New Features
+
+### Slim prompts
+
+The system prompt sent to LLMs is now compact (under 25 lines), reducing context overhead and freeing up token budget for your actual work.
+
+### Smarter result navigation
+
+`ot.result()` gains new parameters for navigating large outputs without full pagination:
+
+- **`tail=N`** — last N lines (great for logs)
+- **`search="pattern"`** — regex filter within stored results
+- **`context=N`** — lines around each match (grep-style)
+- **`progress`** — human-readable progress like "lines 1-50 of 343 (15%)"
+- **`next_query`** — exact call to fetch the next page
+
+### Optional tool extras
+
+In v1, all tools shipped in a single install. v2 splits heavy-dependency packs into `[util]` and `[dev]` extras for a leaner base install:
+
+| Extra    | Packs                                                                              |
+| -------- | ---------------------------------------------------------------------------------- |
+| `[util]` | brave, convert, excel, file, ground, mem                                           |
+| `[dev]`  | aws, context7, db, diagram, package, ripgrep, web, worktree, wb, and browser utils |
+| `[all]`  | Everything                                                                         |
+
+---
+
+## Upgrading
+
+```bash
+uv tool upgrade onetool-mcp
+```
+
+Or with optional tool packs:
+
+```bash
+uv tool install 'onetool-mcp[all]'     # everything
+uv tool install 'onetool-mcp[util]'    # file, convert, excel, brave, ground, mem
+uv tool install 'onetool-mcp[dev]'     # ripgrep, db, web, diagram, aws, worktree, ...
+```
+
+---
+
+## Breaking Changes
+
+### Config and MCP setup is now explicit
+
+v1 auto-discovered config and required no arguments. v2 uses explicit `--config` and `--secrets` flags.
+
+**v1 MCP client config:**
+
+```json
+{
+  "mcpServers": {
+    "onetool": {
+      "command": "onetool"
+    }
+  }
+}
+```
+
+**v2 MCP client config:**
+
+```json
+{
+  "mcpServers": {
+    "onetool": {
+      "command": "onetool",
+      "args": [
+        "--config", "/path/to/.onetool/onetool.yaml",
+        "--secrets", "/path/to/.onetool/secrets.yaml"
+      ]
+    }
+  }
+}
+```
+
+Or via Claude Code CLI:
+
+```bash
+claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
+```
+
+Omit `--secrets` if you don't use API keys. Omit `--config` to start with sensible defaults.
+
+### Config version field
+
+Add `version: 2` to your `onetool.yaml`. Configs with `version: 1` are rejected with a clear error.
+
+```yaml
+# onetool.yaml
+version: 2
+# ... rest of config
+```
+
+### Config location is flat
+
+The config directory changed from `~/.onetool/config/` to `~/.onetool/` (flat layout). Move your files up one level, or re-run `onetool init`.
+
+### Trigger prefix change
+
+The `__ot` prefix is deprecated. Use `>>>` instead:
+
+```python
+# v1
+__ot brave.search(query="test")
+
+# v2 (recommended)
+>>> brave.search(query="test")
+```
+
+`__ot` still works for backward compatibility but is no longer documented or recommended.
+
+### User-defined skills removed
+
+Custom skill files are no longer supported. Built-in skills (like `ot-aws-mcp`, `ot-ref`) are bundled and retrieved via `ot.skills()`.
+
+---
+
+## Dependency Changes
+
+**New in core:** `pyrage`, `keyring` (secret encryption support)
+
+**Moved to `[util]`:** `openpyxl`, `pymupdf`, `python-docx`, `python-pptx`, `google-genai`, `send2trash`, `pathspec`
+
+**Moved to `[dev]`:** `boto3`, `sqlalchemy`, `trafilatura`, `filelock`, `tabulate`
+
+The base `onetool-mcp` install is significantly lighter. Install `[all]` to get everything back.
+
+---
+
+## Quick Migration Checklist
+
+1. Update install: `uv tool install 'onetool-mcp[all]'` (or pick specific extras)
+2. Add `version: 2` to `onetool.yaml`
+3. Move config from `~/.onetool/config/` to `~/.onetool/` (or re-run `onetool init`)
+4. Update MCP client config to pass `--config` and `--secrets` flags
+5. Replace `__ot` with `>>>` in any saved prompts or documentation

@@ -9,7 +9,7 @@ hide:
 <div class="hero">
 <div class="hero__logo" role="img" aria-label="OneTool logo"></div>
 <p class="hero__title">OneTool</p>
-<p class="hero__tagline">🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.</p>
+<p class="hero__tagline">🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.</p>
 <div class="hero__buttons">
 <a href="learn/" class="btn btn--primary">Learn OneTool</a>
 <a href="reference/" class="btn btn--secondary">Reference</a>

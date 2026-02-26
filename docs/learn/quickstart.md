@@ -129,4 +129,4 @@ Commands:
 That's it.
 
 🧿 One MCP for developers - No tool tax, no context rot.
-100+ tools including Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.
+100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.

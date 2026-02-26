@@ -28,13 +28,8 @@ One tool to rule them all
 
 ### External Pitch
 
-```text
-One MCP for developers - No tool tax, no context rot. 
-100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.
-```
-
-With emoji: `🧿 One MCP for developers - No tool tax, no context rot. 
-100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.`
+`🧿 One MCP for developers - No tool tax, no context rot. 
+100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.`
 
 ---
 
@@ -71,7 +66,7 @@ Details and methodology: [claims.md](claims.md)
 ## Short Descriptions
 
 ```text
-🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Gemini, Context7, Version Checker, Excel, File Ops, Database, Chrome DevTools.
+🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.
 ```
 
 ## GitHub Tags

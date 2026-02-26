@@ -16,11 +16,14 @@ Core tools for OneTool introspection and management.
 |----------|-------------|
 | `ot.help(query, info)` | Unified help - search tools, packs, servers, snippets, aliases |
 | `ot.tools(pattern, info)` | List tools, filter by pattern |
+| `ot.tool_info(name, pattern, info)` | Get detailed info (signature, args) for one or more tools |
 | `ot.packs(pattern, info)` | List packs (local + MCP), filter by pattern |
+| `ot.pack_info(name, info)` | Get detailed info for a specific pack |
 | `ot.servers(pattern, info)` | List MCP proxy servers, filter by pattern |
 | `ot.server(status, enable, disable, restart)` | Manage runtime proxy server state |
 | `ot.aliases(pattern, info)` | List aliases, filter by pattern |
 | `ot.snippets(pattern, info)` | List snippets, filter by pattern |
+| `ot.snippet_info(name, info)` | Get full definition for a specific snippet |
 | `ot.skills(name, pattern, info)` | List bundled skills or retrieve a skill body |
 | `ot.config()` | Show aliases, snippets, and server names |
 | `ot.health()` | Check tool dependencies and API connectivity |
@@ -32,13 +35,18 @@ Core tools for OneTool introspection and management.
 
 ## Info Levels
 
-All discovery functions (`help`, `tools`, `packs`, `aliases`, `snippets`, `skills`) support an `info` parameter:
+All discovery functions (`help`, `tools`, `tool_info`, `packs`, `pack_info`, `aliases`, `snippets`, `snippet_info`, `skills`) support an `info` parameter:
 
 | Level | Description |
 |-------|-------------|
-| `list` | Names only (minimal context) |
-| `min` | Name + short description (default) |
+| `min` | Names only (minimal context) |
+| `default` | Name + short description (default) |
 | `full` | Complete details |
+
+**List vs Detail functions:**
+
+- **List functions** (`tools`, `packs`, `aliases`, `snippets`): return many items compactly; `default` gives `{name, description}`.
+- **Detail functions** (`tool_info`, `pack_info`, `snippet_info`): return deep info like signatures, args, body; `default` gives `{name, signature, args, description, source}`.
 
 ## ot.help()
 
@@ -66,7 +74,7 @@ ot.help(query="ws")
 
 # Fuzzy search across all types
 ot.help(query="web fetch")
-ot.help(query="search", info="list")
+ot.help(query="search", info="min")
 ```
 
 **Behaviour:**
@@ -87,65 +95,74 @@ The `info` parameter controls detail level for all search results.
 Help output includes documentation URLs for tools and packs:
 `https://onetool.beycom.online/reference/tools/{pack}/`
 
-## ot.tools()
+## ot.tools() / ot.tool_info()
 
-List all available tools with signatures, filter by pattern.
+List tools or get detailed info for specific tools.
 
 ```python
-# List all tools (default: info="min")
+# List all tools (default: info="default" → {name, description})
 ot.tools()
 
 # Filter by name pattern (substring match)
 ot.tools(pattern="search")
 
-# Filter by pack (use trailing dot)
-ot.tools(pattern="brave.")
-
 # Names only
-ot.tools(info="list")
+ot.tools(info="min")
 
-# Full details (signature, args, returns, example)
-ot.tools(pattern="brave.search", info="full")
+# Full details (name, description, source)
+ot.tools(pattern="brave.", info="full")
+
+# Get signature + args for a specific tool
+ot.tool_info(name="brave.search")
+
+# Get detailed info for all tools in a pack
+ot.tool_info(pattern="brave.")
+
+# Minimal: name, signature, args only
+ot.tool_info(name="brave.search", info="min")
 ```
 
-Returns a list of tool names (info="list") or tool dicts.
+`tools()` returns list-mode info (compact). `tool_info()` returns detail-mode info (signatures, args, returns, examples).
 
-## ot.packs()
+## ot.packs() / ot.pack_info()
 
-List all packs (local and MCP), filter by pattern.
+List packs or get detailed info for a specific pack.
 
 ```python
-# List all packs (default: info="min")
+# List all packs (default: info="default" → {name, description})
 ot.packs()
 
 # Filter by pattern
 ot.packs(pattern="brav")
 
 # Names only
-ot.packs(info="list")
+ot.packs(info="min")
 
-# Full details (type, instructions, tool list)
+# Full details: {name, source, description, instructions, tool_names}
 ot.packs(pattern="brave", info="full")
 
-# MCP server packs show source="mcp"
+# Get full markdown detail for a pack
+ot.pack_info(name="brave")
+
+# MCP server packs show source="mcp:..."
 ot.packs(pattern="chrome-devtools")
 ```
 
-Returns a list of pack names (info="list") or pack summaries/details. MCP proxy servers appear as packs with `source: "mcp"`.
+MCP proxy servers appear as packs with `source: "mcp:{server_name}"`.
 
 ## ot.servers()
 
 List configured MCP proxy servers with connection status.
 
 ```python
-# List all servers (default: info="min")
+# List all servers (default: info="default" → {name, type, enabled, status})
 ot.servers()
 
 # Filter by pattern
 ot.servers(pattern="git")
 
 # Names only
-ot.servers(info="list")
+ot.servers(info="min")
 
 # Full details (type, status, instructions, tools)
 ot.servers(pattern="chrome-devtools", info="full")
@@ -157,7 +174,6 @@ Returns server configuration including:
 - `type` - Connection type (stdio or http)
 - `enabled` - Whether server is enabled
 - `status` - Connection status (connected/disconnected)
-- `tool_count` - Number of tools available
 
 With `info="full"`, also shows:
 
@@ -193,17 +209,14 @@ Only one action (`status`, `enable`, `disable`, `restart`) can be provided per c
 List aliases, filter by pattern.
 
 ```python
-# List all aliases (default: info="min")
+# List all aliases (default: info="default" → [{name, target}])
 ot.aliases()
 
 # Filter by pattern (matches alias name or target)
 ot.aliases(pattern="search")
 
 # Names only
-ot.aliases(info="list")
-
-# Structured output
-ot.aliases(info="full")
+ot.aliases(info="min")
 ```
 
 Aliases are defined in config:
@@ -215,22 +228,25 @@ alias:
   wf: web.fetch
 ```
 
-## ot.snippets()
+## ot.snippets() / ot.snippet_info()
 
-List snippets, filter by pattern.
+List snippets or get the full definition for a specific snippet.
 
 ```python
-# List all snippets (default: info="min")
+# List all snippets (default: info="default" → [{name, description}])
 ot.snippets()
 
 # Filter by pattern (matches name or description)
 ot.snippets(pattern="search")
 
 # Names only
-ot.snippets(info="list")
+ot.snippets(info="min")
 
-# Full definition (params, body, example)
-ot.snippets(pattern="multi_search", info="full")
+# Include params in listing
+ot.snippets(info="full")
+
+# Get full definition (params, body, example) for a specific snippet
+ot.snippet_info(name="brv_research")
 ```
 
 Snippets are defined in config:
@@ -264,7 +280,7 @@ ot.skills(info="full")
 
 # Retrieve the body of a specific skill
 ot.skills(name="ot-chrome-devtools-mcp")
-ot.skills(name="ot-guide")
+ot.skills(name="ot-ref")
 ```
 
 Skills are bundled `.md` files that can be installed as context prompts for AI tools. Use `ot_forge.install_skill()` to write them to disk.
@@ -314,17 +330,17 @@ ot.stats(tool="brave.search")
 ot.stats(output="stats.html")
 
 # Control detail level
-ot.stats(info="list")   # names only
-ot.stats(info="min")    # name + summary (default)
-ot.stats(info="full")   # complete details
+ot.stats(info="min")      # summary only
+ot.stats(info="default")  # summary + top tools (default)
+ot.stats(info="full")     # complete details
 ```
 
 The `info` parameter controls the detail level of the output:
 
 | Level | Description |
 |-------|-------------|
-| `list` | Tool names only |
-| `min` | Name + summary stats (default) |
+| `min` | Summary only — no tools breakdown |
+| `default` | Summary + top 10 tools (default) |
 | `full` | Complete details with per-tool breakdown |
 
 Returns JSON with:
@@ -332,7 +348,7 @@ Returns JSON with:
 - `success_rate` - Percentage of successful calls
 - `context_saved` - Estimated context tokens saved
 - `time_saved_ms` - Estimated time saved in milliseconds
-- `tools` - Per-tool breakdown (info="min" or "full")
+- `tools` - Per-tool breakdown (info="default" or "full")
 
 ## ot.result()
 

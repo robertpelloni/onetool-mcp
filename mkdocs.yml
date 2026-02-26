@@ -145,6 +145,7 @@ nav:
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
       - Comparison: learn/comparison.md
+      - What's New in v2: learn/whats-new-v2.md
       - Extending:
           - learn/extending/index.md
           - Extension Tools: learn/extending/extension-tools.md
