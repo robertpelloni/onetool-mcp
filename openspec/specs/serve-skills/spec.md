@@ -32,7 +32,7 @@ The system SHALL provide an `ot.skills()` function that lists available bundled 
 The system SHALL return the full body of a named skill via `ot.skills(name=...)`.
 
 #### Scenario: Retrieve bundled skill
-- **WHEN** `ot.skills(name="ot-guide")` is called
+- **WHEN** `ot.skills(name="ot-ref")` is called
 - **THEN** it SHALL return the full Markdown body of the skill (below the frontmatter)
 - **AND** the body SHALL reflect the currently running server version
 
@@ -49,10 +49,10 @@ The system SHALL return the full body of a named skill via `ot.skills(name=...)`
 
 The system SHALL bundle an initial set of skills for on-demand discovery and server guides.
 
-#### Scenario: ot-guide skill bundled
+#### Scenario: ot-ref skill bundled
 - **WHEN** `ot.skills()` is called
-- **THEN** `ot-guide` SHALL be listed
-- **AND** its content SHALL include discovery functions (`ot.help()`, `ot.tools()`, `ot.packs()`), error recovery patterns, security allowlist guidance, and output format/sanitisation controls
+- **THEN** `ot-ref` SHALL be listed
+- **AND** its content SHALL include error recovery patterns, security allowlist guidance, output format/sanitisation controls, multi-step patterns, pack extras, and parameter traps
 
 #### Scenario: ot-chrome-devtools-mcp skill bundled
 - **WHEN** `ot.skills()` is called
