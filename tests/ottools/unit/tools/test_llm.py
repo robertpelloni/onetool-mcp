@@ -136,6 +136,11 @@ class TestTransformValidation:
 class TestTransform:
     """Test transform function with mocked OpenAI client."""
 
+    def setup_method(self):
+        import ottools.ot_llm
+
+        ottools.ot_llm._client_cache.clear()
+
     @patch("ottools.ot_llm.OpenAI")
     @patch("ottools.ot_llm._get_api_config")
     def test_successful_transform(self, mock_config, mock_openai):
@@ -347,6 +352,11 @@ class TestTransform:
 class TestTransformConfig:
     """Test transform configuration options."""
 
+    def setup_method(self):
+        import ottools.ot_llm
+
+        ottools.ot_llm._client_cache.clear()
+
     @patch("ottools.ot_llm.OpenAI")
     @patch("ottools.ot_llm._get_api_config")
     def test_timeout_passed_to_client(self, mock_config, mock_openai):
@@ -419,6 +429,11 @@ class TestTransformConfig:
 class TestTransformJsonMode:
     """Test JSON mode functionality."""
 
+    def setup_method(self):
+        import ottools.ot_llm
+
+        ottools.ot_llm._client_cache.clear()
+
     @patch("ottools.ot_llm.OpenAI")
     @patch("ottools.ot_llm._get_api_config")
     def test_json_mode_sets_response_format(self, mock_config, mock_openai):
@@ -469,6 +484,11 @@ class TestTransformJsonMode:
 @pytest.mark.tools
 class TestTransformErrorSanitization:
     """Test error message sanitization."""
+
+    def setup_method(self):
+        import ottools.ot_llm
+
+        ottools.ot_llm._client_cache.clear()
 
     @patch("ottools.ot_llm.OpenAI")
     @patch("ottools.ot_llm._get_api_config")

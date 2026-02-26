@@ -1374,6 +1374,11 @@ def start_packs(
 
         span.add(connected=sum(1 for v in results.values() if v.startswith("ok")))
 
+    # Clear security validator namespace cache so new aws-* namespaces are allowed
+    from ot.executor.validator import reset as _validator_reset
+
+    _validator_reset()
+
     return results
 
 
@@ -1410,6 +1415,11 @@ def stop_packs(
     with LogSpan(span="aws.stop_packs", role=role, count=len(targets)):
         for short in sorted(targets):
             results[short] = proxy.disconnect_server_sync(f"aws-{short}")
+
+    # Clear security validator namespace cache so removed namespaces are no longer allowed
+    from ot.executor.validator import reset as _validator_reset
+
+    _validator_reset()
 
     return results
 
@@ -1456,5 +1466,10 @@ def refresh_packs() -> dict[str, Any]:
             results[short] = proxy.connect_additional_sync(server_name, _make_server_config(short))
 
         span.add(restarted=len(results))
+
+    # Clear security validator namespace cache to reflect reconnected servers
+    from ot.executor.validator import reset as _validator_reset
+
+    _validator_reset()
 
     return results

@@ -36,6 +36,10 @@ from typing import Any
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
+# Cache clients by (api_key, base_url, timeout) to avoid creating a new
+# connection pool on every transform() call.
+_client_cache: dict[tuple[str, str, int], OpenAI] = {}
+
 from ot.config import get_secret, get_tool_config
 from ot.logging import LogSpan
 from ot.paths import resolve_cwd_path
@@ -147,16 +151,26 @@ def transform(
         # Check if transform tool is configured
         if not api_key:
             s.add(error="not_configured")
-            return "Error: Transform tool not available. Set OPENAI_API_KEY in secrets.yaml."
+            return (
+                "Error: Transform tool not available. "
+                "Set OPENAI_API_KEY in secrets.yaml. "
+                "See: https://onetool.beycom.online/reference/tools/ot_llm/"
+            )
 
         if not base_url:
             s.add(error="no_base_url")
             return (
-                "Error: Transform tool not available. Set ot_llm.base_url in config."
+                "Error: Transform tool not available. "
+                "Set tools.ot_llm.base_url in onetool.yaml "
+                "(e.g. https://openrouter.ai/api/v1). "
+                "See: https://onetool.beycom.online/reference/tools/ot_llm/"
             )
 
-        # Create client with timeout
-        client = OpenAI(api_key=api_key, base_url=base_url, timeout=config.timeout)
+        # Get or create cached client (avoids new connection pool per call)
+        cache_key = (api_key, base_url, config.timeout)
+        if cache_key not in _client_cache:
+            _client_cache[cache_key] = OpenAI(api_key=api_key, base_url=base_url, timeout=config.timeout)
+        client = _client_cache[cache_key]
 
         # Build the message
         user_message = f"""Data:
@@ -168,7 +182,12 @@ Instructions:
         used_model = model or default_model
         if not used_model:
             s.add(error="no_model")
-            return "Error: Transform tool not available. Set ot_llm.model in config."
+            return (
+                "Error: Transform tool not available. "
+                "Set tools.ot_llm.model in onetool.yaml "
+                "(e.g. openai/gpt-4o-mini). "
+                "See: https://onetool.beycom.online/reference/tools/ot_llm/"
+            )
 
         s.add(model=used_model, jsonMode=json_mode)
 
