@@ -125,3 +125,6 @@ demo/tmp/
 # Explore test outputs (local state)
 tests/explore/*_status.yaml
 tests/explore/*-results.md
+
+# Test data (downloaded via `just test::setup`)
+tests/data/

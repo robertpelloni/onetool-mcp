@@ -201,7 +201,7 @@ servers:
     command: uvx
     args: ["mcp-alchemy"]
     env:
-      DB_URL: "sqlite:///${OT_CWD}/data/northwind.db"
+      DB_URL: "sqlite:///${OT_CWD}/../tests/data/northwind.db"
 
   magic:
     type: stdio

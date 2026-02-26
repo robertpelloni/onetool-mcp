@@ -13,15 +13,15 @@ Test out the following packs:
 Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, package, ripgrep, ot_forge, web
 
 When testing:
-- convert with files at demo/data/files
-- db with db at demo/data/db/northwind.db (25MB, download via `just demo::setup`)
-- excel with files at demo/data/files
+- convert with files at tests/data/
+- db with db at tests/data/northwind.db (25MB, download via `just test-setup`)
+- excel with files at tests/data/
 - mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
 - ot_forge: create_ext, validate_ext, install_skill
 - web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
-- ot_llm: transform with simple data, transform_file with a file from demo/data/files
+- ot_llm: transform with simple data, transform_file with a file from tests/data/
 
 ```
 
@@ -176,19 +176,19 @@ OneTool is setup correctly with all dependencies and secrets needed.
 ### Parameter naming hints
 
 - **excel tools**: Use `filepath` not `path`, and `sheet_name` not `sheet`
-  - Example: `excel.info(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.info(path="data.xlsx")`
-  - Example: `excel.read(filepath="demo/data/files/file_example_XLS_1000.xlsx")` not `excel.read(path="data.xlsx", sheet="Sales")`
+  - Example: `excel.info(filepath="tests/data/file_example_XLS_1000.xlsx")` not `excel.info(path="data.xlsx")`
+  - Example: `excel.read(filepath="tests/data/file_example_XLS_1000.xlsx")` not `excel.read(path="data.xlsx", sheet="Sales")`
   - `excel.read` uses `start_cell=`/`end_cell=` for range (no `limit=` param). Example: `excel.read(filepath="...", start_cell="A1", end_cell="H4")`
   - Use `pattern=` not `search_term=` for excel.search
 - **ground tools**: Use `max_sources` not `count` to limit results
   - Example: `ground.search(query="topic", max_sources=5)` not `ground.search(query="topic", count=5)`
-- **context7 tools**: Different parameters for search vs doc
-  - `context7.search()` uses `query=` (not `library_key=`)
-  - `context7.doc()` uses `library_key=` and `topic=`
-  - Example: `context7.search(query="react")`
-  - Example: `context7.doc(library_key="vercel/next.js", topic="routing")`
+- **context7 tools**: Different parameters for search vs doc (v2 API)
+  - `context7.search()` requires both `query=` and `library_name=`
+  - `context7.doc()` uses `library_id=` and `query=` (not `library_key=` or `topic=`)
+  - Example: `context7.search(query="hooks tutorial", library_name="react")`
+  - Example: `context7.doc(library_id="react", query="How do hooks work?")`
 - **convert tools**: Use `pattern=` and `output_dir=`, not `filepath=`
-  - Example: `convert.excel(pattern="demo/data/files/*.xlsx", output_dir="tmp/")` not `convert.excel(filepath="...")`
+  - Example: `convert.excel(pattern="tests/data/*.xlsx", output_dir="tmp/")` not `convert.excel(filepath="...")`
 - **package tools**: `packages=` requires a list, not a string
   - Example: `package.pypi(packages=["requests", "flask"])` not `package.pypi(packages="requests")`
 - **ot_llm tools**: Use `data=` not `input=`
@@ -235,14 +235,15 @@ OneTool is setup correctly with all dependencies and secrets needed.
 - **Snippets use abbreviated parameter names** (by design):
   - `$rg` and `$rg_count` use `p=` for pattern (not `pattern=`)
   - `$brv`, `$g`, and `$gh` use `q=` for query (not `query=`)
-  - `$c7` and `$c7_eg` use `lib=` for library_key and `q=` for topic
+  - `$c7` and `$c7_eg` use `lib=` for library_id and `q=` for query
   - `$pkg_pypi` and `$pkg_npm` use `packages=` (comma-separated string, not list)
   - `$web` uses `u=` for URLs (pipe-separated for batch)
   - Example: `$rg p="TODO" ft="py"` not `$rg pattern="TODO" file_type="py"`
 - **db tools**: Use SQLite URL format `sqlite:///path/to/db`
-  - Example: `db.tables(db_url="sqlite:///demo/data/db/northwind.db")`
-  - Example: `db.query(sql="SELECT * FROM Customers LIMIT 3", db_url="sqlite:///demo/data/db/northwind.db")`
+  - Example: `db.tables(db_url="sqlite:///tests/data/northwind.db")`
+  - Example: `db.query(sql="SELECT * FROM Customers LIMIT 3", db_url="sqlite:///tests/data/northwind.db")`
   - Not just the file path alone
+  - Note: DB path is now `tests/data/northwind.db` (download via `just test-setup`)
 - **web.fetch**: Use `max_length=` not `max_chars=` to limit output
   - Example: `web.fetch(url="...", max_length=500)`
 
@@ -259,13 +260,14 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 ### Test data notes
 
-All test data lives under `demo/data/`:
-- **demo/data/db/northwind.db**: SQLite database (25MB) with 13 tables — download via `just demo::setup`, gitignored
-- **demo/data/files/**: Checked-in sample files for excel, convert, and llm testing:
+Test data locations:
+- **tests/data/**: All test data — download via `just test-setup` (gitignored):
+  - `northwind.db` — SQLite database (25MB) with 13 tables
   - `file_example_XLS_1000.xlsx` — Excel workbook
   - `file_example_1MB.docx` — Word document
   - `file_example_PDF_1MB.pdf` — PDF document
   - `file_example_PPT_1MB.pptx` — PowerPoint presentation
+  - `file_example_1.jpg`, `file_example_2.jpg` — Images
 - File access: OneTool sandboxes file access — paths outside cwd may be blocked
 
 ### MCP Server notes
@@ -304,7 +306,7 @@ Test these first for fast coverage (one tool from each category):
 4. `$pkg_pypi packages="requests"` - snippets
 5. `file.tree(path=".", max_depth=1)` - filesystem
 6. `mem.write(topic="tmp/test/smoke", content="hello")` then `mem.read(topic="tmp/test/smoke")` then `mem.delete(topic="tmp/", confirm=True)` - memory
-7. `db.tables(db_url="sqlite:///demo/data/db/northwind.db")` - database
+7. `db.tables(db_url="sqlite:///tests/data/northwind.db")` - database
 8. `ground.search(query="test", max_sources=2)` - grounded search
 
 If all pass, the core infrastructure is working.

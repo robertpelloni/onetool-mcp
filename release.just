@@ -67,7 +67,7 @@ check:
     uv run mkdocs build --strict
     @echo ""
     @echo "Running sanity tests via Claude Code..."
-    claude "/proj:test-explore sanity.md retest all"
+    claude "/p:test-explore sanity.md retest all"
     @echo ""
     @echo "=== All checks passed ==="
     @echo ""

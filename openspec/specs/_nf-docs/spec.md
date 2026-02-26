@@ -464,8 +464,8 @@ The project SHALL provide a comprehensive Chrome DevTools MCP guide at `docs/lea
 - **THEN** they find how to inject the annotation tool
 - **AND** how Claude can highlight elements programmatically
 - **AND** how users can annotate elements manually (Ctrl+I / Cmd+I)
-- **AND** the API reference for `chrome_devtools_util` functions (Chrome DevTools)
-- **AND** the API reference for `playwright_util` functions (Playwright)
+- **AND** the API reference for `chrome_util` functions (Chrome DevTools)
+- **AND** the API reference for `play_util` functions (Playwright)
 - **AND** a note that the two packs are independent — each targets its own MCP server with no fallback between them
 
 #### Scenario: Common tasks documented

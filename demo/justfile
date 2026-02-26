@@ -32,13 +32,9 @@ bench *args:
 # SETUP & CLEANUP
 # ============================================================================
 
-# Download demo assets (database only)
+# Download test data (database + sample files) from beycom/onetool-mcp-test
 setup:
-    @echo "=== Downloading Northwind database ==="
-    @mkdir -p {{ _dir }}/data
-    curl -sL -o {{ _dir }}/data/northwind.db \
-        https://github.com/jpwhite3/northwind-SQLite3/raw/main/dist/northwind.db
-    @echo "=== Demo setup complete ==="
+    just test-setup
 
 # Remove demo assets and generated files
 clean:

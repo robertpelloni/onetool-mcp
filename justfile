@@ -45,6 +45,15 @@ test-unit:
 test-integration:
     uv run pytest -m integration
 
+# Download test data from beycom/onetool-mcp-test into tests/data/
+test-setup:
+    @echo "=== Downloading test data ==="
+    @mkdir -p tests/data
+    curl -sL https://github.com/beycom/onetool-mcp-test/archive/refs/heads/main.zip -o /tmp/ot-test-data.zip
+    unzip -jo /tmp/ot-test-data.zip -d tests/data/
+    @rm -f /tmp/ot-test-data.zip tests/data/README.md
+    @echo "=== Test data ready at tests/data/ ==="
+
 # Run tests with coverage report
 test-coverage:
     uv run pytest --cov=onetool --cov-report=html
