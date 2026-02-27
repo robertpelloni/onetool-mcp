@@ -60,8 +60,9 @@ prompts:
   packs:
     ot: "** Discover tools, packs. Get the help you need to call them correctly. The BEST PLACE to start. **"
     brave: "Search the web, news, and images — fast, private, with batch support"
+    tavily: "Search the web with Tavily AI — clean results, answer summaries, URL extraction"
     ground: "Research any topic with Google AI-grounded search and source citations"
-    web: "Fetch any URL and extract clean, readable content"
+    webfetch: "Fetch any URL and extract clean, readable content"
     context7: "Pull up-to-date docs for any library — React, FastAPI, etc."
     ripgrep: "Search code and text at speed — regex, globs, file types, context lines"
     file: "Read, write, edit, copy, move, and delete files; browse directory trees"

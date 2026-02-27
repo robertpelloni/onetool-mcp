@@ -132,9 +132,9 @@ snippets:
       package.models(query="{{ q }}", provider="{{ provider }}", limit=10)
 
   # ============================================================================
-  # WEB FETCH (web_)
+  # WEB FETCH (webfetch_)
   # ============================================================================
-  web:
+  webfetch:
     description: Fetch multiple URLs concurrently
     params:
       u: { description: "Pipe-separated URLs to fetch" }
@@ -142,24 +142,24 @@ snippets:
       links: { default: false, description: "Include hyperlinks" }
       max: { default: "", description: "Max length per URL" }
     body: |
-      web.fetch_batch(urls=[{% for url in u.split('|') %}"{{ url.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}], output_format="{{ f }}", include_links={{ links }}{% if max %}, max_length={{ max }}{% endif %})
+      webfetch.fetch_batch(urls=[{% for url in u.split('|') %}"{{ url.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}], output_format="{{ f }}", include_links={{ links }}{% if max %}, max_length={{ max }}{% endif %})
 
-  web_data:
+  webfetch_data:
     description: Extract structured data from a web page
     params:
       u: { description: "URL to fetch" }
       schema: { description: "What to extract (e.g., 'prices as {item, price}')" }
     body: |
-      content = web.fetch(url="{{ u }}", include_tables=True)
+      content = webfetch.fetch(url="{{ u }}", include_tables=True)
       ot_llm.transform(data=content, prompt="Extract {{ schema }} as YAML")
 
-  web_summary:
+  webfetch_summary:
     description: Fetch and summarize a web page
     params:
       u: { description: "URL to fetch" }
       focus: { default: "", description: "What to focus on" }
     body: |
-      content = web.fetch(url="{{ u }}", output_format="markdown", fast=True)
+      content = webfetch.fetch(url="{{ u }}", output_format="markdown", fast=True)
       ot_llm.transform(data=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
 
   # ============================================================================
