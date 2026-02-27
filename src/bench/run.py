@@ -299,7 +299,7 @@ def run_single_benchmark(
     return results or [], not interrupted
 
 
-@app.command()
+@app.command("run")
 def run(
     config_files: list[str] = typer.Argument(
         None,
