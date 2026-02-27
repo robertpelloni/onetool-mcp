@@ -26,15 +26,11 @@ ID as label.
 #### Scenario: Add shapes and edges
 - **WHEN** `wb.draw(input='a["A"]\nb["B"]\na-->b')` is called
 - **THEN** two rectangles and a directed arrow SHALL appear on the canvas
-- **AND** the return value SHALL be `"+2 shapes, total 3 elements"`
+- **AND** the return value SHALL match `"+2 shapes, +1 edge(s): edge-a-b"` (format: `"+N shapes[, M updated][, +P edge(s): ids][, +Q group(s)]"`)
 
 #### Scenario: Additive — existing shapes untouched
 - **WHEN** `wb.draw(input='c["C"]')` is called after shapes `a` and `b` exist
 - **THEN** only shape `c` SHALL be added; `a` and `b` SHALL be untouched
-
-#### Scenario: Style classes
-- **WHEN** the DSL includes `classDef svc fill:#dae8fc,stroke:#6c8ebf;` and `class a svc`
-- **THEN** shape `a` SHALL be drawn with the specified fill and stroke colours
 
 #### Scenario: Subgraph bounding rect
 - **WHEN** the DSL includes a `subgraph ... end` block naming existing shapes
@@ -56,6 +52,21 @@ ID as label.
 #### Scenario: Auto-create unknown nodes
 - **WHEN** an edge references a node not declared as a shape (e.g. `a-->typo`)
 - **THEN** the unknown node SHALL be auto-created with its ID as the label
+
+#### Scenario: ID pre-normalisation
+- **WHEN** an ID contains spaces, hyphens, `+`, or uppercase letters (e.g. `api gateway["API Gateway"]`)
+- **THEN** the ID SHALL be pre-normalised before parsing: non-word characters stripped, lowercased
+- **AND** the label SHALL be preserved as written (label content is never modified)
+- **AND** `api gateway --> lambda fn` SHALL parse as an edge from `apigateway` to `lambdafn`
+
+#### Scenario: Subgraph return count
+- **WHEN** `wb.draw()` creates one or more new subgraphs
+- **THEN** the return value SHALL include `, +N group(s)` at the end
+
+#### Scenario: Auto-layout overlap avoidance
+- **WHEN** a new node would be placed at the same column as an existing placed node
+- **AND** the computed y position conflicts (within node height + gap) with any existing placed node
+- **THEN** the new node SHALL be placed below all existing nodes in that column
 
 #### Scenario: State not committed on JS failure
 - **WHEN** the browser call raises an exception
@@ -130,10 +141,15 @@ reconstructed base ID string), covering both shape erasure and labeled-edge eras
 #### Scenario: Erase shape removes dangling edges
 - **WHEN** `wb.erase(ids=["b"])` is called and edges `a-->b` and `b-->c` exist
 - **THEN** both edges SHALL be removed from state and canvas
+- **AND** the return value SHALL be `"erased 1 element(s), 2 dangling edge(s) removed"`
 
 #### Scenario: Erase unknown ID
 - **WHEN** `wb.erase(ids=["nonexistent"])` is called
 - **THEN** the return value SHALL be `"erased 0 element(s)"`
+
+#### Scenario: Erase with no dangling edges
+- **WHEN** `wb.erase(ids=["a"])` is called and `a` has no connected edges
+- **THEN** the return value SHALL be `"erased 1 element(s)"` (no dangling mention)
 
 #### Scenario: `_max_rendered_y` not reset when shapes remain
 - **WHEN** one of two shapes is erased
@@ -145,34 +161,47 @@ reconstructed base ID string), covering both shape erasure and labeled-edge eras
 
 ### Requirement: Save diagram to file
 
-`wb.save(file=)` SHALL write the current diagram to a file in `[dsl]/[scene]`
-format. The scene block SHALL capture live element positions, sizes, and visual
-properties from `getSceneElements()`. Bound text elements (id ends in `-text`
-or `-label`) and bound arrow elements (has `startBinding`) SHALL be excluded.
-Elements with id starting with `__` or equal to `"dsl"` SHALL be excluded.
+`wb.save(file=)` SHALL write the current diagram as a native `.excalidraw` JSON
+file (format: `{"type":"excalidraw","version":2,"elements":[...],...}`). Before
+writing, it SHALL upsert a `__otDSL` text element containing the current DSL so
+that `wb.load()` and `wb.sync()` can restore Python state. The file can be
+opened directly in excalidraw.com. Conventionally uses the `.excalidraw` extension.
 
-#### Scenario: File written in [dsl]/[scene] format
-- **WHEN** `wb.save(file="out.wb")` is called
-- **THEN** the file SHALL start with `[dsl]\n` followed by the DSL text
-- **AND** contain `[scene]\n` followed by a JSON array of scene elements
+#### Scenario: File written in native .excalidraw format
+- **WHEN** `wb.save(file="arch.excalidraw")` is called
+- **THEN** the file SHALL be valid JSON with `"type": "excalidraw"`
+- **AND** `elements` SHALL include a `__otDSL` text element containing the DSL
+- **AND** the file SHALL be openable directly in excalidraw.com
 
 ### Requirement: Load diagram from file
 
-`wb.load(file=)` SHALL restore a diagram saved by `save()`. It SHALL parse the
-DSL, restore Python state, and render all elements at the saved scene positions.
-Files must use the `[dsl]/[scene]` format written by `save()`.
+`wb.load(file=)` SHALL restore a diagram from a native `.excalidraw` JSON file.
+It SHALL pass all elements to `updateScene`, then read the `__otDSL` element to
+restore Python DSL state. If `__otDSL` is absent, the canvas is restored but
+a warning is included in the return value.
 
-#### Scenario: Restore from [dsl]/[scene] format
-- **WHEN** `wb.load(file=)` is called on a `[dsl]/[scene]` file
-- **THEN** shapes SHALL appear at the saved x/y positions
+#### Scenario: Restore from .excalidraw file
+- **WHEN** `wb.load(file="arch.excalidraw")` is called
+- **THEN** all elements SHALL be restored to the canvas at saved positions
+- **AND** Python state SHALL be restored from the embedded `__otDSL` element
+- **AND** the return value SHALL be `"loaded N shapes, M edges"`
 
-#### Scenario: File missing [dsl] block
-- **WHEN** the file does not contain a `[dsl]` section
-- **THEN** an error string SHALL be returned
+#### Scenario: File missing __otDSL element
+- **WHEN** the file does not contain a `__otDSL` element
+- **THEN** the canvas SHALL be restored and the return SHALL include a warning
+- **AND** the return format SHALL be `"loaded N element(s) [warning: no __otDSL element — ...]"`
 
 #### Scenario: File not found
 - **WHEN** the file path does not exist
-- **THEN** an error string SHALL be returned
+- **THEN** `"Error: file not found: <path>"` SHALL be returned
+
+#### Scenario: Invalid JSON
+- **WHEN** the file is not valid JSON
+- **THEN** `"Error: invalid JSON in <path>: ..."` SHALL be returned
+
+#### Scenario: Wrong format
+- **WHEN** the JSON does not have `"type": "excalidraw"`
+- **THEN** `"Error: not a valid .excalidraw file - ..."` SHALL be returned
 
 ### Requirement: Clear diagram
 
@@ -249,10 +278,10 @@ lowercase with non-word characters stripped.
 #### Supported shape types
 | Syntax | Shape |
 |--------|-------|
-| `id["Label"]` | Rectangle |
-| `id(("Label"))` | Ellipse |
-| `id{"Label"}` | Diamond |
+| `id["Label"]` | Rectangle (only supported shape in DSL) |
 | `id["Line1\nLine2"]` | Multiline label |
+
+> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise an error directing the user to `wb.style()`. `classDef`/`class` syntax is also unsupported in the DSL; use `wb.style()` for colours and shapes after drawing.
 
 #### Supported edge types
 | Syntax | Meaning |
@@ -313,3 +342,85 @@ The `note()` input uses `id[type:\ncontent\n]` blocks. Supported types:
 | `note` | Word-wrapped text | Plain paragraph text (wrap at 60 chars) |
 
 All renderers accept `;` as a line separator in addition to newlines.
+
+### Requirement: Apply visual styles
+
+`wb.style(ids=, style=)` SHALL apply Excalidraw style properties to existing
+canvas elements in bulk. It SHALL never modify `_dsl_state` — styling is a
+purely visual operation. The `style` string uses the same shorthand key:value
+format as `wb.draw` inline styles. All keys and values are case-insensitive.
+
+Shape changes (`shape:d`, `shape:c`) SHALL use delete+recreate with the same ID
+so arrow connections survive.
+
+#### Scenario: Apply colour
+- **WHEN** `wb.style(ids=["a"], style="bc:green")` is called
+- **THEN** shape `a` SHALL have `backgroundColor` set to `#bbf7d0`
+
+#### Scenario: Case-insensitive values
+- **WHEN** `wb.style(ids=["a"], style="bc:Green,ss:Solid,f:Hand,shape:R")` is called
+- **THEN** the values SHALL resolve identically to their lowercase equivalents
+
+#### Scenario: Named colours
+- **WHEN** the style string uses a named colour (e.g. `bc:blue`)
+- **THEN** it SHALL resolve to the corresponding hex value (`#bfdbfe`)
+- **AND** hex colours with `#` prefix SHALL be passed through unchanged
+
+#### Scenario: Unknown IDs
+- **WHEN** an ID in `ids` is not on the canvas
+- **THEN** the call SHALL still return `"styled N element(s)"` (no error for unknown IDs)
+
+### Requirement: Sync Python state from canvas
+
+`wb.sync()` SHALL read the `__otDSL` text element from the current Excalidraw
+canvas and restore Python DSL state. Returns `"synced: N shapes, M edges"` on
+success. If no `__otDSL` element is found, returns an explanatory message.
+
+#### Scenario: Sync restores state
+- **WHEN** `wb.sync()` is called and a `__otDSL` element is present
+- **THEN** `_dsl_state` SHALL be restored from the embedded DSL text
+
+#### Scenario: No __otDSL element
+- **WHEN** `wb.sync()` is called and no `__otDSL` element is on canvas
+- **THEN** a message explaining the absence SHALL be returned (no error)
+
+### Requirement: __otDSL canvas element
+
+The `__otDSL` element is a hidden text element on the Excalidraw canvas that
+stores the current DSL text. It SHALL be:
+
+- Written (upserted) by `wb.save()` before file output
+- Read by `wb.load()` and `wb.sync()` to restore Python state
+- Excluded from `wb.save()` scene snapshots (id starts with `__`)
+- Written by `wb.embed_dsl()` as a visible code-font element with id `"dsl"`
+  (separate from the `__otDSL` hidden element)
+
+#### Scenario: __otDSL written on save
+- **WHEN** `wb.save()` is called
+- **THEN** a `__otDSL` text element SHALL be upserted on canvas with the current DSL
+
+#### Scenario: __otDSL absent on load
+- **WHEN** `wb.load()` is called on a file with no `__otDSL` element
+- **THEN** the canvas SHALL be restored and the return SHALL include a warning about empty Python state
+
+### Requirement: DSL and style reference tool
+
+`wb.help()` SHALL return the full DSL syntax and style shorthand reference as a
+plain-text string. No browser interaction is required. The content is loaded
+from the bundled `dsl-reference.md` asset file.
+
+#### Scenario: Returns non-empty string
+- **WHEN** `wb.help()` is called
+- **THEN** a non-empty string covering DSL syntax and style shorthands SHALL be returned
+
+### Requirement: Inline style props in draw()
+
+Shape declarations in `wb.draw()` MAY include style props after the closing `]`:
+
+```
+a["Label"] bc:green,sw:2
+```
+
+These props are applied to the shape element alongside label and position. The
+same shorthand key:value format used by `wb.style()` is supported. Values are
+case-insensitive.

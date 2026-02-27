@@ -20,8 +20,9 @@ ot.server(enable="playwright")
 ```python
 wb.open()
 wb.draw(input='a["API"]; b["DB"]; a-->b')
+wb.style(ids=["b"], style="bc:blue,sc:#1d4ed8")
 wb.screenshot()
-wb.save(file="diagrams/arch.wb")
+wb.save(file="diagrams/arch.excalidraw")
 ```
 
 ## API Summary (Generated)
@@ -33,17 +34,21 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 |---|---|
 | `wb.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
 | `wb.close() -> str` | Close the excalidraw tab and reset all Python state. |
-| `wb.draw(*, input: str) -> str` | Add diagram elements from DSL. Additive — never clears existing elements. |
+| `wb.draw(*, input: str) -> str` | Add or update diagram elements from DSL. Always additive — never clears. |
 | `wb.embed_dsl() -> str` | Embed the current DSL as a note element on the canvas. |
 | `wb.erase(*, ids: list[str]) -> str` | Remove individual elements from the canvas and Python state. |
 | `wb.fit() -> str` | Fit all elements in view. |
 | `wb.hard_reset() -> str` | Reset Python DSL state unconditionally; attempt canvas clear if browser is available. |
-| `wb.load(*, file: str) -> str` | Restore diagram from a file saved by save(). |
+| `wb.help() -> str` | Return the full DSL and style reference. Call this before using wb.draw or wb.style. |
+| `wb.load(*, file: str) -> str` | Restore diagram from a native ``.excalidraw`` file. |
 | `wb.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
 | `wb.open() -> str` | Open excalidraw.com and start with a clean canvas. |
-| `wb.save(*, file: str) -> str` | Save current diagram to a file in DSL+scene format. |
+| `wb.save(*, file: str) -> str` | Save current diagram to a native ``.excalidraw`` JSON file. |
 | `wb.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
 | `wb.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
+| `wb.share() -> str` | Generate a shareable Excalidraw link for the current canvas. |
+| `wb.style(*, ids: list[str], style: str) -> str` | Apply visual style properties to existing canvas elements in bulk. |
+| `wb.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
 | `wb.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
 <!-- END GENERATED:WB_HELP_SUMMARY -->
 
@@ -75,11 +80,62 @@ wb.open()
 
 ### `draw(input)`
 
-Add diagram elements from DSL. Additive — never clears existing elements. New shapes get auto-layout positions. Edges are deduplicated by `(src, dst, label)`.
+Add or update diagram elements from DSL. Additive — never clears existing elements.
+
+- **New shapes** get auto-layout positions.
+- **Existing shapes** (by ID) are patched — label and inline style props are updated, position and size are preserved.
+- Edges are deduplicated by `(src, dst, label)`.
 
 ```python
 wb.draw(input='a["Service A"]; b["DB"]; a-->b')
-# Returns: "+2 shapes, total 3 elements"
+# Returns: "+2 shapes, +1 edge(s): edge-a-b"
+```
+
+Inline style props can be appended after the closing `]`:
+
+```python
+wb.draw(input='a["API"] bc:blue,sc:#1d4ed8,sw:2')
+```
+
+### `style(ids, style)`
+
+Apply visual style properties to existing canvas elements. Never changes position or size unless `x`, `y`, `w`, `h` are given.
+
+```python
+wb.style(ids=["a", "b"], style="bc:green,sc:#16a34a")
+wb.style(ids=["c"], style="shape:d")   # change to diamond
+# Returns: "styled 2 element(s)"
+```
+
+Style shorthand reference (all keys and values are **case-insensitive**):
+
+| Key | Excalidraw property | Notes |
+|-----|---------------------|-------|
+| `bc` | backgroundColor | hex (requires `#`: `bc:#ff0000`) or named colour (`bc:green`) |
+| `sc` | strokeColor | hex (requires `#`: `sc:#1d4ed8`) or named colour (`sc:blue`) |
+| `sw` | strokeWidth | number |
+| `ss` | strokeStyle | `solid`, `dashed`, `dotted` |
+| `r` | roughness | 0-2 |
+| `o` | opacity | 0-100 |
+| `f` | fontFamily | `hand`, `normal`, `mono` |
+| `fs` | fontSize | number |
+| `ta` | textAlign | `left`, `center`, `right` |
+| `va` | verticalAlign | `top`, `middle`, `bottom` |
+| `shape` | element type | `r`=rect, `d`=diamond, `c`=circle |
+| `x`/`y` | position | pixels |
+| `w`/`h` | width/height | pixels |
+
+Named colours: `green`, `blue`, `red`, `purple`, `yellow`, `orange`, `pink`, `gray`, `white`, `black`.
+
+> **Colour format:** Hex colours require the `#` prefix (`bc:#ff0000`). Named colours do not (`bc:green`). All values are case-insensitive (`bc:Green` and `bc:green` are equivalent).
+
+### `help()`
+
+Return the full DSL syntax and style shorthand reference as plain text. No browser required. Call this before using `wb.draw()` or `wb.style()` for the first time.
+
+```python
+wb.help()
+# Returns: full DSL and style reference as a string
 ```
 
 ### `note(input, background)`
@@ -100,34 +156,60 @@ Bob,QA
 
 Remove elements by ID. Dangling edges (whose src or dst is erased) are removed automatically.
 
+Edge IDs use the format `edge-{src}-{dst}` (plus optional label and arrowhead suffix). The `draw()` return value lists newly created edge IDs.
+
 ```python
 wb.erase(ids=["a", "edge-a-b"])
 # Returns: "erased 2 element(s)"
+
+wb.erase(ids=["b"])  # b has edges a-->b and b-->c
+# Returns: "erased 1 element(s), 2 dangling edge(s) removed"
 ```
 
-### `embed_dsl()`
+### `sync()`
 
-Insert the current DSL as a grey code-font box (`id="dsl"`) on the canvas. Idempotent. Excluded from `save()` snapshots.
+Sync Python DSL state from the `__otDSL` canvas element. Use this after loading a file directly in the Excalidraw UI or drag-and-dropping an `.excalidraw` file.
 
 ```python
-wb.embed_dsl()
-# Returns: "embedded DSL (5 lines)"
+wb.sync()
+# Returns: "synced: 4 shapes, 3 edges"
 ```
 
 ### `save(file)`
 
-Save the diagram to a `.wb` file (DSL + scene positions).
+Save the diagram to a native `.excalidraw` file (JSON). Also embeds the current DSL as a `__otDSL` text element on the canvas for state restoration.
 
 ```python
-wb.save(file="diagrams/arch.wb")
+wb.save(file="diagrams/arch.excalidraw")
 ```
 
 ### `load(file)`
 
-Restore a diagram saved by `save()`.
+Restore a diagram saved by `save()`. Reads the native `.excalidraw` JSON and restores Python state from the embedded `__otDSL` element.
 
 ```python
-wb.load(file="diagrams/arch.wb")
+wb.load(file="diagrams/arch.excalidraw")
+# Returns: "loaded 4 shapes, 3 edges"
+```
+
+> If the file has no `__otDSL` element (e.g. created outside `wb.save()`), the canvas is still restored but Python state will be empty and the return includes a warning. Call `wb.sync()` after manually adding a DSL element.
+
+### `share()`
+
+Generate a shareable Excalidraw link. Encrypts the full scene client-side (AES-GCM, 128-bit) and uploads to Excalidraw's storage. Returns a URL anyone can open in a browser.
+
+```python
+wb.share()
+# Returns: "https://excalidraw.com/#json={id},{key}"
+```
+
+### `embed_dsl()`
+
+Insert the current DSL as a grey code-font box on the canvas. Idempotent. Excluded from `save()` snapshots.
+
+```python
+wb.embed_dsl()
+# Returns: "embedded DSL (5 lines)"
 ```
 
 ### `clear()`
@@ -192,16 +274,20 @@ wb.hard_reset()
 
 ## Draw DSL
 
-The `draw()` input uses a Mermaid-compatible syntax. Lines can be separated by newlines or semicolons.
+The `draw()` input uses a Mermaid-compatible syntax. Statements can be separated by **semicolons** (preferred) or newlines.
 
 ### Shapes
 
+Only rectangles are supported:
+
 ```
-id["Label"]               rectangle (default)
-id(("Label"))             ellipse
-id{"Label"}               diamond
+id["Label"]               rectangle
+id["Label"] bc:blue       rectangle with inline style props
 id["Line1\nLine2"]        multiline label
+id bc:blue                style-only update (label unchanged)
 ```
+
+> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise a `ValueError`. Use `wb.style(ids=[...], style="shape:c")` or `shape:d` to change shape after drawing.
 
 ### Edges
 
@@ -216,30 +302,6 @@ a-.->b                    dashed directed arrow
 a-.->|label|b             dashed directed arrow with label
 a-.-b                     dashed undirected
 ```
-
-### Style Classes
-
-```
-classDef name fill:#hex,stroke:#hex,stroke-width:2px;
-class id1,id2 name
-```
-
-Supported style properties:
-
-| Property | Values |
-|----------|--------|
-| `fill` | CSS colour (`#hex`, `red`, etc.) |
-| `stroke` | CSS colour |
-| `stroke-width` | Integer (px) |
-| `stroke-style` | `solid`, `dashed`, `dotted` |
-| `color` | Text colour |
-| `roughness` | `0` (smooth) – `3` (rough) |
-| `edges` | `sharp`, `round` |
-| `font-family` | `handwritten`, `normal`, `code`, `serif` |
-| `font-size` | `S` (16), `M` (20), `L` (28), `XL` (36), or integer |
-| `text-align` | `left`, `center`, `right` |
-| `vertical-align` | `top`, `middle` |
-| `opacity` | 0–100 |
 
 ### Subgraphs
 
@@ -413,21 +475,13 @@ word-wrapped and displayed in a code-font box.
 
 ## Examples
 
-### Architecture diagram with annotations
+### Architecture diagram with styling
 
 ```python
 wb.open()
-wb.draw(input="""
-classDef svc fill:#dae8fc,stroke:#6c8ebf;
-classDef db  fill:#d5e8d4,stroke:#82b366;
-api["API Gateway"]
-auth["Auth Service"]
-users["Users DB"]
-api-->auth
-auth-->users
-class api,auth svc
-class users db
-""")
+wb.draw(input='api["API Gateway"]; auth["Auth Service"]; users["Users DB"]; api-->auth; auth-->users')
+wb.style(ids=["api", "auth"], style="bc:#dae8fc,sc:#6c8ebf")
+wb.style(ids=["users"], style="bc:#d5e8d4,sc:#82b366")
 wb.note(input="""
 t[table:
 Service,Latency,Owner
@@ -442,10 +496,10 @@ wb.screenshot()
 ### Save and restore
 
 ```python
-wb.save(file="diagrams/arch.wb")
+wb.save(file="diagrams/arch.excalidraw")
 # ... later ...
 wb.open()
-wb.load(file="diagrams/arch.wb")
+wb.load(file="diagrams/arch.excalidraw")
 ```
 
 ### Incremental drawing
@@ -453,4 +507,19 @@ wb.load(file="diagrams/arch.wb")
 ```python
 wb.draw(input='a["Start"]; b["Process"]')
 wb.draw(input='c["End"]; b-->c')   # additive, positions relative to existing
+```
+
+### Upsert — update label or style without moving
+
+```python
+wb.draw(input='a["API"]; b["DB"]')
+wb.draw(input='a["API Gateway"] bc:blue')   # updates label and colour; position preserved
+```
+
+### Share a diagram
+
+```python
+wb.draw(input='a["Hello"]; b["World"]; a-->b')
+wb.share()
+# Returns a URL like: https://excalidraw.com/#json=abc123,key456
 ```

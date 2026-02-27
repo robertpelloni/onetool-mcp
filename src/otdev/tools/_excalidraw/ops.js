@@ -187,9 +187,6 @@
         originalText: label, autoResize: true,
       };
 
-      // Add every member (and its bound text) to the same groupIds so they
-      // move together with the bounding rect when selected as a group.
-      // Fall back to liveMap for elements not yet in __drawElements.
       for (const mid of memberIds) {
         const el = window.__drawElements[mid] || liveMap[mid];
         if (el) {
@@ -210,26 +207,6 @@
 
       // Insert rect + label at BEGINNING so they render behind all other elements
       window.__drawElements = { [id]: groupRect, [labelId]: labelEl, ...window.__drawElements };
-
-      // NOTE: frame-based implementation (kept for reference, not active)
-      // const frameEl = {
-      //   id, type: 'frame',
-      //   x, y, width: w, height: h,
-      //   name: label,
-      //   strokeWidth: 1, strokeStyle: 'solid', roughness: 0, opacity: 100,
-      //   fillStyle: 'solid', angle: 0, groupIds: [], frameId: null,
-      //   isDeleted: false, link: null, locked: false,
-      //   version: 1, versionNonce: rng(), updated: now,
-      //   boundElements: [],
-      // };
-      // for (const mid of memberIds) {
-      //   if (window.__drawElements[mid])
-      //     window.__drawElements[mid] = { ...window.__drawElements[mid], frameId: id };
-      //   const tid = mid + '-text';
-      //   if (window.__drawElements[tid])
-      //     window.__drawElements[tid] = { ...window.__drawElements[tid], frameId: id };
-      // }
-      // window.__drawElements = { [id]: frameEl, ...window.__drawElements };
     }
 
     // Single updateScene for all phases
@@ -246,6 +223,158 @@
     window.__drawApi._raw.updateScene({ elements: Object.values(window.__drawElements) });
     return true;
   };
+
+  // ---------------------------------------------------------------------------
+  // Patch existing elements (upsert — label and/or style only, position preserved)
+  // Used by wb.draw for existing nodes and wb.style.
+  // patches: [{id, text?, strokeColor?, backgroundColor?, ...excalidraw props}]
+  // ---------------------------------------------------------------------------
+  window._patch_elements = (patches) => {
+    const now = Date.now();
+    const rng = () => Math.floor(Math.random() * 9999999);
+
+    const liveMap = {};
+    for (const el of window.__drawApi.read()) {
+      liveMap[el.id] = el;
+    }
+
+    for (const patch of patches) {
+      const { id, text, shape: newType, ...styleProps } = patch;
+
+      const existing = liveMap[id] || window.__drawElements[id];
+      if (!existing) continue;
+
+      const textId = id + '-text';
+      const existingText = liveMap[textId] || window.__drawElements[textId];
+
+      // Shape type change requires delete + recreate (Excalidraw cannot change type in-place)
+      if (newType && newType !== existing.type) {
+        const boundEls = existing.boundElements || [];
+        window.__drawElements[id] = {
+          ...existing,
+          type: newType,
+          ...styleProps,
+          boundElements: boundEls,
+          version: (existing.version || 1) + 1,
+          versionNonce: rng(),
+          updated: now,
+        };
+      } else {
+        window.__drawElements[id] = {
+          ...existing,
+          ...styleProps,
+          version: (existing.version || 1) + 1,
+          versionNonce: rng(),
+          updated: now,
+        };
+      }
+
+      // Update text child
+      if (existingText) {
+        const newLabel = text !== undefined ? text : existingText.text;
+        const fontSize = styleProps.fontSize || existingText.fontSize || 16;
+        const lineCount = newLabel.split('\n').length;
+        const textH = lineCount * fontSize * 1.25;
+        window.__drawElements[textId] = {
+          ...existingText,
+          text: newLabel,
+          originalText: newLabel,
+          fontSize,
+          height: textH,
+          // Sync text stroke colour if sc was provided
+          ...(styleProps.strokeColor ? { strokeColor: styleProps.strokeColor } : {}),
+          ...(styleProps.fontFamily  ? { fontFamily: styleProps.fontFamily }   : {}),
+          ...(styleProps.textAlign   ? { textAlign: styleProps.textAlign }     : {}),
+          version: (existingText.version || 1) + 1,
+          versionNonce: rng(),
+          updated: now,
+        };
+      }
+    }
+
+    window.__drawApi._raw.updateScene({ elements: Object.values(window.__drawElements) });
+    return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Style elements by ID — applies Excalidraw props directly.
+  // ids: string[], styleProps: {backgroundColor?, strokeColor?, strokeWidth?, ...}
+  // ---------------------------------------------------------------------------
+  window._style_elements = (ids, styleProps) => {
+    const patches = ids.map(id => ({ id, ...styleProps }));
+    return window._patch_elements(patches);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Upsert the __otDSL text element (fixed ID) with the current DSL string.
+  // Positioned at (20, 20) on first write; preserves position on updates.
+  // ---------------------------------------------------------------------------
+  window._upsert_dsl_element = (dslText) => {
+    const now = Date.now();
+    const rng = () => Math.floor(Math.random() * 9999999);
+    const id = '__otDSL';
+
+    const allEls = window.__drawApi.read();
+    const existing = allEls.find(e => e.id === id) || window.__drawElements[id];
+
+    const lines = dslText.split('\n');
+    const fontSize = 12;
+    const lineH = fontSize * 1.4;
+    const charW = 7;
+    const pad = 12;
+    const w = Math.max(120, Math.max(...lines.map(l => l.length)) * charW + pad * 2);
+    const h = lines.length * lineH + pad * 2;
+
+    const x = existing ? existing.x : 20;
+    const y = existing ? existing.y : 20;
+
+    window.__drawElements[id] = {
+      id, type: 'text',
+      x, y, width: w, height: h,
+      text: dslText,
+      fontSize,
+      fontFamily: 3,
+      textAlign: 'left', verticalAlign: 'top',
+      strokeColor: '#888888', backgroundColor: 'transparent',
+      fillStyle: 'solid', strokeWidth: 1, roughness: 0,
+      opacity: 50, angle: 0, groupIds: [], frameId: null,
+      isDeleted: false, link: null, locked: false,
+      version: existing ? (existing.version || 1) + 1 : 1,
+      versionNonce: rng(), updated: now,
+      boundElements: [], containerId: null, lineHeight: 1.4, baseline: 10,
+      originalText: dslText, autoResize: true,
+    };
+
+    window.__drawApi._raw.updateScene({ elements: Object.values(window.__drawElements) });
+    return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Download interceptor — captures Excalidraw "Save to file" downloads.
+  // Excalidraw uses <a href="blob:..." download="..."> + .click() to save.
+  // We intercept .click() on download anchors, read the blob, and store the
+  // file data in window.__downloadQueue for Python to retrieve and write.
+  // ---------------------------------------------------------------------------
+  if (!window.__downloadInterceptInstalled) {
+    window.__downloadInterceptInstalled = true;
+    window.__downloadQueue = [];
+
+    const _origClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () {
+      if (this.download && this.href && this.href.startsWith('blob:')) {
+        const url  = this.href;
+        const name = this.download;
+        fetch(url)
+          .then(r => r.text())
+          .then(data => {
+            window.__downloadQueue.push({ name, data, ts: Date.now() });
+          })
+          .catch(err => console.warn('[wb] download intercept failed:', err));
+        return;
+      }
+      return _origClick.call(this);
+    };
+  }
 
   return true;
 }

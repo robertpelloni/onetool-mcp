@@ -20,12 +20,16 @@ __all__ = [
     "erase",
     "fit",
     "hard_reset",
+    "help",
     "load",
     "note",
     "open",
     "save",
     "screenshot",
     "scroll",
+    "share",
+    "style",
+    "sync",
     "zoom",
 ]
 
@@ -45,10 +49,23 @@ from ot.proxy import get_proxy_manager
 # Module-level DSL state
 # ---------------------------------------------------------------------------
 
-_dsl_state: dict[str, Any] = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+_dsl_state: dict[str, Any] = {"shapes": {}, "edges": [], "groups": {}}
 _edge_keys: set[tuple[str, str, str, str | None, str | None]] = set()
 _rendered_ids: set[str] = set()
+_placed_positions: dict[str, tuple[float, float]] = {}
 _max_rendered_y: float = 0.0
+
+
+def _reset_state() -> None:
+    """Reset all module-level DSL and render state to empty."""
+    global _max_rendered_y
+    _dsl_state.clear()
+    _dsl_state.update({"shapes": {}, "edges": [], "groups": {}})
+    _rendered_ids.clear()
+    _edge_keys.clear()
+    _placed_positions.clear()
+    _max_rendered_y = 0.0
+
 
 # ---------------------------------------------------------------------------
 # JS asset loader
@@ -136,9 +153,68 @@ def _js_batch_draw(
     _browser_evaluate(f"() => window._batch_draw({s_json}, {e_json}, {f_json})")
 
 
+def _js_patch_elements(patches: list[dict[str, Any]]) -> None:
+    """Patch existing elements (label and/or style) without changing position."""
+    p_json = json.dumps(patches)
+    _browser_evaluate(f"() => window._patch_elements({p_json})")
+
+
+def _js_style_elements(ids: list[str], style_props: dict[str, Any]) -> None:
+    """Apply style properties to elements by ID."""
+    ids_json = json.dumps(ids)
+    props_json = json.dumps(style_props)
+    _browser_evaluate(f"() => window._style_elements({ids_json}, {props_json})")
+
+
+def _shape_payload(
+    id_: str,
+    shape: dict[str, Any],
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    style: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a shape payload dict for _js_batch_draw."""
+    return {
+        "id": id_, "label": shape["label"],
+        "x": x, "y": y, "w": w, "h": h,
+        "shape": "rectangle", "styleProps": style or {},
+    }
+
+
 # ---------------------------------------------------------------------------
 # Browser lifecycle
 # ---------------------------------------------------------------------------
+
+
+def _process_pending_downloads() -> list[str]:
+    """Retrieve captured downloads from the browser and save to disk.
+
+    Excalidraw's 'Save to file' is intercepted by the JS download handler in
+    ops.js. This function drains the queue, writes each file to the current
+    working directory, and returns a list of saved paths.
+    """
+    try:
+        queue = _browser_evaluate_json(
+            "() => { const q = window.__downloadQueue || []; "
+            "window.__downloadQueue = []; return q; }"
+        )
+        if not isinstance(queue, list) or not queue:
+            return []
+        saved = []
+        for item in queue:
+            name = item.get("name", "download.excalidraw") if isinstance(item, dict) else "download.excalidraw"
+            data = item.get("data", "") if isinstance(item, dict) else ""
+            if not data:
+                continue
+            out_path = resolve_cwd_path(name)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(data, encoding="utf-8")
+            saved.append(str(out_path))
+        return saved
+    except Exception:
+        return []
 
 
 def _ensure_ready() -> str | None:
@@ -192,25 +268,11 @@ def _ensure_ready() -> str | None:
         if _dsl_state["shapes"]:
             _rerender_from_state()
 
-    elif not _rendered_ids:
-        # Ready but nothing tracked — check for untracked canvas content
-        try:
-            live = _browser_evaluate_json("() => Array.from(window.__drawApi.read())")
-            if isinstance(live, list):
-                untracked = [
-                    e for e in live
-                    if isinstance(e, dict)
-                    and not e.get("id", "").startswith("__")
-                    and not e.get("isDeleted", False)
-                ]
-                if untracked:
-                    for e in untracked:
-                        _rendered_ids.add(e["id"])
-        except Exception:
-            pass
-
     # Always re-inject ops.js so in-place code changes take effect without a page reload
     _browser_evaluate(_load_js("ops.js"))
+
+    # Save any files the user downloaded via the Excalidraw UI
+    _process_pending_downloads()
 
     return None
 
@@ -219,7 +281,7 @@ def _rerender_from_state() -> None:
     """Re-render all content from _dsl_state after a page loss.
 
     Visual positions revert to auto-layout. To preserve positions,
-    call save_diag() before any risky operations.
+    call save() before any risky operations.
     """
     global _max_rendered_y
     _rendered_ids.clear()
@@ -228,11 +290,7 @@ def _rerender_from_state() -> None:
     shape_payloads = []
     for id_, shape in _dsl_state["shapes"].items():
         x, y = positions[id_]
-        style = _resolve_style(shape, _dsl_state["classes"])
-        shape_payloads.append(
-            {"id": id_, "label": shape["label"], "x": x, "y": y,
-             "w": 160, "h": 60, "shape": shape.get("type", "rectangle"), "styleProps": style}
-        )
+        shape_payloads.append(_shape_payload(id_, shape, x, y, 160, 60))
 
     edge_payloads = [
         {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
@@ -249,6 +307,8 @@ def _rerender_from_state() -> None:
     _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
     _rendered_ids.update(s["id"] for s in shape_payloads)
     _rendered_ids.update(e["id"] for e in edge_payloads)
+    for p in shape_payloads:
+        _placed_positions[p["id"]] = (p["x"], p["y"])
     if shape_payloads:
         _max_rendered_y = max(s["y"] + s["h"] for s in shape_payloads)
 
@@ -257,20 +317,30 @@ def _rerender_from_state() -> None:
 # DSL parser
 # ---------------------------------------------------------------------------
 
-_RE_HEADER = re.compile(r"^(?:flowchart|graph)\s+\w+$")
-_RE_SHAPE = re.compile(r'^([\w-]+)\s*\[\s*"?([^"\]]*)"?\s*\]$')
-_RE_SHAPE_ELLIPSE = re.compile(r'^([\w-]+)\s*\(\s*\(\s*"?([^")]*)"?\s*\)\s*\)$')
-_RE_SHAPE_DIAMOND = re.compile(r'^([\w-]+)\s*\{\s*"?([^"}]*)"?\s*\}$')
-_RE_CLASSDEF = re.compile(r"^classDef\s+([\w-]+)\s+(.+?);?$")
-_RE_CLASS = re.compile(r"^class\s+([\w,\s-]+)\s+([\w-]+)$")
-_RE_EDGE_ARR = re.compile(r"^([\w-]+)\s*-->(?:\|([^|]*)\|)?\s*([\w-]+)$")
-_RE_EDGE_BIDIR = re.compile(r"^([\w-]+)\s*<-->(?:\|([^|]*)\|)?\s*([\w-]+)$")
-_RE_EDGE_UND = re.compile(r"^([\w-]+)\s*---\s*([\w-]+)$")
-_RE_EDGE_DOT = re.compile(r"^([\w-]+)\s*--o(?:\|([^|]*)\|)?\s*([\w-]+)$")
-_RE_EDGE_BAR = re.compile(r"^([\w-]+)\s*--x(?:\|([^|]*)\|)?\s*([\w-]+)$")
-_RE_EDGE_DASHED_ARR = re.compile(r"^([\w-]+)\s*-\.->(?:\|([^|]*)\|)?\s*([\w-]+)$")
-_RE_EDGE_DASHED_UND = re.compile(r"^([\w-]+)\s*-\.-\s*([\w-]+)$")
+# Edge operator pattern used in ID pre-normalisation (longest first to avoid prefix clashes)
+_EDGE_OP_RE = re.compile(r'(<-->|-\.->|-\.-|--[ox]|-->|---)')
+
+_RE_HEADER   = re.compile(r"^(?:flowchart|graph)\s+\w+$")
 _RE_SUBGRAPH = re.compile(r'^subgraph\s+([\w-]+)(?:\s+\[\s*"([^"]+)"\s*\])?$')
+
+# Rectangle shape — trailing content after ] is parsed as inline style props
+_RE_SHAPE_RECT    = re.compile(r'^([\w-]+)\s*\[\s*"?([^"\]]*)"?\s*\]\s*(.*)$')
+# Hints for deprecated ellipse/diamond syntax (to provide a clear error)
+_RE_SHAPE_ELLIPSE = re.compile(r'^[\w-]+\s*\(\s*\(')
+_RE_SHAPE_DIAMOND = re.compile(r'^[\w-]+\s*\{')
+# Bare id + inline style props:  a bc:green,sw:2
+_RE_BARE_STYLE    = re.compile(r'^([\w-]+)\s+([a-z]+:.+)$')
+
+# (pattern, id_suffix, has_label, start_arrowhead, end_arrowhead, directed, stroke_style)
+_EDGE_PATTERNS: list[tuple[re.Pattern[str], str, bool, str | None, str | None, bool, str | None]] = [
+    (re.compile(r"^([\w-]+)\s*<-->\s*(?:\|([^|]*)\|)?\s*([\w-]+)$"),    "-bidir",      True,  "arrow", "arrow", True,  None),
+    (re.compile(r"^([\w-]+)\s*-\.->\s*(?:\|([^|]*)\|)?\s*([\w-]+)$"),   "-dashed",     True,  None,    "arrow", True,  "dashed"),
+    (re.compile(r"^([\w-]+)\s*-\.-\s*([\w-]+)$"),                         "-dashed-und", False, None,    None,    False, "dashed"),
+    (re.compile(r"^([\w-]+)\s*--o\s*(?:\|([^|]*)\|)?\s*([\w-]+)$"),     "-dot",        True,  None,    "dot",   True,  None),
+    (re.compile(r"^([\w-]+)\s*--x\s*(?:\|([^|]*)\|)?\s*([\w-]+)$"),     "-bar",        True,  None,    "bar",   True,  None),
+    (re.compile(r"^([\w-]+)\s*-->\s*(?:\|([^|]*)\|)?\s*([\w-]+)$"),     "",            True,  None,    "arrow", True,  None),
+    (re.compile(r"^([\w-]+)\s*---\s*([\w-]+)$"),                          "-und",        False, None,    None,    False, None),
+]
 
 
 def _norm_id(raw: str) -> str:
@@ -278,29 +348,262 @@ def _norm_id(raw: str) -> str:
     return re.sub(r"[^\w]", "", raw).lower()
 
 
-def _parse_style_props(s: str) -> dict[str, str]:
-    """Parse a comma-separated `key:value` style string."""
-    props: dict[str, str] = {}
+def _prenorm_line(line: str) -> str:
+    """Pre-normalise ID tokens in one DSL line before main parsing.
+
+    Handles IDs with spaces, hyphens, or other non-word chars by applying
+    _norm_id to every ID position: before ``[``, before/after edge operators,
+    after the ``subgraph`` keyword, and bare-ID tokens.
+
+    Label content inside ``["..."]`` and ``|...|`` is never modified.
+    """
+    if not line:
+        return line
+    # Preserve comment and directive lines unchanged
+    if line.startswith("#") or line.startswith("%%"):
+        return line
+    if re.match(r"^(?:flowchart|graph|classDef|class|end)(\s|$)", line):
+        return line
+
+    # subgraph <id> [optional "Label"]
+    if line.startswith("subgraph "):
+        m = re.match(r"^(subgraph\s+)(.*?)(\s*(?:\[.*)?$)", line)
+        if m:
+            raw_id = m[2].strip()
+            return "subgraph " + _norm_id(raw_id) + (" " + m[3].strip() if m[3].strip() else "")
+        return line
+
+    # Edge line — find operator and normalise src and dst independently
+    if m := _EDGE_OP_RE.search(line):
+        op_start, op_end = m.start(), m.end()
+        op = m.group()
+        src_raw = line[:op_start].strip()
+        rest = line[op_end:]
+        # Labeled edge: -->|label|dst
+        if lm := re.match(r"^\s*\|([^|]*)\|\s*(.*)", rest):
+            dst_raw = lm[2].strip()
+            return _norm_id(src_raw) + op + "|" + lm[1] + "|" + _norm_id(dst_raw)
+        return _norm_id(src_raw) + op + _norm_id(rest.strip())
+
+    # Shape declaration: id["Label"] [optional inline style]
+    bracket = line.find("[")
+    if bracket > 0:
+        return _norm_id(line[:bracket]) + line[bracket:]
+
+    # Bare id + inline style props (id may be multi-word)
+    if m := re.match(r"^([\w\s\-+]+?)\s+([a-z]+:.+)$", line):
+        return _norm_id(m[1].strip()) + " " + m[2]
+
+    # Bare id token (subgraph member or unknown) — normalise if non-canonical chars present
+    if re.search(r"[\s\-+]", line) and re.match(r"^[\w\s\-+]+$", line):
+        return _norm_id(line)
+
+    return line
+
+
+def _find_free_y(x: float, y: float) -> float:
+    """Return y (or a shifted y) that does not overlap any already-placed node.
+
+    Checks ``_placed_positions`` for nodes in the same x-column. If the
+    proposed y conflicts with any existing node, places the new node below all
+    nodes in that column instead.
+    """
+    node_w, node_h, gap_y = 160, 60, 40
+    col_ys = [py for px, py in _placed_positions.values() if abs(px - x) < node_w]
+    if not col_ys:
+        return y
+    for py in col_ys:
+        if abs(py - y) < node_h + gap_y:
+            return max(col_ys) + node_h + gap_y
+    return y
+
+
+# ---------------------------------------------------------------------------
+# Style property helpers (shared by wb.draw, wb.style, wb.erase docstrings)
+# ---------------------------------------------------------------------------
+
+_STYLE_SHORTHANDS: dict[str, str] = {
+    "bc":    "backgroundColor",
+    "sc":    "strokeColor",
+    "sw":    "strokeWidth",
+    "ss":    "strokeStyle",
+    "r":     "roughness",
+    "o":     "opacity",
+    "f":     "fontFamily",
+    "fs":    "fontSize",
+    "ta":    "textAlign",
+    "va":    "verticalAlign",
+    "shape": "shape",   # special — triggers delete+recreate in JS
+    "x":     "x",
+    "y":     "y",
+    "w":     "width",
+    "h":     "height",
+}
+
+_NAMED_COLORS: dict[str, str] = {
+    "green":  "#bbf7d0",
+    "blue":   "#bfdbfe",
+    "red":    "#fecaca",
+    "purple": "#e9d5ff",
+    "yellow": "#fef08a",
+    "orange": "#fed7aa",
+    "pink":   "#fce7f3",
+    "gray":   "#e5e7eb",
+    "grey":   "#e5e7eb",
+    "white":  "#ffffff",
+    "black":  "#000000",
+}
+
+_FONT_FAMILY_MAP: dict[str, int] = {"hand": 1, "normal": 2, "mono": 3, "excalidraw": 5}
+_STROKE_STYLE_VALUES = {"solid", "dashed", "dotted"}
+_TEXT_ALIGN_VALUES   = {"left", "center", "right"}
+_VERT_ALIGN_VALUES   = {"top", "middle", "bottom"}
+_SHAPE_MAP: dict[str, str] = {"r": "rectangle", "d": "diamond", "c": "ellipse"}
+
+
+def _parse_style_props(s: str) -> dict[str, Any]:
+    """Parse a comma-separated ``key:value`` style string, expanding shorthands.
+
+    Shorthand keys are expanded to Excalidraw property names. Named colours
+    (``green``, ``blue``, ``red``, ``purple``, ``yellow``, ``white``,
+    ``black``, ``orange``, ``pink``, ``gray``) are resolved to hex values.
+    Numeric props (``sw``, ``r``, ``o``, ``f``, ``fs``, ``x``, ``y``,
+    ``w``, ``h``) are cast to int/float automatically.
+
+    Args:
+        s: Style string like ``"bc:#bbf7d0,sc:#16a34a,sw:2"``.
+
+    Returns:
+        Dict with Excalidraw property names as keys.
+    """
+    props: dict[str, Any] = {}
     for part in s.split(","):
-        if ":" in part:
-            k, v = part.strip().split(":", 1)
-            props[k.strip()] = v.strip()
+        if ":" not in part:
+            continue
+        k, v = part.strip().split(":", 1)
+        k, v = k.strip(), v.strip()
+        if not k or not v:
+            continue
+        v_lower = v.lower()
+        # Expand shorthand key
+        prop = _STYLE_SHORTHANDS.get(k, k)
+        # Resolve named colour (case-insensitive; hex pass-through unchanged)
+        if prop in ("backgroundColor", "strokeColor") and v_lower in _NAMED_COLORS:
+            v = _NAMED_COLORS[v_lower]
+        # Map font-family shorthand (case-insensitive)
+        if prop == "fontFamily" and v_lower in _FONT_FAMILY_MAP:
+            props[prop] = _FONT_FAMILY_MAP[v_lower]
+            continue
+        # Map shape shorthand (r/d/c → excalidraw type names, case-insensitive)
+        if prop == "shape" and v_lower in _SHAPE_MAP:
+            props[prop] = _SHAPE_MAP[v_lower]
+            continue
+        # Numeric coercion
+        if prop in ("strokeWidth", "roughness", "opacity", "fontSize", "x", "y", "width", "height"):
+            try:
+                props[prop] = float(v) if "." in v else int(v)
+                continue
+            except ValueError:
+                pass
+        # Enum string props: normalise to lowercase for strokeStyle, textAlign, verticalAlign
+        if prop in ("strokeStyle", "textAlign", "verticalAlign"):
+            props[prop] = v_lower
+            continue
+        props[prop] = v
     return props
+
+
+def _try_shape(
+    line: str,
+    shapes: dict[str, Any],
+    subgraph: dict[str, Any] | None,
+    inline_styles: dict[str, Any] | None = None,
+) -> bool:
+    """Try to match line as a shape declaration. Mutates shapes. Returns True on match.
+
+    Raises ValueError for deprecated ellipse ((...)) and diamond {...} syntax.
+    Trailing style props after the closing ] are captured into inline_styles.
+    """
+    if _RE_SHAPE_ELLIPSE.match(line):
+        nid = _norm_id(line.split("(")[0].strip())
+        raise ValueError(
+            f"Ellipse syntax '((...))' is not supported. "
+            f"Draw a rectangle and use wb.style(ids=['{nid}'], style='shape:c') to change shape."
+        )
+    if _RE_SHAPE_DIAMOND.match(line):
+        nid = _norm_id(line.split("{")[0].strip())
+        raise ValueError(
+            f"Diamond syntax '{{...}}' is not supported. "
+            f"Draw a rectangle and use wb.style(ids=['{nid}'], style='shape:d') to change shape."
+        )
+    if m := _RE_SHAPE_RECT.match(line):
+        nid = _norm_id(m[1])
+        shape: dict[str, Any] = {"label": m[2].replace("\\n", "\n"), "classes": []}
+        shapes[nid] = shape
+        if subgraph is not None:
+            subgraph["members"].append(nid)
+        trailing = m[3].strip()
+        if inline_styles is not None and trailing:
+            inline_styles[nid] = _parse_style_props(trailing)
+        return True
+    return False
+
+
+def _try_edge(line: str, edges: list[dict[str, Any]]) -> bool:
+    """Try to match line as an edge. Appends to edges. Returns True on match."""
+    for pat, id_sfx, has_label, s_head, e_head, directed, stroke in _EDGE_PATTERNS:
+        if m := pat.match(line):
+            if has_label:
+                src, lbl, dst = _norm_id(m[1]), m[2] or "", _norm_id(m[3])
+            else:
+                src, dst, lbl = _norm_id(m[1]), _norm_id(m[2]), ""
+            edge_id = f"edge-{src}-{dst}{id_sfx}" + (f"-{lbl}" if lbl else "")
+            edge: dict[str, Any] = {
+                "id": edge_id, "src": src, "dst": dst, "label": lbl,
+                "directed": directed,
+                "startArrowhead": s_head, "endArrowhead": e_head,
+            }
+            if stroke:
+                edge["strokeStyle"] = stroke
+            edges.append(edge)
+            return True
+    return False
 
 
 def parse_dsl(spec: str) -> dict[str, Any]:
     """Parse a Mermaid-compatible DSL string into a structured dict.
 
+    Supported syntax:
+        id["Label"]             rectangle (the only supported shape)
+        id["Label"] bc:green    rectangle with inline style props
+        id bc:green             style-only update (label unchanged)
+        id1-->id2               directed edge
+        id1-->|label|id2        labeled edge
+        id1---id2               undirected edge
+        id1<-->id2              bidirectional edge
+        id1--o id2              dot arrowhead
+        id1--x id2              bar arrowhead
+        id1-.->id2              dashed directed edge
+        id1-.-id2               dashed undirected edge
+        subgraph name ["Label"] bounding group
+          id1
+        end
+
+    Note: classDef/class and ellipse/diamond syntax are not supported.
+    Use ``wb.style`` to change colours and shapes after drawing.
+
     Args:
-        spec: DSL string with shapes, edges, classDefs, and subgraphs.
+        spec: DSL string. Statements may be separated by newlines or semicolons.
 
     Returns:
-        Dict with keys: shapes, classes, edges, groups.
+        Dict with keys: ``shapes``, ``edges``, ``groups``, ``inline_styles``.
+        ``inline_styles`` maps node IDs to parsed style prop dicts.
+        Shape dicts have a ``label`` key (``None`` means "keep existing label").
     """
     shapes: dict[str, Any] = {}
-    classes: dict[str, Any] = {}
     edges: list[dict[str, Any]] = []
     groups: dict[str, Any] = {}
+    inline_styles: dict[str, Any] = {}
     current_subgraph: dict[str, Any] | None = None
 
     # Normalize real newlines inside quoted labels to the \n escape so they
@@ -308,7 +611,7 @@ def parse_dsl(spec: str) -> dict[str, Any]:
     spec = re.sub(r'"[^"]*"', lambda m: m.group(0).replace("\n", "\\n"), spec)
 
     for raw in re.split(r"[;\n]", spec):
-        line = raw.strip()
+        line = _prenorm_line(raw.strip())
         if not line or line.startswith("#") or line.startswith("%%"):
             continue
         if _RE_HEADER.match(line):
@@ -326,93 +629,39 @@ def parse_dsl(spec: str) -> dict[str, Any]:
             current_subgraph = None
             continue
 
-        if current_subgraph is not None:
-            if m := _RE_SHAPE.match(line):
-                nid = _norm_id(m[1])
-                shapes[nid] = {"label": m[2].replace("\\n", "\n"), "classes": []}
-                current_subgraph["members"].append(nid)
-                continue
-            elif m := _RE_SHAPE_ELLIPSE.match(line):
-                nid = _norm_id(m[1])
-                shapes[nid] = {"label": m[2].replace("\\n", "\n"), "classes": [], "type": "ellipse"}
-                current_subgraph["members"].append(nid)
-                continue
-            elif m := _RE_SHAPE_DIAMOND.match(line):
-                nid = _norm_id(m[1])
-                shapes[nid] = {"label": m[2].replace("\\n", "\n"), "classes": [], "type": "diamond"}
-                current_subgraph["members"].append(nid)
-                continue
-            elif re.match(r"^[\w-]+$", line):
-                current_subgraph["members"].append(_norm_id(line))
-                continue
-            # Edges/classDef/class inside subgraph fall through
+        # Shape declaration (handles subgraph membership in one pass)
+        if _try_shape(line, shapes, current_subgraph, inline_styles):
+            continue
 
-        if m := _RE_SHAPE.match(line):
-            shapes[_norm_id(m[1])] = {"label": m[2].replace("\\n", "\n"), "classes": []}
-        elif m := _RE_SHAPE_ELLIPSE.match(line):
-            shapes[_norm_id(m[1])] = {"label": m[2].replace("\\n", "\n"), "classes": [], "type": "ellipse"}
-        elif m := _RE_SHAPE_DIAMOND.match(line):
-            shapes[_norm_id(m[1])] = {"label": m[2].replace("\\n", "\n"), "classes": [], "type": "diamond"}
-        elif m := _RE_CLASSDEF.match(line):
-            classes[_norm_id(m[1])] = _parse_style_props(m[2])
-        elif m := _RE_CLASS.match(line):
-            cls = _norm_id(m[2].strip())
-            for id_ in [_norm_id(x) for x in m[1].split(",")]:
-                if id_ in shapes:
-                    shapes[id_]["classes"].append(cls)
-        elif m := _RE_EDGE_ARR.match(line):
-            src, dst, lbl = _norm_id(m[1]), _norm_id(m[3]), m[2] or ""
-            edges.append({
-                "id": f"edge-{src}-{dst}" + (f"-{lbl}" if lbl else ""),
-                "src": src, "dst": dst, "label": lbl, "directed": True,
-                "startArrowhead": None, "endArrowhead": "arrow",
-            })
-        elif m := _RE_EDGE_BIDIR.match(line):
-            src, dst, lbl = _norm_id(m[1]), _norm_id(m[3]), m[2] or ""
-            edges.append({
-                "id": f"edge-{src}-{dst}-bidir" + (f"-{lbl}" if lbl else ""),
-                "src": src, "dst": dst, "label": lbl, "directed": True,
-                "startArrowhead": "arrow", "endArrowhead": "arrow",
-            })
-        elif m := _RE_EDGE_UND.match(line):
-            src, dst = _norm_id(m[1]), _norm_id(m[2])
-            edges.append({
-                "id": f"edge-{src}-{dst}-und", "src": src, "dst": dst,
-                "label": "", "directed": False,
-                "startArrowhead": None, "endArrowhead": None,
-            })
-        elif m := _RE_EDGE_DOT.match(line):
-            src, dst, lbl = _norm_id(m[1]), _norm_id(m[3]), m[2] or ""
-            edges.append({
-                "id": f"edge-{src}-{dst}-dot" + (f"-{lbl}" if lbl else ""),
-                "src": src, "dst": dst, "label": lbl, "directed": True,
-                "startArrowhead": None, "endArrowhead": "dot",
-            })
-        elif m := _RE_EDGE_BAR.match(line):
-            src, dst, lbl = _norm_id(m[1]), _norm_id(m[3]), m[2] or ""
-            edges.append({
-                "id": f"edge-{src}-{dst}-bar" + (f"-{lbl}" if lbl else ""),
-                "src": src, "dst": dst, "label": lbl, "directed": True,
-                "startArrowhead": None, "endArrowhead": "bar",
-            })
-        elif m := _RE_EDGE_DASHED_ARR.match(line):
-            src, dst, lbl = _norm_id(m[1]), _norm_id(m[3]), m[2] or ""
-            edges.append({
-                "id": f"edge-{src}-{dst}-dashed" + (f"-{lbl}" if lbl else ""),
-                "src": src, "dst": dst, "label": lbl, "directed": True,
-                "startArrowhead": None, "endArrowhead": "arrow", "strokeStyle": "dashed",
-            })
-        elif m := _RE_EDGE_DASHED_UND.match(line):
-            src, dst = _norm_id(m[1]), _norm_id(m[2])
-            edges.append({
-                "id": f"edge-{src}-{dst}-dashed-und",
-                "src": src, "dst": dst, "label": "", "directed": False,
-                "startArrowhead": None, "endArrowhead": None, "strokeStyle": "dashed",
-            })
-        else:
-            shapes[line] = {"label": line, "classes": []}
+        # classDef / class — no longer supported
+        if re.match(r"^(?:classDef|class)\s", line):
+            raise ValueError(
+                "classDef/class syntax is not supported. "
+                "Use wb.style() to apply colours and shapes after drawing."
+            )
 
-    return {"shapes": shapes, "classes": classes, "edges": edges, "groups": groups}
+        # Bare node ID inside a subgraph — membership only
+        if current_subgraph is not None and re.match(r"^[\w-]+$", line):
+            current_subgraph["members"].append(_norm_id(line))
+            continue
+
+        # Edges
+        if _try_edge(line, edges):
+            continue
+
+        # Bare id + inline style props (no bracket declaration):  a bc:green,sw:2
+        if m := _RE_BARE_STYLE.match(line):
+            nid = _norm_id(m[1])
+            inline_styles[nid] = _parse_style_props(m[2])
+            # Mark as style-only update (label=None means "keep existing label")
+            if nid not in shapes:
+                shapes[nid] = {"label": None, "classes": []}
+            continue
+
+        # Bare node ID fallback — create shape with label = node ID
+        shapes[line] = {"label": line, "classes": []}
+
+    return {"shapes": shapes, "edges": edges, "groups": groups, "inline_styles": inline_styles}
 
 
 # ---------------------------------------------------------------------------
@@ -421,26 +670,17 @@ def parse_dsl(spec: str) -> dict[str, Any]:
 
 
 def _build_dsl(state: dict[str, Any]) -> str:
-    """Reconstruct DSL text from accumulated Python state."""
+    """Reconstruct DSL text from accumulated Python state.
+
+    Emits shapes as rectangles only. Styling is not encoded in the DSL —
+    it lives in the Excalidraw scene elements.
+    """
     lines: list[str] = []
     for id_, shape in state["shapes"].items():
-        label = shape["label"].replace("\n", "\\n")
-        stype = shape.get("type", "rectangle")
-        if stype == "ellipse":
-            lines.append(f'{id_}(("{label}"))')
-        elif stype == "diamond":
-            lines.append(f'{id_}{{"{label}"}}')
-        else:
-            lines.append(f'{id_}["{label}"]')
-    for name, props in state["classes"].items():
-        prop_str = ",".join(f"{k}:{v}" for k, v in props.items())
-        lines.append(f"classDef {name} {prop_str};")
-    class_members: dict[str, list[str]] = {}
-    for id_, shape in state["shapes"].items():
-        for cls in shape.get("classes", []):
-            class_members.setdefault(cls, []).append(id_)
-    for cls, members in class_members.items():
-        lines.append(f'class {",".join(members)} {cls}')
+        label = shape["label"]
+        if label is None:
+            label = id_
+        lines.append(f'{id_}["{label.replace(chr(10), "\\n")}"]')
     for edge in state["edges"]:
         src, dst = edge["src"], edge["dst"]
         lbl = f'|{edge["label"]}|' if edge["label"] else ""
@@ -544,61 +784,37 @@ def auto_layout(
 
 
 # ---------------------------------------------------------------------------
-# Style resolver
+# DSL canvas element helpers (issue #3)
 # ---------------------------------------------------------------------------
 
-_FONT_FAMILY = {"handwritten": 1, "normal": 2, "code": 3, "serif": 4}
-_FONT_SIZE = {"S": 16, "M": 20, "L": 28, "XL": 36}
-_ROUNDNESS: dict[str, Any] = {"sharp": None, "round": {"type": 3}}
+
+def _read_dsl_from_canvas() -> str:
+    """Read the __otDSL text element from the canvas. Returns empty string if absent."""
+    result = _browser_evaluate_json(
+        "() => {"
+        "  const el = Array.from(window.__drawApi.read()).find(e => e.id === '__otDSL');"
+        "  return el ? el.text : '';"
+        "}"
+    )
+    return result if isinstance(result, str) else ""
 
 
-def _resolve_style(shape: dict[str, Any], classes: dict[str, Any]) -> dict[str, Any]:
-    """Merge class style properties into an Excalidraw style dict.
+def _write_dsl_to_canvas(dsl_str: str) -> None:
+    """Upsert the __otDSL text element on the canvas with current DSL content."""
+    _browser_evaluate(f"() => window._upsert_dsl_element({json.dumps(dsl_str)})")
 
-    Args:
-        shape: Shape dict with optional 'classes' list.
-        classes: Dict of class name → parsed style props.
 
-    Returns:
-        Excalidraw-compatible style dict.
-    """
-    merged: dict[str, str] = {}
-    for cls in shape.get("classes", []):
-        merged.update(classes.get(cls, {}))
-    try:
-        stroke_w = int(merged.get("stroke-width", "2").replace("px", ""))
-    except ValueError:
-        stroke_w = 2
-    style: dict[str, Any] = {
-        "backgroundColor": merged.get("fill", "#ffffff"),
-        "strokeColor": merged.get("stroke", "#1e1e1e"),
-        "strokeWidth": stroke_w,
-        "color": merged.get("color", "#1e1e1e"),
-    }
-    if "stroke-style" in merged:
-        style["strokeStyle"] = merged["stroke-style"]
-    if "roughness" in merged:
-        with contextlib.suppress(ValueError):
-            style["roughness"] = int(merged["roughness"])
-    if "edges" in merged and merged["edges"] in _ROUNDNESS:
-        style["roundness"] = _ROUNDNESS[merged["edges"]]
-    if "font-family" in merged and merged["font-family"] in _FONT_FAMILY:
-        style["fontFamily"] = _FONT_FAMILY[merged["font-family"]]
-    if "font-size" in merged:
-        fs = merged["font-size"]
-        if fs in _FONT_SIZE:
-            style["fontSize"] = _FONT_SIZE[fs]
-        else:
-            with contextlib.suppress(ValueError):
-                style["fontSize"] = int(fs)
-    if "text-align" in merged:
-        style["textAlign"] = merged["text-align"]
-    if "vertical-align" in merged:
-        style["verticalAlign"] = merged["vertical-align"]
-    if "opacity" in merged:
-        with contextlib.suppress(ValueError):
-            style["opacity"] = int(merged["opacity"])
-    return style
+def _parse_dsl_to_state(dsl_str: str) -> None:
+    """Parse DSL string and update _dsl_state and _edge_keys."""
+    parsed = parse_dsl(dsl_str)
+    _reset_state()
+    _dsl_state.update({
+        "shapes": parsed["shapes"],
+        "edges":  parsed["edges"],
+        "groups": parsed["groups"],
+    })
+    for e in parsed["edges"]:
+        _edge_keys.add((e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead")))
 
 
 # ---------------------------------------------------------------------------
@@ -607,18 +823,28 @@ def _resolve_style(shape: dict[str, Any], classes: dict[str, Any]) -> dict[str, 
 
 
 def draw(*, input: str) -> str:
-    """Add diagram elements from DSL. Additive — never clears existing elements.
+    """Add or update diagram elements from DSL. Always additive — never clears.
 
-    New shapes get auto-layout positions. Existing shapes are untouched.
-    Edges are deduplicated by (src, dst, label).
+    **New nodes** get auto-layout positions. **Existing nodes** are upserted:
+    only the properties explicitly passed are changed; position, size, and
+    other styles on the live canvas are preserved.
+
+    Semicolons are preferred as statement separators for agent calls (compact,
+    no multi-line strings needed). Newlines are also accepted.
 
     Shapes:
-        id["Label"]                           rectangle (default)
-        id(("Label"))                         ellipse
-        id{"Label"}                           diamond
-        id["Line1
-Line2"]                             multiline label (preferred: use a real newline)
-        id["Line1\\nLine2"]                   multiline label (also accepted)
+        id["Label"]                           rectangle (only supported shape)
+        id["Label"] bc:green,sw:2            rectangle with inline style props
+        id bc:green                           style-only update (label unchanged)
+
+    Inline style shorthands (comma-separated ``key:value``):
+        bc  backgroundColor    sc  strokeColor     sw  strokeWidth
+        ss  strokeStyle        r   roughness        o   opacity
+        f   fontFamily         fs  fontSize         ta  textAlign
+        va  verticalAlign      shape  shape type     x/y  position
+        w/h width/height
+
+    Named colours: green, blue, red, purple, yellow, orange, pink, gray, white, black
 
     Edges:
         a-->b                                 directed arrow
@@ -631,10 +857,6 @@ Line2"]                             multiline label (preferred: use a real newli
         a-.->|label|b                         dashed directed arrow with label
         a-.-b                                 dashed undirected
 
-    Styles:
-        classDef name fill:#hex,stroke:#hex,color:#fff;  define a style class
-        class id1,id2 className                          assign style to nodes
-
     Subgraphs:
         subgraph name ["Label"]               bounding rect around members
           id1
@@ -646,13 +868,13 @@ Line2"]                             multiline label (preferred: use a real newli
         graph LR
 
     Args:
-        input: DSL string describing shapes, edges, and style classes.
+        input: DSL string. Semicolons or newlines separate statements.
 
     Returns:
-        Summary of elements added, e.g. "+2 shapes, total 5 elements".
+        Summary like "+2 shapes, +1 edge [edge-a-b]".
 
     Example:
-        excalidraw.draw(input='a["Service A"]\nb["DB"]\na-->b')
+        wb.draw(input='a["Service A"];b["DB"];a-->b')
     """
     with LogSpan(span="excalidraw.draw") as s:
         global _max_rendered_y
@@ -662,6 +884,7 @@ Line2"]                             multiline label (preferred: use a real newli
             return err
 
         parsed = parse_dsl(input)
+        inline_styles = parsed.get("inline_styles", {})
 
         # Auto-create nodes referenced in edges but not declared as shapes
         for edge in parsed["edges"]:
@@ -669,17 +892,21 @@ Line2"]                             multiline label (preferred: use a real newli
                 if nid not in parsed["shapes"] and nid not in _dsl_state["shapes"]:
                     parsed["shapes"][nid] = {"label": nid, "classes": []}
 
-        # Compute new shapes (not yet rendered) before mutating state
+        # Separate new shapes from existing shapes
         new_shapes = {
             id_: sh for id_, sh in parsed["shapes"].items()
-            if id_ not in _rendered_ids
+            if id_ not in _dsl_state["shapes"]
         }
+        existing_shape_updates = {
+            id_: sh for id_, sh in parsed["shapes"].items()
+            if id_ in _dsl_state["shapes"]
+        }
+        new_groups = {gid for gid in parsed["groups"] if gid not in _dsl_state["groups"]}
 
-        # Build merged state for layout without mutating globals yet
+        # Build merged state for layout (new shapes get correct layer positions)
         merged_shapes = {**_dsl_state["shapes"], **parsed["shapes"]}
-        merged_classes = {**_dsl_state["classes"], **parsed["classes"]}
-        new_edges_to_commit: list[tuple[tuple[str, str, str, str | None, str | None], dict[str, Any]]] = []
         merged_edges = list(_dsl_state["edges"])
+        new_edges_to_commit: list[tuple[tuple[str, str, str, str | None, str | None], dict[str, Any]]] = []
         for e in parsed["edges"]:
             key = (e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead"))
             if key not in _edge_keys:
@@ -687,28 +914,46 @@ Line2"]                             multiline label (preferred: use a real newli
                 new_edges_to_commit.append((key, e))
         merged_groups = {**_dsl_state["groups"], **parsed["groups"]}
 
-        # Use full merged graph for topology — new shapes get correct layer positions
         positions = auto_layout(merged_shapes, merged_edges)
 
+        # Build payloads for new shapes, adjusting positions to avoid overlap
         shape_payloads = []
         for id_, shape in new_shapes.items():
             x, y = positions[id_]
-            style = _resolve_style(shape, merged_classes)
-            shape_payloads.append(
-                {"id": id_, "label": shape["label"], "x": x, "y": y,
-                 "w": 160, "h": 60, "shape": shape.get("type", "rectangle"), "styleProps": style}
-            )
+            y = _find_free_y(x, y)
+            # Apply inline styles for new shapes
+            style = dict(inline_styles.get(id_, {}))
+            shape_payloads.append(_shape_payload(id_, shape, x, y, 160, 60, style))
+
+        # Build patch payloads for existing shapes that changed
+        patch_payloads = []
+        for id_, shape in existing_shape_updates.items():
+            patch: dict[str, Any] = {}
+            # Update label only if explicitly specified (not None)
+            if shape.get("label") is not None:
+                existing_label = _dsl_state["shapes"][id_].get("label", "")
+                if shape["label"] != existing_label:
+                    patch["text"] = shape["label"]
+            # Apply inline styles
+            patch.update(inline_styles.get(id_, {}))
+            if patch:
+                patch["id"] = id_
+                patch_payloads.append(patch)
+
+        # Apply inline style-only updates for nodes not in parsed["shapes"]
+        for id_, style in inline_styles.items():
+            if id_ not in parsed["shapes"] and id_ in _dsl_state["shapes"]:
+                patch_payloads.append({"id": id_, **style})
 
         # Render only NEW edges
         edge_payloads = []
-        for edge in parsed["edges"]:
-            if edge["id"] not in _rendered_ids:
-                edge_payloads.append(
-                    {"id": edge["id"], "srcId": edge["src"], "dstId": edge["dst"],
-                     "label": edge["label"], "startArrowhead": edge.get("startArrowhead"),
-                     "endArrowhead": edge.get("endArrowhead", "arrow"),
-                     "strokeStyle": edge.get("strokeStyle", "solid")}
-                )
+        for _key, e in new_edges_to_commit:
+            edge_payloads.append(
+                {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
+                 "label": e["label"], "startArrowhead": e.get("startArrowhead"),
+                 "endArrowhead": e.get("endArrowhead", "arrow"),
+                 "strokeStyle": e.get("strokeStyle", "solid")}
+            )
 
         # Redraw ALL subgraphs — bounding boxes must reflect current member positions
         subgraph_payloads = [
@@ -716,23 +961,38 @@ Line2"]                             multiline label (preferred: use a real newli
             for gid, group in merged_groups.items()
         ]
 
+        # Single batch draw for new shapes + edges
         _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
 
-        # Commit state only after successful JS call
-        _dsl_state["shapes"].update(parsed["shapes"])
-        _dsl_state["classes"].update(parsed["classes"])
+        # Patch existing shapes (separate call to preserve their live positions)
+        if patch_payloads:
+            _js_patch_elements(patch_payloads)
+
+        # Commit state only after successful JS calls
+        for id_, shape in parsed["shapes"].items():
+            if shape.get("label") is not None:
+                _dsl_state["shapes"][id_] = shape
+            elif id_ not in _dsl_state["shapes"]:
+                _dsl_state["shapes"][id_] = {"label": id_, "classes": []}
         _dsl_state["groups"].update(parsed["groups"])
         for key, e in new_edges_to_commit:
             _dsl_state["edges"].append(e)
             _edge_keys.add(key)
         _rendered_ids.update(s["id"] for s in shape_payloads)
         _rendered_ids.update(e["id"] for e in edge_payloads)
+        for p in shape_payloads:
+            _placed_positions[p["id"]] = (p["x"], p["y"])
         if shape_payloads:
             _max_rendered_y = max(_max_rendered_y, max(p["y"] + p["h"] for p in shape_payloads))
 
+        new_edge_ids = [e["id"] for _, e in new_edges_to_commit]
+        edge_msg = f", +{len(new_edge_ids)} edge(s): {', '.join(new_edge_ids)}" if new_edge_ids else ""
+        updated_msg = f", {len(patch_payloads)} updated" if patch_payloads else ""
+        group_msg = f", +{len(new_groups)} group(s)" if new_groups else ""
+
         s.add("newShapes", len(new_shapes))
         s.add("totalElements", len(_rendered_ids))
-        return f"+{len(new_shapes)} shapes, total {len(_rendered_ids)} elements"
+        return f"+{len(new_shapes)} shapes{updated_msg}{edge_msg}{group_msg}"
 
 
 # ---------------------------------------------------------------------------
@@ -740,7 +1000,7 @@ Line2"]                             multiline label (preferred: use a real newli
 # ---------------------------------------------------------------------------
 
 _RE_NOTE_BLOCK = re.compile(
-    r"^(\w+)\[(\w+):\n(.*?)\]$", re.DOTALL | re.MULTILINE
+    r"^(\w+)\[(\w+):[ \t]*\n(.*?)\]$", re.DOTALL | re.MULTILINE
 )
 
 _NOTE_RENDERERS: dict[str, Any] = {}
@@ -768,7 +1028,7 @@ def _get_note_renderers() -> dict[str, Any]:
 def _parse_note_blocks(spec: str) -> list[dict[str, Any]]:
     """Parse id[type:\\n content] blocks from a note DSL string."""
     blocks = []
-    for m in _RE_NOTE_BLOCK.finditer(spec):
+    for m in _RE_NOTE_BLOCK.finditer(spec.replace("\r\n", "\n")):
         blocks.append({"id": m[1], "type": m[2], "content": m[3]})
     return blocks
 
@@ -910,7 +1170,7 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
 def embed_dsl() -> str:
     """Embed the current DSL as a note element on the canvas.
 
-    Inserts a grey code-font box with id ``__dsl__`` containing the full DSL
+    Inserts a grey code-font box with id ``dsl`` containing the full DSL
     text. Calling again overwrites the previous embed (idempotent). The element
     is excluded from save() snapshots.
 
@@ -962,6 +1222,22 @@ def erase(*, ids: list[str]) -> str:
     Bound children (shape text, arrow labels) are removed automatically.
     Silently ignores IDs that are not currently rendered.
 
+    **Edge ID format:** ``edge-{src}-{dst}[-{type-suffix}][-{label}]``
+
+    Type suffixes: ``-bidir`` (↔), ``-und`` (undirected ---),
+    ``-dashed`` (-.->), ``-dashed-und`` (-.-), ``-dot`` (--o), ``-bar`` (--x).
+
+    Examples::
+
+        a-->b               →  "edge-a-b"
+        a-->|send|b         →  "edge-a-b-send"
+        a<-->b              →  "edge-a-b-bidir"
+        a---b               →  "edge-a-b-und"
+        a-.->b              →  "edge-a-b-dashed"
+        a-.->|Metrics|b     →  "edge-a-b-dashed-Metrics"
+
+    Use ``wb.draw`` output to see the generated edge IDs after drawing.
+
     Args:
         ids: List of element IDs to remove.
 
@@ -1002,6 +1278,7 @@ def erase(*, ids: list[str]) -> str:
             _rendered_ids.discard(id_)
             _rendered_ids.discard(id_ + "-text")
             _rendered_ids.discard(id_ + "-label")
+            _placed_positions.pop(id_, None)
 
         # Remove edges by their own ID or if their src/dst is being erased
         keys_to_remove = {
@@ -1024,25 +1301,32 @@ def erase(*, ids: list[str]) -> str:
             _max_rendered_y = 0.0
 
         n = len(to_erase)
+        dangling = len(orphaned_edge_ids)
         s.add("erased", n)
+        s.add("danglingEdges", dangling)
+        if dangling:
+            return f"erased {n} element(s), {dangling} dangling edge(s) removed"
         return f"erased {n} element(s)"
 
 
 def save(*, file: str) -> str:
-    """Save current diagram to a file in DSL+scene format.
+    """Save current diagram to a native ``.excalidraw`` JSON file.
 
-    Reads getSceneElements() for live positions, sizes, and styles,
-    capturing any user edits. Bound text and arrow elements are excluded —
-    they are re-derived on load.
+    Writes the full Excalidraw scene (including user-added elements and
+    live positions) plus a ``__otDSL`` text element that stores the
+    logical DSL for future ``wb.load`` / ``wb.sync`` calls.
+
+    The saved file can be opened directly in excalidraw.com.
 
     Args:
-        file: Output file path (relative to project root).
+        file: Output file path (relative to project root). Conventionally
+              uses the ``.excalidraw`` extension.
 
     Returns:
         Summary of elements saved.
 
     Example:
-        excalidraw.save(file="diagrams/arch.wb")
+        excalidraw.save(file="diagrams/arch.excalidraw")
     """
     with LogSpan(span="excalidraw.save", file=file) as s:
         err = _ensure_ready()
@@ -1050,62 +1334,51 @@ def save(*, file: str) -> str:
             s.add("error", err)
             return err
 
+        # Write current DSL as __otDSL element so load() can restore Python state
+        dsl_str = _build_dsl(_dsl_state)
+        if dsl_str.strip():
+            _write_dsl_to_canvas(dsl_str)
+
         elements = _browser_evaluate_json(
             "() => Array.from(window.__drawApi.read())"
         )
         if not isinstance(elements, list):
             return f"Error: could not read scene elements: {elements}"
 
-        scene = []
-        for el in elements:
-            if not isinstance(el, dict):
-                continue
-            el_id = el.get("id", "")
-            if el_id.startswith("__") or el_id == "dsl":
-                continue
-            if (el_id.endswith("-text") or el_id.endswith("-label")) and el.get("containerId"):
-                continue
-            if el.get("type") == "arrow" and el.get("startBinding"):
-                continue
-            scene.append({
-                "id": el_id,
-                "x": el.get("x", 0),
-                "y": el.get("y", 0),
-                "w": el.get("width", 160),
-                "h": el.get("height", 60),
-                "strokeColor": el.get("strokeColor"),
-                "backgroundColor": el.get("backgroundColor"),
-                "strokeWidth": el.get("strokeWidth"),
-                "strokeStyle": el.get("strokeStyle"),
-                "roughness": el.get("roughness"),
-                "opacity": el.get("opacity"),
-            })
+        native = {
+            "type": "excalidraw",
+            "version": 2,
+            "source": "https://excalidraw.com",
+            "elements": elements,
+            "appState": {"viewBackgroundColor": "#ffffff"},
+            "files": {},
+        }
 
-        dsl_str = _build_dsl(_dsl_state)
         out_path = resolve_cwd_path(file)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(
-            f"[dsl]\n{dsl_str}\n[scene]\n{json.dumps(scene, indent=2)}\n"
-        )
+        out_path.write_text(json.dumps(native, indent=2), encoding="utf-8")
 
-        s.add("elementCount", len(scene))
-        return f"saved {len(scene)} elements to {file}"
+        n = len([e for e in elements if not e.get("isDeleted", False)])
+        s.add("elementCount", n)
+        return f"saved {n} elements to {file}"
 
 
 def load(*, file: str) -> str:
-    """Restore diagram from a file saved by save().
+    """Restore diagram from a native ``.excalidraw`` file.
 
-    Parses the DSL, restores Python state, and renders all elements at
-    the saved scene positions and visual properties.
+    Loads the full Excalidraw scene and restores Python DSL state from the
+    embedded ``__otDSL`` element (written by ``wb.save``). If the file was
+    not created by ``wb.save`` and lacks a ``__otDSL`` element, Python state
+    will be empty (call ``wb.sync`` after manually adding a DSL element).
 
     Args:
-        file: Path to a file previously saved by save().
+        file: Path to a ``.excalidraw`` file.
 
     Returns:
         Summary of elements loaded.
 
     Example:
-        excalidraw.load(file="diagrams/arch.wb")
+        excalidraw.load(file="diagrams/arch.excalidraw")
     """
     with LogSpan(span="excalidraw.load", file=file) as s:
         err = _ensure_ready()
@@ -1117,92 +1390,273 @@ def load(*, file: str) -> str:
         if not src_path.exists():
             return f"Error: file not found: {file}"
 
-        raw = src_path.read_text()
-        if "[dsl]" not in raw:
-            return f"Error: no [dsl] block found in {file}"
-        _render_dsl_block(raw)
+        raw = src_path.read_text(encoding="utf-8")
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            return f"Error: invalid JSON in {file}: {exc}"
+
+        if not isinstance(data, dict) or data.get("type") != "excalidraw":
+            return (
+                "Error: not a valid .excalidraw file - "
+                "expected {\"type\": \"excalidraw\", ...}"
+            )
+
+        elements = data.get("elements", [])
+        elements_json = json.dumps(elements)
+
+        # Restore canvas
+        _browser_evaluate(
+            f"() => {{"
+            f"  window.__drawElements = {{}};"
+            f"  for (const el of {elements_json}) window.__drawElements[el.id] = el;"
+            f"  window.__drawApi._raw.updateScene({{ elements: {elements_json} }});"
+            f"}}"
+        )
+
+        # Sync Python state from __otDSL element
+        _reset_state()
+        dsl_str = _read_dsl_from_canvas()
+        if dsl_str:
+            _parse_dsl_to_state(dsl_str)
+            warning = ""
+        else:
+            warning = " [warning: no __otDSL element — Python state is empty; call wb.sync() after adding one]"
+
+        # Rebuild _rendered_ids from state
+        for id_ in _dsl_state["shapes"]:
+            _rendered_ids.add(id_)
+            _rendered_ids.add(id_ + "-text")
+        for e in _dsl_state["edges"]:
+            _rendered_ids.add(e["id"])
+
+        n_shapes = len(_dsl_state["shapes"])
+        n_edges = len(_dsl_state["edges"])
+        n_elements = len(elements)
+        s.add("shapes", n_shapes)
+        s.add("edges", n_edges)
+        if warning:
+            s.add("warning", "no __otDSL element")
+            return f"loaded {n_elements} element(s){warning}"
+        return f"loaded {n_shapes} shapes, {n_edges} edges"
+
+
+def sync() -> str:
+    """Sync Python DSL state from the ``__otDSL`` canvas element.
+
+    Reads the ``__otDSL`` text element from the current Excalidraw canvas
+    and updates Python state. Use this after:
+
+    - Loading a file directly in the Excalidraw UI (File → Open)
+    - Drag-and-dropping an ``.excalidraw`` file onto the canvas
+    - Any operation that bypasses ``wb.load``
+
+    Returns:
+        Summary like ``"synced: 4 shapes, 3 edges"``.
+
+    Example:
+        excalidraw.sync()
+    """
+    with LogSpan(span="excalidraw.sync") as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        dsl_str = _read_dsl_from_canvas()
+        if not dsl_str:
+            return (
+                "sync: no __otDSL element found on canvas. "
+                "Canvas may have been created outside wb, or wb.save() was not used."
+            )
+
+        _parse_dsl_to_state(dsl_str)
+
+        # Rebuild _rendered_ids
+        _rendered_ids.clear()
+        for id_ in _dsl_state["shapes"]:
+            _rendered_ids.add(id_)
+            _rendered_ids.add(id_ + "-text")
+        for e in _dsl_state["edges"]:
+            _rendered_ids.add(e["id"])
 
         n_shapes = len(_dsl_state["shapes"])
         n_edges = len(_dsl_state["edges"])
         s.add("shapes", n_shapes)
         s.add("edges", n_edges)
-        return f"loaded {n_shapes} shapes, {n_edges} edges"
+        return f"synced: {n_shapes} shapes, {n_edges} edges"
 
 
-def _render_parsed(parsed: dict[str, Any], layout: dict[str, Any]) -> None:
-    """Reset state and render a parsed DSL dict to canvas with given layout positions."""
-    global _max_rendered_y
+def help() -> str:
+    """Return the full DSL and style reference. Call this before using wb.draw or wb.style.
 
-    # Reset state in-place — avoids breakage if the module was loaded under two names
-    _dsl_state.clear()
-    _dsl_state.update({"shapes": {}, "classes": {}, "edges": [], "groups": {}})
-    _dsl_state.update(parsed)
-    _rendered_ids.clear()
-    _edge_keys.clear()
-    _max_rendered_y = 0.0
-    for e in parsed["edges"]:
-        _edge_keys.add((e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead")))
+    Returns the complete wb DSL syntax and style shorthand reference as plain text.
+    No browser interaction needed.
 
-    # Clear canvas first
-    _browser_evaluate("() => window.__drawApi.clear()")
+    Returns:
+        Full DSL and style reference as a plain-text string.
 
-    shape_payloads = []
-    for id_, shape in parsed["shapes"].items():
-        pos = layout.get(id_, {})
-        style = _resolve_style(shape, parsed["classes"])
-        style.update({
-            k: pos[k] for k in (
-                "strokeColor", "backgroundColor", "strokeWidth",
-                "strokeStyle", "roughness", "opacity"
-            ) if k in pos
-        })
-        shape_payloads.append(
-            {"id": id_, "label": shape["label"],
-             "x": pos.get("x", 0), "y": pos.get("y", 0),
-             "w": pos.get("w", 160), "h": pos.get("h", 60),
-             "shape": shape.get("type", "rectangle"), "styleProps": style}
+    Example:
+        excalidraw.help()
+    """
+    return _load_js("dsl-reference.md")
+
+
+def style(*, ids: list[str], style: str) -> str:
+    """Apply visual style properties to existing canvas elements in bulk.
+
+    Applies Excalidraw style properties to the named elements. Never touches
+    ``_dsl_state`` — styling is a purely visual operation.
+
+    Style string is comma-separated ``key:value`` pairs using the shorthand
+    table shared with ``wb.draw`` inline styles:
+
+    +---------+----------------------+------------------------------------------+
+    | Key     | Excalidraw property  | Notes                                    |
+    +=========+======================+==========================================+
+    | ``bc``  | backgroundColor      | hex or named colour                      |
+    | ``sc``  | strokeColor          | hex or named colour                      |
+    | ``sw``  | strokeWidth          | number                                   |
+    | ``ss``  | strokeStyle          | ``solid``, ``dashed``, ``dotted``        |
+    | ``r``   | roughness            | 0-2                                      |
+    | ``o``   | opacity              | 0-100                                    |
+    | ``f``   | fontFamily           | ``hand``, ``normal``, ``mono``           |
+    | ``fs``  | fontSize             | number                                   |
+    | ``ta``  | textAlign            | ``left``, ``center``, ``right``          |
+    | ``va``  | verticalAlign        | ``top``, ``middle``, ``bottom``          |
+    | ``shape``| element type        | ``r``=rect, ``d``=diamond, ``c``=circle  |
+    | ``x``/``y`` | position         | pixels                                   |
+    | ``w``/``h`` | width/height     | pixels                                   |
+    +---------+----------------------+------------------------------------------+
+
+    Shape changes (``shape:d``, ``shape:c``) use delete+recreate with the same
+    ID so arrow connections survive.
+
+    Named colours: ``green``, ``blue``, ``red``, ``purple``, ``yellow``,
+    ``orange``, ``pink``, ``gray``, ``white``, ``black``.
+
+    Args:
+        ids:   List of node IDs to style.
+        style: Style string, e.g. ``"bc:#bbf7d0,sc:#16a34a,sw:2"``.
+
+    Returns:
+        Summary like ``"styled 3 element(s)"``.
+
+    Example:
+        excalidraw.style(ids=["a", "b"], style="bc:green,sc:#16a34a")
+        excalidraw.style(ids=["c"], style="shape:d")
+    """
+    with LogSpan(span="excalidraw.style", ids=ids, style=style) as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        if not style.strip():
+            return "Error: style string is empty"
+
+        style_props = _parse_style_props(style)
+        if not style_props:
+            return "Error: no valid style properties parsed from style string"
+
+        _js_style_elements(ids, style_props)
+
+        s.add("count", len(ids))
+        return f"styled {len(ids)} element(s)"
+
+
+def share() -> str:
+    """Generate a shareable Excalidraw link for the current canvas.
+
+    Encrypts the full scene client-side (AES-GCM, 128-bit) and uploads it
+    to Excalidraw's storage, returning a URL that anyone can open in a browser.
+
+    The encryption and upload use the same protocol as Excalidraw's own
+    "Export to Link" feature — end-to-end encrypted, key never sent to server.
+
+    Returns:
+        Shareable URL like ``https://excalidraw.com/#json={id},{key}``.
+
+    Example:
+        excalidraw.share()
+    """
+    with LogSpan(span="excalidraw.share") as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        # Read scene elements
+        elements = _browser_evaluate_json(
+            "() => Array.from(window.__drawApi.read())"
+        )
+        if not isinstance(elements, list):
+            return f"Error: could not read scene elements: {elements}"
+
+        # Build native excalidraw payload
+        payload_obj = {
+            "type": "excalidraw",
+            "version": 2,
+            "source": "https://excalidraw.com",
+            "elements": elements,
+            "appState": {"viewBackgroundColor": "#ffffff"},
+            "files": {},
+        }
+        payload_json_str = json.dumps(payload_obj)
+
+        # Encrypt client-side via Web Crypto API (AES-GCM, 128-bit key)
+        # Return object directly (not JSON.stringify) so _browser_evaluate_json
+        # can parse it without double-encoding issues.
+        encrypt_js = (
+            "async () => {"
+            "  const data = " + json.dumps(payload_json_str) + ";"
+            "  const enc = new TextEncoder().encode(data);"
+            "  const key = await crypto.subtle.generateKey("
+            "    {name: 'AES-GCM', length: 128}, true, ['encrypt']);"
+            "  const iv = crypto.getRandomValues(new Uint8Array(12));"
+            "  const ct = await crypto.subtle.encrypt({name: 'AES-GCM', iv}, key, enc);"
+            "  const exportedKey = await crypto.subtle.exportKey('raw', key);"
+            "  const combined = new Uint8Array(iv.byteLength + ct.byteLength);"
+            "  combined.set(iv);"
+            "  combined.set(new Uint8Array(ct), iv.byteLength);"
+            "  const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));"
+            "  const keyB64 = b64(exportedKey)"
+            "    .replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=/g,'');"
+            "  return {data: b64(combined), key: keyB64};"
+            "}"
         )
 
-    edge_payloads = [
-        {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
-         "label": e["label"], "startArrowhead": e.get("startArrowhead"),
-         "endArrowhead": e.get("endArrowhead", "arrow")}
-        for e in parsed["edges"]
-    ]
+        enc_data = _browser_evaluate_json(encrypt_js)
+        if not isinstance(enc_data, dict) or "data" not in enc_data or "key" not in enc_data:
+            return f"Error: unexpected encryption result: {enc_data}"
 
-    subgraph_payloads = []
-    for gid, group in parsed["groups"].items():
-        pos = layout.get(gid, {})
-        subgraph_payloads.append(
-            {"id": gid, "label": group["label"], "memberIds": group["members"],
-             "savedBounds": pos if pos else None}
+        # Upload to Excalidraw storage using Python urllib (bypasses CORS)
+        import urllib.error
+        import urllib.request
+
+        req_body = json.dumps({"data": enc_data["data"]}).encode("utf-8")
+        req = urllib.request.Request(
+            "https://json.excalidraw.com/api/v2/post/",
+            data=req_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
-
-    _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
-    _rendered_ids.update(s["id"] for s in shape_payloads)
-    _rendered_ids.update(e["id"] for e in edge_payloads)
-    if shape_payloads:
-        _max_rendered_y = max(s["y"] + s["h"] for s in shape_payloads)
-
-
-def _render_dsl_block(raw: str) -> None:
-    """Parse a [dsl]/[scene] file and render to canvas. Used by load_diag."""
-    # New format: [dsl] ... [scene] ...
-    dsl_match = re.search(r"\[dsl\]\n(.*?)(?:\[scene\]|$)", raw, re.DOTALL)
-    scene_match = re.search(r"\[scene\]\n(.*)", raw, re.DOTALL)
-    dsl_lines = dsl_match.group(1).strip() if dsl_match else ""
-    layout: dict[str, Any] = {}
-    if scene_match:
         try:
-            saved = json.loads(scene_match.group(1).strip())
-            layout = {e["id"]: e for e in saved if isinstance(e, dict)}
-        except (json.JSONDecodeError, KeyError):
-            pass
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            return f"Error: upload failed — {exc}"
+        except (json.JSONDecodeError, ValueError) as exc:
+            return f"Error: unexpected response from Excalidraw storage — {exc}"
 
-    parsed = parse_dsl(dsl_lines)
-    _render_parsed(parsed, layout)
+        share_id = resp_data.get("id", "")
+        if not share_id:
+            return f"Error: no ID in upload response: {resp_data}"
 
-
+        key = enc_data["key"]
+        url = f"https://excalidraw.com/#json={share_id},{key}"
+        s.add("url", url)
+        return url
 
 
 def clear() -> str:
@@ -1214,8 +1668,6 @@ def clear() -> str:
     Example:
         excalidraw.clear()
     """
-    global _max_rendered_y
-
     with LogSpan(span="excalidraw.clear") as s:
         err = _ensure_ready()
         if err:
@@ -1223,12 +1675,7 @@ def clear() -> str:
             return err
 
         _browser_evaluate("() => window.__drawApi.clear()")
-        _dsl_state.clear()
-        _dsl_state.update({"shapes": {}, "classes": {}, "edges": [], "groups": {}})
-        _rendered_ids.clear()
-        _edge_keys.clear()
-        _max_rendered_y = 0.0
-
+        _reset_state()
         return "canvas cleared"
 
 
@@ -1343,8 +1790,6 @@ def screenshot(*, file: str | None = None) -> Any:
                 return f"Error: could not save screenshot from {src_path} — {exc}"
 
         # Fallback: base64-encoded content
-        import contextlib
-
         img_bytes: bytes | None = None
         if "base64," in result_str:
             with contextlib.suppress(Exception):
@@ -1373,13 +1818,7 @@ def hard_reset() -> str:
     Example:
         excalidraw.hard_reset()
     """
-    global _max_rendered_y
-
-    _dsl_state.clear()
-    _dsl_state.update({"shapes": {}, "classes": {}, "edges": [], "groups": {}})
-    _rendered_ids.clear()
-    _edge_keys.clear()
-    _max_rendered_y = 0.0
+    _reset_state()
 
     browser_ok = False
     if _check_playwright() is None:
@@ -1407,7 +1846,6 @@ def open() -> str:
     Example:
         excalidraw.open()
     """
-    global _max_rendered_y
     with LogSpan(span="excalidraw.open") as s:
         err = _ensure_ready()
         # Untracked content warning is non-fatal — open() always starts fresh
@@ -1415,13 +1853,7 @@ def open() -> str:
             s.add("error", err)
             return err
         # Always start fresh: reset Python state and clear canvas
-        import contextlib
-
-        _dsl_state.clear()
-        _dsl_state.update({"shapes": {}, "classes": {}, "edges": [], "groups": {}})
-        _rendered_ids.clear()
-        _edge_keys.clear()
-        _max_rendered_y = 0.0
+        _reset_state()
         with contextlib.suppress(Exception):
             _browser_evaluate("() => window.__drawApi.clear()")
         return "whiteboard ready"
@@ -1442,18 +1874,10 @@ def close() -> str:
     Example:
         excalidraw.close()
     """
-    global _max_rendered_y
-
-    _dsl_state.clear()
-    _dsl_state.update({"shapes": {}, "classes": {}, "edges": [], "groups": {}})
-    _rendered_ids.clear()
-    _edge_keys.clear()
-    _max_rendered_y = 0.0
+    _reset_state()
 
     if _check_playwright() is not None:
         return "whiteboard closed (browser unavailable)"
-
-    import contextlib
 
     proxy = get_proxy_manager()
     try:

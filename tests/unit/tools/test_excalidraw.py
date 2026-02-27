@@ -1,11 +1,12 @@
 """Unit tests for the wb (whiteboard) tool pack.
 
-Tests cover: parse_dsl, _build_dsl, auto_layout, _resolve_style, and
+Tests cover: parse_dsl, _build_dsl, auto_layout, _parse_style_props, and
 smoke tests for public tools with mocked Playwright.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -14,7 +15,6 @@ import pytest
 from otdev.tools.excalidraw import (
     _build_dsl,
     _parse_style_props,
-    _resolve_style,
     auto_layout,
     parse_dsl,
 )
@@ -85,20 +85,18 @@ class TestParseDsl:
         assert e["label"] == "lbl"
         assert e["endArrowhead"] == "dot"
 
-    def test_classdef(self) -> None:
-        result = parse_dsl('classDef svc fill:#dae8fc,stroke:#6c8ebf;')
-        assert "svc" in result["classes"]
-        assert result["classes"]["svc"]["fill"] == "#dae8fc"
-        assert result["classes"]["svc"]["stroke"] == "#6c8ebf"
+    def test_classdef_raises_error(self) -> None:
+        """classDef syntax is no longer supported — raises ValueError."""
+        with pytest.raises(Exception):
+            parse_dsl('classDef svc fill:#dae8fc,stroke:#6c8ebf;')
 
-    def test_class_assignment(self) -> None:
-        result = parse_dsl(
-            'a["A"]\nb["B"]\n'
-            'classDef svc fill:#fff;\n'
-            'class a,b svc'
-        )
-        assert "svc" in result["shapes"]["a"]["classes"]
-        assert "svc" in result["shapes"]["b"]["classes"]
+    def test_class_assignment_ignored_or_raises(self) -> None:
+        """class assignment is no longer parsed as class — treated as bare id or error."""
+        # 'class a,b svc' does not match any shape/edge pattern and falls through
+        # to bare-ID fallback or is silently ignored
+        result = parse_dsl('a["A"]\nb["B"]')
+        assert "a" in result["shapes"]
+        assert "b" in result["shapes"]
 
     def test_subgraph(self) -> None:
         dsl = 'a["A"]\nb["B"]\nsubgraph grp ["Group"]\n  a\n  b\nend'
@@ -147,18 +145,15 @@ class TestParseDsl:
         result = parse_dsl("a[test]")
         assert result["shapes"]["a"] == {"label": "test", "classes": []}
 
-    def test_unquoted_label_ellipse(self) -> None:
-        result = parse_dsl("a((test))")
-        assert result["shapes"]["a"] == {"label": "test", "classes": [], "type": "ellipse"}
+    def test_ellipse_raises_error(self) -> None:
+        """Ellipse syntax is not supported — raises ValueError with helpful message."""
+        with pytest.raises(ValueError, match="Ellipse"):
+            parse_dsl('a(("Oval"))')
 
-    def test_unquoted_label_diamond(self) -> None:
-        result = parse_dsl("a{test}")
-        assert result["shapes"]["a"] == {"label": "test", "classes": [], "type": "diamond"}
-
-    def test_unquoted_label_equivalent_to_quoted(self) -> None:
-        unquoted = parse_dsl("a[1];b[2]")
-        quoted = parse_dsl('a["1"];b["2"]')
-        assert unquoted["shapes"] == quoted["shapes"]
+    def test_diamond_raises_error(self) -> None:
+        """Diamond syntax is not supported — raises ValueError with helpful message."""
+        with pytest.raises(ValueError, match="Diamond"):
+            parse_dsl('a{"Decision"}')
 
     def test_bare_id_becomes_shape(self) -> None:
         result = parse_dsl("mynode")
@@ -199,6 +194,22 @@ class TestParseDsl:
         e = result["edges"][0]
         assert e.get("strokeStyle") is None
 
+    def test_inline_style_props_on_shape(self) -> None:
+        """Trailing style props after ] are captured in inline_styles."""
+        result = parse_dsl('a["A"] bc:green,sw:2')
+        assert "a" in result["shapes"]
+        assert "a" in result["inline_styles"]
+        assert result["inline_styles"]["a"]["backgroundColor"] == "#bbf7d0"
+        assert result["inline_styles"]["a"]["strokeWidth"] == 2
+
+    def test_bare_id_with_style_props(self) -> None:
+        """Bare id + style props → style-only update, label=None."""
+        result = parse_dsl("a bc:green")
+        assert "a" in result["shapes"]
+        assert result["shapes"]["a"]["label"] is None
+        assert "a" in result["inline_styles"]
+        assert result["inline_styles"]["a"]["backgroundColor"] == "#bbf7d0"
+
 
 # ===========================================================================
 # 6.2 _build_dsl
@@ -220,12 +231,6 @@ class TestBuildDsl:
         assert "a" in rt["shapes"]
         assert rt["shapes"]["a"]["label"] == "Service A"
         assert "b" in rt["shapes"]
-
-    def test_classdef_round_trip(self) -> None:
-        dsl = 'a["A"]\nclassDef svc fill:#fff,stroke:#000;\nclass a svc'
-        rt = self._round_trip(dsl)
-        assert "svc" in rt["classes"]
-        assert "svc" in rt["shapes"]["a"]["classes"]
 
     def test_directed_edge_round_trip(self) -> None:
         dsl = 'a["A"]\nb["B"]\na-->b'
@@ -295,7 +300,7 @@ class TestBuildDsl:
         assert e["strokeStyle"] == "dashed"
 
     def test_empty_state(self) -> None:
-        state: dict[str, Any] = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        state: dict[str, Any] = {"shapes": {}, "edges": [], "groups": {}}
         assert _build_dsl(state) == ""
 
 
@@ -347,7 +352,6 @@ class TestAutoLayout:
         ]
         positions = auto_layout(shapes, edges)
         assert all(k in positions for k in ("top", "left", "right", "bot"))
-        # top should be at layer 0, bot at layer 2
         assert positions["top"][0] < positions["bot"][0]
 
     def test_disconnected_nodes(self) -> None:
@@ -367,107 +371,78 @@ class TestAutoLayout:
 
 
 # ===========================================================================
-# 6.4 _resolve_style
+# 6.4 _parse_style_props (replaces _resolve_style)
 # ===========================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestResolveStyle:
-    def test_defaults_when_no_classes(self) -> None:
-        shape: dict[str, Any] = {"label": "A", "classes": []}
-        style = _resolve_style(shape, {})
-        assert style["backgroundColor"] == "#ffffff"
-        assert style["strokeColor"] == "#1e1e1e"
-        assert style["strokeWidth"] == 2
-        assert style["color"] == "#1e1e1e"
+class TestParseStyleProps:
+    def test_bc_shorthand(self) -> None:
+        props = _parse_style_props("bc:#ff0000")
+        assert props["backgroundColor"] == "#ff0000"
 
-    def test_fill_maps_to_background(self) -> None:
-        classes = {"svc": {"fill": "#dae8fc"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["svc"]}
-        style = _resolve_style(shape, classes)
-        assert style["backgroundColor"] == "#dae8fc"
+    def test_sc_shorthand(self) -> None:
+        props = _parse_style_props("sc:#1e1e1e")
+        assert props["strokeColor"] == "#1e1e1e"
 
-    def test_stroke_maps_to_stroke_color(self) -> None:
-        classes = {"svc": {"stroke": "#6c8ebf"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["svc"]}
-        style = _resolve_style(shape, classes)
-        assert style["strokeColor"] == "#6c8ebf"
+    def test_sw_numeric(self) -> None:
+        props = _parse_style_props("sw:2")
+        assert props["strokeWidth"] == 2
 
-    def test_color_maps_to_text_color(self) -> None:
-        classes = {"svc": {"color": "#ff0000"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["svc"]}
-        style = _resolve_style(shape, classes)
-        assert style["color"] == "#ff0000"
+    def test_named_color_green(self) -> None:
+        props = _parse_style_props("bc:green")
+        assert props["backgroundColor"] == "#bbf7d0"
 
-    def test_stroke_width(self) -> None:
-        classes = {"thick": {"stroke-width": "4"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["thick"]}
-        style = _resolve_style(shape, classes)
-        assert style["strokeWidth"] == 4
-
-    def test_stroke_style(self) -> None:
-        classes = {"dashed": {"stroke-style": "dashed"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["dashed"]}
-        style = _resolve_style(shape, classes)
-        assert style["strokeStyle"] == "dashed"
+    def test_named_color_blue(self) -> None:
+        props = _parse_style_props("bc:blue")
+        assert props["backgroundColor"] == "#bfdbfe"
 
     def test_roughness(self) -> None:
-        classes = {"smooth": {"roughness": "0"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["smooth"]}
-        style = _resolve_style(shape, classes)
-        assert style["roughness"] == 0
-
-    def test_edges_sharp(self) -> None:
-        classes = {"sharp": {"edges": "sharp"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["sharp"]}
-        style = _resolve_style(shape, classes)
-        assert style["roundness"] is None
-
-    def test_edges_round(self) -> None:
-        classes = {"rounded": {"edges": "round"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["rounded"]}
-        style = _resolve_style(shape, classes)
-        assert style["roundness"] == {"type": 3}
-
-    def test_font_family_normal(self) -> None:
-        classes = {"f": {"font-family": "normal"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["f"]}
-        style = _resolve_style(shape, classes)
-        assert style["fontFamily"] == 2
-
-    def test_font_size_named(self) -> None:
-        classes = {"f": {"font-size": "L"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["f"]}
-        style = _resolve_style(shape, classes)
-        assert style["fontSize"] == 28
-
-    def test_text_align(self) -> None:
-        classes = {"la": {"text-align": "left"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["la"]}
-        style = _resolve_style(shape, classes)
-        assert style["textAlign"] == "left"
+        props = _parse_style_props("r:0")
+        assert props["roughness"] == 0
 
     def test_opacity(self) -> None:
-        classes = {"op": {"opacity": "80"}}
-        shape: dict[str, Any] = {"label": "A", "classes": ["op"]}
-        style = _resolve_style(shape, classes)
-        assert style["opacity"] == 80
+        props = _parse_style_props("o:80")
+        assert props["opacity"] == 80
 
-    def test_multiple_classes_merge(self) -> None:
-        classes = {
-            "base": {"fill": "#fff", "stroke": "#000"},
-            "highlight": {"fill": "#ff0"},
-        }
-        shape: dict[str, Any] = {"label": "A", "classes": ["base", "highlight"]}
-        style = _resolve_style(shape, classes)
-        assert style["backgroundColor"] == "#ff0"
-        assert style["strokeColor"] == "#000"
+    def test_font_family_normal(self) -> None:
+        props = _parse_style_props("f:normal")
+        assert props["fontFamily"] == 2
 
-    def test_unknown_class_ignored(self) -> None:
-        shape: dict[str, Any] = {"label": "A", "classes": ["nonexistent"]}
-        style = _resolve_style(shape, {})
-        assert style["backgroundColor"] == "#ffffff"
+    def test_font_family_mono(self) -> None:
+        props = _parse_style_props("f:mono")
+        assert props["fontFamily"] == 3
+
+    def test_font_size(self) -> None:
+        props = _parse_style_props("fs:20")
+        assert props["fontSize"] == 20
+
+    def test_stroke_style(self) -> None:
+        props = _parse_style_props("ss:dashed")
+        assert props["strokeStyle"] == "dashed"
+
+    def test_shape_d(self) -> None:
+        props = _parse_style_props("shape:d")
+        assert props["shape"] == "diamond"
+
+    def test_shape_c(self) -> None:
+        props = _parse_style_props("shape:c")
+        assert props["shape"] == "ellipse"
+
+    def test_shape_r(self) -> None:
+        props = _parse_style_props("shape:r")
+        assert props["shape"] == "rectangle"
+
+    def test_multiple_props(self) -> None:
+        props = _parse_style_props("bc:green,sc:#000,sw:3")
+        assert props["backgroundColor"] == "#bbf7d0"
+        assert props["strokeColor"] == "#000"
+        assert props["strokeWidth"] == 3
+
+    def test_empty_string(self) -> None:
+        props = _parse_style_props("")
+        assert props == {}
 
 
 # ===========================================================================
@@ -479,9 +454,10 @@ def _reset_exc_state() -> None:
     """Reset module-level excalidraw state between tests."""
     import otdev.tools.excalidraw as exc
 
-    exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+    exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
     exc._edge_keys = set()
     exc._rendered_ids = set()
+    exc._placed_positions = {}
     exc._max_rendered_y = 0.0
 
 
@@ -502,6 +478,10 @@ def _playwright_eval_side_effect(
     if "__drawApi?.backend" in fn:
         return "### Result\ntrue\n### Ran Playwright code\n..."
     if "__drawApi.read" in fn:
+        return '### Result\n[]\n### Ran Playwright code\n...'
+    if "__otDSL" in fn:
+        return '### Result\n""\n### Ran Playwright code\n...'
+    if "__downloadQueue" in fn:
         return '### Result\n[]\n### Ran Playwright code\n...'
     return "### Result\nnull\n### Ran Playwright code\n..."
 
@@ -525,7 +505,6 @@ class TestPublicToolsSmoke:
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "shapes" in result or "Error" not in result
-        # browser_evaluate should have been called (bootstrap check + shapes)
         assert mock_proxy.call_tool_sync.called
 
     def test_draw_returns_error_when_playwright_not_connected(self) -> None:
@@ -551,7 +530,6 @@ class TestPublicToolsSmoke:
             result = excalidraw.clear()
 
         assert result == "canvas cleared"
-        # Verify __drawApi.clear() was called
         calls = [str(c) for c in mock_proxy.call_tool_sync.call_args_list]
         assert any("clear" in c for c in calls)
 
@@ -595,7 +573,7 @@ class TestPublicToolsSmoke:
 
         assert "fit" in result
 
-    def test_save_calls_read_and_writes_file(
+    def test_save_writes_native_excalidraw_file(
         self, tmp_path: Any
     ) -> None:
         from otdev.tools import excalidraw
@@ -603,18 +581,20 @@ class TestPublicToolsSmoke:
         self._reset_state()
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-        out_file = str(tmp_path / "out.md")
+        out_file = str(tmp_path / "out.excalidraw")
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
-            patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=tmp_path / "out.md"),
+            patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=tmp_path / "out.excalidraw"),
         ):
             result = excalidraw.save(file=out_file)
 
         assert "saved" in result
-        content = (tmp_path / "out.md").read_text()
-        assert "[dsl]" in content
-        assert "[scene]" in content
+        content = (tmp_path / "out.excalidraw").read_text()
+        data = json.loads(content)
+        assert data["type"] == "excalidraw"
+        assert "elements" in data
+        assert data["version"] == 2
 
     def test_load_restores_state(self, tmp_path: Any) -> None:
         from otdev.tools import excalidraw
@@ -623,21 +603,25 @@ class TestPublicToolsSmoke:
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        # Create a minimal saved diagram file in new [dsl]/[scene] format
-        content = (
-            "[dsl]\n"
-            'a["A"]\n'
-            'b["B"]\n'
-            "a-->b\n"
-            "[scene]\n"
-            '[{"id": "a", "x": 0, "y": 0, "w": 160, "h": 60}]\n'
-        )
-        diag_file = tmp_path / "diag.exc"
-        diag_file.write_text(content)
+        # Create a native .excalidraw file
+        content = {
+            "type": "excalidraw",
+            "version": 2,
+            "source": "https://excalidraw.com",
+            "elements": [],
+            "appState": {"viewBackgroundColor": "#ffffff"},
+            "files": {},
+        }
+        diag_file = tmp_path / "diag.excalidraw"
+        diag_file.write_text(json.dumps(content))
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=diag_file),
+            patch(
+                "otdev.tools.excalidraw._read_dsl_from_canvas",
+                return_value='a["A"]\nb["B"]\na-->b',
+            ),
         ):
             result = excalidraw.load(file=str(diag_file))
 
@@ -657,15 +641,15 @@ class TestPublicToolsSmoke:
         assert "Error" in result
         mock_proxy.call_tool_sync.assert_not_called()
 
-    def test_load_returns_error_for_missing_dsl_block(self, tmp_path: Any) -> None:
+    def test_load_returns_error_for_invalid_format(self, tmp_path: Any) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        diag_file = tmp_path / "bad.wb"
-        diag_file.write_text("no dsl block here\n")
+        diag_file = tmp_path / "bad.excalidraw"
+        diag_file.write_text("not json at all\n")
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
@@ -674,7 +658,24 @@ class TestPublicToolsSmoke:
             result = excalidraw.load(file=str(diag_file))
 
         assert "Error" in result
-        assert "[dsl]" in result
+
+    def test_load_returns_error_for_wrong_type(self, tmp_path: Any) -> None:
+        from otdev.tools import excalidraw
+
+        self._reset_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        diag_file = tmp_path / "bad.excalidraw"
+        diag_file.write_text(json.dumps({"type": "other", "elements": []}))
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=diag_file),
+        ):
+            result = excalidraw.load(file=str(diag_file))
+
+        assert "Error" in result
 
     def test_fit_delegates_to_zoom(self) -> None:
         from otdev.tools import excalidraw
@@ -756,12 +757,11 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {"a": {"label": "A", "classes": []}}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}}
         exc._rendered_ids = {"a"}
         exc._edge_keys = set()
         exc._max_rendered_y = 100.0
 
-        # No Playwright server — should still reset Python state
         mock_proxy = _make_mock_proxy(servers=[])
 
         with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
@@ -874,7 +874,7 @@ class TestPublicToolsSmoke:
 
         assert "closed" in result
         calls = [c.args[1] for c in mock_proxy.call_tool_sync.call_args_list]
-        assert "browser_tab_close" in calls or "browser_navigate" in calls
+        assert "browser_close" in calls or "browser_navigate" in calls
 
     def test_bootstrap_failure_returns_error(self) -> None:
         from otdev.tools import excalidraw
@@ -887,9 +887,7 @@ class TestPublicToolsSmoke:
                 return "### Result\nnull\n### Ran Playwright code\n..."
             fn = (arguments or {}).get("function", "")
             if "__drawApi?.backend" in fn:
-                # Not ready — force a navigate + bootstrap attempt
                 return "### Result\nfalse\n### Ran Playwright code\n..."
-            # bootstrap.js contains `window.__drawElements` — simulate fiber-not-found
             if "__drawElements" in fn:
                 return "### Result\nfalse\n### Ran Playwright code\n..."
             return "### Result\nnull\n### Ran Playwright code\n..."
@@ -911,7 +909,6 @@ class TestPublicToolsSmoke:
 
         with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
-            # Add c connected to b — c should land at layer 2, not layer 0
             with patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch:
                 excalidraw.draw(input='c["C"]\nb-->c')
                 assert mock_batch.called
@@ -931,7 +928,6 @@ class TestPublicToolsSmoke:
         with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->typo')
 
-        # "typo" is auto-created as a shape with label "typo"
         assert "skipped" not in result
         assert "+3 shapes" in result
 
@@ -961,7 +957,7 @@ class TestPublicToolsSmoke:
         assert "skipped" not in result
 
     def test_js_batch_draw_passes_three_positional_args(self) -> None:
-        """_js_batch_draw must call browser_evaluate with 3 separate JSON args, not 1 object."""
+        """_js_batch_draw must call browser_evaluate with 3 separate JSON args."""
         import otdev.tools.excalidraw as exc
 
         self._reset_state()
@@ -980,7 +976,6 @@ class TestPublicToolsSmoke:
 
         assert calls, "should have called _browser_evaluate"
         fn = calls[0]
-        # Must pass three separate args, not a single {shapes:…} object
         assert '"shapes"' not in fn.split("_batch_draw(")[1][:10], \
             "_batch_draw must not receive a {shapes:…} object as first arg"
         assert fn.count(",") >= 2, "call must have at least 2 commas (three positional args)"
@@ -1023,6 +1018,43 @@ class TestPublicToolsSmoke:
         _, kwargs = mock_batch.call_args
         assert len(kwargs["shapes"]) == 3
         assert len(kwargs["edges"]) == 2
+
+    def test_draw_returns_edge_ids_in_output(self) -> None:
+        """draw() includes new edge IDs in the return string (issue #6)."""
+        from otdev.tools import excalidraw
+
+        self._reset_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
+
+        assert "edge-a-b" in result
+
+    def test_draw_upsert_existing_shape(self) -> None:
+        """draw() on an existing shape patches it (upsert) rather than skipping."""
+        from otdev.tools import excalidraw
+
+        self._reset_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        patches: list[Any] = []
+
+        def capture_patch(p: list[Any]) -> None:
+            patches.extend(p)
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._js_patch_elements", side_effect=capture_patch),
+        ):
+            excalidraw.draw(input='a["A"]')
+            patches.clear()
+            excalidraw.draw(input='a["Updated"]')
+
+        assert any(p.get("id") == "a" and p.get("text") == "Updated" for p in patches), \
+            "existing shape label update should be sent as a patch"
 
 
 # ===========================================================================
@@ -1068,7 +1100,7 @@ class TestEdgeIdUniqueness:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1102,7 +1134,7 @@ class TestArrowLabels:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1157,8 +1189,6 @@ class TestCyclicLayout:
         ]
         positions = auto_layout(shapes, edges)
         xs = [pos[0] for pos in positions.values()]
-        # With 3 cyclic nodes, grid fallback assigns them to different layers,
-        # so not all should have the same x (cols=2 → at least two distinct x values)
         assert len(set(xs)) > 1 or len(positions) <= 1, "cyclic nodes should not all stack at x=0"
 
     def test_mixed_dag_and_cyclic(self) -> None:
@@ -1170,7 +1200,7 @@ class TestCyclicLayout:
         edges = [
             {"id": "e1", "src": "root", "dst": "a", "label": ""},
             {"id": "e2", "src": "a", "dst": "b", "label": ""},
-            {"id": "e3", "src": "b", "dst": "a", "label": ""},  # cycle between a and b
+            {"id": "e3", "src": "b", "dst": "a", "label": ""},
         ]
         positions = auto_layout(shapes, edges)
         assert "root" in positions
@@ -1210,11 +1240,27 @@ class TestNoteToolParsing:
 
         assert _parse_note_blocks("nothing here") == []
 
+    def test_parse_note_blocks_trailing_space_after_colon(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = "t[table:  \nA,B\n1,2\n]"
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "table"
+
+    def test_parse_note_blocks_crlf_line_endings(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = "t[table:\r\nA,B\r\n1,2\r\n]"
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "table"
+
     def test_note_tool_returns_error_on_no_blocks(self) -> None:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1231,7 +1277,7 @@ class TestNoteToolParsing:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1250,14 +1296,14 @@ class TestNoteToolParsing:
             result = excalidraw.note(input="t[table:\nName,Role\nAlice,Dev\n]")
 
         assert "Error" in result
-        assert "t" in result  # block id included
-        mock_batch.assert_not_called()  # no shape was inserted on canvas
+        assert "t" in result
+        mock_batch.assert_not_called()
 
     def test_note_unknown_type_returns_error(self) -> None:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1276,7 +1322,7 @@ class TestNoteToolParsing:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
         exc._max_rendered_y = 0.0
@@ -1371,42 +1417,35 @@ class TestRenderers:
     def test_render_tree_siblings_show_connector(self) -> None:
         from otdev.tools._excalidraw.renderers import render_tree
 
-        # Two siblings under root — first should show "│   " continuation line
         result = render_tree("root\n-child1\n--leaf1\n-child2")
         lines = result.splitlines()
-        # child1 has a sibling (child2) so leaf1 should be under a continued branch
         assert any("│" in ln for ln in lines), "sibling branch should show │ connector"
-        # child2 is the last child so it uses └──
         assert "child2" in result
         assert any("└──" in ln for ln in lines)
 
     def test_render_tree_no_false_sibling_across_subtree(self) -> None:
         from otdev.tools._excalidraw.renderers import render_tree
 
-        # leaf1 and leaf2 are NOT siblings (they belong to different parents)
         result = render_tree("root\n-child1\n--leaf1\n-child2\n--leaf2")
         lines = result.splitlines()
         leaf1_line = next(ln for ln in lines if "leaf1" in ln)
-        # leaf1 is last under child1, so no │ continuation in its prefix
         assert "leaf1" in leaf1_line
         assert "└──" in leaf1_line or "├──" in leaf1_line
 
     def test_render_tree_true_siblings_continuation(self) -> None:
         from otdev.tools._excalidraw.renderers import render_tree
 
-        # leaf1 and leaf2 ARE siblings (same parent child1)
         result = render_tree("root\n-child1\n--leaf1\n--leaf2")
         lines = result.splitlines()
         leaf1_line = next(ln for ln in lines if "leaf1" in ln)
-        # leaf1 has a sibling (leaf2) — rendered with ├── connector
         assert "├──" in leaf1_line
 
     def test_render_tree_unicode_connectors(self) -> None:
         from otdev.tools._excalidraw.renderers import render_tree
 
         result = render_tree("root\n-child1\n-child2")
-        assert "├──" in result   # first child uses ├──
-        assert "└──" in result   # last child uses └──
+        assert "├──" in result
+        assert "└──" in result
 
     def test_render_tree_space_indent(self) -> None:
         from otdev.tools._excalidraw.renderers import render_tree
@@ -1447,7 +1486,7 @@ class TestMaxRenderedY:
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         import otdev.tools.excalidraw as exc
-        exc._max_rendered_y = 200.0  # simulate existing canvas content
+        exc._max_rendered_y = 200.0
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
@@ -1717,63 +1756,50 @@ class TestErase:
 
         assert exc._max_rendered_y == 0.0
 
+    def test_erase_docstring_documents_edge_id_format(self) -> None:
+        """erase() docstring must document the edge ID format."""
+        from otdev.tools import excalidraw
+
+        doc = excalidraw.erase.__doc__ or ""
+        assert "edge-{src}-{dst}" in doc, "docstring must document edge ID format"
+
 
 # ===========================================================================
-# Shape types (ellipse, diamond)
+# Shape types — ellipse and diamond are no longer supported via DSL
 # ===========================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.tools
 class TestShapeTypes:
-    def test_parse_ellipse(self) -> None:
-        result = parse_dsl('a(("Oval"))')
-        assert "a" in result["shapes"]
-        assert result["shapes"]["a"]["label"] == "Oval"
-        assert result["shapes"]["a"]["type"] == "ellipse"
+    def test_parse_ellipse_raises_error(self) -> None:
+        """Ellipse syntax raises ValueError with helpful error message."""
+        with pytest.raises(ValueError, match="Ellipse"):
+            parse_dsl('a(("Oval"))')
 
-    def test_parse_diamond(self) -> None:
-        result = parse_dsl('a{"Decision"}')
-        assert "a" in result["shapes"]
-        assert result["shapes"]["a"]["label"] == "Decision"
-        assert result["shapes"]["a"]["type"] == "diamond"
+    def test_parse_diamond_raises_error(self) -> None:
+        """Diamond syntax raises ValueError with helpful error message."""
+        with pytest.raises(ValueError, match="Diamond"):
+            parse_dsl('a{"Decision"}')
 
     def test_rectangle_has_no_explicit_type(self) -> None:
         result = parse_dsl('a["Box"]')
         assert "type" not in result["shapes"]["a"]
 
-    def test_build_dsl_round_trips_ellipse(self) -> None:
-        result = parse_dsl('a(("Oval"))')
-        dsl = _build_dsl({"shapes": result["shapes"], "classes": {}, "edges": [], "groups": {}})
-        assert '(("Oval"))' in dsl
+    def test_style_shape_d_maps_to_diamond(self) -> None:
+        """wb.style shape:d maps to 'diamond' excalidraw type."""
+        props = _parse_style_props("shape:d")
+        assert props["shape"] == "diamond"
 
-    def test_build_dsl_round_trips_diamond(self) -> None:
-        result = parse_dsl('a{"Decision"}')
-        dsl = _build_dsl({"shapes": result["shapes"], "classes": {}, "edges": [], "groups": {}})
-        assert '{"Decision"}' in dsl
+    def test_style_shape_c_maps_to_ellipse(self) -> None:
+        """wb.style shape:c maps to 'ellipse' excalidraw type."""
+        props = _parse_style_props("shape:c")
+        assert props["shape"] == "ellipse"
 
-    def test_draw_passes_ellipse_shape_type(self) -> None:
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "classes": {}, "edges": [], "groups": {}}
-        exc._rendered_ids = set()
-        exc._edge_keys = set()
-        exc._max_rendered_y = 0.0
-
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
-            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
-        ):
-            excalidraw.draw(input='a(("Node"))')
-
-        _, kwargs = mock_batch.call_args
-        assert kwargs["shapes"][0]["shape"] == "ellipse"
+    def test_style_shape_r_maps_to_rectangle(self) -> None:
+        """wb.style shape:r maps to 'rectangle' excalidraw type."""
+        props = _parse_style_props("shape:r")
+        assert props["shape"] == "rectangle"
 
 
 # ===========================================================================
@@ -1790,7 +1816,6 @@ class TestNodeIdNormalise:
         assert "A" not in result["shapes"]
 
     def test_mixed_case_ids_merge(self) -> None:
-        # A and a both normalise to 'a'; second declaration overwrites
         result = parse_dsl('A["First"]\na["Second"]')
         assert len(result["shapes"]) == 1
         assert result["shapes"]["a"]["label"] == "Second"
@@ -1817,12 +1842,6 @@ class TestNodeIdNormalise:
         assert e["src"] == "servicea"
         assert e["dst"] == "serviceb"
 
-    def test_class_assignment_normalised(self) -> None:
-        result = parse_dsl(
-            'A["A"]\nclassDef svc fill:#fff;\nclass A svc'
-        )
-        assert "svc" in result["shapes"]["a"]["classes"]
-
 
 # ===========================================================================
 # 6.x Whitespace tolerance
@@ -1844,15 +1863,15 @@ class TestWhitespaceTolerance:
         assert "a" in result["shapes"]
         assert result["shapes"]["a"]["label"] == "Hello World"
 
-    def test_ellipse_shape_spaced(self) -> None:
-        result = parse_dsl('a ( ( "Node" ) )')
-        assert "a" in result["shapes"]
-        assert result["shapes"]["a"].get("type") == "ellipse"
+    def test_ellipse_shape_spaced_raises_error(self) -> None:
+        """Spaced ellipse syntax also raises ValueError."""
+        with pytest.raises(ValueError, match="Ellipse"):
+            parse_dsl('a ( ( "Node" ) )')
 
-    def test_diamond_shape_spaced(self) -> None:
-        result = parse_dsl('a { "Decision" }')
-        assert "a" in result["shapes"]
-        assert result["shapes"]["a"].get("type") == "diamond"
+    def test_diamond_shape_spaced_raises_error(self) -> None:
+        """Spaced diamond syntax also raises ValueError."""
+        with pytest.raises(ValueError, match="Diamond"):
+            parse_dsl('a { "Decision" }')
 
     def test_arrow_edge_no_spaces(self) -> None:
         result = parse_dsl('a["A"]\nb["B"]\na-->b')
@@ -1894,3 +1913,486 @@ class TestWhitespaceTolerance:
         r2 = parse_dsl('a["A"]\nb["B"]\na-->b')
         assert r1["shapes"] == r2["shapes"]
         assert len(r1["edges"]) == len(r2["edges"]) == 1
+
+    def test_arrow_edge_with_label_space_before_pipe(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --> |label| b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["label"] == "label"
+
+    def test_bidir_edge_with_label_space_before_pipe(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na <--> |label| b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["label"] == "label"
+
+    def test_dot_edge_with_label_space_before_pipe(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --o |lbl| b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["label"] == "lbl"
+
+    def test_bar_edge_with_label_space_before_pipe(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na --x |lbl| b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["label"] == "lbl"
+
+    def test_dashed_arrow_edge_with_label_space_before_pipe(self) -> None:
+        result = parse_dsl('a["A"]\nb["B"]\na -.-> |lbl| b')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["label"] == "lbl"
+
+
+# ===========================================================================
+# ID pre-normalisation (spaces, hyphens, special chars stripped before parsing)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestIdPrenorm:
+    """IDs with spaces, hyphens, or other non-word chars are pre-normalised."""
+
+    def test_shape_id_with_spaces(self) -> None:
+        result = parse_dsl('a b["Test"]')
+        assert "ab" in result["shapes"]
+        assert result["shapes"]["ab"]["label"] == "Test"
+
+    def test_shape_id_with_hyphen(self) -> None:
+        result = parse_dsl('a-b["Test"]')
+        assert "ab" in result["shapes"]
+        assert result["shapes"]["ab"]["label"] == "Test"
+
+    def test_shape_id_with_plus(self) -> None:
+        result = parse_dsl('a+b["Test"]')
+        assert "ab" in result["shapes"]
+        assert result["shapes"]["ab"]["label"] == "Test"
+
+    def test_shape_id_multiword(self) -> None:
+        result = parse_dsl('api gateway["API Gateway"]')
+        assert "apigateway" in result["shapes"]
+        assert result["shapes"]["apigateway"]["label"] == "API Gateway"
+
+    def test_edge_src_with_spaces(self) -> None:
+        result = parse_dsl('a b["A"]\nc["C"]\na b-->c')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "ab"
+        assert result["edges"][0]["dst"] == "c"
+
+    def test_edge_both_sides_with_spaces(self) -> None:
+        result = parse_dsl('a b["A"]\nc d["C"]\na b-->c d')
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "ab"
+        assert result["edges"][0]["dst"] == "cd"
+
+    def test_edge_with_label_and_spaces_in_ids(self) -> None:
+        result = parse_dsl('a b["A"]\nc d["C"]\na b-->|calls|c d')
+        assert len(result["edges"]) == 1
+        e = result["edges"][0]
+        assert e["src"] == "ab"
+        assert e["dst"] == "cd"
+        assert e["label"] == "calls"
+
+    def test_bare_style_with_space_in_id(self) -> None:
+        result = parse_dsl('api gateway bc:green')
+        assert "apigateway" in result["shapes"]
+        assert result["shapes"]["apigateway"]["label"] is None
+
+    def test_prenorm_does_not_touch_label_content(self) -> None:
+        result = parse_dsl('a b["hello world"]')
+        assert result["shapes"]["ab"]["label"] == "hello world"
+
+
+# ===========================================================================
+# Erase dangling edge count in return value
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestEraseDanglingCount:
+    def test_erase_reports_dangling_edges(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        import otdev.tools.excalidraw as exc
+        _reset_exc_state()
+        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
+        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
+        exc._dsl_state["shapes"]["c"] = {"label": "C", "classes": []}
+        exc._dsl_state["edges"] = [
+            {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""},
+            {"id": "edge-b-c", "src": "b", "dst": "c", "label": ""},
+        ]
+        exc._rendered_ids = {"a", "b", "c", "edge-a-b", "edge-b-c"}
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.erase(ids=["b"])
+
+        assert "erased 1" in result
+        assert "dangling" in result
+        assert "2" in result
+
+    def test_erase_no_dangling_message_when_no_edges(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        import otdev.tools.excalidraw as exc
+        _reset_exc_state()
+        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
+        exc._rendered_ids = {"a", "a-text"}
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.erase(ids=["a"])
+
+        assert "erased 1" in result
+        assert "dangling" not in result
+
+
+# ===========================================================================
+# Note tool: leading newline before first block (regression)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestNoteLeadingNewline:
+    def test_leading_newline_does_not_prevent_match(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = "\nt[table:\nA,B\n1,2\n]"
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["id"] == "t"
+        assert blocks[0]["type"] == "table"
+
+    def test_triple_quoted_style_with_leading_newline(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = """
+t[table:
+A,B
+1,2
+]"""
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["id"] == "t"
+
+    def test_multiple_blocks_with_surrounding_newlines(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = "\nt1[table:\nA,B\n1,2\n]\n\nt2[note:\nhello\n]\n"
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 2
+
+
+# ===========================================================================
+# Subgraph count in draw() return value
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestDrawSubgraphCount:
+    def test_draw_new_subgraph_reports_group(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.draw(input='a["A"]\nb["B"]')
+            result = excalidraw.draw(
+                input='subgraph grp ["My Group"]\n  a\n  b\nend'
+            )
+
+        assert "group" in result
+
+    def test_draw_no_group_msg_when_no_new_subgraph(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.draw(input='a["A"]\nb["B"]')
+
+        assert "group" not in result
+
+
+# ===========================================================================
+# Auto-layout overlap avoidance
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestAutoLayoutOverlap:
+    def test_find_free_y_no_conflict(self) -> None:
+        import otdev.tools.excalidraw as exc
+        from otdev.tools.excalidraw import _find_free_y
+
+        exc._placed_positions = {}
+        # No existing positions — proposed y should be returned unchanged
+        assert _find_free_y(500.0, 470.0) == 470.0
+
+    def test_find_free_y_conflict_shifts_below(self) -> None:
+        import otdev.tools.excalidraw as exc
+        from otdev.tools.excalidraw import _find_free_y
+
+        # Simulate a node already placed at (980, 470) with h=60, gap_y=40
+        exc._placed_positions = {"db": (980.0, 470.0)}
+        # New node proposed at same x, same y — should be shifted below
+        y = _find_free_y(980.0, 470.0)
+        # Should be placed below: 470 + 60 + 40 = 570
+        assert y > 470.0 + 60  # at least below db's bottom
+
+    def test_draw_stores_placed_positions(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        import otdev.tools.excalidraw as exc
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.draw(input='a["A"]\nb["B"]')
+
+        assert "a" in exc._placed_positions
+        assert "b" in exc._placed_positions
+
+    def test_erase_removes_placed_position(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        import otdev.tools.excalidraw as exc
+        _reset_exc_state()
+        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
+        exc._rendered_ids = {"a", "a-text"}
+        exc._placed_positions = {"a": (500.0, 470.0)}
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.erase(ids=["a"])
+
+        assert "a" not in exc._placed_positions
+
+
+# ===========================================================================
+# Case-insensitive style values
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestParseStylePropsCI:
+    """Case-insensitive style value resolution."""
+
+    def test_named_color_uppercase(self) -> None:
+        props = _parse_style_props("bc:Green")
+        assert props["backgroundColor"] == "#bbf7d0"
+
+    def test_named_color_allcaps(self) -> None:
+        props = _parse_style_props("bc:BLUE")
+        assert props["backgroundColor"] == "#bfdbfe"
+
+    def test_stroke_color_mixedcase(self) -> None:
+        props = _parse_style_props("sc:Red")
+        assert props["strokeColor"] == "#fecaca"
+
+    def test_stroke_style_uppercase(self) -> None:
+        props = _parse_style_props("ss:Solid")
+        assert props["strokeStyle"] == "solid"
+
+    def test_stroke_style_dashed_uppercase(self) -> None:
+        props = _parse_style_props("ss:Dashed")
+        assert props["strokeStyle"] == "dashed"
+
+    def test_font_family_uppercase(self) -> None:
+        props = _parse_style_props("f:Hand")
+        assert props["fontFamily"] == 1
+
+    def test_font_family_normal_uppercase(self) -> None:
+        props = _parse_style_props("f:Normal")
+        assert props["fontFamily"] == 2
+
+    def test_shape_uppercase_r(self) -> None:
+        props = _parse_style_props("shape:R")
+        assert props["shape"] == "rectangle"
+
+    def test_shape_uppercase_d(self) -> None:
+        props = _parse_style_props("shape:D")
+        assert props["shape"] == "diamond"
+
+    def test_shape_uppercase_c(self) -> None:
+        props = _parse_style_props("shape:C")
+        assert props["shape"] == "ellipse"
+
+    def test_text_align_uppercase(self) -> None:
+        props = _parse_style_props("ta:Center")
+        assert props["textAlign"] == "center"
+
+    def test_vert_align_uppercase(self) -> None:
+        props = _parse_style_props("va:Middle")
+        assert props["verticalAlign"] == "middle"
+
+    def test_hex_color_passthrough_unchanged(self) -> None:
+        """Hex colours pass through as-is (Excalidraw accepts both cases)."""
+        props = _parse_style_props("bc:#FF0000")
+        assert props["backgroundColor"] == "#FF0000"
+
+
+# ===========================================================================
+# load() warning when __otDSL is absent
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestLoadWarningNoDsl:
+    """load() warns when no __otDSL element is found."""
+
+    def test_load_warns_when_no_otdsl(self, tmp_path: Any) -> None:
+        """Loading a .excalidraw file with no __otDSL element includes a warning."""
+        import json
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        # Write a valid .excalidraw file with no __otDSL element
+        exc_file = tmp_path / "no-dsl.excalidraw"
+        data = {
+            "type": "excalidraw",
+            "version": 2,
+            "elements": [
+                {"id": "shape1", "type": "rectangle", "x": 0, "y": 0, "width": 100, "height": 60},
+            ],
+        }
+        exc_file.write_text(json.dumps(data), encoding="utf-8")
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.load(file=str(exc_file))
+
+        assert "warning" in result.lower()
+        assert "__otDSL" in result or "no __otDSL" in result
+
+    def test_load_with_otdsl_no_warning(self, tmp_path: Any) -> None:
+        """Loading a .excalidraw file with __otDSL does not include a warning."""
+        import json
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        # Write a valid .excalidraw file with a __otDSL element
+        exc_file = tmp_path / "with-dsl.excalidraw"
+        dsl_text = 'a["A"];b["B"];a-->b'
+        data = {
+            "type": "excalidraw",
+            "version": 2,
+            "elements": [
+                {"id": "__otDSL", "type": "text", "text": dsl_text, "x": 0, "y": 0, "width": 100, "height": 20},
+            ],
+        }
+        exc_file.write_text(json.dumps(data), encoding="utf-8")
+
+        _reset_exc_state()
+
+        # Make _read_dsl_from_canvas return the DSL text
+        def _eval_with_dsl(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if tool == "browser_navigate":
+                return "### Result\nnull\n### Ran Playwright code\n..."
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "__otDSL" in fn:
+                return f'### Result\n"{dsl_text}"\n### Ran Playwright code\n...'
+            if "__downloadQueue" in fn:
+                return "### Result\n[]\n### Ran Playwright code\n..."
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _eval_with_dsl
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.load(file=str(exc_file))
+
+        assert "warning" not in result.lower()
+        assert "shapes" in result
+
+    def test_load_file_not_found(self) -> None:
+        """load() returns an error when file does not exist."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.load(file="/nonexistent/path.excalidraw")
+
+        assert "Error" in result
+        assert "not found" in result
+
+
+# ===========================================================================
+# wb.help()
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestHelp:
+    def test_help_returns_nonempty_string(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.help()
+        assert isinstance(result, str)
+        assert len(result) > 100
+
+    def test_help_contains_dsl_reference(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.help()
+        assert "Draw DSL" in result or "draw" in result.lower()
+        assert "Style" in result or "style" in result.lower()
+
+    def test_help_contains_edge_syntax(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.help()
+        assert "-->" in result
+
+    def test_help_requires_no_browser(self) -> None:
+        """help() must not call Playwright (no _ensure_ready)."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager") as mock_gpm:
+            result = excalidraw.help()
+
+        mock_gpm.assert_not_called()
+        assert isinstance(result, str)
+        assert len(result) > 0
