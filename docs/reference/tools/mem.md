@@ -2,6 +2,13 @@
 
 Persistent memory for AI agents with SQLite storage and optional semantic search.
 
+## TL;DR
+
+- Write with `mem.write()` / `mem.write_batch()`.
+- Retrieve with `mem.search()`, `mem.read()`, `mem.toc()`, and `mem.slice()`.
+- Maintain with `mem.update()`, `mem.append()`, `mem.decay()`, and `mem.refresh()`.
+- Back up with `mem.export()` / `mem.snap()` and recover with `mem.load()` / `mem.restore()`.
+
 ## Highlights
 
 - Topic-based memory with path hierarchy (`projects/onetool/rules`)
@@ -28,6 +35,7 @@ Persistent memory for AI agents with SQLite storage and optional semantic search
 | `mem.toc(topic, id)` | Display numbered section index with staleness detection |
 | `mem.slice(topic, select, id)` | Extract content by section number, heading, line range, or list |
 | `mem.search(query, mode, ...)` | Search memories (returns meta + truncated extract) |
+| `mem.grep(pattern, mode, ...)` | Regex/text search across memory content |
 | `mem.list(topic, category)` | List memories (returns meta only, no content) |
 | `mem.count(topic, category)` | Count memories |
 | `mem.delete(topic, id, confirm)` | Delete memories |
@@ -99,6 +107,22 @@ The retrieval functions return different levels of detail:
 | `limit` | int | Max results (default: config search_limit) |
 | `tags` | list | Tag filter (matches any) |
 | `extract` | int | Content extract char limit (default: config search_extract, 0 = full) |
+
+### `mem.grep()`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pattern` | str | Text or regex pattern to match |
+| `topic` | str | Topic prefix filter |
+| `ids` | list | Restrict search to specific memory IDs |
+| `category` | str | Category filter |
+| `tags` | list | Tag filter (matches any) |
+| `limit` | int | Max matches to return |
+| `ignore_case` | bool | Case-insensitive match |
+| `word` | bool | Match whole words only |
+| `regex` | bool | Treat `pattern` as regex |
+| `invert` | bool | Return non-matching entries |
+| `max_chars` | int | Max characters to scan per memory |
 
 ### `mem.read_batch()`
 
@@ -190,10 +214,37 @@ Extract sections from multiple memories in a single call.
 
 ## Configuration
 
+### Required
+
+- No required `tools.mem` settings.
+- `OPENAI_API_KEY` is only required if you enable embeddings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.mem.db_path` | string | `mem.db` | SQLite database path, relative to the OneTool directory. |
+| `tools.mem.model` | string | `text-embedding-3-small` | Embedding model. |
+| `tools.mem.base_url` | string | `https://openrouter.ai/api/v1` | OpenAI-compatible embeddings API base URL. |
+| `tools.mem.dimensions` | int | `1536` | Embedding dimensions. Must match the configured model. |
+| `tools.mem.search_limit` | int | `10` | Default max search results. Range: `1-100`. |
+| `tools.mem.search_extract` | int | `200` | Default extract length in chars. `0` means full content. |
+| `tools.mem.redaction_enabled` | bool | `true` | Enable secret/PII redaction on write. |
+| `tools.mem.redaction_patterns` | string[] | `[]` | Extra regex patterns to redact. |
+| `tools.mem.tags_whitelist` | string[] | `[]` | Allowed tag prefixes. Empty means unrestricted. |
+| `tools.mem.decay_half_life_days` | int | `30` | Importance decay half-life in days. |
+| `tools.mem.allowed_file_dirs` | string[] | `[]` | Allowed directories for file-backed memory operations. |
+| `tools.mem.exclude_file_patterns` | string[] | `[".git", "node_modules", "__pycache__", ".venv", "venv"]` | Excluded file patterns for file-backed memory operations. |
+| `tools.mem.max_embedding_tokens` | int | `8191` | Max tokens per embedding input. |
+| `tools.mem.read_cache_max_size` | int | `128` | Read cache size. `0` disables the cache. |
+| `tools.mem.read_cache_ttl_seconds` | int | `300` | Read cache TTL. `0` means no expiry. |
+| `tools.mem.embeddings_enabled` | bool | `false` | Enable semantic embeddings and vector search. |
+| `tools.mem.embeddings_async` | bool | `true` | Generate embeddings asynchronously. |
+
 ```yaml
 tools:
   mem:
-    db_path: mem.db  # relative to .onetool/
+    db_path: mem.db
     model: text-embedding-3-small
     base_url: https://openrouter.ai/api/v1
     dimensions: 1536
@@ -211,6 +262,10 @@ tools:
     embeddings_enabled: false
     embeddings_async: true
 ```
+
+### Defaults
+
+- If `tools.mem` is omitted, OneTool uses the built-in storage, redaction, search, cache, and embedding defaults shown above.
 
 ## Topic Hierarchy
 

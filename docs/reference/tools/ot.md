@@ -2,6 +2,13 @@
 
 Core tools for OneTool introspection and management.
 
+## TL;DR
+
+- Start with `ot.help()` and `ot.tools()` for discovery.
+- Use `ot.tool_info()` / `ot.pack_info()` for detailed signatures and docs.
+- Use `ot.health()`, `ot.security()`, and `ot.stats()` for operational visibility.
+- Use `ot.result()` for large outputs returned by handles.
+
 ## Highlights
 
 - List and filter available tools and packs
@@ -26,12 +33,29 @@ Core tools for OneTool introspection and management.
 | `ot.snippet_info(name, info)` | Get full definition for a specific snippet |
 | `ot.skills(name, pattern, info)` | List bundled skills or retrieve a skill body |
 | `ot.config()` | Show aliases, snippets, and server names |
+| `ot.debug(enable, line_limit)` | Toggle debug tracebacks and traceback line limits |
 | `ot.health()` | Check tool dependencies and API connectivity |
+| `ot.version()` | Show OneTool version information |
 | `ot.stats(period, tool, output, info)` | Get runtime usage statistics |
 | `ot.result(handle, ...)` | Query stored large output with pagination and search |
 | `ot.notify(topic, message)` | Publish message to configured topic |
 | `ot.reload()` | Force configuration reload |
 | `ot.security(check)` | Check security rules and allowlists |
+
+## Configuration
+
+### Required
+
+- No required `tools.ot` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.ot`.
+- `ot.*` reads global OneTool config such as `alias`, `snippets`, `servers`, `prompts`, `security`, and `stats`.
+
+### Defaults
+
+- OneTool uses the global config defaults for aliases, snippets, servers, security, and statistics when those sections are omitted.
 
 ## Info Levels
 
@@ -310,6 +334,25 @@ Returns status of:
 - OneTool version and Python version
 - Registry status and tool count
 - Proxy status and server connections
+
+## ot.debug()
+
+Control traceback verbosity for errors during this session.
+
+```python
+ot.debug()                 # Show current debug settings
+ot.debug(enable=True)      # Enable full tracebacks
+ot.debug(enable=False)     # Disable full tracebacks
+ot.debug(line_limit=20)    # Set traceback line limit
+```
+
+## ot.version()
+
+Show current OneTool version and build metadata.
+
+```python
+ot.version()
+```
 
 ## ot.stats()
 

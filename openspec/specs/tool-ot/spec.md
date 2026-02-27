@@ -238,7 +238,7 @@ All `ot.*` functions SHALL format output using YAML flow style.
 
 ### Requirement: Logging
 
-The tool SHALL follow [tool-conventions](../tool-conventions/spec.md) for logging.
+The tool SHALL follow [_nf-conventions](../_nf-conventions/spec.md) for logging.
 
 #### Scenario: Span naming
 - **GIVEN** an ot function is called
@@ -868,4 +868,3 @@ The `ot.cheatsheet()` function SHALL return a project-agnostic reference documen
 - **AND** it SHALL NOT reference snippets (tools only)
 - **AND** it SHALL NOT include project-specific paths or data
 - **AND** every example SHALL be a valid, copy-pasteable function call
-

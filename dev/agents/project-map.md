@@ -12,40 +12,33 @@ Core execution engine, configuration, logging, and inter-tool API.
 
 | Module | Purpose | Key Files |
 |--------|---------|-----------|
-| `executor/` | Code execution engine | `runner.py`, `validator.py` |
-| `config/` | Configuration management | `loader.py`, `schema.py` |
-| `logging/` | LogSpan structured logging | `logspan.py` |
-| `registry/` | AST-based tool discovery | `registry.py`, `discovery.py` |
-| `meta/` | Metadata and paths | `paths.py`, `version.py` |
-| `proxy/` | External MCP server support | `client.py`, `server.py` |
+| `executor/` | Code execution engine | `runner.py`, `validator.py`, `tool_loader.py` |
+| `config/` | Configuration management | `loader.py`, `models.py`, `secrets.py` |
+| `logging/` | LogSpan structured logging | `span.py`, `entry.py`, `format.py` |
+| `registry/` | AST-based tool discovery | `registry.py`, `parser.py`, `models.py` |
+| `meta/` | Metadata, health, and introspection helpers | `_help.py`, `_stats.py`, `_config_health.py` |
+| `proxy/` | External MCP server support | `manager.py` |
 
 ### Tool Packs (`src/ottools/`)
 
-Built-in tool packs (15+ packs, 100+ tools).
+Built-in core packs bundled with base install.
 
 | Pack | Description | Key Functions |
 |------|-------------|---------------|
-| `brave.py` | Web search | `search()`, `web_search()` |
-| `db.py` | Database operations | `query()`, `connect()` |
-| `excel.py` | Excel file handling | `read()`, `write()` |
-| `file.py` | File operations | `read()`, `write()`, `list()` |
-| `git.py` | Git operations | `status()`, `commit()` |
-| `mem.py` | Vector memory | `store()`, `search()` |
-| `pkg.py` | Package management | `install()`, `search()` |
-| `ripgrep.py` | Fast code search | `search()`, `count()` |
-| `screenshot.py` | Screen capture | `capture()` |
-| `shell.py` | Shell commands | `run()` |
-| `sys.py` | System info | `info()`, `platform()` |
+| `ot_forge.py` | Extension scaffolding and validation | `create_ext()`, `validate_ext()`, `install_skill()` |
+| `ot_llm.py` | LLM-powered transformation tools | `transform()`, `transform_file()` |
+| `ot_secrets.py` | Secret management utilities | `init()`, `encrypt()`, `audit()` |
+| `ot_timer.py` | Named stopwatch timers | `start()`, `elapsed()`, `list()` |
+| `server.py` | MCP server metadata/resources | prompt/resource helpers |
+| `skills.py` | Skills loading and lookup | skill registry helpers |
 
 ### MCP Server (`src/onetool/`)
 
-MCP server CLI and implementation.
+Standalone CLI wrapper.
 
 | File | Purpose |
 |------|---------|
-| `server.py` | MCP server entry point |
-| `handlers.py` | Request handlers |
-| `__main__.py` | CLI entry point |
+| `cli.py` | onetool CLI entry point and commands |
 
 ### Benchmark Harness (`src/bench/`)
 
@@ -54,8 +47,9 @@ Performance benchmarking CLI.
 | File | Purpose |
 |------|---------|
 | `cli.py` | Benchmark CLI |
-| `runner.py` | Benchmark execution |
-| `reporters.py` | Results reporting |
+| `run.py` | Benchmark execution entry |
+| `harness/runner.py` | Scenario/task execution loop |
+| `reporter.py` | Console and summary reporting |
 
 ### Dev Extras (`src/otdev/`) — optional `[dev]`
 
@@ -161,7 +155,8 @@ A test for `src/otdev/tools/worktree.py` → `tests/otdev/unit/tools/test_worktr
 **Need to modify:**
 - Tool pack → `src/ottools/<pack>.py`
 - Core executor → `src/ot/executor/runner.py`
-- MCP server → `src/onetool/server.py`
+- MCP server runtime → `src/ot/server.py`
+- onetool CLI → `src/onetool/cli.py`
 - Tests → `tests/otdev/`, `tests/ottools/`, `tests/otutil/`, or `tests/` (match source package)
 - Specs → `openspec/specs/<feature>/spec.md`
 

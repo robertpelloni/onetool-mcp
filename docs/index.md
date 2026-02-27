@@ -40,7 +40,7 @@ Configure one MCP Server. Use unlimited tools.
 
 <div class="bento" markdown>
 
-<div class="card span-2 tall" markdown>
+<div class="card span-2" markdown>
 
 ### :material-chart-line: 96% Token Savings
 
@@ -76,17 +76,17 @@ Write Python, not tool definitions. You see exactly what runs. No more guessing.
 
 </div>
 
-<div class="card" markdown>
+<div class="card span-2" markdown>
 
 ### :material-puzzle: Scaffold Tools
 
 Build new tools as part of the conversation. New tools are just Python functions. Drop a file, get a pack.
 
-[:octicons-arrow-right-24: Create tools](learn/extending/extension-tools.md)
+[:octicons-arrow-right-24: Create tools](learn/extension-tools.md)
 
 </div>
 
-<div class="card" markdown>
+<div class="card span-2" markdown>
 
 ### :material-server-network: MCP Server Proxy
 
@@ -116,7 +116,7 @@ Single, well-structured [YAML config](learn/configuration.md) with global and pr
 
 ### :material-chart-box: Observability
 
-Meta tools for introspection. [Structured logging](learn/extending/extension-tools.md#logging-with-logspan) with LogSpan. [Runtime statistics](reference/tools/ot.md#otstats) for costs and success rates.
+Meta tools for introspection. [Structured logging](learn/extension-tools.md#logging-with-logspan) with LogSpan. [Runtime statistics](reference/tools/ot.md#otstats) for costs and success rates.
 
 </div>
 

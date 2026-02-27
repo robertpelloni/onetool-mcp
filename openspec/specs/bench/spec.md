@@ -122,7 +122,7 @@ The execution engine SHALL be tested via unit tests, not benchmarks.
 #### Scenario: Unit test coverage
 - **GIVEN** the Python execution engine
 - **WHEN** testing parsing, execution, return values, imports, and errors
-- **THEN** tests SHALL be in `tests/unit/test_python_exec.py`
+- **THEN** tests SHALL be in `tests/unit/core/test_python_exec.py`
 - **AND** tests SHALL use the `executor` fixture for direct execution
 - **NOT** require LLM involvement
 

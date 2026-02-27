@@ -71,13 +71,32 @@ ot_llm.transform_file(
 
 ## Configuration
 
-Add under `tools:` in `onetool.yaml`:
+### Required
+
+- `OPENAI_API_KEY` must be set in `secrets.yaml`.
+- `tools.ot_llm.base_url` must be configured.
+- `tools.ot_llm.model` must be configured.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.ot_llm.base_url` | string | `""` | OpenAI-compatible API base URL. Required in practice to use the pack. |
+| `tools.ot_llm.model` | string | `""` | Default model for transforms. Required in practice to use the pack. |
+| `tools.ot_llm.timeout` | int | `30` | API timeout in seconds. |
+| `tools.ot_llm.max_tokens` | int \| null | `null` | Max response tokens. `null` means no limit. |
 
 ```yaml
 tools:
   ot_llm:
     base_url: https://openrouter.ai/api/v1
     model: openai/gpt-5-mini
-    timeout: 30        # API timeout in seconds (default: 30)
-    max_tokens: 4096   # Maximum tokens in response (optional)
+    timeout: 30
+    max_tokens: 4096
 ```
+
+### Defaults
+
+- `timeout` defaults to `30`.
+- `max_tokens` defaults to `null`.
+- `base_url` and `model` default to empty strings, which means the pack is not usable until you set them.

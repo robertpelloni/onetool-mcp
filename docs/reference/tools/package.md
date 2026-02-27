@@ -32,6 +32,28 @@ Check latest versions for npm, PyPI packages and search OpenRouter AI models.
 
 No API key required.
 
+## Configuration
+
+### Required
+
+- No required `tools.package` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.package.timeout` | float | `30.0` | Request timeout in seconds. Range: `1.0-120.0`. |
+
+```yaml
+tools:
+  package:
+    timeout: 30.0
+```
+
+### Defaults
+
+- If `tools.package` is omitted, package lookups use the built-in timeout shown above.
+
 ## Examples
 
 ```python

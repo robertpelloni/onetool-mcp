@@ -75,6 +75,20 @@ To read a section efficiently:
 
 Images are named using content hashes (`img_abc123.png`) for stable diffs across regenerations.
 
+## Configuration
+
+### Required
+
+- No required `tools.convert` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.convert`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for document conversion.
+
 ## Examples
 
 ### Converting PDFs

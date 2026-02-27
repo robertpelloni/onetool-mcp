@@ -78,15 +78,25 @@ Any SQLAlchemy-compatible database:
 
 ## Configuration
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `db.max_chars` | 4000 | Maximum output characters |
+### Required
+
+- No required `tools.db` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.db.max_chars` | int | `4000` | Maximum characters in query output. Range: `100-100000`. |
 
 ```yaml
 tools:
   db:
-    max_chars: 8000  # Larger output
+    max_chars: 8000
 ```
+
+### Defaults
+
+- If `tools.db` is omitted, query output is truncated at 4000 characters.
 
 ## Security
 

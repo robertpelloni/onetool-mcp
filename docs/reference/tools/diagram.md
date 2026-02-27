@@ -59,6 +59,55 @@ All 28+ Kroki providers are available for advanced use.
 | `output_dir` | str | Override default output directory |
 | `async_mode` | bool | Render in background thread, return task ID for status polling |
 
+## Configuration
+
+### Required
+
+- No required `tools.diagram` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.diagram.backend.type` | `"kroki"` | `"kroki"` | Backend type. Only Kroki is currently supported. |
+| `tools.diagram.backend.remote_url` | string | `https://kroki.io` | Remote Kroki base URL. |
+| `tools.diagram.backend.self_hosted_url` | string | `http://localhost:8000` | Self-hosted Kroki base URL. |
+| `tools.diagram.backend.prefer` | enum | `remote` | Backend preference: `remote`, `self_hosted`, or `auto`. |
+| `tools.diagram.backend.timeout` | float | `30.0` | Backend request timeout in seconds. |
+| `tools.diagram.policy.rules` | string | built-in policy text | Guidance returned by `diagram.get_diagram_policy()`. |
+| `tools.diagram.policy.preferred_format` | enum | `svg` | Preferred output format: `svg`, `png`, or `pdf`. |
+| `tools.diagram.policy.preferred_providers` | string[] | `["mermaid", "d2", "plantuml"]` | Provider preference order. |
+| `tools.diagram.output.dir` | string | `diagrams` | Output directory for rendered files. |
+| `tools.diagram.output.naming` | string | `{provider}_{name}_{timestamp}` | Filename template. |
+| `tools.diagram.output.default_format` | enum | `svg` | Default output format. |
+| `tools.diagram.output.save_source` | bool | `true` | Save source files alongside rendered output. |
+| `tools.diagram.instructions` | object<string, object> | `{}` | Provider-specific guidance overrides. |
+| `tools.diagram.templates` | object<string, object> | `{}` | Named template references. |
+
+```yaml
+tools:
+  diagram:
+    backend:
+      prefer: remote
+      timeout: 30.0
+    output:
+      dir: diagrams
+      default_format: svg
+    policy:
+      preferred_providers: [mermaid, d2, plantuml]
+```
+
+Or use `include:` to load from a shared config file:
+
+```yaml
+include:
+  - config/diagram.yaml  # Falls back to global
+```
+
+### Defaults
+
+- If `tools.diagram` is omitted, OneTool uses the built-in backend, policy, output, and template defaults shown above.
+
 ## Examples
 
 ```python
@@ -81,27 +130,6 @@ diagram.get_playground_url(source="graph TD\n  A --> B", provider="mermaid")
 
 # List available providers
 diagram.list_providers(focus_only=True)
-```
-
-## Configuration
-
-Add to `onetool.yaml`:
-
-```yaml
-tools:
-  diagram:
-    backend:
-      prefer: remote  # remote | self_hosted | auto
-    output:
-      dir: ../diagrams  # Relative to config dir
-      default_format: svg
-```
-
-Or use `include:` to load from a shared config file:
-
-```yaml
-include:
-  - config/diagram.yaml  # Falls back to global
 ```
 
 ## Templates

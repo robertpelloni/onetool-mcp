@@ -1,15 +1,15 @@
 # OneTool
 
-> *One Tool to rule them all, One Tool to find them, One Tool to bring them all and in the development bind them.*
-
 > MCP server exposing a single `run` tool for LLM code execution.
 
-OneTool reduces MCP token usage from ~46K to ~2K (96% reduction, see docs/learn/comparison.md) by presenting tools as code APIs instead of individual tool definitions.
+OneTool reduces tool-definition context overhead by exposing tools as Python APIs.
 
 ## Quick Start
 
 ```bash
-uv sync && uv run onetool
+uv tool install 'onetool-mcp[all]'
+onetool init -c ~/.onetool
+onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
 ```
 
 ## Invocation
@@ -18,42 +18,62 @@ uv sync && uv run onetool
 >>> brave.search(query="AI news")
 ```
 
-## Tools
+## Packs
 
-- brave: search, news, local, image, video, search_batch, summarize
-- web: fetch, fetch_batch
-- ground: search, search_batch, dev, docs, reddit
-- context7: search, doc
-- code: search, search_batch, research, autodoc, status
-- ripgrep: search, count, files, types
-- llm: transform, transform_file
-- db: tables, schema, query
-- excel: create, read, write, formula, info, search, tables (+17 more)
-- convert: auto, pdf, word, powerpoint, excel
-- package: npm, pypi, audit, version
-- file: read, write, edit, info, list, tree, search, copy, move, delete
-- diagram: generate_source, render_diagram, list_providers (+8 more)
-- scaffold: create, list_extensions, templates
-- ot: tools, packs, aliases, snippets, config, debug, health, help, stats, notify, reload
+Source of truth: `src/ot/config/global_templates/prompts.yaml` (`prompts.packs`).
+
+<!-- BEGIN GENERATED:PACK_SUMMARY -->
+| Pack | Extra | Description |
+|---|---|---|
+| `ot` | `core` | ** Discover tools, packs. Get the help you need to call them correctly. The BEST PLACE to start. ** |
+| `brave` | `[util]` | Search the web, news, and images — fast, private, with batch support |
+| `ground` | `[util]` | Research any topic with Google AI-grounded search and source citations |
+| `web` | `[dev]` | Fetch any URL and extract clean, readable content |
+| `context7` | `[dev]` | Pull up-to-date docs for any library — React, FastAPI, etc. |
+| `ripgrep` | `[dev]` | Search code and text at speed — regex, globs, file types, context lines |
+| `file` | `[util]` | Read, write, edit, copy, move, and delete files; browse directory trees |
+| `worktree` | `[dev]` | Manage git worktrees — create, switch, merge, diff, and clean up |
+| `db` | `[dev]` | Explore and query databases — list tables, inspect schema, run SQL |
+| `excel` | `[util]` | Work with Excel files — read, write, search, pivot, and set formulas |
+| `convert` | `[util]` | Turn PDF, Word, Excel, and PowerPoint files into clean markdown |
+| `mem` | `[util]` | Persistent topic-based memory — write, search, grep, slice, and organise |
+| `ot_llm` | `core` | Run any text through an LLM — summarise, extract, reformat, translate |
+| `diagram` | `[dev]` | Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw |
+| `wb` | `[dev]` | Live whiteboard using Excalidraw — you can **draw** diagrams with a powerful DSL, assisted by AI. Additive drawing by design |
+| `package` | `[dev]` | Look up PyPI and npm packages, audit deps, find the latest AI models |
+| `chrome_util` | `[dev]` | Annotate and highlight page elements via Chrome DevTools |
+| `play_util` | `[dev]` | Annotate and highlight page elements via Playwright |
+| `aws` | `[dev]` | Manage AWS resources — dynamically enable any of their 50+ dedicated MCP tools |
+| `ot_secrets` | `core` | Store and retrieve API keys and secrets for OneTool services |
+| `ot_timer` | `core` | Time tool calls and report performance |
+| `ot_forge` | `core` | Scaffold and generate code from templates |
+<!-- END GENERATED:PACK_SUMMARY -->
 
 ## Documentation
 
-- Learn: docs/learn/
-- Tools Reference: docs/reference/tools/
-- CLI Reference: docs/reference/cli/
-- Extending: docs/extending/
+- Learn: `docs/learn/`
+- Extending: `docs/learn/extending/`
+- Tool Reference: `docs/reference/tools/`
+- CLI Reference: `docs/reference/cli/`
+- Server Reference: `docs/reference/servers/`
 
 ## Adding Tools
 
-Create `src/ot_tools/mytool.py`:
+Create a new extension module (example path):
 
 ```python
+# src/mytool.py
+from ot.decorators import tool
+
 pack = "mytool"
 
-def my_function(*, arg: str) -> str:
-    """Description shown to LLM."""
-    return f"Result: {arg}"
+@tool
+def hello(*, name: str) -> str:
+    """Return a greeting."""
+    return f"Hello, {name}!"
 ```
+
+Then include it in your config `tools_dir` glob.
 
 ## Repository
 

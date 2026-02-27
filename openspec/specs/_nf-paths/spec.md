@@ -198,7 +198,7 @@ The paths module SHALL provide access to bundled default configuration files.
 #### Scenario: Get bundled config directory
 - **GIVEN** OneTool is installed as a package
 - **WHEN** `get_bundled_config_dir()` is called
-- **THEN** it SHALL return the path to `ot/config/defaults/` within the installed package
+- **THEN** it SHALL return the path to `ot/config/global_templates/` within the installed package
 - **AND** the path SHALL be accessible via `importlib.resources`
 
 #### Scenario: Bundled directory contents
@@ -213,7 +213,7 @@ The paths module SHALL provide access to bundled default configuration files.
 #### Scenario: Bundled configs in development mode
 - **GIVEN** OneTool is installed in editable mode (`uv tool install -e .`)
 - **WHEN** `get_bundled_config_dir()` is called
-- **THEN** it SHALL return the path to `src/ot/config/defaults/`
+- **THEN** it SHALL return the path to `src/ot/config/global_templates/`
 - **AND** the configs SHALL be usable without rebuilding
 
 ### Requirement: Global Templates Directory
@@ -408,4 +408,3 @@ The SDK paths module SHALL provide functions to get directory paths.
 - **GIVEN** no override
 - **WHEN** `get_global_dir()` is called
 - **THEN** it SHALL return `~/.onetool/`
-

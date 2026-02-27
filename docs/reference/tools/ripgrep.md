@@ -35,12 +35,27 @@ Fast text and regex search in files using ripgrep.
 
 ## Configuration
 
+### Required
+
+- No required `tools.ripgrep` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.ripgrep.timeout` | float | `60.0` | Command timeout in seconds. Range: `1.0-300.0`. |
+| `tools.ripgrep.relative_paths` | bool | `true` | Return relative paths instead of absolute paths. |
+
 ```yaml
 tools:
   ripgrep:
-    timeout: 60.0           # Command timeout in seconds
-    relative_paths: true    # Output relative paths (default)
+    timeout: 60.0
+    relative_paths: true
 ```
+
+### Defaults
+
+- If `tools.ripgrep` is omitted, ripgrep uses the built-in timeout and path formatting shown above.
 
 ## Requires
 

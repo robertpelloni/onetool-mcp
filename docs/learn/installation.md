@@ -108,7 +108,7 @@ API keys are stored in `secrets.yaml` (gitignored) and passed to the server via 
 
 | Key | Service | Used By |
 |-----|---------|---------|
-| `OPENAI_API_KEY` | OpenRouter | `ot_llm.transform` |
+| `OPENAI_API_KEY` | OpenAI-compatible providers (including OpenRouter) | `ot_llm.transform` |
 | `BRAVE_API_KEY` | [Brave Search](https://brave.com/search/api/) | `brave.*` tools |
 | `CONTEXT7_API_KEY` | [Context7](https://context7.com) | `context7.*` tools |
 
@@ -132,7 +132,7 @@ Pass it to the server via `--secrets /path/to/secrets.yaml`. If omitted, no secr
 
 ### Transform Tool Configuration
 
-The transform tool requires explicit configuration in `onetool.yaml` under the top-level `llm:` key:
+The transform tool requires explicit configuration in `onetool.yaml` under `tools.ot_llm`:
 
 ```yaml
 tools:

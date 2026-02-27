@@ -26,7 +26,7 @@ uv tool install onetool-mcp
 onetool init -c ~/.onetool
 ```
 
-An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, snippets, skills). Press space to toggle, enter to confirm.
+An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, diagram config, snippets, worktree config — see `src/onetool/cli.py` for the authoritative list). Press space to toggle, enter to confirm.
 
 This creates `~/.onetool/onetool.yaml` with `include:` entries for your selected extensions.
 

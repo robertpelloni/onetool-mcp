@@ -175,10 +175,10 @@ build: update uv to 0.5.0
 style: apply ruff formatting
 ```
 
-## Using /proj:stage
+## Using /p:stage
 
 1. Make your changes
-2. Run `/proj:stage`
+2. Run `/p:stage`
 3. Agent analyzes changes and suggests **single-line** message
 4. Review and commit
 

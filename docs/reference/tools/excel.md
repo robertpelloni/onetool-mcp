@@ -76,6 +76,20 @@ Excel file manipulation using openpyxl. Create, read, write workbooks, apply for
 | `pattern` | str | Search pattern (wildcards or regex) |
 | `table_name` | str | Name for table operations |
 
+## Configuration
+
+### Required
+
+- No required `tools.excel` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.excel`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for Excel operations.
+
 ## Examples
 
 ### Basic Operations

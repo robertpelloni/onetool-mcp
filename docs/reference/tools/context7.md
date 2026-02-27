@@ -47,6 +47,28 @@ When a shorthand is given, Context7 resolves it via a search call. A note is pre
 
 - `CONTEXT7_API_KEY` in secrets.yaml
 
+## Configuration
+
+### Required
+
+- `CONTEXT7_API_KEY` must be set in `secrets.yaml`.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.context7.timeout` | float | `30.0` | Request timeout in seconds. Range: `1.0-120.0`. |
+
+```yaml
+tools:
+  context7:
+    timeout: 30.0
+```
+
+### Defaults
+
+- If `tools.context7` is omitted, Context7 uses the built-in timeout shown above.
+
 ## Examples
 
 ```python

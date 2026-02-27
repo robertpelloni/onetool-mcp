@@ -2,6 +2,13 @@
 
 AWS services via the official [awslabs/mcp](https://github.com/awslabs/mcp) servers. Unlike the other proxy servers, AWS is managed as a dynamic tool pack — servers are activated on demand by role or name rather than being statically configured in `servers.yaml`.
 
+## Highlights
+
+- Dynamic AWS MCP pack activation by role or by server name
+- Profile and region management for rapid context switching
+- Runtime server lifecycle control (start/stop/refresh)
+- Works with both curated roles and arbitrary awslabs server packages
+
 ## Quick Start
 
 ```python
@@ -11,6 +18,77 @@ aws.start_packs(pack=["iam"])        # Activate a specific server
 aws.packs()                          # List active servers with doc links
 aws.stop_packs(role="finops")        # Deactivate servers
 ```
+
+## Functions
+
+| Function | Description |
+|----------|-------------|
+| `aws.check()` | Validate active credentials and connectivity |
+| `aws.profiles()` | List available AWS profiles |
+| `aws.profile()` | Show active profile details |
+| `aws.use(profile, region)` | Switch active profile/region |
+| `aws.login(profile)` | Start SSO login flow for a profile |
+| `aws.mfa(profile, token)` | Create/use MFA-backed temporary profile |
+| `aws.whoami()` | Show current caller identity/account |
+| `aws.roles()` | List available role bundles |
+| `aws.values()` | Show known servers and metadata values |
+| `aws.regions()` | List configured/available regions |
+| `aws.services()` | List available AWS MCP services |
+| `aws.arn(service, region, account, resource, partition)` | Build AWS ARN strings |
+| `aws.attributes()` | Show current pack/session attributes |
+| `aws.packs()` | List currently active dynamic packs |
+| `aws.start_packs(role, pack)` | Start packs by role or explicit pack list |
+| `aws.stop_packs(role, pack)` | Stop running packs by role or explicit pack list |
+| `aws.refresh_packs()` | Refresh dynamic pack registry/state |
+
+## Key Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `profile` | str | AWS named profile to use |
+| `region` | str | AWS region override |
+| `role` | str | Role bundle name (for grouped server activation) |
+| `pack` | str/list | Specific server pack(s) to start/stop |
+| `token` | str | MFA token code |
+
+## Requires
+
+- AWS credentials configured locally (profile, SSO, or MFA session)
+- `uvx` available for dynamic package execution
+- Optional: AWS SSO setup for `aws.login()`
+
+## Configuration
+
+### Required
+
+- No required `tools.aws` keys.
+- AWS credentials and profile configuration must exist outside OneTool.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.aws.profile` | string \| null | `null` | Active AWS profile name. |
+| `tools.aws.region` | string \| null | `null` | Active AWS region. |
+| `tools.aws.timeout` | int | `30` | Boto3 API timeout in seconds. Minimum: `1`. |
+| `tools.aws.roles` | object<string, string[]> | `{}` | User-defined role bundles mapping role name to server short names. |
+| `tools.aws.servers` | object<string, string> | `{}` | Additional AWS MCP servers or overrides for built-in entries. |
+
+```yaml
+tools:
+  aws:
+    profile: dev
+    region: us-east-1
+    timeout: 45
+    roles:
+      finops_plus: [cost, billing, pricing]
+    servers:
+      custom-docs: awslabs.aws-documentation-mcp-server
+```
+
+### Defaults
+
+- If `tools.aws` is omitted, OneTool uses ambient AWS profile/region state and the built-in AWS server registry.
 
 ## Roles
 

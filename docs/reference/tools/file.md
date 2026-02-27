@@ -82,19 +82,37 @@ Secure file operations with configurable security boundaries. Read, write, edit,
 
 ## Configuration
 
-Configure via `onetool.yaml`:
+### Required
+
+- No required `tools.file` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.file.allowed_dirs` | string[] | `[]` | Allowed directories for file operations. Empty means current working directory only. |
+| `tools.file.exclude_patterns` | string[] | `[".git", "node_modules", "__pycache__", ".venv", "venv"]` | Path patterns excluded from operations. |
+| `tools.file.max_file_size` | int | `10000000` | Max readable/writable file size in bytes. Range: `1000-100000000`. |
+| `tools.file.max_list_entries` | int | `1000` | Max entries returned by `list()` and `tree()`. Range: `10-10000`. |
+| `tools.file.backup_on_write` | bool | `true` | Create `.bak` backup files before overwriting. |
+| `tools.file.use_trash` | bool | `true` | Move deleted files to trash when supported. |
+| `tools.file.relative_paths` | bool | `true` | Return relative paths instead of absolute paths. |
 
 ```yaml
 tools:
   file:
-    allowed_dirs: ["."]          # Allowed directories (empty = cwd only)
-    exclude_patterns: [".git"]   # Patterns to exclude
-    max_file_size: 10000000      # Max file size (10MB)
-    max_list_entries: 1000       # Max entries in list/tree
-    backup_on_write: true        # Create .bak before writes
-    use_trash: false             # Use send2trash if available
-    relative_paths: true         # Output relative paths (default)
+    allowed_dirs: ["."]
+    exclude_patterns: [".git"]
+    max_file_size: 10000000
+    max_list_entries: 1000
+    backup_on_write: true
+    use_trash: true
+    relative_paths: true
 ```
+
+### Defaults
+
+- If `tools.file` is omitted, the file pack uses the built-in safety limits and path behavior shown above.
 
 ## Examples
 
@@ -280,4 +298,3 @@ All paths are validated against:
 - **Allowed directories**: Paths must be under configured `allowed_dirs`
 - **Exclude patterns**: Paths matching patterns like `.git` are blocked
 - **File size limits**: Large files are rejected to prevent memory issues
-

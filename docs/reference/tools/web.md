@@ -41,6 +41,30 @@ Extracts main content from web pages, filtering navigation, ads, and boilerplate
 
 Note: `favor_precision` and `favor_recall` are mutually exclusive.
 
+## Configuration
+
+### Required
+
+- No required `tools.web` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.web.timeout` | float | `30.0` | Request timeout in seconds. Range: `1.0-120.0`. |
+| `tools.web.max_length` | int | `50000` | Max extracted content length in characters. Range: `1000-500000`. |
+
+```yaml
+tools:
+  web:
+    timeout: 30.0
+    max_length: 50000
+```
+
+### Defaults
+
+- If `tools.web` is omitted, web fetch uses the built-in timeout and max length shown above.
+
 ## Examples
 
 ```python

@@ -45,22 +45,41 @@ Most management functions (`add`, `list`, `remove`, `clean`) must run from the *
 
 ## Configuration
 
-Add to `onetool.yaml` (or an included file):
+### Required
+
+- No required `tools.worktree` settings.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.worktree.workspace_dir` | string | `../{repo}-work/{task_id}` | Directory template for new worktrees. |
+| `tools.worktree.branch_name` | string | `{task_id}` | Branch name template. |
+| `tools.worktree.launch_cmd` | string | `cd {workspace_dir} && claude` | Command returned by `worktree.add()`. |
+| `tools.worktree.ot_cmd` | string | `worktree.info()` | Suggested first OneTool command for the worker agent. |
+| `tools.worktree.prepare` | string[] | `[]` | Shell commands run after `git worktree add`. |
+| `tools.worktree.commit.types` | string[] | `["feat", "fix", "refactor", "perf", "docs", "test", "build", "ci", "chore", "style", "revert"]` | Allowed conventional commit types. |
+| `tools.worktree.commit.scopes` | string[] | `[]` | Project-specific commit scopes. |
 
 ```yaml
 tools:
   worktree:
-    workspace_dir: "../{repo}-work/{task_id}"  # task directory template
-    branch_name: "{task_id}"                    # branch name template
-    launch_cmd: "cd {workspace_dir} && claude" # command printed after worktree.add()
-    prepare:                                    # shell commands run after git worktree add
+    workspace_dir: "../{repo}-work/{task_id}"
+    branch_name: "{task_id}"
+    launch_cmd: "cd {workspace_dir} && claude"
+    ot_cmd: "worktree.info()"
+    prepare:
       - "cp ../{repo}/.env {workspace_dir}/.env"
     commit:
       types: [feat, fix, refactor, docs, test, chore]
-      scopes: [tool:worktree, config]           # project-specific scopes
+      scopes: [tool:worktree, config]
 ```
 
 Available template variables: `{task_id}`, `{repo}`, `{base_dir}`, `{workspace_dir}`.
+
+### Defaults
+
+- If `tools.worktree` is omitted, worktree creation, launch instructions, and commit conventions use the built-in values shown above.
 
 ## Typical Workflow
 

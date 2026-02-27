@@ -177,7 +177,7 @@ The system SHALL provide centralized logging documentation for developers.
 
 #### Scenario: Developer guide exists
 - **GIVEN** a developer needs to add logging to new code
-- **WHEN** they consult `docs/logging.md`
+- **WHEN** they consult `dev/practices/logging.md`
 - **THEN** it SHALL contain:
   - LogSpan usage patterns
   - Span naming conventions

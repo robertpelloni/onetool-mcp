@@ -54,6 +54,20 @@ The recommended workflow for creating and activating extensions:
 ot_forge.create_ext(name) → (edit) → ot_forge.validate_ext(path) → ot.reload() → use
 ```
 
+## Configuration
+
+### Required
+
+- No required `tools.ot_forge` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.ot_forge`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for Forge.
+
 ## Examples
 
 ```python

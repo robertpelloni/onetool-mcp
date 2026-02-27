@@ -2,6 +2,14 @@
 
 Complete reference for `onetool.yaml` configuration.
 
+## TL;DR
+
+- Use `onetool init -c ~/.onetool` for first-time setup.
+- Core config lives in `onetool.yaml`; secrets live in `secrets.yaml`.
+- Relative include paths resolve from the directory containing `onetool.yaml`.
+- Start with `version`, `include`, `tools_dir`, `servers`, `tools`, `security`.
+- Validate with `onetool init validate -c ~/.onetool/onetool.yaml`.
+
 ## CLI Flags
 
 Configuration is specified via CLI flags — there is no automatic global or project config discovery.
@@ -89,42 +97,191 @@ servers:
 - Files are merged left-to-right (later files override earlier)
 - Inline content in the main file overrides everything
 
-## Pack Configuration Reference
+## Pack Configuration
 
-| Pack | Field | Type | Default | Range | Description |
-|------|-------|------|---------|-------|-------------|
-| brave | timeout | float | 60.0 | 1-300 | API request timeout (seconds) |
-| context7 | docs_limit | int | 10 | 1-20 | Max documentation results |
-| context7 | timeout | float | 30.0 | 1-120 | API request timeout (seconds) |
-| db | max_chars | int | 4000 | 100-100K | Query output truncation |
-| ground | model | string | gemini-2.5-flash | - | Gemini model for grounding |
-| package | timeout | float | 30.0 | 1-120 | Registry request timeout |
-| ripgrep | relative_paths | bool | true | - | Use relative paths in output |
-| ripgrep | timeout | float | 60.0 | 1-300 | Search timeout (seconds) |
-| stats | chars_per_token | float | 4.0 | ≥1.0 | Characters per token estimate |
-| stats | context_per_call | int | 30000 | ≥0 | Context tokens saved per call |
-| stats | cost_per_million_input_tokens | float | 15.0 | ≥0 | Input token cost (USD) |
-| stats | cost_per_million_output_tokens | float | 75.0 | ≥0 | Output token cost (USD) |
-| stats | enabled | bool | true | - | Enable statistics collection |
-| stats | flush_interval_seconds | int | 30 | 1-300 | Disk flush interval |
-| stats | model | string | anthropic/claude-opus-4.5 | - | Model for cost estimation |
-| stats | persist_dir | string | stats | - | Stats directory path |
-| stats | persist_path | string | stats.jsonl | - | Stats file path |
-| stats | time_overhead_per_call_ms | int | 4000 | ≥0 | Time overhead saved (ms) |
-| web | max_length | int | 50000 | 1K-500K | Max content characters |
-| web | timeout | float | 30.0 | 1-120 | Page fetch timeout (seconds) |
+Pack settings go under `tools.<pack_name>` in `onetool.yaml`.
+
+### aws
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `profile` | string \| null | `null` | - | Active AWS profile name |
+| `region` | string \| null | `null` | - | Active AWS region |
+| `timeout` | int | `30` | `>=1` | Boto3 API call timeout seconds |
+| `roles` | object<string, string[]> | `{}` | - | User-defined role name -> server short names |
+| `servers` | object<string, string> | `{}` | - | Additional/override AWS MCP servers |
+
+### brave
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `timeout` | float | `60.0` | `1.0-300.0` | Request timeout in seconds |
+
+### chrome_util
+
+No pack-specific `tools.chrome_util` settings.
+
+### context7
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `timeout` | float | `30.0` | `1.0-120.0` | Request timeout in seconds |
+
+### convert
+
+No pack-specific `tools.convert` settings.
+
+### db
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `max_chars` | int | `4000` | `100-100000` | Maximum characters in query result output |
+
+### diagram
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `backend.type` | `"kroki"` | `"kroki"` | fixed | Backend type |
+| `backend.remote_url` | string | `https://kroki.io` | - | Remote Kroki service URL |
+| `backend.self_hosted_url` | string | `http://localhost:8000` | - | Self-hosted Kroki URL |
+| `backend.prefer` | enum | `remote` | `remote \| self_hosted \| auto` | Backend preference |
+| `backend.timeout` | float | `30.0` | `1.0-120.0` | Backend request timeout |
+| `policy.rules` | string | built-in policy text | - | Diagram generation policy text |
+| `policy.preferred_format` | enum | `svg` | `svg \| png \| pdf` | Preferred output format |
+| `policy.preferred_providers` | string[] | `["mermaid","d2","plantuml"]` | - | Preferred providers in order |
+| `output.dir` | string | `diagrams` | - | Output directory |
+| `output.naming` | string | `{provider}_{name}_{timestamp}` | - | Filename template |
+| `output.default_format` | enum | `svg` | `svg \| png \| pdf` | Default output format |
+| `output.save_source` | bool | `true` | - | Save source next to rendered output |
+| `instructions` | object<string, object> | `{}` | - | Provider guidance overrides |
+| `templates` | object<string, object> | `{}` | - | Named template references |
+
+### excel
+
+No pack-specific `tools.excel` settings.
+
+### file
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `allowed_dirs` | string[] | `[]` | - | Allowed dirs (empty = cwd only) |
+| `exclude_patterns` | string[] | `[".git","node_modules","__pycache__",".venv","venv"]` | - | Excluded path patterns |
+| `max_file_size` | int | `10000000` | `1000-100000000` | Max file size in bytes |
+| `max_list_entries` | int | `1000` | `10-10000` | Max entries for list/tree |
+| `backup_on_write` | bool | `true` | - | Create `.bak` before overwrite |
+| `use_trash` | bool | `true` | - | Move deleted files to trash |
+| `relative_paths` | bool | `true` | - | Return relative paths in output |
+
+### ground
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `model` | string | `gemini-2.5-flash` | - | Gemini model for grounded search |
+
+### mem
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `db_path` | string | `mem.db` | - | SQLite path for memory store |
+| `model` | string | `text-embedding-3-small` | - | Embedding model |
+| `base_url` | string | `https://openrouter.ai/api/v1` | - | OpenAI-compatible embedding API base |
+| `dimensions` | int | `1536` | - | Embedding dimensions |
+| `search_limit` | int | `10` | `1-100` | Default max search results |
+| `search_extract` | int | `200` | `>=0` | Extract length per result (`0` = full) |
+| `redaction_enabled` | bool | `true` | - | Enable redaction on write |
+| `redaction_patterns` | string[] | `[]` | - | Extra regex redaction patterns |
+| `tags_whitelist` | string[] | `[]` | - | Allowed tag prefixes |
+| `decay_half_life_days` | int | `30` | `>=1` | Importance decay half-life |
+| `allowed_file_dirs` | string[] | `[]` | - | Allowed dirs for mem file I/O |
+| `exclude_file_patterns` | string[] | built-in defaults | - | Excluded paths for mem file I/O |
+| `max_embedding_tokens` | int | `8191` | `>=1` | Max tokens per embedding input |
+| `read_cache_max_size` | int | `128` | `>=0` | Read cache size (`0` = off) |
+| `read_cache_ttl_seconds` | int | `300` | `>=0` | Read cache TTL (`0` = no expiry) |
+| `embeddings_enabled` | bool | `false` | - | Enable semantic embeddings |
+| `embeddings_async` | bool | `true` | - | Generate embeddings async |
+
+### ot
+
+No pack-specific `tools.ot` settings.
+
+### ot_forge
+
+No pack-specific `tools.ot_forge` settings.
+
+### ot_llm
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `base_url` | string | `""` | - | OpenAI-compatible API base URL |
+| `model` | string | `""` | - | Default model for transforms |
+| `timeout` | int | `30` | - | API timeout in seconds |
+| `max_tokens` | int \| null | `null` | - | Max response tokens (`null` = no limit) |
+
+### ot_secrets
+
+No pack-specific `tools.ot_secrets` settings.
+
+### ot_timer
+
+No pack-specific `tools.ot_timer` settings.
+
+### package
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `timeout` | float | `30.0` | `1.0-120.0` | Request timeout in seconds |
+
+### play_util
+
+No pack-specific `tools.play_util` settings.
+
+### ripgrep
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `timeout` | float | `60.0` | `1.0-300.0` | Command timeout in seconds |
+| `relative_paths` | bool | `true` | - | Return relative paths in output |
+
+### wb
+
+No pack-specific `tools.wb` settings.
+
+### web
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `timeout` | float | `30.0` | `1.0-120.0` | Request timeout in seconds |
+| `max_length` | int | `50000` | `1000-500000` | Maximum content length in chars |
+
+### worktree
+
+| Field | Type | Default | Range | Description |
+|------|------|---------|-------|-------------|
+| `workspace_dir` | string | `../{repo}-work/{task_id}` | - | Worktree dir template |
+| `branch_name` | string | `{task_id}` | - | Branch name template |
+| `launch_cmd` | string | `cd {workspace_dir} && claude` | - | Launch command template |
+| `ot_cmd` | string | `worktree.info()` | - | First tool call instruction |
+| `prepare` | string[] | `[]` | - | Post-create shell commands |
+| `commit.types` | string[] | `["feat","fix","refactor","perf","docs","test","build","ci","chore","style","revert"]` | - | Allowed conventional commit types |
+| `commit.scopes` | string[] | `[]` | - | Project commit scopes |
 
 Example:
 
 ```yaml
 tools:
-  brave:
-    timeout: 120.0
-  context7:
-    timeout: 60.0
-    docs_limit: 20
-  db:
-    max_chars: 8000
+  aws:
+    profile: dev
+    timeout: 45
+  diagram:
+    backend:
+      prefer: auto
+    output:
+      dir: docs/diagrams
+  ripgrep:
+    timeout: 120
+    relative_paths: true
+  ot_llm:
+    model: openai/gpt-4o-mini
 ```
 
 ## Secrets Configuration
@@ -509,7 +666,6 @@ tools:
     timeout: 120.0
   context7:
     timeout: 60.0
-    docs_limit: 20
   db:
     max_chars: 8000
   ripgrep:

@@ -45,6 +45,16 @@ See [play_util reference](../tools/play-util.md) for the full API.
 - Use `browser_evaluate` for custom JS execution
 - Use `browser_screenshot` only for visual verification when the accessibility tree is insufficient
 
+## Verification Checklist
+
+Use these checks after enabling the server:
+
+```python
+ot.servers(pattern="playwright", info="full")
+ot.packs(pattern="play")
+ot.tool_info(pattern="playwright.")
+```
+
 ## Examples
 
 ### 1. Read a page without vision

@@ -114,7 +114,7 @@ Normally, with great power comes great configurability challenges.
 
 However, OneTool keeps it simple and consistent with sensible defaults: a single, well-structured [YAML config](../learn/configuration.md), with global and project scopes, and per-tool-pack configuration (timeouts, limits, models, etc).
 
-You also get a range of meta tools to help with the coding aspects, plus [structured logging](../learn/extending/extension-tools.md#logging-with-logspan) and [runtime statistics](../reference/tools/ot.md#otstats) to track tool calls, success rates, tokens saved, and cost estimates.
+You also get a range of meta tools to help with the coding aspects, plus [structured logging](../learn/extension-tools.md#logging-with-logspan) and [runtime statistics](../reference/tools/ot.md#otstats) to track tool calls, success rates, tokens saved, and cost estimates.
 
 ### Security: powerful, with guardrails
 
@@ -129,7 +129,7 @@ OneTool is built for developers. It's very powerful -  so knowledge is your grea
 
 Every developer loves plugins, extensions, and ways to make tools even better. OneTool is highly configurable and extensible.
 
-- [Scaffold tools](../learn/extending/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtu.be/AZz03Yw0s1E) of Claude building a Wikipedia fetcher in under three minutes.
+- [Scaffold tools](../learn/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtu.be/AZz03Yw0s1E) of Claude building a Wikipedia fetcher in under three minutes.
 - [MCP server proxy](../reference/cli/onetool-config.md#external-mcp-servers) - allows you to wrap any MCP server with OneTool, configure it with YAML, and call it explicitly - without the tool tax and context rot.
 
 ### Testing, benchmarking, and proper engineering

@@ -39,6 +39,28 @@ Web search with Google's grounding capabilities via Gemini API. Provides current
 
 - `GEMINI_API_KEY` in secrets.yaml
 
+## Configuration
+
+### Required
+
+- `GEMINI_API_KEY` must be set in `secrets.yaml`.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.ground.model` | string | `gemini-2.5-flash` | Default Gemini model used when a tool call does not pass `model=`. |
+
+```yaml
+tools:
+  ground:
+    model: gemini-2.5-flash
+```
+
+### Defaults
+
+- If `tools.ground` is omitted, grounding search uses `gemini-2.5-flash`.
+
 ## Examples
 
 ```python

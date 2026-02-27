@@ -26,6 +26,20 @@ Named stopwatch timers for performance measurement across tool calls.
 | `store_as` | str | `None` | Optional key to store elapsed result for later retrieval |
 | `results` | bool | `False` | If True, `clear()` also removes stored results |
 
+## Configuration
+
+### Required
+
+- No required `tools.ot_timer` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.ot_timer`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for timer names, storage, and formatting.
+
 ## Examples
 
 ### Basic timing

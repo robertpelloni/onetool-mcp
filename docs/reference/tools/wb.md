@@ -2,6 +2,13 @@
 
 Playwright-driven live diagram manipulation on [excalidraw.com](https://excalidraw.com). Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.
 
+## TL;DR
+
+- Call `wb.open()` first, then `wb.draw(...)`.
+- Use `wb.note(...)` and `wb.embed_dsl()` for documentation overlays.
+- Persist with `wb.save(file=...)` / `wb.load(file=...)`.
+- Export visuals with `wb.screenshot(...)`; recover with `wb.hard_reset()` when state is broken.
+
 Requires the Playwright MCP server:
 
 ```python
@@ -12,10 +19,48 @@ ot.server(enable="playwright")
 
 ```python
 wb.open()
-wb.draw(input='a["API"]\nb["DB"]\na-->b')
+wb.draw(input='a["API"]; b["DB"]; a-->b')
 wb.screenshot()
 wb.save(file="diagrams/arch.wb")
 ```
+
+## API Summary (Generated)
+
+Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstrings).
+
+<!-- BEGIN GENERATED:WB_HELP_SUMMARY -->
+| Function | Summary |
+|---|---|
+| `wb.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
+| `wb.close() -> str` | Close the excalidraw tab and reset all Python state. |
+| `wb.draw(*, input: str) -> str` | Add diagram elements from DSL. Additive — never clears existing elements. |
+| `wb.embed_dsl() -> str` | Embed the current DSL as a note element on the canvas. |
+| `wb.erase(*, ids: list[str]) -> str` | Remove individual elements from the canvas and Python state. |
+| `wb.fit() -> str` | Fit all elements in view. |
+| `wb.hard_reset() -> str` | Reset Python DSL state unconditionally; attempt canvas clear if browser is available. |
+| `wb.load(*, file: str) -> str` | Restore diagram from a file saved by save(). |
+| `wb.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
+| `wb.open() -> str` | Open excalidraw.com and start with a clean canvas. |
+| `wb.save(*, file: str) -> str` | Save current diagram to a file in DSL+scene format. |
+| `wb.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
+| `wb.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
+| `wb.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
+<!-- END GENERATED:WB_HELP_SUMMARY -->
+
+## Configuration
+
+### Required
+
+- No required `tools.wb` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.wb`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for whiteboard layout, DSL state, and save/load behavior.
+- Runtime access still depends on the `playwright` MCP server being enabled.
 
 ## Tools
 
@@ -33,7 +78,7 @@ wb.open()
 Add diagram elements from DSL. Additive — never clears existing elements. New shapes get auto-layout positions. Edges are deduplicated by `(src, dst, label)`.
 
 ```python
-wb.draw(input='a["Service A"]\nb["DB"]\na-->b')
+wb.draw(input='a["Service A"]; b["DB"]; a-->b')
 # Returns: "+2 shapes, total 3 elements"
 ```
 
@@ -406,6 +451,6 @@ wb.load(file="diagrams/arch.wb")
 ### Incremental drawing
 
 ```python
-wb.draw(input='a["Start"]\nb["Process"]')
-wb.draw(input='c["End"]\nb-->c')   # additive, positions relative to existing
+wb.draw(input='a["Start"]; b["Process"]')
+wb.draw(input='c["End"]; b-->c')   # additive, positions relative to existing
 ```

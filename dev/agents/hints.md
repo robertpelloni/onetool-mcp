@@ -78,7 +78,7 @@ openspec/       Specifications and proposals
 ### Git Commits
 - ✅ Format: `type(scope): description` (no body)
 - ✅ Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`
-- ✅ Scopes: See `dev/practices/commit-scopes.md` or use `/proj:stage`
+- ✅ Scopes: See `dev/practices/commit-scopes.md` or use `/p:stage`
 
 ### Backwards Compatibility
 - ❌ No backwards compat - delete unused code completely
@@ -117,7 +117,7 @@ openspec/       Specifications and proposals
 
 **Make a commit:**
 1. Stage files: `git add <files>`
-2. Or use: `/proj:stage` (agent suggests commit message)
+2. Or use: `/p:stage` (agent suggests commit message)
 3. Format: `type(scope): description`
 4. Scopes: `mem.search(query="commit scope")` or `dev/practices/commit-scopes.md`
 

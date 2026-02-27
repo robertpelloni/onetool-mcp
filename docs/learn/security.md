@@ -3,6 +3,13 @@
 !!! warning "Not a Sandbox"
     The security model provides defense-in-depth but is **NOT a sandbox**. Never run code you do not trust. The allowlist model catches common dangerous patterns but cannot prevent all malicious code. Always review generated code before execution.
 
+## TL;DR
+
+- OneTool security is defense-in-depth, not absolute isolation.
+- Default policy is allowlist-based: unsafe code is rejected unless explicitly allowed.
+- Use `ot.security()` to inspect active rules and check patterns.
+- Keep secrets in `secrets.yaml` and enable output sanitization.
+
 ## Philosophy
 
 OneTool takes a different approach to AI tool security:

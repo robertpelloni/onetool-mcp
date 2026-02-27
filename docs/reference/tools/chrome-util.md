@@ -84,6 +84,21 @@ annotations = chrome_util.scan_annotations()
 - Use `scan_annotations` after the user has used Ctrl+I to read their selections
 - Call `clear_annotations()` between tasks to avoid stale overlays
 
+## Configuration
+
+### Required
+
+- No required `tools.chrome_util` settings.
+
+### Optional
+
+- This pack does not define any pack-specific keys under `tools.chrome_util`.
+
+### Defaults
+
+- OneTool uses the built-in defaults for annotation behavior.
+- Runtime access still depends on the `chrome-devtools` MCP server being enabled.
+
 ## Examples
 
 ### Guide a user through a form

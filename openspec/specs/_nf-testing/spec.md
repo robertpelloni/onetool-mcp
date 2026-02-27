@@ -219,7 +219,7 @@ The execution engine SHALL have dedicated unit tests.
 #### Scenario: Test file location
 - **GIVEN** execution engine tests
 - **WHEN** organised
-- **THEN** they SHALL be in `tests/unit/test_python_exec.py`
+- **THEN** they SHALL be in `tests/unit/core/test_python_exec.py`
 
 #### Scenario: Test categories
 - **GIVEN** `test_python_exec.py`
@@ -239,4 +239,3 @@ The execution engine SHALL have dedicated unit tests.
 - **THEN** they SHALL have:
   - Speed tier: `unit`
   - Component: `core`
-

@@ -98,6 +98,10 @@ secrets-check:
 docs-serve *args:
     uv run mkdocs serve --dev-addr 127.0.0.1:8000 {{ args }}
 
+# Sync generated docs blocks (pack summaries, wb help table) from source
+docs-sync:
+    uv run python scripts/sync_docs_generated.py
+
 # Stop the documentation server
 docs-serve-stop:
     @lsof -ti :8000 | xargs kill 2>/dev/null && echo "Docs server stopped" || echo "No server running on port 8000"
@@ -105,6 +109,10 @@ docs-serve-stop:
 # Build documentation site (strict mode)
 docs-build:
     uv run mkdocs build --strict
+
+# Validate docs tool index counts against runtime registry
+docs-registry-check:
+    uv run python scripts/check_docs_registry.py
 
 # Clean and rebuild docs (strict mode)
 docs-clean:
@@ -201,4 +209,3 @@ ot-uninstall:
 # List global uv tools
 ot-list:
     uv tool list
-

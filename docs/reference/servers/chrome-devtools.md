@@ -55,6 +55,16 @@ See [chrome_util reference](../tools/chrome-util.md) for the full API.
 - Use `list_network_requests` after navigation to inspect all HTTP traffic
 - Use remote mode (`--browserUrl`) to preserve an existing logged-in session
 
+## Verification Checklist
+
+Use these checks after enabling the server:
+
+```python
+ot.servers(pattern="chrome-devtools", info="full")
+ot.packs(pattern="chrome")
+ot.tool_info(pattern="chrome_devtools.")
+```
+
 ## Examples
 
 ### 1. Scrape structured data from a page

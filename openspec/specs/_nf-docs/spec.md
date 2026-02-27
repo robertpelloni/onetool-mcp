@@ -90,7 +90,7 @@ The project SHALL document all tools at `docs/reference/tools/`.
 #### Scenario: ot pack documented
 - **GIVEN** the `ot.*` pack
 - **WHEN** a user reads `reference/tools/ot.md`
-- **THEN** they find docs for ot.tools, ot.push, ot.config
+- **THEN** they find docs for ot.tools, ot.notify, ot.config
 
 ### Requirement: How-to Guides
 
@@ -125,10 +125,11 @@ The project SHALL provide user-facing extension docs at `docs/learn/extending/`.
 - **WHEN** they read `learn/extending/extension-tools.md`
 - **THEN** they find the full guide for building in-process tools
 
-#### Scenario: Isolated tool guide
-- **GIVEN** a user needing external dependencies
-- **WHEN** they read `learn/extending/isolated-tools.md`
-- **THEN** they find the PEP 723 subprocess tool guide
+#### Scenario: Extension guide scope
+- **GIVEN** a user needing extension guidance
+- **WHEN** they read `learn/extending/extension-tools.md`
+- **THEN** they find the supported extension workflow
+- **AND** user docs SHALL NOT reference nonexistent guide pages
 
 ### Requirement: Internal Documentation
 
@@ -405,10 +406,10 @@ The documentation SHALL include a plugin development guide for building standalo
 
 ### Requirement: About Page
 
-The project SHALL provide an about page at `docs/about.md`.
+The project SHALL provide about pages under `docs/about/`.
 
 #### Scenario: About content
-- **GIVEN** a user reading `docs/about.md`
+- **GIVEN** a user reading `docs/about/index.md` and `docs/about/about-onetool.md`
 - **WHEN** they view the page
 - **THEN** they find project information, authors, and license details
 
@@ -429,21 +430,20 @@ The project SHALL provide learning materials in `docs/learn/`.
 - **WHEN** checked
 - **THEN** it contains quickstart, installation, configuration, security, explicit-calls, and comparison
 - **AND** extending documentation is in `learn/extending/`
-- **AND** guides are in `learn/guides/`
 
-### Requirement: Guides Subsection
+### Requirement: Extending Subsection
 
-The project SHALL provide task-oriented guides in `docs/learn/guides/`.
+The project SHALL provide task-oriented extension documentation in `docs/learn/extending/`.
 
-#### Scenario: Guides landing page
-- **GIVEN** a user navigating to `docs/learn/guides/index.md`
+#### Scenario: Extending landing page
+- **GIVEN** a user navigating to `docs/learn/extending/index.md`
 - **WHEN** they read it
-- **THEN** they find a brief overview of available guides
-- **AND** links to individual guide pages
+- **THEN** they find a brief overview of extension documentation
+- **AND** links to the extension tool guide
 
 ### Requirement: Chrome DevTools Guide
 
-The project SHALL provide a comprehensive Chrome DevTools MCP guide at `docs/learn/guides/chrome-devtools.md`.
+The project SHALL provide Chrome DevTools MCP guidance in `docs/reference/servers/chrome-devtools.md`.
 
 #### Scenario: Quick start section
 - **GIVEN** a user wanting to try Chrome DevTools MCP
@@ -485,4 +485,3 @@ The project SHALL provide a comprehensive Chrome DevTools MCP guide at `docs/lea
 - **WHEN** they read the FAQ section
 - **THEN** they find answers to at least 8 common questions
 - **AND** answers include code examples where relevant
-

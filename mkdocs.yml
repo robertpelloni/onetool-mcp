@@ -145,10 +145,8 @@ nav:
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
       - Comparison: learn/comparison.md
+      - Extension Tools: learn/extension-tools.md
       - What's New in v2: learn/whats-new-v2.md
-      - Extending:
-          - learn/extending/index.md
-          - Extension Tools: learn/extending/extension-tools.md
   - Reference:
       - reference/index.md
       - CLIs:
@@ -160,7 +158,7 @@ nav:
           - reference/tools/index.md
           - AWS: reference/tools/aws.md
           - Brave: reference/tools/brave.md
-          - Chrome DevTools Util: reference/tools/chrome-devtools-util.md
+          - Chrome DevTools Util: reference/tools/chrome-util.md
           - Context7: reference/tools/context7.md
           - Convert: reference/tools/convert.md
           - DB: reference/tools/db.md
@@ -172,8 +170,9 @@ nav:
           - LLM: reference/tools/llm.md
           - Mem: reference/tools/mem.md
           - OT Core: reference/tools/ot.md
+          - OT Secrets: reference/tools/secrets.md
           - Package: reference/tools/package.md
-          - Playwright Util: reference/tools/playwright-util.md
+          - Playwright Util: reference/tools/play-util.md
           - Ripgrep: reference/tools/ripgrep.md
           - Timer: reference/tools/timer.md
           - WB (Whiteboard): reference/tools/wb.md

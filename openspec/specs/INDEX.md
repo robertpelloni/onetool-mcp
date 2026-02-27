@@ -75,9 +75,10 @@ The MCP server that exposes tools for LLM code execution.
 |------|---------|
 | [tool-devtools-annotation](ottools/tool-devtools-annotation/spec.md) | Chrome DevTools inject.js annotation system |
 | [tool-devtools-util](ottools/tool-devtools-util/spec.md) | Chrome DevTools automation utilities |
+| [tool-forge](ottools/tool-forge/spec.md) | Extension scaffolding and skill installation |
 | [tool-llm](ottools/tool-llm/spec.md) | LLM-powered data transformation |
 | [tool-mem](ottools/tool-mem/spec.md) | Persistent agent memory with semantic search |
-| [tool-scaffold](ottools/tool-scaffold/spec.md) | Extension scaffolding |
+| [tool-secrets](ottools/tool-secrets/spec.md) | Age-encrypted secrets management |
 | [tool-timer](ottools/tool-timer/spec.md) | Named stopwatch timers |
 
 ### Domain Tools (`[util]` extra)
@@ -130,11 +131,11 @@ CLI for testing and benchmarking MCP servers.
 | onetool Core | 8 |
 | Tool Infrastructure | 1 |
 | Built-in Tools (core) | 1 |
-| Built-in Tools (ottools) | 6 |
+| Built-in Tools (ottools) | 7 |
 | Domain Tools [util] | 5 |
 | Domain Tools [dev] | 7 |
 | bench | 8 |
-| **Total** | **42** |
+| **Total** | **43** |
 
 ---
 

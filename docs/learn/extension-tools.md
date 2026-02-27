@@ -4,6 +4,13 @@
 
 Extension tools run in-process with full access to OneTool's logging, config, secrets, and inter-tool calling APIs. This is the recommended approach for most tools.
 
+## TL;DR
+
+- Define `pack = "name"` and exported keyword-only functions.
+- Decorate each callable with `@tool` for registry discovery.
+- Use OneTool APIs for config, secrets, logging, and calling other tools.
+- Validate/reload quickly during development with Forge and `ot.reload()`.
+
 ## Minimal Structure
 
 An extension needs just one file:
