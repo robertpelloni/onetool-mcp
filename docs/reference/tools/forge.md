@@ -15,7 +15,7 @@ Create, validate, and install extension tools and skill stubs.
 |----------|-------------|
 | `ot_forge.create_ext(name, ...)` | Create a new in-process extension tool |
 | `ot_forge.validate_ext(path)` | Validate an extension before reload |
-| `ot_forge.install_skill(install, ...)` | Install a skill stub for an AI tool |
+| `ot_forge.install_skills(install, ...)` | Install a skill stub for an AI tool |
 
 ## Key Parameters
 
@@ -27,6 +27,8 @@ Create, validate, and install extension tools and skill stubs.
 | `pack_name` | str | Pack name for dot notation (default: same as name) |
 | `function` | str | Main function name (default: `run`) |
 | `description` | str | Module description |
+| `function_description` | str | Function docstring description |
+| `api_key` | str | API key secret name for optional config (default: `MY_API_KEY`) |
 
 ### validate_ext
 
@@ -34,7 +36,7 @@ Create, validate, and install extension tools and skill stubs.
 |-----------|------|-------------|
 | `path` | str | Full path to the extension file |
 
-### install_skill
+### install_skills
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -81,14 +83,14 @@ ot_forge.validate_ext(path=".onetool/tools/my_tool/my_tool.py")
 ot.skills()
 
 # Install a skill stub for Claude Code
-ot_forge.install_skill(install="ot-guide")
+ot_forge.install_skills(install="ot-ref")
 
 # Install for a different AI tool
-ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")
+ot_forge.install_skills(install="ot-ref", tool="codex")
 
 # Install all skills at once (default)
-ot_forge.install_skill()
+ot_forge.install_skills()
 
 # Install all skills except specific ones
-ot_forge.install_skill(exclude=["ot-aws-mcp", "ot-chrome-devtools-mcp"])
+ot_forge.install_skills(exclude=["ot-ref"])
 ```

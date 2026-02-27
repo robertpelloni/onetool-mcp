@@ -1,4 +1,4 @@
-"""Unit tests for ot_forge.install_skill() — skill stub installation."""
+"""Unit tests for ot_forge.install_skills() — skill stub installation."""
 
 from __future__ import annotations
 
@@ -93,11 +93,11 @@ def _patch_env(env: dict):
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_claude(fake_env: dict, tmp_path: Path) -> None:
-    """install_skill(install=...) installs stub for Claude Code."""
-    from ottools.ot_forge import install_skill
+    """install_skills(install=...) installs stub for Claude Code."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(install="my-skill", tool="claude")
+        result = install_skills(install="my-skill", tool="claude")
 
     assert "installed" in result or "updated" in result
     stub_file = fake_env["project_dir"] / ".claude" / "skills" / "my-skill" / "SKILL.md"
@@ -111,11 +111,11 @@ def test_install_skill_claude(fake_env: dict, tmp_path: Path) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_codex(fake_env: dict) -> None:
-    """install_skill(install=..., tool='codex') installs stub for Codex."""
-    from ottools.ot_forge import install_skill
+    """install_skills(install=..., tool='codex') installs stub for Codex."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(install="my-skill", tool="codex")
+        result = install_skills(install="my-skill", tool="codex")
 
     assert "installed" in result or "updated" in result
     stub_file = fake_env["project_dir"] / ".codex" / "skills" / "my-skill" / "SKILL.md"
@@ -125,11 +125,11 @@ def test_install_skill_codex(fake_env: dict) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_all(fake_env: dict) -> None:
-    """install_skill(install='all') installs stubs for all bundled skills."""
-    from ottools.ot_forge import install_skill
+    """install_skills(install='all') installs stubs for all bundled skills."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(install="all", tool="claude")
+        result = install_skills(install="all", tool="claude")
 
     assert "my-skill" in result
     assert "other-skill" in result
@@ -142,11 +142,11 @@ def test_install_skill_all(fake_env: dict) -> None:
 @pytest.mark.tools
 def test_install_skill_overwrites(fake_env: dict) -> None:
     """Installing an already-existing stub reports 'updated'."""
-    from ottools.ot_forge import install_skill
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        install_skill(install="my-skill", tool="claude")
-        result = install_skill(install="my-skill", tool="claude")
+        install_skills(install="my-skill", tool="claude")
+        result = install_skills(install="my-skill", tool="claude")
 
     assert "updated" in result
 
@@ -154,11 +154,11 @@ def test_install_skill_overwrites(fake_env: dict) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_default(fake_env: dict) -> None:
-    """install_skill() with no args installs all bundled skills."""
-    from ottools.ot_forge import install_skill
+    """install_skills() with no args installs all bundled skills."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill()
+        result = install_skills()
 
     assert "my-skill" in result
     assert "other-skill" in result
@@ -170,11 +170,11 @@ def test_install_skill_default(fake_env: dict) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_exclude(fake_env: dict) -> None:
-    """install_skill(exclude=[...]) installs all skills except excluded ones."""
-    from ottools.ot_forge import install_skill
+    """install_skills(exclude=[...]) installs all skills except excluded ones."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(exclude=["other-skill"])
+        result = install_skills(exclude=["other-skill"])
 
     project = fake_env["project_dir"]
     assert (project / ".claude" / "skills" / "my-skill" / "SKILL.md").exists()
@@ -186,11 +186,11 @@ def test_install_skill_exclude(fake_env: dict) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_unknown(fake_env: dict) -> None:
-    """install_skill(install='unknown') returns error listing available skills."""
-    from ottools.ot_forge import install_skill
+    """install_skills(install='unknown') returns error listing available skills."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(install="nonexistent-skill")
+        result = install_skills(install="nonexistent-skill")
 
     assert "Error" in result or "Unknown" in result
     assert "my-skill" in result
@@ -199,11 +199,11 @@ def test_install_skill_unknown(fake_env: dict) -> None:
 @pytest.mark.unit
 @pytest.mark.tools
 def test_install_skill_unsupported_tool(fake_env: dict) -> None:
-    """install_skill(install=..., tool='unknown-tool') returns error."""
-    from ottools.ot_forge import install_skill
+    """install_skills(install=..., tool='unknown-tool') returns error."""
+    from ottools.ot_forge import install_skills
 
     with _patch_env(fake_env):
-        result = install_skill(install="my-skill", tool="unknown-tool")
+        result = install_skills(install="my-skill", tool="unknown-tool")
 
     assert "Error" in result or "Unsupported" in result
     assert "claude" in result

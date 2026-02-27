@@ -13,10 +13,10 @@ from ot.config.loader import get_config
 from ot.logging import LogSpan
 from ot.utils.cache import cache
 
-# Pack for dot notation: ot_forge.create_ext(), ot_forge.validate_ext(), ot_forge.install_skill()
+# Pack for dot notation: ot_forge.create_ext(), ot_forge.validate_ext(), ot_forge.install_skills()
 pack = "ot_forge"
 
-__all__ = ["create_ext", "install_skill", "validate_ext"]
+__all__ = ["create_ext", "install_skills", "validate_ext"]
 
 
 def _get_templates_dir() -> Path:
@@ -413,7 +413,7 @@ def _get_skill_body(skill_name: str) -> str:
     return content.strip()
 
 
-def install_skill(
+def install_skills(
     *,
     install: str = "all",
     exclude: list[str] | None = None,
@@ -433,14 +433,13 @@ def install_skill(
         Status message describing what was done
 
     Example:
-        ot_forge.install_skill()
-        ot_forge.install_skill(exclude=["ot-aws-mcp"])
-        ot_forge.install_skill(install="ot-guide")
-        ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")
-        ot_forge.install_skill(install="all", tool="opencode")
+        ot_forge.install_skills()
+        ot_forge.install_skills(install="ot-ref")
+        ot_forge.install_skills(install="ot-ref", tool="codex")
+        ot_forge.install_skills(install="all", tool="opencode")
     """
     exclude = exclude or []
-    with LogSpan(span="ot_forge.install_skill", install=install, tool=tool) as s:
+    with LogSpan(span="ot_forge.install_skills", install=install, tool=tool) as s:
         tools_config = _get_tools_config()
         bundled = _list_bundled_skills()
 
@@ -455,7 +454,7 @@ def install_skill(
 
         # Resolve list of skills to install
         if install == "all":
-            to_install = [s for s in bundled if s not in exclude]
+            to_install = [skill for skill in bundled if skill not in exclude]
         else:
             if install not in bundled:
                 s.add(error="unknown_skill", install=install)
@@ -472,7 +471,7 @@ def install_skill(
             template_src = _get_skill_stub_template()
             tmpl = Template(template_src)
         except ImportError:
-            return "Error: jinja2 is required for ot_forge.install_skill(). Install it: pip install jinja2"
+            return "Error: jinja2 is required for ot_forge.install_skills(). Install it: pip install jinja2"
 
         from ot.paths import expand_path
 

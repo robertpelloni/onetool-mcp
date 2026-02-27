@@ -81,38 +81,38 @@ The extension template SHALL be stored in the bundled config defaults directory.
 
 ### Requirement: Install Skill Stub Function
 
-The ot_forge pack SHALL provide an `install_skill()` function to install skill stubs for AI tools.
+The ot_forge pack SHALL provide an `install_skills()` function to install skill stubs for AI tools.
 
 #### Scenario: Install stub for Claude Code (default)
-- **WHEN** `ot_forge.install_skill(install="ot-guide")` is called
-- **THEN** it SHALL write a stub file to `.claude/skills/ot-guide/SKILL.md`
+- **WHEN** `ot_forge.install_skills(install="ot-ref")` is called
+- **THEN** it SHALL write a stub file to `.claude/skills/ot-ref/SKILL.md`
 - **AND** the stub SHALL contain the full body content of the skill
 
 #### Scenario: Install stub for Codex
-- **WHEN** `ot_forge.install_skill(install="ot-chrome-devtools-mcp", tool="codex")` is called
-- **THEN** it SHALL write a stub file to `.codex/skills/ot-chrome-devtools-mcp/SKILL.md`
+- **WHEN** `ot_forge.install_skills(install="ot-ref", tool="codex")` is called
+- **THEN** it SHALL write a stub file to `.codex/skills/ot-ref/SKILL.md`
 
 #### Scenario: Install stub for OpenCode
-- **WHEN** `ot_forge.install_skill(install="ot-playwright-mcp", tool="opencode")` is called
-- **THEN** it SHALL write a stub file to `.opencode/skills/ot-playwright-mcp/SKILL.md`
+- **WHEN** `ot_forge.install_skills(install="ot-ref", tool="opencode")` is called
+- **THEN** it SHALL write a stub file to `.opencode/skills/ot-ref/SKILL.md`
 
 #### Scenario: Install all stubs
-- **WHEN** `ot_forge.install_skill(install="all")` is called
+- **WHEN** `ot_forge.install_skills(install="all")` is called
 - **THEN** it SHALL install stubs for all bundled skills
 - **AND** default tool SHALL be `"claude"`
 
 #### Scenario: Stub already installed
-- **WHEN** `ot_forge.install_skill(install="ot-guide")` is called
+- **WHEN** `ot_forge.install_skills(install="ot-ref")` is called
 - **AND** the stub file already exists
 - **THEN** it SHALL overwrite the existing stub
 - **AND** report that it was updated
 
 #### Scenario: Unknown skill name
-- **WHEN** `ot_forge.install_skill(install="unknown-skill")` is called
+- **WHEN** `ot_forge.install_skills(install="unknown-skill")` is called
 - **THEN** it SHALL return an error message listing available skill names
 
 #### Scenario: Unsupported tool
-- **WHEN** `ot_forge.install_skill(install="ot-guide", tool="unknown-tool")` is called
+- **WHEN** `ot_forge.install_skills(install="ot-ref", tool="unknown-tool")` is called
 - **THEN** it SHALL return an error message listing supported tools
 
 ### Requirement: Stub File Format
@@ -129,7 +129,7 @@ Skill stub files SHALL use a unified frontmatter format with `name:` and `descri
 Stub installation paths SHALL be driven by configuration in `global_templates/skills.md`.
 
 #### Scenario: Path config read from skills.md
-- **WHEN** `ot_forge.install_skill()` resolves the installation path
+- **WHEN** `ot_forge.install_skills()` resolves the installation path
 - **THEN** it SHALL read the path template from `global_templates/skills.md` for the specified tool
 - **AND** substitute `{name}` with the skill name
 
