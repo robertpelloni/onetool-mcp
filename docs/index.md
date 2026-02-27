@@ -17,6 +17,20 @@ hide:
 </div>
 
 
+!!! tip "OneTool v2 is here"
+    **New in v2 — highlights:**
+
+    - :material-aws: **Dynamic AWS proxy** — the only practical way to use all 57+ official AWS MCP servers; zero token tax, credentials and SSO handled automatically
+    - :material-draw: **Live whiteboard** — draw diagrams and architecture with a Mermaid-compatible DSL, powered by Excalidraw
+    - :material-magnify: **Three search engines** — Brave, Google (Ground), and Tavily; each with batch support, topic filters, and answer summaries
+    - :material-eye: **Browser annotations** — highlight page elements and guide users through multi-step workflows via Chrome DevTools or Playwright
+    - :material-console: **Interactive setup** — `onetool init` opens a TUI to select exactly the extensions you need; no manual YAML editing to get started
+    - :material-file-cog: **Cleaner config** — flat `~/.onetool/` layout, explicit `--config` and `--secrets` flags, and a versioned schema with clear errors
+    - :material-lock: **Encrypted secrets** — age-encrypted `secrets.yaml` backed by your OS keychain
+    - :material-package-variant: **Leaner install** — optional `[util]` and `[dev]` extras; install only the dependencies you need
+
+    [:octicons-arrow-right-24: See everything that's new in v2](learn/whats-new-v2.md)
+
 ## **The Problem**
 
 ### Tool Tax
@@ -30,7 +44,7 @@ And then there's **context rot** -  the phenomenon where the agent's performance
 
 OneTool is **one MCP server** that exposes tools as a Python API. Instead of reading tool definitions, your agent writes code  - `brave.search(q="react docs")`  - and OneTool runs it.
 
-Configure one MCP Server. Use unlimited tools. 
+Configure one MCP Server. Use unlimited tools.
 
 **96% fewer tokens. 30× lower cost. No context rot. 100+ tools, extensible and configurable**
 
@@ -78,7 +92,7 @@ Write Python, not tool definitions. You see exactly what runs. No more guessing.
 
 <div class="card span-2" markdown>
 
-### :material-puzzle: Scaffold Tools
+### :material-puzzle: Forge New Tools
 
 Build new tools as part of the conversation. New tools are just Python functions. Drop a file, get a pack.
 

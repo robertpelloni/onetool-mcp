@@ -128,8 +128,8 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | `ot`       | `help`, `tools`, `stats`                | Introspection          |
 | `package`  | `npm`, `pypi`, `cargo`                  | Package versions       |
 | `ripgrep`  | `search`, `count`                       | Fast code search       |
-| `forge`    | `create_ext`, `install_skill`, `validate_ext` | Generate new tools |
-| `web`      | `fetch`, `fetch_batch`                  | Web fetching           |
+| `forge`    | `create_ext`, `install_skills`, `validate_ext` | Generate new tools |
+| `webfetch` | `fetch`, `fetch_batch`                  | Web fetching           |
 
 [📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
 

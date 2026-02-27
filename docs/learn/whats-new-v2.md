@@ -6,58 +6,18 @@ This guide covers what you gain in OneTool MCP v2, followed by upgrade steps and
 
 These packs are entirely new in v2.
 
-### ot_secrets — Secret encryption
+### aws — Dynamic proxy to all 57+ official AWSlabs MCP servers `[dev]`
 
-In v1, API keys sat in plain text in `secrets.yaml`. If that file was accidentally committed or shared, every key was exposed. v2 adds transparent age encryption backed by your OS keychain. You generate an identity once, encrypt your secrets file in-place, and from that point on OneTool decrypts values automatically at load time. You can audit which values are still plain, rotate keys, and check keychain status — all without leaving the tool.
-
-```python
->>> ot_secrets.init()                          # generate key, store in keychain
->>> ot_secrets.encrypt(file="secrets.yaml")    # encrypt plain values in-place
->>> ot_secrets.audit(file="secrets.yaml")      # check which values are encrypted
->>> ot_secrets.rotate(file="secrets.yaml")     # rotate to a new key
->>> ot_secrets.status()                        # keychain status
-```
-
-### ot_timer — Named timers
-
-Simple named timers that persist across tool calls. Start a timer before a long operation, check elapsed time after, and compare results. Useful for profiling builds, API calls, or any workflow where you want to measure duration without leaving the conversation.
+AWS publishes 57 official MCP servers (awslabs) covering everything from S3 and Lambda to Bedrock and Cost Explorer. Without OneTool, using even one of them means paying the full tool tax on every request — and configuring credentials, profiles, SSO, and MFA manually for each. This pack gives you dynamic access to all 57 through a single interface with a fixed, minimal token footprint. Pick servers individually or activate curated role-based bundles (finops, security, compute, data, ml, and 13 more). Credential pre-flight, SSO login, MFA sessions, and profile switching are all handled automatically.
 
 ```python
->>> ot_timer.start(name="build")
->>> ot_timer.elapsed(name="build")
->>> ot_timer.list()
+>>> aws_util.whoami()
+>>> aws_util.login(profile="dev")
+>>> aws_util.start_packs(role="finops")
+>>> aws_util.profiles()
 ```
 
-### ot_forge — Extension scaffolding
-
-Generates the boilerplate for new tool packs — file structure, type hints, keyword-only args, docstrings — so you can focus on the logic. Also validates extensions before reload, catching issues early.
-
-```python
->>> ot_forge.create_ext(name="my_pack", pack_name="mypack", function="hello")
->>> ot_forge.validate_ext(path="src/mypack.py")
-```
-
-### skills — Bundled skill guides
-
-v1 supported user-defined skill files but they were fragile and hard to maintain. v2 replaces them with curated, bundled skill guides covering AWS, Chrome DevTools, Playwright, and more. These are structured Markdown documents that give your LLM the context it needs to use external MCP servers correctly — no manual setup required.
-
-```python
->>> skills.skills()                     # list all skills
->>> skills.skills(name="ot-aws-mcp")   # get full skill content
-```
-
-### worktree — Parallel agent tasks `[dev]`
-
-Running multiple agents on the same repo is risky — they step on each other's files, create merge conflicts, and lose work. The worktree pack solves this by giving each task an isolated git worktree with its own branch and working directory. Agents can work in parallel without coordination. When a task is done, `commit` squashes, rebases, and pushes to main cleanly.
-
-```python
->>> worktree.add(id="fix-login", description="Fix login timeout")
->>> worktree.list()
->>> worktree.commit(message="fix: resolve login timeout")
->>> worktree.remove(id="fix-login")
-```
-
-Also provides `checkout`, `diff`, `status`, `log`, `mark`, `prepare`, and `clean`.
+Also provides `check`, `use`, `mfa`, `roles`, `packs`, `stop_packs`, `refresh_packs`, `services`, `regions`, `arn`, `attributes`, and `values`.
 
 ### wb (excalidraw) — Live whiteboard `[dev]`
 
@@ -73,18 +33,20 @@ Turns Excalidraw into a tool-driven canvas. Agents can generate architecture dia
 
 Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, and `hard_reset`.
 
-### aws — Dynamic proxy to all (57+) official AWSlabs MCP servers `[dev]`
+### tavily — AI-powered search and URL extraction `[util]`
 
-AWS publishes 57 official MCP servers (awslabs) covering everything from S3 and Lambda to Bedrock and Cost Explorer. Configuring them manually — credentials, profiles, SSO, MFA, server lifecycle — is a chore. This pack gives you dynamic access to all of them through a single interface. Pick servers individually or activate curated role-based bundles (finops, security, compute, data, ml, and 13 more). The pack handles credential pre-flight, SSO login, MFA sessions, and profile switching, then starts the servers on demand and tears them down when you're done.
+Tavily is an AI-native search API optimised for LLM pipelines. Results come back clean — titles, URLs, content snippets, and an AI-synthesised answer — all in one call. `output_format` controls the response structure (`"full"`, `"text_only"`, `"sources_only"`), matching the convention used by the `ground` pack. `search_batch()` runs multiple queries in parallel with section labels. `extract_batch()` fetches multiple URL sets concurrently. `research()` submits a deep research task and polls until complete.
 
 ```python
->>> aws_util.whoami()
->>> aws_util.login(profile="dev")
->>> aws_util.start_packs(role="finops")
->>> aws_util.profiles()
+>>> tavily.search(query="LLM context window research", output_format="text_only")
+>>> tavily.search(query="AI news", topic="news", time_range="week", min_score=0.7)
+>>> tavily.search_batch(queries=["React 19 features", "Vue 4 roadmap"])
+>>> tavily.extract(urls=["https://example.com/article"])
+>>> tavily.extract_batch(url_sets=[(["https://docs.a.com"], "A"), (["https://docs.b.com"], "B")])
+>>> tavily.research(input="How does Rust's ownership model work?", model="mini")
 ```
 
-Also provides `check`, `use`, `mfa`, `roles`, `packs`, `stop_packs`, `refresh_packs`, `services`, `regions`, `arn`, `attributes`, and `values`.
+Requires a `TAVILY_API_KEY` in `secrets.yaml`. Supports topic filters (`general`, `news`, `finance`), domain allow/block lists, time range filtering, relevance score threshold (`min_score`), and configurable result depth.
 
 ### chrome_util / play_util — Browser annotations `[dev]`
 
@@ -95,6 +57,59 @@ Two packs that bring visual annotation to browser automation. Inject overlays on
 >>> chrome_util.highlight_element(selector="h1", label="Title")
 >>> chrome_util.guide_user(instructions="Click the login button")
 >>> chrome_util.scan_annotations()
+```
+
+### skills — Bundled skill guides
+
+v1 supported user-defined skill files but they were fragile and hard to maintain. v2 replaces them with curated, bundled skill guides covering AWS, Chrome DevTools, Playwright, and more. These are structured Markdown documents that give your LLM the context it needs to use external MCP servers correctly — no manual setup required.
+
+```python
+>>> skills.skills()                     # list all skills
+>>> skills.skills(name="ot-aws-mcp")   # get full skill content
+```
+
+### ot_secrets — Secret encryption
+
+In v1, API keys sat in plain text in `secrets.yaml`. If that file was accidentally committed or shared, every key was exposed. v2 adds transparent age encryption backed by your OS keychain. You generate an identity once, encrypt your secrets file in-place, and from that point on OneTool decrypts values automatically at load time. You can audit which values are still plain, rotate keys, and check keychain status — all without leaving the tool.
+
+```python
+>>> ot_secrets.init()                          # generate key, store in keychain
+>>> ot_secrets.encrypt(file="secrets.yaml")    # encrypt plain values in-place
+>>> ot_secrets.audit(file="secrets.yaml")      # check which values are encrypted
+>>> ot_secrets.rotate(file="secrets.yaml")     # rotate to a new key
+>>> ot_secrets.status()                        # keychain status
+```
+
+### ot_forge — Extension scaffolding
+
+Generates the boilerplate for new tool packs — file structure, type hints, keyword-only args, docstrings — so you can focus on the logic. Also validates extensions before reload, catching issues early.
+
+```python
+>>> ot_forge.create_ext(name="my_pack", pack_name="mypack", function="hello")
+>>> ot_forge.validate_ext(path="src/mypack.py")
+```
+
+### worktree — Parallel agent tasks `[dev]` *(beta)*
+
+Running multiple agents on the same repo is risky — they step on each other's files, create merge conflicts, and lose work. The worktree pack solves this by giving each task an isolated git worktree with its own branch and working directory. Agents can work in parallel without coordination. When a task is done, `commit` squashes, rebases, and pushes to main cleanly.
+
+```python
+>>> worktree.add(id="fix-login", description="Fix login timeout")
+>>> worktree.list()
+>>> worktree.commit(message="fix: resolve login timeout")
+>>> worktree.remove(id="fix-login")
+```
+
+Also provides `checkout`, `diff`, `status`, `log`, `mark`, `prepare`, and `clean`.
+
+### ot_timer — Named timers
+
+Simple named timers that persist across tool calls. Start a timer before a long operation, check elapsed time after, and compare results. Useful for profiling builds, API calls, or any workflow where you want to measure duration without leaving the conversation.
+
+```python
+>>> ot_timer.start(name="build")
+>>> ot_timer.elapsed(name="build")
+>>> ot_timer.list()
 ```
 
 ---
@@ -132,6 +147,26 @@ Adds `get_playground_url(source)` which generates a shareable Kroki playground l
 ---
 
 ## New Features
+
+### Interactive setup with `onetool init`
+
+Getting started no longer means editing YAML by hand. Run `onetool init` and a TUI opens — a checkbox list of every available extension (prompts, servers, security rules, diagram config, snippets, worktree config). Toggle what you want, press enter, and the config files are written for you. Existing files are backed up to `.bak` automatically.
+
+```bash
+onetool init -c ~/.onetool
+```
+
+### Cleaner config layout
+
+v2 simplifies how config is found and passed to the server:
+
+- **Flat directory** — config lives in `~/.onetool/` directly, not `~/.onetool/config/`
+- **Explicit flags** — `--config` and `--secrets` are passed to the server; no implicit discovery
+- **Versioned schema** — add `version: 2` to `onetool.yaml`; configs without it are rejected with a clear error rather than silently misbehaving
+
+```bash
+onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
+```
 
 ### Slim prompts
 

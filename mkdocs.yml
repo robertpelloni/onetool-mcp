@@ -144,7 +144,6 @@ nav:
       - Configuration: learn/configuration.md
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
-      - Comparison: learn/comparison.md
       - Extension Tools: learn/extension-tools.md
       - What's New in v2: learn/whats-new-v2.md
   - Reference:
@@ -174,9 +173,10 @@ nav:
           - Package: reference/tools/package.md
           - Playwright Util: reference/tools/play-util.md
           - Ripgrep: reference/tools/ripgrep.md
+          - Tavily: reference/tools/tavily.md
           - Timer: reference/tools/timer.md
           - WB (Whiteboard): reference/tools/wb.md
-          - Web: reference/tools/web.md
+          - Webfetch: reference/tools/webfetch.md
           - Worktree: reference/tools/worktree.md
       - Servers:
           - reference/servers/index.md
@@ -185,7 +185,8 @@ nav:
           - GitHub: reference/servers/github.md
           - Playwright: reference/servers/playwright.md
   - Results:
-      - Mem vs File Benchmark: results/mem-vs-file-20260223.md
+      - OneTool vs MCPs: learn/comparison.md
+      - Mem vs File vs Claude: results/mem-vs-file-20260223.md
   - About:
       - about/index.md
       - About OneTool: about/about-onetool.md

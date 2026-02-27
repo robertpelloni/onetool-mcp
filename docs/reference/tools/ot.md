@@ -249,7 +249,7 @@ Aliases are defined in config:
 alias:
   ws: brave.search
   ns: brave.news
-  wf: web.fetch
+  wf: webfetch.fetch
 ```
 
 ## ot.snippets() / ot.snippet_info()
@@ -307,7 +307,7 @@ ot.skills(name="ot-chrome-devtools-mcp")
 ot.skills(name="ot-ref")
 ```
 
-Skills are bundled `.md` files that can be installed as context prompts for AI tools. Use `ot_forge.install_skill()` to write them to disk.
+Skills are bundled `.md` files that can be installed as context prompts for AI tools. Use `ot_forge.install_skills()` to write them to disk.
 
 ## ot.config()
 

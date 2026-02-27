@@ -1,4 +1,4 @@
-# Benchmark Comparison Results
+# OneTool vs MCPs Benchmark
 
 *Benchmarks run: February 2026 · [raw data](../results/result-20260223-0334.csv)*
 

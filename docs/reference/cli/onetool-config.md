@@ -437,7 +437,7 @@ Short names for common tool functions:
 alias:
   ws: brave.search
   ns: brave.news
-  wf: web.fetch
+  wf: webfetch.fetch
 ```
 
 ## Snippets

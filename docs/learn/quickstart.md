@@ -119,9 +119,9 @@ Finally, list all OneTool commands used.
 Commands:
 >>> ot.health()
 >>> ot.help()
->>> ot.help(q="web.fetch", i="full")
->>> web.fetch(ubad="https://onetool.beycom.online/")
->>> web.fetch(u="https://onetool.beycom.online/")
+>>> ot.help(q="webfetch.fetch", i="full")
+>>> webfetch.fetch(ubad="https://onetool.beycom.online/")
+>>> webfetch.fetch(u="https://onetool.beycom.online/")
 >>> $pkg
 
 ```
