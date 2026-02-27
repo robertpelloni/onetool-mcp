@@ -592,17 +592,17 @@ The system SHALL support tool-specific configuration via the `tools:` section, w
 - **DEFAULT** timeout: 30.0, docs_limit: 10 (from context7.py Config class)
 - **RANGE** timeout: 1.0-120.0, docs_limit: 1-20
 
-#### Scenario: Web fetch configuration
+#### Scenario: Webfetch configuration
 - **GIVEN** configuration with:
   ```yaml
   tools:
-    web:
+    webfetch:
       timeout: 60.0
       max_length: 100000
   ```
-- **WHEN** web.* functions are called
+- **WHEN** webfetch.* functions are called
 - **THEN** they SHALL use 60 second timeout and 100000 max length
-- **DEFAULT** timeout: 30.0, max_length: 50000 (from web.py Config class)
+- **DEFAULT** timeout: 30.0, max_length: 50000 (from webfetch.py Config class)
 - **RANGE** timeout: 1.0-120.0, max_length: 1000-500000
 
 #### Scenario: Ripgrep configuration

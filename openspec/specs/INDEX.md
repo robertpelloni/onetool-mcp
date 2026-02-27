@@ -101,7 +101,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via Playwright (`wb` pack) |
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
-| [tool-web](otdev/tool-web/spec.md) | Web content extraction via trafilatura |
+| [tool-webfetch](otdev/tool-webfetch/spec.md) | Web content extraction via trafilatura |
 
 ---
 
@@ -157,6 +157,7 @@ Specs that have been consolidated into other specs:
 - `tool-grounding-search` → renamed to [tool-ground](otutil/tool-ground/spec.md)
 - `tool-transform` → renamed to [tool-llm](ottools/tool-llm/spec.md)
 - `tool-web-fetch` → renamed to [tool-web](otdev/tool-web/spec.md)
+- `tool-web` → renamed to [tool-webfetch](otdev/tool-webfetch/spec.md)
 - `tool-notify` → consolidated into [tool-ot](tool-ot/spec.md)
 - `tool-sdk` → removed (extensions use `ot.*` imports directly)
 - `changes/add-excalidraw-pack` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (spec updated to match final implementation: pack renamed `wb`, tools renamed, file format changed, new tools added)

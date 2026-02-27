@@ -46,7 +46,7 @@ NAME_TO_PACK = {
     "Ripgrep": "ripgrep",
     "Timer": "ot_timer",
     "WB (Whiteboard)": "wb",
-    "Web": "web",
+    "Webfetch": "webfetch",
     "Worktree": "worktree",
 }
 

@@ -576,7 +576,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
 
 #### Scenario: Info level min
 - **GIVEN** `info="min"` parameter
-- **WHEN** `ot.help(query="web", info="min")` is called
+- **WHEN** `ot.help(query="webfetch", info="min")` is called
 - **THEN** it SHALL return only names of matching items
 
 #### Scenario: Info level default (default)
@@ -600,7 +600,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - `db` -> `database`
   - `ground` -> `grounding-search`
   - `ot_llm` -> `ot_llm`
-  - `web` -> `web-fetch`
+  - `webfetch` -> `web-fetch`
 - **AND** packs not in override map SHALL use pack name as slug
 
 #### Scenario: No matches

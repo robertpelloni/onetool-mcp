@@ -11,7 +11,7 @@ context: |
   - ot/: Core framework (executor, config, logging, registry, proxy, paths) — shared with onetool-mcp
   - otcommon/: Shared registry and utilities for extras
   - otutil/: onetool-util MCP server — file, excel, brave, convert, ground tool packs
-  - otdev/: onetool-dev MCP server — ripgrep, web, package, db, diagram, context7 tool packs
+  - otdev/: onetool-dev MCP server — ripgrep, webfetch, package, db, diagram, context7 tool packs
 
   Optional install extras:
   - [util]: openpyxl, pymupdf, python-docx, python-pptx (otutil tools)

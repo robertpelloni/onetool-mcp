@@ -17,7 +17,7 @@ DOC_SLUGS: dict[str, str] = {
     "brave": "brave-search",
     "db": "database",
     "ground": "grounding-search",
-    "web": "web-fetch",
+    "webfetch": "web-fetch",
 }
 
 DOC_BASE_URL = "https://onetool.beycom.online/reference/tools/"

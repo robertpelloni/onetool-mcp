@@ -68,7 +68,7 @@ The server SHALL expose an MCP prompt for fetch-and-transform patterns.
 - **GIVEN** an MCP client requests the `transform_data` prompt
 - **WHEN** the client provides `urls=["https://example.com"]` and `instruction="Extract titles"`
 - **THEN** it SHALL return a properly formatted `__onetool__run` code block
-- **AND** the code SHALL call `web.fetch` for each URL
+- **AND** the code SHALL call `webfetch.fetch` for each URL
 - **AND** the code SHALL include the instruction as a comment for LLM processing
 
 ---

@@ -59,7 +59,7 @@ def _format_general_help() -> str:
 
 ## Discovery
   ot.tools()                    - List all tools
-  ot.tools(pattern="web")       - Filter by pattern
+  ot.tools(pattern="webfetch")  - Filter by pattern
   ot.tool_info(name="brave.search") - Signature + args for a tool
   ot.packs()                    - List all packs (local + MCP)
   ot.pack_info(name="brave")    - Pack details + instructions
@@ -76,7 +76,7 @@ def _format_general_help() -> str:
 
 ## Quick Examples
   brave.search(query="AI news")
-  web.fetch(url="https://...")
+  webfetch.fetch(url="https://...")
   $b_q q=search terms
 
 ## Tips

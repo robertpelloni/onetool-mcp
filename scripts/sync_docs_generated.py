@@ -40,7 +40,7 @@ DOC_MAP = {
     "play_util": "play-util.md",
     "ripgrep": "ripgrep.md",
     "wb": "wb.md",
-    "web": "web.md",
+    "webfetch": "webfetch.md",
     "worktree": "worktree.md",
 }
 
@@ -65,7 +65,7 @@ EXTRA_MAP = {
     "play_util": "[dev]",
     "ripgrep": "[dev]",
     "wb": "[dev]",
-    "web": "[dev]",
+    "webfetch": "[dev]",
     "worktree": "[dev]",
 }
 
