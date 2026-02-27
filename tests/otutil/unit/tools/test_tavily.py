@@ -1,0 +1,829 @@
+"""Tests for Tavily AI search tools.
+
+Tests pure functions (validators, formatters) and main functions with HTTP mocks.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from otutil.tools.tavily import (
+    _EXTRACT_DEPTH_VALUES,
+    _EXTRACT_FORMAT_VALUES,
+    _OUTPUT_FORMAT_VALUES,
+    _RESEARCH_MODEL_VALUES,
+    _SEARCH_DEPTH_VALUES,
+    _TIME_RANGE_VALUES,
+    _TOPIC_VALUES,
+    _format_extract_results,
+    _format_search_results,
+    _format_sources,
+    _validate_days,
+    _validate_extract_depth,
+    _validate_extract_format,
+    _validate_max_results,
+    _validate_output_format,
+    _validate_query,
+    _validate_research_model,
+    _validate_search_depth,
+    _validate_time_range,
+    _validate_topic,
+    _validate_urls,
+    extract,
+    extract_batch,
+    research,
+    search,
+    search_batch,
+)
+
+# -----------------------------------------------------------------------------
+# Pure Function Tests (No Mocking Required)
+# -----------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateQuery:
+    def test_valid_query(self):
+        assert _validate_query("python best practices") is None
+
+    def test_empty_query(self):
+        result = _validate_query("")
+        assert result is not None
+        assert "empty" in result
+
+    def test_whitespace_only_query(self):
+        result = _validate_query("   ")
+        assert result is not None
+        assert "empty" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateMaxResults:
+    def test_valid_max_results(self):
+        assert _validate_max_results(5) is None
+
+    def test_max_results_at_min(self):
+        assert _validate_max_results(1) is None
+
+    def test_max_results_at_max(self):
+        assert _validate_max_results(20) is None
+
+    def test_max_results_too_low(self):
+        result = _validate_max_results(0)
+        assert result is not None
+        assert "1" in result and "20" in result
+
+    def test_max_results_too_high(self):
+        result = _validate_max_results(21)
+        assert result is not None
+        assert "1" in result and "20" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateSearchDepth:
+    def test_valid_basic(self):
+        assert _validate_search_depth("basic") is None
+
+    def test_valid_advanced(self):
+        assert _validate_search_depth("advanced") is None
+
+    def test_invalid_depth(self):
+        result = _validate_search_depth("deep")
+        assert result is not None
+        assert "deep" in result
+
+    def test_all_valid_values(self):
+        for val in _SEARCH_DEPTH_VALUES:
+            assert _validate_search_depth(val) is None
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateTopic:
+    def test_valid_general(self):
+        assert _validate_topic("general") is None
+
+    def test_valid_news(self):
+        assert _validate_topic("news") is None
+
+    def test_valid_finance(self):
+        assert _validate_topic("finance") is None
+
+    def test_invalid_topic(self):
+        result = _validate_topic("sports")
+        assert result is not None
+        assert "sports" in result
+
+    def test_all_valid_values(self):
+        for val in _TOPIC_VALUES:
+            assert _validate_topic(val) is None
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateTimeRange:
+    def test_none_is_valid(self):
+        assert _validate_time_range(None) is None
+
+    def test_all_valid_values(self):
+        for val in _TIME_RANGE_VALUES:
+            assert _validate_time_range(val) is None
+
+    def test_invalid_time_range(self):
+        result = _validate_time_range("hour")
+        assert result is not None
+        assert "hour" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateDays:
+    def test_valid_days(self):
+        assert _validate_days(3) is None
+
+    def test_days_at_min(self):
+        assert _validate_days(1) is None
+
+    def test_days_at_max(self):
+        assert _validate_days(30) is None
+
+    def test_days_too_low(self):
+        result = _validate_days(0)
+        assert result is not None
+        assert "1" in result and "30" in result
+
+    def test_days_too_high(self):
+        result = _validate_days(31)
+        assert result is not None
+        assert "1" in result and "30" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateUrls:
+    def test_valid_urls(self):
+        assert _validate_urls(["https://example.com"]) is None
+
+    def test_empty_urls(self):
+        result = _validate_urls([])
+        assert result is not None
+        assert "empty" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateOutputFormat:
+    def test_all_valid_values(self):
+        for val in _OUTPUT_FORMAT_VALUES:
+            assert _validate_output_format(val) is None
+
+    def test_invalid_format(self):
+        result = _validate_output_format("xml")
+        assert result is not None
+        assert "xml" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateExtractFormat:
+    def test_all_valid_values(self):
+        for val in _EXTRACT_FORMAT_VALUES:
+            assert _validate_extract_format(val) is None
+
+    def test_invalid_format(self):
+        result = _validate_extract_format("html")
+        assert result is not None
+        assert "html" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateExtractDepth:
+    def test_all_valid_values(self):
+        for val in _EXTRACT_DEPTH_VALUES:
+            assert _validate_extract_depth(val) is None
+
+    def test_invalid_depth(self):
+        result = _validate_extract_depth("deep")
+        assert result is not None
+        assert "deep" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestValidateResearchModel:
+    def test_all_valid_values(self):
+        for val in _RESEARCH_MODEL_VALUES:
+            assert _validate_research_model(val) is None
+
+    def test_invalid_model(self):
+        result = _validate_research_model("turbo")
+        assert result is not None
+        assert "turbo" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestFormatSources:
+    def test_basic_sources(self):
+        results = [
+            {"url": "https://a.com", "title": "Site A"},
+            {"url": "https://b.com", "title": "Site B"},
+        ]
+        output = _format_sources(results)
+        assert "1. [Site A](https://a.com)" in output
+        assert "2. [Site B](https://b.com)" in output
+
+    def test_deduplication(self):
+        results = [
+            {"url": "https://a.com", "title": "A"},
+            {"url": "https://a.com", "title": "A duplicate"},
+        ]
+        output = _format_sources(results)
+        assert output.count("https://a.com") == 1
+
+    def test_title_fallback_to_url(self):
+        results = [{"url": "https://a.com", "title": ""}]
+        output = _format_sources(results)
+        assert "https://a.com" in output
+
+    def test_empty_results(self):
+        assert _format_sources([]) == ""
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestFormatSearchResults:
+    def test_full_format_with_results(self):
+        data = {
+            "answer": "Python is great.",
+            "results": [
+                {"title": "Python Docs", "url": "https://python.org", "content": "Official docs", "score": 0.9}
+            ],
+        }
+        result = _format_search_results(data, "full", None)
+        assert "Python is great." in result
+        assert "Python Docs" in result
+        assert "https://python.org" in result
+        assert "## Sources" in result
+
+    def test_full_format_with_credits(self):
+        data = {
+            "results": [{"title": "X", "url": "https://x.com", "content": ""}],
+            "usage": {"credits": 2},
+        }
+        result = _format_search_results(data, "full", None)
+        assert "[Credits: 2]" in result
+
+    def test_full_format_no_results(self):
+        result = _format_search_results({"results": []}, "full", None)
+        assert "No results found." in result
+
+    def test_text_only_returns_answer(self):
+        data = {
+            "answer": "The answer is 42.",
+            "results": [{"title": "X", "url": "https://x.com", "content": ""}],
+        }
+        result = _format_search_results(data, "text_only", None)
+        assert result == "The answer is 42."
+        assert "X" not in result
+
+    def test_text_only_no_answer(self):
+        result = _format_search_results({"results": []}, "text_only", None)
+        assert "No answer available." in result
+
+    def test_sources_only(self):
+        data = {
+            "results": [
+                {"title": "A", "url": "https://a.com", "content": ""},
+                {"title": "B", "url": "https://b.com", "content": ""},
+            ]
+        }
+        result = _format_search_results(data, "sources_only", None)
+        assert "https://a.com" in result
+        assert "https://b.com" in result
+        assert "## Sources" not in result
+
+    def test_sources_only_no_results(self):
+        result = _format_search_results({"results": []}, "sources_only", None)
+        assert "No sources found." in result
+
+    def test_min_score_filtering(self):
+        data = {
+            "results": [
+                {"title": "High", "url": "https://high.com", "content": "", "score": 0.9},
+                {"title": "Low", "url": "https://low.com", "content": "", "score": 0.2},
+            ]
+        }
+        result = _format_search_results(data, "full", 0.5)
+        assert "https://high.com" in result
+        assert "https://low.com" not in result
+
+    def test_min_score_all_filtered(self):
+        data = {
+            "results": [
+                {"title": "Low", "url": "https://low.com", "content": "", "score": 0.1},
+            ]
+        }
+        result = _format_search_results(data, "full", 0.5)
+        assert "No results found." in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestFormatExtractResults:
+    def test_empty_results(self):
+        result = _format_extract_results({"results": [], "failed_results": []})
+        assert "No content extracted." in result
+
+    def test_successful_extraction(self):
+        data = {
+            "results": [
+                {"url": "https://example.com", "raw_content": "Page content here."}
+            ],
+            "failed_results": [],
+        }
+        result = _format_extract_results(data)
+        assert "https://example.com" in result
+        assert "Page content here." in result
+
+    def test_failed_extraction(self):
+        data = {
+            "results": [],
+            "failed_results": [{"url": "https://bad.com", "error": "404 Not Found"}],
+        }
+        result = _format_extract_results(data)
+        assert "Failed" in result
+        assert "https://bad.com" in result
+        assert "404 Not Found" in result
+
+    def test_mixed_results(self):
+        data = {
+            "results": [{"url": "https://ok.com", "raw_content": "OK content"}],
+            "failed_results": [{"url": "https://fail.com", "error": "timeout"}],
+        }
+        result = _format_extract_results(data)
+        assert "https://ok.com" in result
+        assert "OK content" in result
+        assert "https://fail.com" in result
+        assert "timeout" in result
+
+
+# -----------------------------------------------------------------------------
+# Mocked HTTP Tests
+# -----------------------------------------------------------------------------
+
+
+def _make_mock_response(data: dict) -> MagicMock:
+    """Create a mock httpx response."""
+    mock = MagicMock()
+    mock.status_code = 200
+    mock.json.return_value = data
+    mock.raise_for_status.return_value = None
+    return mock
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSearch:
+    def test_basic_search(self):
+        response_data = {
+            "results": [
+                {
+                    "title": "Python Docs",
+                    "url": "https://docs.python.org",
+                    "content": "Official Python documentation",
+                    "score": 0.95,
+                }
+            ],
+            "answer": "Python is a programming language.",
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search(query="python documentation")
+
+        assert "Python Docs" in result
+        assert "https://docs.python.org" in result
+        assert "Python is a programming language." in result
+
+    def test_validation_error_empty_query(self):
+        result = search(query="")
+        assert "Error" in result
+        assert "empty" in result
+
+    def test_validation_error_invalid_depth(self):
+        result = search(query="test", search_depth="invalid")
+        assert "Error" in result
+
+    def test_validation_error_invalid_topic(self):
+        result = search(query="test", topic="bogus")
+        assert "Error" in result
+
+    def test_validation_error_invalid_output_format(self):
+        result = search(query="test", output_format="xml")  # type: ignore[arg-type]
+        assert "Error" in result
+
+    def test_missing_api_key(self):
+        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+            result = search(query="test")
+        assert "TAVILY_API_KEY" in result
+
+    def test_output_format_text_only(self):
+        response_data = {
+            "answer": "Python was created by Guido van Rossum.",
+            "results": [
+                {"title": "Python History", "url": "https://x.com", "content": "...", "score": 0.9}
+            ],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search(query="who created python", output_format="text_only")
+
+        assert result == "Python was created by Guido van Rossum."
+        assert "Python History" not in result
+
+    def test_output_format_sources_only(self):
+        response_data = {
+            "answer": "Some answer.",
+            "results": [
+                {"title": "Source A", "url": "https://a.com", "content": "...", "score": 0.9}
+            ],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search(query="test", output_format="sources_only")
+
+        assert "https://a.com" in result
+        assert "Some answer." not in result
+
+    def test_min_score_filtering(self):
+        response_data = {
+            "results": [
+                {"title": "High", "url": "https://high.com", "content": "Good", "score": 0.9},
+                {"title": "Low", "url": "https://low.com", "content": "Bad", "score": 0.1},
+            ]
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search(query="test", min_score=0.5)
+
+        assert "https://high.com" in result
+        assert "https://low.com" not in result
+
+    def test_domain_filters_sent_in_payload(self):
+        response_data = {"results": [], "answer": ""}
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            search(
+                query="test",
+                include_domains=["example.com"],
+                exclude_domains=["spam.com"],
+            )
+
+        call_kwargs = mock_client.post.call_args
+        payload = call_kwargs[1]["json"]
+        assert payload["include_domains"] == ["example.com"]
+        assert payload["exclude_domains"] == ["spam.com"]
+
+    def test_include_answer_sent_to_api(self):
+        response_data = {"results": [], "answer": ""}
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            search(query="test")
+
+        payload = mock_client.post.call_args[1]["json"]
+        assert payload["include_answer"] is True
+
+    def test_sources_section_in_full_output(self):
+        response_data = {
+            "results": [{"title": "A", "url": "https://a.com", "content": "content", "score": 0.9}],
+            "answer": "The answer.",
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search(query="test", output_format="full")
+
+        assert "## Sources" in result
+        assert "[A](https://a.com)" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestExtract:
+    def test_basic_extraction(self):
+        response_data = {
+            "results": [
+                {
+                    "url": "https://example.com/page",
+                    "raw_content": "This is the page content.",
+                }
+            ],
+            "failed_results": [],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = extract(urls=["https://example.com/page"])
+
+        assert "https://example.com/page" in result
+        assert "This is the page content." in result
+
+    def test_validation_error_empty_urls(self):
+        result = extract(urls=[])
+        assert "Error" in result
+        assert "empty" in result
+
+    def test_validation_error_invalid_format(self):
+        result = extract(urls=["https://example.com"], format="html")
+        assert "Error" in result
+
+    def test_validation_error_invalid_depth(self):
+        result = extract(urls=["https://example.com"], extract_depth="deep")
+        assert "Error" in result
+
+    def test_extract_depth_sent_in_payload(self):
+        response_data = {"results": [{"url": "https://a.com", "raw_content": "x"}], "failed_results": []}
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            extract(urls=["https://a.com"], extract_depth="advanced")
+
+        payload = mock_client.post.call_args[1]["json"]
+        assert payload["extract_depth"] == "advanced"
+
+    def test_missing_api_key(self):
+        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+            result = extract(urls=["https://example.com"])
+        assert "TAVILY_API_KEY" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestExtractBatch:
+    def test_basic_batch(self):
+        response_data = {
+            "results": [{"url": "https://a.com", "raw_content": "Content A"}],
+            "failed_results": [],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = extract_batch(url_sets=[
+                ["https://a.com"],
+                ["https://b.com"],
+            ])
+
+        assert "https://a.com" in result or "Content A" in result
+
+    def test_labeled_sets(self):
+        response_data = {
+            "results": [{"url": "https://docs.react.dev", "raw_content": "React docs"}],
+            "failed_results": [],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = extract_batch(url_sets=[
+                (["https://docs.react.dev"], "React Docs"),
+            ])
+
+        assert "React Docs" in result
+
+    def test_empty_url_sets(self):
+        result = extract_batch(url_sets=[])
+        assert "Error" in result
+
+    def test_empty_urls_in_set(self):
+        result = extract_batch(url_sets=[[]])
+        assert "Error" in result
+
+    def test_validation_error_invalid_format(self):
+        result = extract_batch(url_sets=[["https://a.com"]], format="html")
+        assert "Error" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSearchBatch:
+    def test_basic_batch(self):
+        response_data = {
+            "results": [{"title": "Result", "url": "https://x.com", "content": "..."}],
+            "answer": "An answer.",
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search_batch(queries=["python", "javascript"])
+
+        assert "python" in result.lower() or "Result" in result
+
+    def test_validation_error_invalid_depth(self):
+        result = search_batch(queries=["test"], search_depth="bad")
+        assert "Error" in result
+
+    def test_empty_queries(self):
+        result = search_batch(queries=[])
+        assert "Error" in result
+
+    def test_tuple_queries_with_labels(self):
+        response_data = {
+            "results": [{"title": "R", "url": "https://x.com", "content": "..."}],
+            "answer": "",
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search_batch(
+                queries=[("Python 3.13 features", "Python 3.13")]
+            )
+
+        assert "Python 3.13" in result
+
+    def test_empty_label_falls_back_to_query(self):
+        response_data = {"results": [], "answer": ""}
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search_batch(queries=[("some query", "")])
+
+        assert "some query" in result
+
+    def test_output_format_forwarded(self):
+        response_data = {
+            "answer": "The answer.",
+            "results": [{"title": "X", "url": "https://x.com", "content": "x", "score": 0.9}],
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = search_batch(queries=["q"], output_format="text_only")
+
+        assert "The answer." in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestResearch:
+    def test_validation_error_empty_input(self):
+        result = research(input="")
+        assert "Error" in result
+        assert "empty" in result
+
+    def test_validation_error_invalid_model(self):
+        result = research(input="some topic", model="turbo")
+        assert "Error" in result
+        assert "turbo" in result
+
+    def test_missing_api_key(self):
+        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+            result = research(input="some topic")
+        assert "TAVILY_API_KEY" in result
+
+    def test_synchronous_completion(self):
+        """Research completes immediately (synchronous response)."""
+        response_data = {
+            "status": "completed",
+            "content": "Detailed research report about FastAPI.",
+        }
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(response_data)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+        ):
+            result = research(input="How does FastAPI work?")
+
+        assert "Detailed research report" in result
+
+    def test_polling_completion(self):
+        """Research requires polling before completing."""
+        start_response = {"id": "task-123", "status": "processing"}
+        poll_response = {"status": "completed", "content": "Research complete."}
+
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(start_response)
+        mock_client.get.return_value = _make_mock_response(poll_response)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.time.sleep"),
+        ):
+            result = research(input="Some topic", timeout_seconds=60)
+
+        assert "Research complete." in result
+
+    def test_timeout_exceeded(self):
+        """Research times out when polling never completes."""
+        start_response = {"id": "task-456", "status": "processing"}
+        poll_response = {"status": "processing"}
+
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(start_response)
+        mock_client.get.return_value = _make_mock_response(poll_response)
+
+        # Make time.monotonic advance rapidly to trigger timeout
+        time_values = iter([0.0, 0.0, 10000.0])
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.time.sleep"),
+            patch("otutil.tools.tavily.time.monotonic", side_effect=time_values),
+        ):
+            result = research(input="Some topic", timeout_seconds=5)
+
+        assert "timed out" in result
+        assert "5" in result
+
+    def test_research_task_failed(self):
+        """Research task fails on server side."""
+        start_response = {"id": "task-789", "status": "processing"}
+        poll_response = {"status": "failed", "error": "internal server error"}
+
+        mock_client = MagicMock()
+        mock_client.post.return_value = _make_mock_response(start_response)
+        mock_client.get.return_value = _make_mock_response(poll_response)
+
+        with (
+            patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
+            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.time.sleep"),
+        ):
+            result = research(input="Some topic", timeout_seconds=60)
+
+        assert "Error" in result
+        assert "failed" in result
