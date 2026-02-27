@@ -8,15 +8,14 @@ Reference: https://github.com/adbar/trafilatura
 
 from __future__ import annotations
 
-import json
-from urllib.parse import urlparse
-
-# Pack for dot notation: web.fetch(), web.fetch_batch()
-pack = "web"
+# Pack for dot notation: webfetch.fetch(), webfetch.fetch_batch()
+pack = "webfetch"
 
 __all__ = ["fetch", "fetch_batch"]
 
+import json
 from typing import Any, Literal
+from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
 
@@ -60,8 +59,8 @@ class Config(BaseModel):
 
 
 def _get_config() -> Config:
-    """Get web pack configuration."""
-    return get_tool_config("web", Config)
+    """Get webfetch pack configuration."""
+    return get_tool_config("webfetch", Config)
 
 
 def _create_config(timeout: float) -> Any:
@@ -147,7 +146,7 @@ def _fetch_url_cached(url: str, timeout: float) -> tuple[str | None, str | None]
         Tuple of (content, content_type). Content is the decoded response,
         content_type is the Content-Type header value.
     """
-    with LogSpan(span="web.download", url=url, timeout=timeout) as span:
+    with LogSpan(span="webfetch.download", url=url, timeout=timeout) as span:
         import trafilatura
 
         config = _create_config(timeout)
@@ -212,24 +211,21 @@ def fetch(
         use_cache: Use cached pages if available (default: True)
 
     Returns:
-        Extracted content in the specified format, or error message on failure
-
-    Raises:
-        ValueError: If URL is empty/malformed or if both favor_precision and
-            favor_recall are True
+        Extracted content in the specified format, or error string on failure
+        (empty URL, malformed URL, conflicting options, network error, etc.)
 
     Example:
         # Basic usage with defaults
-        content = web.fetch("https://docs.python.org/3/library/asyncio.html")
+        content = webfetch.fetch("https://docs.python.org/3/library/asyncio.html")
 
         # Get plain text with faster extraction
-        content = web.fetch(url, output_format="text", fast=True)
+        content = webfetch.fetch(url, output_format="text", fast=True)
 
         # Include links for research
-        content = web.fetch(url, include_links=True)
+        content = webfetch.fetch(url, include_links=True)
 
         # Get content with metadata
-        content = web.fetch(url, output_format="json", include_metadata=True)
+        content = webfetch.fetch(url, output_format="json", include_metadata=True)
     """
     # Validate inputs before starting the span
     _require_trafilatura()
@@ -238,7 +234,7 @@ def fetch(
     if error := _validate_options(favor_precision, favor_recall):
         return error
 
-    with LogSpan(span="web.fetch", url=url, output_format=output_format) as s:
+    with LogSpan(span="webfetch.fetch", url=url, output_format=output_format) as s:
         try:
             # Get config values
             pack_config = _get_config()
@@ -322,7 +318,7 @@ def fetch(
                         "content": content_data,
                         "metadata": {
                             "final_url": url,
-                            "content_type": "text/html",
+                            "content_type": content_type,
                         },
                     }
                 )
@@ -406,13 +402,13 @@ def fetch_batch(
 
     Example:
         # Simple list of URLs
-        content = web.fetch_batch([
+        content = webfetch.fetch_batch([
             "https://docs.python.org/3/library/asyncio.html",
             "https://docs.python.org/3/library/threading.html",
         ])
 
         # With custom labels
-        content = web.fetch_batch([
+        content = webfetch.fetch_batch([
             ("https://fastapi.tiangolo.com/tutorial/", "FastAPI Tutorial"),
             ("https://docs.pydantic.dev/latest/", "Pydantic Docs"),
         ])
@@ -424,7 +420,7 @@ def fetch_batch(
     normalized = normalize_items(urls)
 
     with LogSpan(
-        span="web.batch", urlCount=len(normalized), output_format=output_format
+        span="webfetch.batch", urlCount=len(normalized), output_format=output_format
     ) as s:
 
         def _fetch_one(url: str, label: str) -> tuple[str, str]:

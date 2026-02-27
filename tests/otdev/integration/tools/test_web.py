@@ -21,7 +21,7 @@ class TestWebFetchLive:
 
     def test_fetch_live(self):
         """Verify web fetch works with a real URL."""
-        from otdev.tools.web import fetch
+        from otdev.tools.webfetch import fetch
 
         # Use GitHub's about page - an HTML page that trafilatura can parse
         result = fetch(

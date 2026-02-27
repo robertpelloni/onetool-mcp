@@ -1,4 +1,4 @@
-# Web Fetch
+# Webfetch
 
 Extracts main content from web pages, filtering navigation, ads, and boilerplate.
 
@@ -17,8 +17,8 @@ Extracts main content from web pages, filtering navigation, ads, and boilerplate
 
 | Function | Description |
 |----------|-------------|
-| `web.fetch(url, ...)` | Fetch and extract content from a URL |
-| `web.fetch_batch(urls, ...)` | Fetch multiple URLs concurrently |
+| `webfetch.fetch(url, ...)` | Fetch and extract content from a URL |
+| `webfetch.fetch_batch(urls, ...)` | Fetch multiple URLs concurrently |
 
 ## Key Parameters
 
@@ -37,6 +37,7 @@ Extracts main content from web pages, filtering navigation, ads, and boilerplate
 | `fast` | bool | Skip fallback extraction for speed |
 | `target_language` | str | Filter by ISO 639-1 language code |
 | `max_length` | int | Truncate output to this length |
+| `timeout` | float | Request timeout in seconds (defaults to config) |
 | `use_cache` | bool | Use cached pages (default: True) |
 
 Note: `favor_precision` and `favor_recall` are mutually exclusive.
@@ -45,56 +46,56 @@ Note: `favor_precision` and `favor_recall` are mutually exclusive.
 
 ### Required
 
-- No required `tools.web` settings.
+- No required `tools.webfetch` settings.
 
 ### Optional
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `tools.web.timeout` | float | `30.0` | Request timeout in seconds. Range: `1.0-120.0`. |
-| `tools.web.max_length` | int | `50000` | Max extracted content length in characters. Range: `1000-500000`. |
+| `tools.webfetch.timeout` | float | `30.0` | Request timeout in seconds. Range: `1.0-120.0`. |
+| `tools.webfetch.max_length` | int | `50000` | Max extracted content length in characters. Range: `1000-500000`. |
 
 ```yaml
 tools:
-  web:
+  webfetch:
     timeout: 30.0
     max_length: 50000
 ```
 
 ### Defaults
 
-- If `tools.web` is omitted, web fetch uses the built-in timeout and max length shown above.
+- If `tools.webfetch` is omitted, web fetch uses the built-in timeout and max length shown above.
 
 ## Examples
 
 ```python
 # Fetch single URL
-web.fetch(url="https://example.com/article")
+webfetch.fetch(url="https://example.com/article")
 
 # Fetch with markdown output
-web.fetch(url="https://docs.python.org/3/tutorial/", output_format="markdown")
+webfetch.fetch(url="https://docs.python.org/3/tutorial/", output_format="markdown")
 
 # Fast mode without fallback
-web.fetch(url="https://example.com/page", fast=True)
+webfetch.fetch(url="https://example.com/page", fast=True)
 
 # JSON output with metadata
-web.fetch(
+webfetch.fetch(
     url="https://example.com/article",
     output_format="json",
     include_metadata=True
 )
 
 # Precision mode for cleaner extraction
-web.fetch(url="https://example.com/page", favor_precision=True)
+webfetch.fetch(url="https://example.com/page", favor_precision=True)
 
 # Batch fetch multiple URLs
-web.fetch_batch(urls=[
+webfetch.fetch_batch(urls=[
     "https://example.com/page1",
     "https://example.com/page2"
 ])
 
 # Batch with all options
-web.fetch_batch(
+webfetch.fetch_batch(
     urls=["https://example.com/page1", "https://example.com/page2"],
     include_links=True,
     favor_precision=True,
@@ -102,6 +103,6 @@ web.fetch_batch(
 )
 
 # Fetch plain text or JSON files (returned directly without extraction)
-web.fetch(url="https://example.com/data.json")
-web.fetch(url="https://example.com/robots.txt")
+webfetch.fetch(url="https://example.com/data.json")
+webfetch.fetch(url="https://example.com/robots.txt")
 ```
