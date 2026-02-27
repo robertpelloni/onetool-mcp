@@ -47,7 +47,7 @@ Ref: #123
 | `tool:package` | package | Package info (npm, pypi) |
 | `tool:ripgrep` | ripgrep | Fast code search |
 | `tool:scaffold` | scaffold | Tool scaffolding |
-| `tool:web` | web | Web fetch |
+| `tool:webfetch` | webfetch | Web fetch |
 
 ## Benchmark System
 

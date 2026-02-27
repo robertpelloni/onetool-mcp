@@ -62,7 +62,7 @@ Tool packs for developer-focused features. Installed via `pip install onetool-mc
 | `tools/diagram.py` | Diagram generation (Kroki) |
 | `tools/package.py` | Package version checking |
 | `tools/ripgrep.py` | Fast code search |
-| `tools/web.py` | Web scraping (trafilatura) |
+| `tools/webfetch.py` | Web scraping (trafilatura) |
 | `tools/worktree.py` | Git worktree management for parallel agents |
 
 ### Util Extras (`src/otutil/`) — optional `[util]`
@@ -76,6 +76,7 @@ Tool packs for document and file utilities. Installed via `pip install onetool-m
 | `tools/excel.py` | Excel file handling |
 | `tools/file.py` | File operations |
 | `tools/ground.py` | Gemini grounding search |
+| `tools/tavily.py` | Tavily AI search and URL extraction |
 
 ---
 

@@ -12,6 +12,7 @@ How to build tool packs for OneTool.
 |-------|-------|
 | [Creating Tools](creating-tools.md) | Complete guide to building tool packs |
 | [Tool Configuration](tool-configuration.md) | Adding tool-specific configuration |
+| [Tool Reference Docs](tool-ref-docs.md) | Standard format for `docs/reference/tools/` pages |
 | [Attribution](attribution.md) | License handling for derived tools |
 
 ---
@@ -33,6 +34,7 @@ OneTool configuration system.
 |--------------|-----|
 | Create a new tool pack | [Creating Tools](creating-tools.md) |
 | Add configuration to my tool | [Tool Configuration](tool-configuration.md) |
+| Write a reference doc for my tool | [Tool Reference Docs](tool-ref-docs.md) |
 | Handle third-party code licenses | [Attribution](attribution.md) |
 | Configure OneTool | [Configuration](configuration.md) |
 

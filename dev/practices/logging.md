@@ -114,14 +114,14 @@ LogSpan(span="tool.op", query="test", timeout=30)
 ### Nested Spans
 
 ```python
-with LogSpan(span="web.fetch", url=url) as outer:
+with LogSpan(span="webfetch.fetch", url=url) as outer:
     # Download
-    with LogSpan(span="web.download", url=url) as dl:
+    with LogSpan(span="webfetch.download", url=url) as dl:
         response = download(url)
         dl.add("status", response.status)
 
     # Extract
-    with LogSpan(span="web.extract", url=url) as ext:
+    with LogSpan(span="webfetch.extract", url=url) as ext:
         content = extract_content(response)
         ext.add("length", len(content))
 
@@ -165,7 +165,7 @@ Logs are written in dev-friendly format to `logs/{log_name}.log` (relative to co
 ```text
 12:34:56.789 | INFO   | server:54  | mcp.server.start | status=SUCCESS | duration=0.042
 12:34:57.123 | INFO   | brave:78   | brave.search.web | query=test | resultCount=10 | duration=1.234
-12:34:58.456 | ERROR  | web:92     | web.fetch | url=http://... | status=FAILED | errorType=HTTPError
+12:34:58.456 | ERROR  | webfetch:92 | webfetch.fetch | url=http://... | status=FAILED | errorType=HTTPError
 ```
 
 **Characteristics:**

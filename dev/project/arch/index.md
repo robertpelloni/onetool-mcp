@@ -86,7 +86,7 @@ src/
     mem.py                   #   Persistent vector memory
     ripgrep.py               #   Fast regex search
     transform.py             #   LLM-powered transforms
-    web_fetch.py             #   Web page fetching
+    webfetch.py              #   Web page fetching
 
   onetool/                   # MCP server CLI (onetool.cli:cli)
   bench/                     # Benchmark harness CLI (bench.cli:cli)

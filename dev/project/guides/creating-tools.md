@@ -99,7 +99,7 @@ The `pack` variable enables dot notation:
 
 ```python
 pack = "brave"  # Exposes brave.search(), brave.news()
-pack = "web"    # Exposes web.fetch(), web.fetch_batch()
+pack = "webfetch"    # Exposes webfetch.fetch(), webfetch.fetch_batch()
 ```
 
 **Important**: The pack declaration must appear before other imports (except `from __future__`).
@@ -433,6 +433,7 @@ from otutil.tools._mem import Config, _close_connection
 - [ ] Unit tests with `@pytest.mark.unit` + `@pytest.mark.tools`
 - [ ] Integration tests if external APIs involved
 - [ ] Spec at `openspec/specs/tool-<name>/spec.md` (for non-trivial tools)
+- [ ] Reference doc at `docs/reference/tools/<pack>.md` (see [Tool Reference Docs](tool-ref-docs.md))
 - [ ] Attribution level determined (see [Attribution](attribution.md))
 - [ ] Update `src/ot/config/global_templates/agent-hints.md` if adding user-facing tools
 - [ ] `just check` passes

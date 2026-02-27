@@ -28,7 +28,7 @@ src/
   onetool/      MCP server CLI
   bench/        Benchmark harness CLI
   otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
-  otutil/       [util] extra: brave, convert, excel, file, ground
+  otutil/       [util] extra: brave, convert, excel, file, ground, tavily
 
 tests/          All tests (smoke, unit, integration)
 dev/            Developer documentation (THIS folder)
