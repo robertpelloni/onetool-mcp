@@ -18,7 +18,7 @@ When testing:
 - excel with files at tests/data/
 - mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
-- ot_forge: create_ext, validate_ext, install_skill
+- ot_forge: create_ext, validate_ext, install_skills
 - web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - ot_llm: transform with simple data, transform_file with a file from tests/data/
@@ -55,9 +55,9 @@ Package snippets:
 File/code snippets:
 - $rg p="TODO"
 - $rg_count p="import" ft="py"
-- $web u="https://en.wikipedia.org/wiki/Python_(programming_language)"
-- $web_summary u="https://en.wikipedia.org/wiki/Python_(programming_language)"
-- $web_data u="https://en.wikipedia.org/wiki/Python_(programming_language)" schema="section headings"
+- $webfetch u="https://en.wikipedia.org/wiki/Python_(programming_language)"
+- $webfetch_summary u="https://en.wikipedia.org/wiki/Python_(programming_language)"
+- $webfetch_data u="https://en.wikipedia.org/wiki/Python_(programming_language)" schema="section headings"
 
 System snippets:
 - $ot_status
@@ -237,15 +237,15 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - `$brv`, `$g`, and `$gh` use `q=` for query (not `query=`)
   - `$c7` and `$c7_eg` use `lib=` for library_id and `q=` for query
   - `$pkg_pypi` and `$pkg_npm` use `packages=` (comma-separated string, not list)
-  - `$web` uses `u=` for URLs (pipe-separated for batch)
+  - `$webfetch` uses `u=` for URLs (pipe-separated for batch)
   - Example: `$rg p="TODO" ft="py"` not `$rg pattern="TODO" file_type="py"`
 - **db tools**: Use SQLite URL format `sqlite:///path/to/db`
   - Example: `db.tables(db_url="sqlite:///tests/data/northwind.db")`
   - Example: `db.query(sql="SELECT * FROM Customers LIMIT 3", db_url="sqlite:///tests/data/northwind.db")`
   - Not just the file path alone
   - Note: DB path is now `tests/data/northwind.db` (download via `just test-setup`)
-- **web.fetch**: Use `max_length=` not `max_chars=` to limit output
-  - Example: `web.fetch(url="...", max_length=500)`
+- **webfetch.fetch**: Use `max_length=` not `max_chars=` to limit output
+  - Example: `webfetch.fetch(url="...", max_length=500)`
 
 ### Expected behaviors (not bugs)
 
@@ -256,7 +256,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
 
 ### Test URLs
 
-- **web.fetch & devtools.navigate_page**: Use `https://en.wikipedia.org/wiki/Python_(programming_language)` or similar - NOT example.com (doesn't resolve) or `https://en.wikipedia.org` (has captcha)
+- **webfetch.fetch & devtools.navigate_page**: Use `https://en.wikipedia.org/wiki/Python_(programming_language)` or similar - NOT example.com (doesn't resolve) or `https://en.wikipedia.org` (has captcha)
 
 ### Test data notes
 
@@ -289,7 +289,7 @@ Test data locations:
 - **Test context7 and ground BEFORE calling `$ot_reload`** — `ot.reload()` clears
   env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
   tools to fail in the same session. These tools only work on fresh server startup.
-- **`$brv_research` and `$web_summary`/`$web_data`** require `ot_llm.transform`, which
+- **`$brv_research` and `$webfetch_summary`/`$webfetch_data`** require `ot_llm.transform`, which
   depends on `OPENAI_API_KEY`. Skip or expect failure if that key is not configured.
 - **`$ot_notify`** returns "SKIP: no matching topic" when no subscriber is configured — this is expected, not a bug.
 - **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index

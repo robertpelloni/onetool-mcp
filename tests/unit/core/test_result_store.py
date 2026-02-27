@@ -376,14 +376,14 @@ class TestMeta:
             "total_lines": 50,
             "size_bytes": 2500,
             "created_at": "2026-01-31T12:00:00Z",
-            "tool": "web.fetch",
+            "tool": "webfetch.fetch",
         }
 
         meta = ResultMeta.from_dict(d)
 
         assert meta.handle == "xyz789"
         assert meta.total_lines == 50
-        assert meta.tool == "web.fetch"
+        assert meta.tool == "webfetch.fetch"
 
     def test_query_result_to_dict(self) -> None:
         """QueryResult converts to dict."""

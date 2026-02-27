@@ -115,7 +115,7 @@ class TestGetDocUrl:
         assert _get_doc_url("db") == "https://onetool.beycom.online/reference/tools/database/"
         assert _get_doc_url("ground") == "https://onetool.beycom.online/reference/tools/grounding-search/"
         assert _get_doc_url("ot_llm") == "https://onetool.beycom.online/reference/tools/ot_llm/"
-        assert _get_doc_url("web") == "https://onetool.beycom.online/reference/tools/web-fetch/"
+        assert _get_doc_url("webfetch") == "https://onetool.beycom.online/reference/tools/web-fetch/"
 
 
 @pytest.mark.unit
@@ -127,7 +127,7 @@ class TestFuzzyMatch:
         """Substring matches get priority."""
         from ot.meta import _fuzzy_match
 
-        candidates = ["brave.search", "web.fetch", "search_tool"]
+        candidates = ["brave.search", "webfetch.fetch", "search_tool"]
         result = _fuzzy_match("search", candidates)
 
         # Both brave.search and search_tool should match

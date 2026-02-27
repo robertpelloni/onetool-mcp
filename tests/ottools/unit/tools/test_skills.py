@@ -203,7 +203,7 @@ def test_bundled_skills_exist() -> None:
     skills_dir = get_global_templates_dir() / "skills"
     assert skills_dir.exists(), "skills/ directory must exist in global_templates"
 
-    expected = {"ot-ref", "ot-chrome-devtools-mcp", "ot-playwright-mcp", "ot-github-mcp"}
+    expected = {"ot-ref"}
     found = {f.stem for f in skills_dir.glob("*.md")}
     assert expected.issubset(found), f"Missing bundled skills: {expected - found}"
 

@@ -124,14 +124,14 @@ class TestProxyManagerListTools:
 
         manager._tools_by_server = {
             "brave": [tool1],
-            "web": [tool2],
+            "webfetch": [tool2],
         }
 
         tools = manager.list_tools()
 
         assert len(tools) == 2
         assert any(t.server == "brave" and t.name == "search" for t in tools)
-        assert any(t.server == "web" and t.name == "fetch" for t in tools)
+        assert any(t.server == "webfetch" and t.name == "fetch" for t in tools)
 
     def test_list_tools_filtered_by_server(self) -> None:
         """Should filter tools by server name."""
@@ -151,7 +151,7 @@ class TestProxyManagerListTools:
 
         manager._tools_by_server = {
             "brave": [tool1],
-            "web": [tool2],
+            "webfetch": [tool2],
         }
 
         tools = manager.list_tools(server="brave")
