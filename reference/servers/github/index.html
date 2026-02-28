@@ -10,31 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://onetool.beycom.online/learn/extending/">
+        <link rel="canonical" href="https://onetool.beycom.online/reference/servers/github/">
       
       
-        <link rel="prev" href="../guides/chrome-devtools/">
+        <link rel="prev" href="../chunkhound/">
       
       
-        <link rel="next" href="extension-tools/">
+        <link rel="next" href="../playwright/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <link rel="icon" href="../../../assets/logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
-        <title>Extending OneTool - OneTool</title>
+        <title>GitHub - OneTool</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -47,9 +47,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
   
@@ -95,7 +95,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#extending-onetool" class="md-skip">
+        <a href="#github-mcp" class="md-skip">
           Skip to content
         </a>
       
@@ -111,9 +111,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="OneTool" class="md-header__button md-logo" aria-label="OneTool" data-md-component="logo">
+    <a href="../../.." title="OneTool" class="md-header__button md-logo" aria-label="OneTool" data-md-component="logo">
       
-  <img src="../../assets/logo.svg" alt="logo">
+  <img src="../../../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -130,7 +130,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Extending OneTool
+              GitHub
             
           </span>
         </div>
@@ -252,7 +252,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="../../.." class="md-tabs__link">
         
   
   
@@ -269,13 +269,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../../learn/" class="md-tabs__link">
           
   
   
@@ -293,11 +291,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../reference/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
           
   
   
@@ -319,7 +319,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../results/mem-vs-file-20260223/" class="md-tabs__link">
+        <a href="../../../learn/comparison/" class="md-tabs__link">
           
   
   
@@ -341,7 +341,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../about/" class="md-tabs__link">
+        <a href="../../../about/" class="md-tabs__link">
           
   
   
@@ -383,9 +383,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="OneTool" class="md-nav__button md-logo" aria-label="OneTool" data-md-component="logo">
+    <a href="../../.." title="OneTool" class="md-nav__button md-logo" aria-label="OneTool" data-md-component="logo">
       
-  <img src="../../assets/logo.svg" alt="logo">
+  <img src="../../../assets/logo.svg" alt="logo">
 
     </a>
     OneTool
@@ -412,7 +412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="../../.." class="md-nav__link">
         
   
   
@@ -436,8 +436,6 @@
       
   
   
-    
-  
   
   
     
@@ -467,23 +465,20 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../../learn/" class="md-nav__link ">
               
   
   
@@ -501,13 +496,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -527,7 +522,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../../../learn/quickstart/" class="md-nav__link">
         
   
   
@@ -555,7 +550,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../../learn/installation/" class="md-nav__link">
         
   
   
@@ -583,7 +578,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+      <a href="../../../learn/configuration/" class="md-nav__link">
         
   
   
@@ -611,7 +606,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../security/" class="md-nav__link">
+      <a href="../../../learn/security/" class="md-nav__link">
         
   
   
@@ -639,7 +634,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../explicit-calls/" class="md-nav__link">
+      <a href="../../../learn/explicit-calls/" class="md-nav__link">
         
   
   
@@ -667,14 +662,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../comparison/" class="md-nav__link">
+      <a href="../../../learn/snippets/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Comparison
+    Snippets
   
 
     
@@ -694,190 +689,8 @@
   
   
   
-    
-    
-      
-        
-          
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_8" >
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../guides/" class="md-nav__link ">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Guides
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2_8" id="__nav_2_8_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_8">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Guides
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
     <li class="md-nav__item">
-      <a href="../guides/chrome-devtools/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Chrome DevTools
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-    
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_9" checked>
-        
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
-              
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Extending
-  
-
-    
-  </span>
-  
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link md-nav__link--active" for="__nav_2_9" id="__nav_2_9_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_9_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2_9">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Extending
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="extension-tools/" class="md-nav__link">
+      <a href="../../../learn/extension-tools/" class="md-nav__link">
         
   
   
@@ -898,9 +711,29 @@
 
               
             
-          </ul>
-        </nav>
-      
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../learn/whats-new-v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What's New in v2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -917,6 +750,8 @@
       
   
   
+    
+  
   
   
     
@@ -930,24 +765,29 @@
       
         
       
+        
+      
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/" class="md-nav__link ">
+            <a href="../../" class="md-nav__link ">
               
   
   
@@ -965,13 +805,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1009,10 +849,13 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
@@ -1020,7 +863,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/cli/" class="md-nav__link ">
+            <a href="../../cli/" class="md-nav__link ">
               
   
   
@@ -1038,7 +881,7 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -1064,7 +907,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/onetool/" class="md-nav__link">
+      <a href="../../cli/bench/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bench
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/onetool/" class="md-nav__link">
         
   
   
@@ -1092,7 +963,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/cli/onetool-config/" class="md-nav__link">
+      <a href="../../cli/onetool-config/" class="md-nav__link">
         
   
   
@@ -1100,34 +971,6 @@
     
   
     onetool Configuration
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
   
 
     
@@ -1194,16 +1037,33 @@
       
         
       
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
     
     
     
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
@@ -1211,7 +1071,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../reference/tools/" class="md-nav__link ">
+            <a href="../../tools/" class="md-nav__link ">
               
   
   
@@ -1229,7 +1089,7 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_3_3" id="__nav_3_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -1255,7 +1115,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/brave/" class="md-nav__link">
+      <a href="../../tools/aws/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/brave/" class="md-nav__link">
         
   
   
@@ -1283,7 +1171,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/context7/" class="md-nav__link">
+      <a href="../../tools/chrome-util/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chrome DevTools Util
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/context7/" class="md-nav__link">
         
   
   
@@ -1311,7 +1227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/convert/" class="md-nav__link">
+      <a href="../../tools/convert/" class="md-nav__link">
         
   
   
@@ -1339,7 +1255,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/db/" class="md-nav__link">
+      <a href="../../tools/db/" class="md-nav__link">
         
   
   
@@ -1367,7 +1283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/diagram/" class="md-nav__link">
+      <a href="../../tools/diagram/" class="md-nav__link">
         
   
   
@@ -1395,7 +1311,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/excel/" class="md-nav__link">
+      <a href="../../tools/excel/" class="md-nav__link">
         
   
   
@@ -1423,7 +1339,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/file/" class="md-nav__link">
+      <a href="../../tools/file/" class="md-nav__link">
         
   
   
@@ -1451,7 +1367,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/ground/" class="md-nav__link">
+      <a href="../../tools/ground/" class="md-nav__link">
         
   
   
@@ -1479,7 +1395,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/llm/" class="md-nav__link">
+      <a href="../../tools/llm/" class="md-nav__link">
         
   
   
@@ -1507,7 +1423,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/mem/" class="md-nav__link">
+      <a href="../../tools/mem/" class="md-nav__link">
         
   
   
@@ -1535,14 +1451,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/ot/" class="md-nav__link">
+      <a href="../../tools/ot/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    OT (Meta)
+    OT Core
   
 
     
@@ -1563,7 +1479,91 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/package/" class="md-nav__link">
+      <a href="../../tools/forge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Forge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/secrets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Secrets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/timer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Timer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/package/" class="md-nav__link">
         
   
   
@@ -1591,7 +1591,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/ripgrep/" class="md-nav__link">
+      <a href="../../tools/play-util/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright Util
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/ripgrep/" class="md-nav__link">
         
   
   
@@ -1619,14 +1647,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/forge/" class="md-nav__link">
+      <a href="../../tools/tavily/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Forge
+    Tavily
   
 
     
@@ -1647,14 +1675,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/timer/" class="md-nav__link">
+      <a href="../../tools/whiteboard/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Timer
+    Whiteboard
   
 
     
@@ -1675,14 +1703,466 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/web/" class="md-nav__link">
+      <a href="../../tools/webfetch/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Web
+    Webfetch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/worktree/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Worktree
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Servers
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_4" id="__nav_3_4_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Servers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chrome-devtools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chrome DevTools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chunkhound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ChunkHound
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enabling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enabling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#server-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Config
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-check-who-youre-authenticated-as" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Check who you're authenticated as
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-list-open-prs-waiting-for-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. List open PRs waiting for review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-search-for-bug-issues-across-a-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Search for bug issues across a repo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-get-the-contents-of-a-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Get the contents of a file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-find-code-using-a-specific-pattern-across-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Find code using a specific pattern across GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-get-the-latest-release-of-a-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Get the latest release of a repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-create-a-new-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Create a new issue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-push-a-file-change-in-one-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Push a file change in one call
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes to Avoid
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../playwright/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Playwright
   
 
     
@@ -1719,6 +2199,8 @@
   
     
     
+      
+        
       
         
       
@@ -1774,14 +2256,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../results/mem-vs-file-20260223/" class="md-nav__link">
+      <a href="../../../learn/comparison/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Mem vs File Benchmark
+    OneTool vs MCPs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../results/mem-vs-file-20260223/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mem vs File vs Claude
   
 
     
@@ -1834,7 +2344,7 @@
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../about/" class="md-nav__link ">
+            <a href="../../../about/" class="md-nav__link ">
               
   
   
@@ -1878,7 +2388,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../about/about-onetool/" class="md-nav__link">
+      <a href="../../../about/about-onetool/" class="md-nav__link">
         
   
   
@@ -1933,10 +2443,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#tool-types" class="md-nav__link">
+  <a href="#enabling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tool Types
+        Enabling
       
     </span>
   </a>
@@ -1944,10 +2454,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#server-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        Server Config
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools
       
     </span>
   </a>
@@ -1955,10 +2493,126 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#usage-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next Steps
+        Usage Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-check-who-youre-authenticated-as" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Check who you're authenticated as
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-list-open-prs-waiting-for-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. List open PRs waiting for review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-search-for-bug-issues-across-a-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Search for bug issues across a repo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-get-the-contents-of-a-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Get the contents of a file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-find-code-using-a-specific-pattern-across-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Find code using a specific pattern across GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-get-the-latest-release-of-a-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Get the latest release of a repository
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-create-a-new-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Create a new issue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-push-a-file-change-in-one-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Push a file change in one call
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-mistakes-to-avoid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Mistakes to Avoid
       
     </span>
   </a>
@@ -1990,7 +2644,7 @@
   
   
     <li class="md-path__item">
-      <a href="../.." class="md-path__link">
+      <a href="../../.." class="md-path__link">
         
   <span class="md-ellipsis">
     Home
@@ -2008,10 +2662,10 @@
     
     
       <li class="md-path__item">
-        <a href="../" class="md-path__link">
+        <a href="../../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Learn
+    Reference
   </span>
 
         </a>
@@ -2026,10 +2680,10 @@
     
     
       <li class="md-path__item">
-        <a href="./" class="md-path__link">
+        <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    Extending
+    Servers
   </span>
 
         </a>
@@ -2051,53 +2705,125 @@
   
 
 
-<h1 id="extending-onetool">Extending OneTool<a class="headerlink" href="#extending-onetool" title="Permanent link">&para;</a></h1>
-<p>Build custom tools for your projects. No OneTool source code required.</p>
-<h2 id="tool-types">Tool Types<a class="headerlink" href="#tool-types" title="Permanent link">&para;</a></h2>
-<p>OneTool supports two types of user-created tools:</p>
+<h1 id="github-mcp">GitHub MCP<a class="headerlink" href="#github-mcp" title="Permanent link">&para;</a></h1>
+<p>GitHub's official MCP server for repository management, issues, pull requests, Actions, and code security. Connects over HTTP using a Personal Access Token.</p>
+<p><strong>Source:</strong> <a href="https://github.com/github/github-mcp-server">github/github-mcp-server</a></p>
+<h2 id="enabling">Enabling<a class="headerlink" href="#enabling" title="Permanent link">&para;</a></h2>
+<p>The server is included in <code>servers.yaml</code> with <code>enabled: false</code>. To activate it permanently:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">github</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<p>Or enable for the current session only:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">server</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="s2">&quot;github&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="server-config">Server Config<a class="headerlink" href="#server-config" title="Permanent link">&para;</a></h2>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">github</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://api.githubcopilot.com/mcp/</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">headers</span><span class="p">:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">Authorization</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${GITHUB_TOKEN}&quot;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">Accept</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;application/json,</span><span class="nv"> </span><span class="s">text/event-stream&quot;</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span></code></pre></div>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create a Personal Access Token at https://github.com/settings/tokens</li>
+<li>Add it to your <code>secrets.yaml</code>:
+   <div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">GITHUB_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghp_your_token_here</span>
+</span></code></pre></div></li>
+<li>Set <code>enabled: true</code> in <code>servers.yaml</code></li>
+</ol>
+<h2 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Type</th>
-<th>When to Use</th>
-<th>Imports</th>
+<th>Toolset</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Extension Tool</strong></td>
-<td>Most tools - no external dependencies</td>
-<td><code>from ot.*</code></td>
+<td><code>repos</code></td>
+<td>Browse code, search files, analyze commits, manage branches</td>
+</tr>
+<tr>
+<td><code>issues</code></td>
+<td>Create, update, list, search, and manage issues</td>
+</tr>
+<tr>
+<td><code>pull_requests</code></td>
+<td>Create PRs, review changes, merge, manage reviews</td>
+</tr>
+<tr>
+<td><code>actions</code></td>
+<td>Monitor workflows, analyze build failures, trigger runs</td>
+</tr>
+<tr>
+<td><code>code_security</code></td>
+<td>Review security findings, Dependabot alerts</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Extension tools</strong> run in-process with full access to OneTool's logging, config, and secrets APIs.</p>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Create a tool file in <code>.onetool/tools/</code> or your own directory</li>
-<li>Add <code>pack = "mytool"</code> and <code>__all__ = ["function_name"]</code></li>
-<li>Write your function with keyword-only arguments</li>
-<li>Configure <code>tools_dir</code> in <code>onetool.yaml</code> to point to your tool</li>
-<li>Restart the server</li>
-</ol>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># .onetool/tools/mytool.py</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">pack</span> <span class="o">=</span> <span class="s2">&quot;mytool&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;greet&quot;</span><span class="p">]</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">greet</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Greet someone by name.</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="sd">        name: The name to greet</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="sd">        A greeting message</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Hello, </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">!&quot;</span>
-</span></code></pre></div>
-<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<h2 id="usage-patterns">Usage Patterns<a class="headerlink" href="#usage-patterns" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="extension-tools/">Extension Tools</a> - In-process tools with OneTool API access</li>
+<li><strong>Search before creating</strong>: Check for existing issues/PRs before creating new ones</li>
+<li><strong>Batch operations</strong>: Use list tools to get multiple items at once rather than individual gets</li>
+<li><strong>Code changes</strong>: Create branch → push files → create PR</li>
+<li><strong>Issue workflow</strong>: <code>search_issues</code> → <code>issue_read</code> → <code>add_issue_comment</code> or <code>issue_write</code></li>
+</ul>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<h3 id="1-check-who-youre-authenticated-as">1. Check who you're authenticated as<a class="headerlink" href="#1-check-who-youre-authenticated-as" title="Permanent link">&para;</a></h3>
+<p>Verify your token is working and see your account details.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">github</span><span class="o">.</span><span class="n">get_me</span><span class="p">()</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Returns: login, name, public_repos, followers, ...</span>
+</span></code></pre></div>
+<h3 id="2-list-open-prs-waiting-for-review">2. List open PRs waiting for review<a class="headerlink" href="#2-list-open-prs-waiting-for-review" title="Permanent link">&para;</a></h3>
+<p>See what's pending in a repository.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">github</span><span class="o">.</span><span class="n">list_pull_requests</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="s2">&quot;myorg&quot;</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="s2">&quot;myrepo&quot;</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="s2">&quot;open&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="3-search-for-bug-issues-across-a-repo">3. Search for bug issues across a repo<a class="headerlink" href="#3-search-for-bug-issues-across-a-repo" title="Permanent link">&para;</a></h3>
+<p>Find open bugs without browsing the UI.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">github</span><span class="o">.</span><span class="n">search_issues</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s2">&quot;is:open is:issue label:bug repo:myorg/myrepo&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="4-get-the-contents-of-a-file">4. Get the contents of a file<a class="headerlink" href="#4-get-the-contents-of-a-file" title="Permanent link">&para;</a></h3>
+<p>Read any file directly from a branch — useful for comparing config across environments.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">github</span><span class="o">.</span><span class="n">get_file_contents</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="s2">&quot;myorg&quot;</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="s2">&quot;myrepo&quot;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;pyproject.toml&quot;</span><span class="p">,</span> <span class="n">branch</span><span class="o">=</span><span class="s2">&quot;main&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="5-find-code-using-a-specific-pattern-across-github">5. Find code using a specific pattern across GitHub<a class="headerlink" href="#5-find-code-using-a-specific-pattern-across-github" title="Permanent link">&para;</a></h3>
+<p>Search for all public usage of an API or function name.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">github</span><span class="o">.</span><span class="n">search_code</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s2">&quot;onetool_mcp language:python&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="6-get-the-latest-release-of-a-repository">6. Get the latest release of a repository<a class="headerlink" href="#6-get-the-latest-release-of-a-repository" title="Permanent link">&para;</a></h3>
+<p>Check the current published version of any project.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">github</span><span class="o">.</span><span class="n">get_latest_release</span><span class="p">(</span><span class="n">owner</span><span class="o">=</span><span class="s2">&quot;microsoft&quot;</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="s2">&quot;playwright-mcp&quot;</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Returns: tag_name, published_at, assets, body (release notes)</span>
+</span></code></pre></div>
+<h3 id="7-create-a-new-issue">7. Create a new issue<a class="headerlink" href="#7-create-a-new-issue" title="Permanent link">&para;</a></h3>
+<p>File a bug or feature request with a structured body.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">github</span><span class="o">.</span><span class="n">issue_write</span><span class="p">(</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">owner</span><span class="o">=</span><span class="s2">&quot;myorg&quot;</span><span class="p">,</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">repo</span><span class="o">=</span><span class="s2">&quot;myrepo&quot;</span><span class="p">,</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Fix: connection timeout on slow networks&quot;</span><span class="p">,</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">body</span><span class="o">=</span><span class="s2">&quot;## Description</span><span class="se">\n</span><span class="s2">Connection drops after 30s on high-latency links.</span><span class="se">\n\n</span><span class="s2">## Steps to reproduce</span><span class="se">\n</span><span class="s2">1. ...&quot;</span><span class="p">,</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="8-push-a-file-change-in-one-call">8. Push a file change in one call<a class="headerlink" href="#8-push-a-file-change-in-one-call" title="Permanent link">&para;</a></h3>
+<p>Create or update a file without cloning the repo locally.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">github</span><span class="o">.</span><span class="n">push_files</span><span class="p">(</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">owner</span><span class="o">=</span><span class="s2">&quot;myorg&quot;</span><span class="p">,</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="n">repo</span><span class="o">=</span><span class="s2">&quot;myrepo&quot;</span><span class="p">,</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="n">branch</span><span class="o">=</span><span class="s2">&quot;main&quot;</span><span class="p">,</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;docs: update changelog&quot;</span><span class="p">,</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">files</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;CHANGELOG.md&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;## v1.2.0</span><span class="se">\n</span><span class="s2">- Added X</span><span class="se">\n</span><span class="s2">- Fixed Y</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">}],</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="common-mistakes-to-avoid">Common Mistakes to Avoid<a class="headerlink" href="#common-mistakes-to-avoid" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Don't create duplicate issues — search first</li>
+<li>Don't forget to specify the repository in <code>owner/repo</code> format</li>
+<li>Don't make multiple API calls when a single list or search call works</li>
+<li>Check PR status before attempting to merge</li>
 </ul>
 
 
@@ -2188,7 +2914,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../guides/chrome-devtools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Chrome DevTools">
+          <a href="../chunkhound/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ChunkHound">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2198,20 +2924,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Chrome DevTools
+                ChunkHound
               </div>
             </div>
           </a>
         
         
           
-          <a href="extension-tools/" class="md-footer__link md-footer__link--next" aria-label="Next: Extension Tools">
+          <a href="../playwright/" class="md-footer__link md-footer__link--next" aria-label="Next: Playwright">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Extension Tools
+                Playwright
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -2275,10 +3001,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips", "content.footnote.tooltips", "navigation.tabs", "navigation.tabs.sticky", "navigation.tracking", "navigation.path", "navigation.footer", "navigation.sections", "navigation.indexes", "navigation.top", "search.highlight", "search.suggest", "search.share", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["content.code.copy", "content.code.annotate", "content.tabs.link", "content.tooltips", "content.footnote.tooltips", "navigation.tabs", "navigation.tabs.sticky", "navigation.tracking", "navigation.path", "navigation.footer", "navigation.sections", "navigation.indexes", "navigation.top", "search.highlight", "search.suggest", "search.share", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
