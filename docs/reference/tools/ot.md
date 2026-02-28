@@ -30,7 +30,7 @@ Core tools for OneTool introspection and management.
 | `ot.server(status, enable, disable, restart)` | Manage runtime proxy server state |
 | `ot.aliases(pattern, info)` | List aliases, filter by pattern |
 | `ot.snippets(pattern, info)` | List snippets, filter by pattern |
-| `ot.snippet_info(name, info)` | Get full definition for a specific snippet |
+| `ot.snippet_info(name, pattern, info)` | Get full definition for a specific snippet |
 | `ot.skills(name, pattern, info)` | List bundled skills or retrieve a skill body |
 | `ot.config()` | Show aliases, snippets, and server names |
 | `ot.debug(enable, line_limit)` | Toggle debug tracebacks and traceback line limits |
@@ -254,7 +254,7 @@ alias:
 
 ## ot.snippets() / ot.snippet_info()
 
-List snippets or get the full definition for a specific snippet.
+List snippets or get the full definition for one or more snippets.
 
 ```python
 # List all snippets (default: info="default" → [{name, description}])
@@ -266,12 +266,28 @@ ot.snippets(pattern="search")
 # Names only
 ot.snippets(info="min")
 
-# Include params in listing
+# Include params in listing — params are dicts with required/default/description
 ot.snippets(info="full")
 
-# Get full definition (params, body, example) for a specific snippet
-ot.snippet_info(name="brv_research")
+# Get full definition for a specific snippet (exact name → single dict)
+ot.snippet_info(name="rg")
+
+# Get full definition for multiple snippets (pattern → list of dicts)
+ot.snippet_info(pattern="mem")
 ```
+
+Params in `snippet_info` output use an explicit `required` flag:
+
+```yaml
+# Required param — no default key, required: true
+p: {required: true, description: "Regex pattern to search for"}
+
+# Optional param — has default, no required key
+path: {default: ".", description: "Search path"}
+```
+
+The `example` field includes required params plus the first optional param with a
+meaningful (non-empty, non-false) default, e.g. `$rg p="..." path=.`.
 
 Snippets are defined in config:
 

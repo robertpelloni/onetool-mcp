@@ -99,14 +99,21 @@ annotations = chrome_util.scan_annotations()
 ### Defaults
 
 - OneTool uses the built-in defaults for annotation behavior.
-- Runtime access still depends on the `chrome-devtools` MCP server being enabled.
+- Requires the `chrome-devtools` MCP server. Enable it in `servers.yaml` (persistent):
+
+```yaml
+chrome-devtools:
+  enabled: true
+```
+
+Or enable for the current session only: `ot.server(enable="chrome-devtools")`
 
 ## Examples
 
 ### Guide a user through a form
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com/settings")
+chrome_devtools.navigate_page(url="https://myapp.com/settings")
 chrome_util.inject_annotations()
 chrome_util.guide_user(
     task="Update your profile",

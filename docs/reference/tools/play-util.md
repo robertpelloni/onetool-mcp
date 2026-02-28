@@ -99,14 +99,21 @@ annotations = play_util.scan_annotations()
 ### Defaults
 
 - OneTool uses the built-in defaults for annotation behavior.
-- Runtime access still depends on the `playwright` MCP server being enabled.
+- Requires the `playwright` MCP server. Enable it in `servers.yaml` (persistent):
+
+```yaml
+playwright:
+  enabled: true
+```
+
+Or enable for the current session only: `ot.server(enable="playwright")`
 
 ## Examples
 
 ### Guide a user through a form
 
 ```python
-playwright.browser_navigate(url="https://example.com/settings")
+playwright.browser_navigate(url="https://myapp.com/settings")
 play_util.inject_annotations()
 play_util.guide_user(
     task="Update your profile",

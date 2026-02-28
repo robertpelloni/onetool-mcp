@@ -97,6 +97,15 @@ servers:
 - Files are merged left-to-right (later files override earlier)
 - Inline content in the main file overrides everything
 
+!!! note "Bundled defaults are not auto-loaded"
+    `snippets.yaml`, `diagram.yaml`, `security.yaml`, and the other bundled config files are
+    **not loaded automatically** — they only activate when listed under `include:`.
+    `onetool init` writes an `onetool.yaml` that already includes all of them, so this only
+    matters if you write your own config from scratch.
+
+    Skills (`.onetool/skills/`) are the exception: they are auto-discovered at runtime without
+    any `include:` entry.
+
 ## Pack Configuration
 
 Pack settings go under `tools.<pack_name>` in `onetool.yaml`.

@@ -4,6 +4,21 @@ Browser automation, debugging, and element annotation via Chrome DevTools Protoc
 
 **Source:** [ChromeDevTools/chrome-devtools-mcp](https://github.com/ChromeDevTools/chrome-devtools-mcp)
 
+## Enabling
+
+The server is included in `servers.yaml` with `enabled: false`. To activate it permanently:
+
+```yaml
+chrome-devtools:
+  enabled: true
+```
+
+Or enable for the current session only:
+
+```python
+ot.server(enable="chrome-devtools")
+```
+
 ## Server Config
 
 ```yaml
@@ -16,6 +31,7 @@ chrome-devtools:
     - "--isolated"
     - "--viewport=1280x720"
   timeout: 120
+  enabled: true
 ```
 
 ### Options
@@ -85,7 +101,7 @@ chrome_devtools.evaluate_script(
 See every HTTP request a page makes — useful for mapping API endpoints or auditing third-party calls.
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com/dashboard")
+chrome_devtools.navigate_page(url="https://myapp.com/dashboard")
 chrome_devtools.list_network_requests()
 chrome_devtools.evaluate_script(
     function="() => performance.getEntriesByType('resource').map(r => ({url: r.name, duration: Math.round(r.duration)}))"
@@ -97,7 +113,7 @@ chrome_devtools.evaluate_script(
 Capture any errors thrown during page load — useful for debugging or regression checks.
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com")
+chrome_devtools.navigate_page(url="https://myapp.com")
 chrome_devtools.list_console_messages()
 # Look for type="error" entries in the output
 ```
@@ -107,7 +123,7 @@ chrome_devtools.list_console_messages()
 Test how a page renders on a phone without a physical device.
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com")
+chrome_devtools.navigate_page(url="https://myapp.com")
 chrome_devtools.resize_page(width=390, height=844)   # iPhone 14 dimensions
 chrome_devtools.take_screenshot()
 chrome_devtools.resize_page(width=1280, height=720)  # Reset to desktop
@@ -118,8 +134,8 @@ chrome_devtools.resize_page(width=1280, height=720)  # Reset to desktop
 Open two pages and compare their state — useful for A/B testing or before/after checks.
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com/pricing?plan=free")
-chrome_devtools.new_page(url="https://example.com/pricing?plan=pro")
+chrome_devtools.navigate_page(url="https://myapp.com/pricing?plan=free")
+chrome_devtools.new_page(url="https://myapp.com/pricing?plan=pro")
 chrome_devtools.take_screenshot()
 chrome_devtools.select_page(index=1)
 chrome_devtools.take_screenshot()
@@ -130,7 +146,7 @@ chrome_devtools.take_screenshot()
 Collect every anchor href — useful for link audits or crawl preparation.
 
 ```python
-chrome_devtools.navigate_page(url="https://docs.example.com")
+chrome_devtools.navigate_page(url="https://docs.myapp.com")
 chrome_devtools.evaluate_script(
     function="() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href).filter(h => h.startsWith('https'))"
 )
@@ -142,7 +158,7 @@ Measure how long a page takes to load and identify bottlenecks.
 
 ```python
 chrome_devtools.performance_start_trace()
-chrome_devtools.navigate_page(url="https://example.com")
+chrome_devtools.navigate_page(url="https://myapp.com")
 chrome_devtools.wait_for(text="Example Domain")
 chrome_devtools.performance_stop_trace()
 chrome_devtools.performance_analyze_insight()
@@ -153,7 +169,7 @@ chrome_devtools.performance_analyze_insight()
 Visually walk the user through a multi-step process with labelled overlays.
 
 ```python
-chrome_devtools.navigate_page(url="https://example.com/settings")
+chrome_devtools.navigate_page(url="https://myapp.com/settings")
 chrome_util.inject_annotations()
 chrome_util.guide_user(
     task="Update profile",

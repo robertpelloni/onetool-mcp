@@ -42,7 +42,7 @@ Most management functions (`add`, `list`, `remove`, `clean`) must run from the *
 ## Requires
 
 - `git` installed and available in `PATH`
-- `gh` (GitHub CLI) — only needed for `worktree.checkout(pr=...)`
+- `gh` (GitHub CLI, [cli.github.com](https://cli.github.com)) — only needed for `worktree.checkout(pr=...)`
 - `filelock` Python package (included in `[dev]` extras)
 
 ## Configuration

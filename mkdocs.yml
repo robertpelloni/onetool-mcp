@@ -144,6 +144,7 @@ nav:
       - Configuration: learn/configuration.md
       - Security: learn/security.md
       - Explicit Calls: learn/explicit-calls.md
+      - Snippets: learn/snippets.md
       - Extension Tools: learn/extension-tools.md
       - What's New in v2: learn/whats-new-v2.md
   - Reference:

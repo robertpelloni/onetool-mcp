@@ -4,6 +4,21 @@ Browser automation via Playwright accessibility tree. No vision or screenshots r
 
 **Source:** [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp)
 
+## Enabling
+
+The server is included in `servers.yaml` with `enabled: false`. To activate it permanently:
+
+```yaml
+playwright:
+  enabled: true
+```
+
+Or enable for the current session only:
+
+```python
+ot.server(enable="playwright")
+```
+
 ## Server Config
 
 ```yaml
@@ -13,6 +28,7 @@ playwright:
   args:
     - "@playwright/mcp@latest"
   timeout: 120
+  enabled: true
 ```
 
 ### Options
@@ -84,10 +100,10 @@ playwright.browser_evaluate(
 Automate authentication flows end-to-end.
 
 ```python
-playwright.browser_navigate(url="https://example.com/login")
+playwright.browser_navigate(url="https://myapp.com/login")
 playwright.browser_snapshot()  # Check form field names first
 playwright.browser_fill_form(fields=[
-    {"selector": "input[name='email']", "value": "user@example.com"},
+    {"selector": "input[name='email']", "value": "user@myapp.com"},
     {"selector": "input[name='password']", "value": "secure123"},
 ])
 playwright.browser_click(element="Submit button", ref="...")
@@ -99,7 +115,7 @@ playwright.browser_snapshot()  # Verify logged in
 Extract all rows from an HTML table as a list of records.
 
 ```python
-playwright.browser_navigate(url="https://example.com/pricing")
+playwright.browser_navigate(url="https://myapp.com/pricing")
 playwright.browser_evaluate(
     function="""() => {
         const rows = Array.from(document.querySelectorAll('table tr'));
@@ -113,11 +129,11 @@ playwright.browser_evaluate(
 Walk through a user journey and verify state at each step.
 
 ```python
-playwright.browser_navigate(url="https://shop.example.com/product/1")
+playwright.browser_navigate(url="https://shop.myapp.com/product/1")
 playwright.browser_snapshot()
 playwright.browser_click(element="Add to cart button")
 playwright.browser_snapshot()  # Verify cart updated
-playwright.browser_navigate(url="https://shop.example.com/cart")
+playwright.browser_navigate(url="https://shop.myapp.com/cart")
 playwright.browser_snapshot()  # Verify item in cart
 playwright.browser_take_screenshot()
 ```
@@ -127,7 +143,7 @@ playwright.browser_take_screenshot()
 Check how a page looks at phone dimensions.
 
 ```python
-playwright.browser_navigate(url="https://example.com")
+playwright.browser_navigate(url="https://myapp.com")
 playwright.browser_resize(width=390, height=844)   # iPhone 14
 playwright.browser_snapshot()
 playwright.browser_take_screenshot()
@@ -139,7 +155,7 @@ playwright.browser_resize(width=1280, height=720)  # Reset to desktop
 Use the annotation overlay to visually guide a user through a workflow.
 
 ```python
-playwright.browser_navigate(url="https://example.com/settings")
+playwright.browser_navigate(url="https://myapp.com/settings")
 play_util.inject_annotations()
 play_util.guide_user(
     task="Update your profile",
@@ -157,7 +173,7 @@ playwright.browser_take_screenshot()
 Detect JavaScript errors thrown during page load.
 
 ```python
-playwright.browser_navigate(url="https://example.com")
+playwright.browser_navigate(url="https://myapp.com")
 playwright.browser_console_messages()
 # Look for level="error" entries — useful for regression checks
 ```

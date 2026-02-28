@@ -29,6 +29,11 @@ Examples of what NOT to do:
 
 The goal is a simple, clean codebase. Backward compat adds hidden complexity and makes bugs harder to find.
 
+## Testing Constraints
+
+- Never use `example.com` in tests or examples — it does not exist.
+  Use realistic tool calls or omit URLs entirely.
+
 ## OpenSpec Workflow
 
 Use `/opsx:new` for changes that define new user-facing behaviour or modify

@@ -25,6 +25,10 @@ onetool init validate -c .onetool/onetool.yaml
 OneTool uses an allowlist-based security model. Everything is blocked by
 default; you must explicitly allow what's safe.
 
+Bundled defaults like `snippets.yaml`, `diagram.yaml`, and `security.yaml` are not loaded
+automatically — they must be listed under `include:`. `onetool init` handles this for you;
+it only matters if you write your own `onetool.yaml` from scratch.
+
 Include `security.yaml` in your config (paths resolve from the directory containing `onetool.yaml`):
 
 ```yaml

@@ -4,6 +4,21 @@ GitHub's official MCP server for repository management, issues, pull requests, A
 
 **Source:** [github/github-mcp-server](https://github.com/github/github-mcp-server)
 
+## Enabling
+
+The server is included in `servers.yaml` with `enabled: false`. To activate it permanently:
+
+```yaml
+github:
+  enabled: true
+```
+
+Or enable for the current session only:
+
+```python
+ot.server(enable="github")
+```
+
 ## Server Config
 
 ```yaml
@@ -14,6 +29,7 @@ github:
     Authorization: "Bearer ${GITHUB_TOKEN}"
     Accept: "application/json, text/event-stream"
   timeout: 120
+  enabled: true
 ```
 
 ### Setup
@@ -23,7 +39,7 @@ github:
    ```yaml
    GITHUB_TOKEN: ghp_your_token_here
    ```
-3. Ensure the `github:` block is enabled in your `servers.yaml`
+3. Set `enabled: true` in `servers.yaml`
 
 ## Tools
 

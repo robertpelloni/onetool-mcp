@@ -4,6 +4,21 @@ Code search for large codebases — regex always available, semantic search and 
 
 **Source:** [chunkhound/chunkhound](https://github.com/chunkhound/chunkhound)
 
+## Enabling
+
+The server is included in `servers.yaml` with `enabled: false`. To activate it permanently:
+
+```yaml
+chunkhound:
+  enabled: true
+```
+
+Or enable for the current session only:
+
+```python
+ot.server(enable="chunkhound")
+```
+
 ## Server Config
 
 ```yaml
@@ -13,7 +28,8 @@ chunkhound:
   args:
     - "mcp"
   timeout: 30
-  inherit_env: true
+  inherit_env: true  # Required: passes CHUNKHOUND_EMBEDDING__API_KEY
+  enabled: true
 ```
 
 ### Setup

@@ -61,7 +61,7 @@ tools:
 
 ## Requires
 
-- `rg` binary (install with: `brew install ripgrep`)
+- `rg` binary — install from [github.com/BurntSushi/ripgrep](https://github.com/BurntSushi/ripgrep) (macOS: `brew install ripgrep`, Linux: `apt install ripgrep`)
 
 ## Glob Patterns
 

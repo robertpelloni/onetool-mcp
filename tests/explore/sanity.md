@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Do sanity testing and find issues.
 
 Test out the following packs:
-Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, package, ripgrep, ot_forge, web
+Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, package, ripgrep, ot_forge, tavily, webfetch
 
 When testing:
 - convert with files at tests/data/
@@ -35,34 +35,44 @@ Do sanity testing and find issues.
 Test the following snippets:
 
 Search snippets:
-- $brv q="test query"
-- $brv_research q="topic"
+- $br q="test query"
 - $g q="test query"
-- $g_reddit q="topic"
 - $gh q="onetool"
+- $tav q="test query"
+- $tav_x url="https://en.wikipedia.org/wiki/Python_(programming_language)"
 
 Documentation snippets:
-- $c7_lib q="react"
 - $c7 lib="facebook/react" q="hooks"
-- $c7_eg lib="facebook/react" q="useState"
 
 Package snippets:
-- $pkg
-- $pkg_pypi packages="requests"
+- $pkg_py packages="requests"
 - $pkg_npm packages="react"
-- $pkg_model q="claude"
+- $pkg_m q="claude"
+- $pkg_a
 
 File/code snippets:
 - $rg p="TODO"
 - $rg_count p="import" ft="py"
-- $webfetch u="https://en.wikipedia.org/wiki/Python_(programming_language)"
-- $webfetch_summary u="https://en.wikipedia.org/wiki/Python_(programming_language)"
-- $webfetch_data u="https://en.wikipedia.org/wiki/Python_(programming_language)" schema="section headings"
+- $wf url="https://en.wikipedia.org/wiki/Python_(programming_language)"
+- $wf_s url="https://en.wikipedia.org/wiki/Python_(programming_language)"
+- $wf_d url="https://en.wikipedia.org/wiki/Python_(programming_language)" schema="section headings"
+- $f_t
+- $f_r path="README.md"
+- $f_g p="TODO"
+
+Convert snippets:
+- $cv file="tests/data/file_example_1MB.docx" output_dir="tmp/sanity-cv/"
+
+Memory snippets:
+- $mem_w topic="tmp/test/snip" file="README.md" category="note"
+- $mem_r topic="tmp/test/snip"
+- $mem_l
+- $mem_g p="TODO"
+- $mem_s q="onetool features"
 
 System snippets:
-- $ot_status
-- $ot_reload
-- $ot_notify msg="sanity test"
+- $status
+- $reload
 
 ```
 
@@ -234,10 +244,16 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `ot.packs()` - lists extensions with `is_extension` and `path`
 - **Snippets use abbreviated parameter names** (by design):
   - `$rg` and `$rg_count` use `p=` for pattern (not `pattern=`)
-  - `$brv`, `$g`, and `$gh` use `q=` for query (not `query=`)
-  - `$c7` and `$c7_eg` use `lib=` for library_id and `q=` for query
-  - `$pkg_pypi` and `$pkg_npm` use `packages=` (comma-separated string, not list)
-  - `$webfetch` uses `u=` for URLs (pipe-separated for batch)
+  - `$br`, `$g`, `$gh`, `$tav`, `$mem_s` use `q=` for query (not `query=`)
+  - `$c7` uses `lib=` for library_id and `q=` for query
+  - `$pkg_py` and `$pkg_npm` use `packages=` (comma-separated string, not list)
+  - `$wf` uses `url=` for URLs (pipe-separated for batch)
+  - `$mem_g` and `$f_g` use `p=` for pattern
+  - `$mem_r` uses `topic=` for exact topic path
+  - `$mem_w` uses `topic=` and `file=` (writes a file into memory)
+  - `$cv` uses `file=` for source glob and `output_dir=` for output
+  - `$tav_x` uses `url=` (pipe-separated for batch extraction)
+  - `$reload` and `$status` take no parameters
   - Example: `$rg p="TODO" ft="py"` not `$rg pattern="TODO" file_type="py"`
 - **db tools**: Use SQLite URL format `sqlite:///path/to/db`
   - Example: `db.tables(db_url="sqlite:///tests/data/northwind.db")`
@@ -286,12 +302,10 @@ Test data locations:
 
 ### Test ordering to avoid reload side effects
 
-- **Test context7 and ground BEFORE calling `$ot_reload`** — `ot.reload()` clears
+- **Test context7 and ground BEFORE calling `$reload`** — `ot.reload()` clears
   env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
   tools to fail in the same session. These tools only work on fresh server startup.
-- **`$brv_research` and `$webfetch_summary`/`$webfetch_data`** require `ot_llm.transform`, which
-  depends on `OPENAI_API_KEY`. Skip or expect failure if that key is not configured.
-- **`$ot_notify`** returns "SKIP: no matching topic" when no subscriber is configured — this is expected, not a bug.
+- **`$wf_s` and `$wf_d`** require `llm.transform` (OpenAI). Skip or expect failure if `OPENAI_API_KEY` is not configured.
 - **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index
   is only built during write. Calling `mem.write(content="# Heading\n...", toc=True)` is
   required before `mem.toc()` or `mem.slice()` will return results.
@@ -303,7 +317,7 @@ Test these first for fast coverage (one tool from each category):
 1. `brave.search(query="test", count=2)` - web search
 2. `ripgrep.search(pattern="TODO", path=".", limit=3)` - file search
 3. `ot.health()` - introspection
-4. `$pkg_pypi packages="requests"` - snippets
+4. `$pkg_py packages="requests"` - snippets
 5. `file.tree(path=".", max_depth=1)` - filesystem
 6. `mem.write(topic="tmp/test/smoke", content="hello")` then `mem.read(topic="tmp/test/smoke")` then `mem.delete(topic="tmp/", confirm=True)` - memory
 7. `db.tables(db_url="sqlite:///tests/data/northwind.db")` - database

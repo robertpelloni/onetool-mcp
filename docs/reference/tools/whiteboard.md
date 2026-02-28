@@ -11,7 +11,14 @@ Short alias: `wb`
 - Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
 - Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
 
-Requires the Playwright MCP server:
+Requires the Playwright MCP server. Enable it in `servers.yaml` (persistent):
+
+```yaml
+playwright:
+  enabled: true
+```
+
+Or enable for the current session only:
 
 ```python
 ot.server(enable="playwright")
