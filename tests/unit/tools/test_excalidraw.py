@@ -1,4 +1,4 @@
-"""Unit tests for the wb (whiteboard) tool pack.
+"""Unit tests for the whiteboard tool pack (pack name: whiteboard, short alias: wb).
 
 Tests cover: parse_dsl, _build_dsl, auto_layout, _parse_style_props, and
 smoke tests for public tools with mocked Playwright.
@@ -1787,17 +1787,17 @@ class TestShapeTypes:
         assert "type" not in result["shapes"]["a"]
 
     def test_style_shape_d_maps_to_diamond(self) -> None:
-        """wb.style shape:d maps to 'diamond' excalidraw type."""
+        """whiteboard.style shape:d maps to 'diamond' excalidraw type."""
         props = _parse_style_props("shape:d")
         assert props["shape"] == "diamond"
 
     def test_style_shape_c_maps_to_ellipse(self) -> None:
-        """wb.style shape:c maps to 'ellipse' excalidraw type."""
+        """whiteboard.style shape:c maps to 'ellipse' excalidraw type."""
         props = _parse_style_props("shape:c")
         assert props["shape"] == "ellipse"
 
     def test_style_shape_r_maps_to_rectangle(self) -> None:
-        """wb.style shape:r maps to 'rectangle' excalidraw type."""
+        """whiteboard.style shape:r maps to 'rectangle' excalidraw type."""
         props = _parse_style_props("shape:r")
         assert props["shape"] == "rectangle"
 
@@ -2357,7 +2357,7 @@ class TestLoadWarningNoDsl:
 
 
 # ===========================================================================
-# wb.help()
+# whiteboard.help()
 # ===========================================================================
 
 

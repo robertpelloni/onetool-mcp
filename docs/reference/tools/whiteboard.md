@@ -1,13 +1,15 @@
-# wb (Whiteboard)
+# Whiteboard
 
 Playwright-driven live diagram manipulation on [excalidraw.com](https://excalidraw.com). Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.
 
+Short alias: `wb`
+
 ## TL;DR
 
-- Call `wb.open()` first, then `wb.draw(...)`.
-- Use `wb.note(...)` and `wb.embed_dsl()` for documentation overlays.
-- Persist with `wb.save(file=...)` / `wb.load(file=...)`.
-- Export visuals with `wb.screenshot(...)`; recover with `wb.hard_reset()` when state is broken.
+- Call `whiteboard.open()` first, then `whiteboard.draw(...)`.
+- Use `whiteboard.note(...)` and `whiteboard.embed_dsl()` for documentation overlays.
+- Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
+- Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
 
 Requires the Playwright MCP server:
 
@@ -18,11 +20,11 @@ ot.server(enable="playwright")
 ## Quick Start
 
 ```python
-wb.open()
-wb.draw(input='a["API"]; b["DB"]; a-->b')
-wb.style(ids=["b"], style="bc:blue,sc:#1d4ed8")
-wb.screenshot()
-wb.save(file="diagrams/arch.excalidraw")
+whiteboard.open()
+whiteboard.draw(input='a["API"]; b["DB"]; a-->b')
+whiteboard.style(ids=["b"], style="bc:blue,sc:#1d4ed8")
+whiteboard.screenshot()
+whiteboard.save(file="diagrams/arch.excalidraw")
 ```
 
 ## API Summary (Generated)
@@ -32,35 +34,35 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 <!-- BEGIN GENERATED:WB_HELP_SUMMARY -->
 | Function | Summary |
 |---|---|
-| `wb.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
-| `wb.close() -> str` | Close the excalidraw tab and reset all Python state. |
-| `wb.draw(*, input: str) -> str` | Add or update diagram elements from DSL. Always additive — never clears. |
-| `wb.embed_dsl() -> str` | Embed the current DSL as a note element on the canvas. |
-| `wb.erase(*, ids: list[str]) -> str` | Remove individual elements from the canvas and Python state. |
-| `wb.fit() -> str` | Fit all elements in view. |
-| `wb.hard_reset() -> str` | Reset Python DSL state unconditionally; attempt canvas clear if browser is available. |
-| `wb.help() -> str` | Return the full DSL and style reference. Call this before using wb.draw or wb.style. |
-| `wb.load(*, file: str) -> str` | Restore diagram from a native ``.excalidraw`` file. |
-| `wb.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
-| `wb.open() -> str` | Open excalidraw.com and start with a clean canvas. |
-| `wb.save(*, file: str) -> str` | Save current diagram to a native ``.excalidraw`` JSON file. |
-| `wb.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
-| `wb.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
-| `wb.share() -> str` | Generate a shareable Excalidraw link for the current canvas. |
-| `wb.style(*, ids: list[str], style: str) -> str` | Apply visual style properties to existing canvas elements in bulk. |
-| `wb.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
-| `wb.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
+| `whiteboard.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
+| `whiteboard.close() -> str` | Close the excalidraw tab and reset all Python state. |
+| `whiteboard.draw(*, input: str) -> str` | Add or update diagram elements from DSL. Always additive — never clears. |
+| `whiteboard.embed_dsl() -> str` | Embed the current DSL as a note element on the canvas. |
+| `whiteboard.erase(*, ids: list[str]) -> str` | Remove individual elements from the canvas and Python state. |
+| `whiteboard.fit() -> str` | Fit all elements in view. |
+| `whiteboard.hard_reset() -> str` | Reset Python DSL state unconditionally; attempt canvas clear if browser is available. |
+| `whiteboard.help() -> str` | Return the full DSL and style reference. Call this before using whiteboard.draw or whiteboard.style. |
+| `whiteboard.load(*, file: str) -> str` | Restore diagram from a native ``.excalidraw`` file. |
+| `whiteboard.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
+| `whiteboard.open() -> str` | Open excalidraw.com and start with a clean canvas. |
+| `whiteboard.save(*, file: str) -> str` | Save current diagram to a native ``.excalidraw`` JSON file. |
+| `whiteboard.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
+| `whiteboard.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
+| `whiteboard.share() -> str` | Generate a shareable Excalidraw link for the current canvas. |
+| `whiteboard.style(*, ids: list[str], style: str) -> str` | Apply visual style properties to existing canvas elements in bulk. |
+| `whiteboard.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
+| `whiteboard.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
 <!-- END GENERATED:WB_HELP_SUMMARY -->
 
 ## Configuration
 
 ### Required
 
-- No required `tools.wb` settings.
+- No required `tools.whiteboard` settings.
 
 ### Optional
 
-- This pack does not define any pack-specific keys under `tools.wb`.
+- This pack does not define any pack-specific keys under `tools.whiteboard`.
 
 ### Defaults
 
@@ -74,7 +76,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 Open excalidraw.com and start with a clean canvas. Resets all Python state.
 
 ```python
-wb.open()
+whiteboard.open()
 # Returns: "whiteboard ready"
 ```
 
@@ -87,14 +89,14 @@ Add or update diagram elements from DSL. Additive — never clears existing elem
 - Edges are deduplicated by `(src, dst, label)`.
 
 ```python
-wb.draw(input='a["Service A"]; b["DB"]; a-->b')
+whiteboard.draw(input='a["Service A"]; b["DB"]; a-->b')
 # Returns: "+2 shapes, +1 edge(s): edge-a-b"
 ```
 
 Inline style props can be appended after the closing `]`:
 
 ```python
-wb.draw(input='a["API"] bc:blue,sc:#1d4ed8,sw:2')
+whiteboard.draw(input='a["API"] bc:blue,sc:#1d4ed8,sw:2')
 ```
 
 ### `style(ids, style)`
@@ -102,8 +104,8 @@ wb.draw(input='a["API"] bc:blue,sc:#1d4ed8,sw:2')
 Apply visual style properties to existing canvas elements. Never changes position or size unless `x`, `y`, `w`, `h` are given.
 
 ```python
-wb.style(ids=["a", "b"], style="bc:green,sc:#16a34a")
-wb.style(ids=["c"], style="shape:d")   # change to diamond
+whiteboard.style(ids=["a", "b"], style="bc:green,sc:#16a34a")
+whiteboard.style(ids=["c"], style="shape:d")   # change to diamond
 # Returns: "styled 2 element(s)"
 ```
 
@@ -131,10 +133,10 @@ Named colours: `green`, `blue`, `red`, `purple`, `yellow`, `orange`, `pink`, `gr
 
 ### `help()`
 
-Return the full DSL syntax and style shorthand reference as plain text. No browser required. Call this before using `wb.draw()` or `wb.style()` for the first time.
+Return the full DSL syntax and style shorthand reference as plain text. No browser required. Call this before using `whiteboard.draw()` or `whiteboard.style()` for the first time.
 
 ```python
-wb.help()
+whiteboard.help()
 # Returns: full DSL and style reference as a string
 ```
 
@@ -143,7 +145,7 @@ wb.help()
 Insert ASCII-rendered text annotations below any existing diagram content.
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 t[table:
 Name,Role
 Alice,Dev
@@ -159,10 +161,10 @@ Remove elements by ID. Dangling edges (whose src or dst is erased) are removed a
 Edge IDs use the format `edge-{src}-{dst}` (plus optional label and arrowhead suffix). The `draw()` return value lists newly created edge IDs.
 
 ```python
-wb.erase(ids=["a", "edge-a-b"])
+whiteboard.erase(ids=["a", "edge-a-b"])
 # Returns: "erased 2 element(s)"
 
-wb.erase(ids=["b"])  # b has edges a-->b and b-->c
+whiteboard.erase(ids=["b"])  # b has edges a-->b and b-->c
 # Returns: "erased 1 element(s), 2 dangling edge(s) removed"
 ```
 
@@ -171,7 +173,7 @@ wb.erase(ids=["b"])  # b has edges a-->b and b-->c
 Sync Python DSL state from the `__otDSL` canvas element. Use this after loading a file directly in the Excalidraw UI or drag-and-dropping an `.excalidraw` file.
 
 ```python
-wb.sync()
+whiteboard.sync()
 # Returns: "synced: 4 shapes, 3 edges"
 ```
 
@@ -180,7 +182,7 @@ wb.sync()
 Save the diagram to a native `.excalidraw` file (JSON). Also embeds the current DSL as a `__otDSL` text element on the canvas for state restoration.
 
 ```python
-wb.save(file="diagrams/arch.excalidraw")
+whiteboard.save(file="diagrams/arch.excalidraw")
 ```
 
 ### `load(file)`
@@ -188,18 +190,18 @@ wb.save(file="diagrams/arch.excalidraw")
 Restore a diagram saved by `save()`. Reads the native `.excalidraw` JSON and restores Python state from the embedded `__otDSL` element.
 
 ```python
-wb.load(file="diagrams/arch.excalidraw")
+whiteboard.load(file="diagrams/arch.excalidraw")
 # Returns: "loaded 4 shapes, 3 edges"
 ```
 
-> If the file has no `__otDSL` element (e.g. created outside `wb.save()`), the canvas is still restored but Python state will be empty and the return includes a warning. Call `wb.sync()` after manually adding a DSL element.
+> If the file has no `__otDSL` element (e.g. created outside `whiteboard.save()`), the canvas is still restored but Python state will be empty and the return includes a warning. Call `whiteboard.sync()` after manually adding a DSL element.
 
 ### `share()`
 
 Generate a shareable Excalidraw link. Encrypts the full scene client-side (AES-GCM, 128-bit) and uploads to Excalidraw's storage. Returns a URL anyone can open in a browser.
 
 ```python
-wb.share()
+whiteboard.share()
 # Returns: "https://excalidraw.com/#json={id},{key}"
 ```
 
@@ -208,7 +210,7 @@ wb.share()
 Insert the current DSL as a grey code-font box on the canvas. Idempotent. Excluded from `save()` snapshots.
 
 ```python
-wb.embed_dsl()
+whiteboard.embed_dsl()
 # Returns: "embedded DSL (5 lines)"
 ```
 
@@ -217,7 +219,7 @@ wb.embed_dsl()
 Clear all elements from the canvas and reset Python state.
 
 ```python
-wb.clear()
+whiteboard.clear()
 ```
 
 ### `screenshot(file)`
@@ -225,8 +227,8 @@ wb.clear()
 Take a PNG screenshot of the current canvas.
 
 ```python
-wb.screenshot()                            # return inline image
-wb.screenshot(file="diagrams/canvas.png") # save to disk
+whiteboard.screenshot()                            # return inline image
+whiteboard.screenshot(file="diagrams/canvas.png") # save to disk
 ```
 
 ### `scroll(dx, dy)`
@@ -234,7 +236,7 @@ wb.screenshot(file="diagrams/canvas.png") # save to disk
 Pan the canvas.
 
 ```python
-wb.scroll(dx=200, dy=0)
+whiteboard.scroll(dx=200, dy=0)
 ```
 
 ### `zoom(level)`
@@ -242,16 +244,16 @@ wb.scroll(dx=200, dy=0)
 Set zoom level. Pass `0` to fit all elements in view.
 
 ```python
-wb.zoom(level=0.5)   # 50%
-wb.zoom(level=0)     # fit all
+whiteboard.zoom(level=0.5)   # 50%
+whiteboard.zoom(level=0)     # fit all
 ```
 
 ### `fit()`
 
-Fit all elements in view. Equivalent to `wb.zoom(level=0)`.
+Fit all elements in view. Equivalent to `whiteboard.zoom(level=0)`.
 
 ```python
-wb.fit()
+whiteboard.fit()
 ```
 
 ### `close()`
@@ -259,7 +261,7 @@ wb.fit()
 Close the excalidraw tab and reset all Python state.
 
 ```python
-wb.close()
+whiteboard.close()
 ```
 
 ### `hard_reset()`
@@ -267,7 +269,7 @@ wb.close()
 Reset Python state unconditionally; attempt canvas clear if browser is available. Use to recover from broken Playwright state.
 
 ```python
-wb.hard_reset()
+whiteboard.hard_reset()
 ```
 
 ---
@@ -287,7 +289,7 @@ id["Line1\nLine2"]        multiline label
 id bc:blue                style-only update (label unchanged)
 ```
 
-> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise a `ValueError`. Use `wb.style(ids=[...], style="shape:c")` or `shape:d` to change shape after drawing.
+> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise a `ValueError`. Use `whiteboard.style(ids=[...], style="shape:c")` or `shape:d` to change shape after drawing.
 
 ### Edges
 
@@ -349,7 +351,7 @@ One or more blocks per call. Each becomes a code-font rectangle placed below the
 First row is the header. Columns separated by commas; rows by newlines or semicolons.
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 t[table:
 Task,In,Out
 compare:base,33,273
@@ -375,7 +377,7 @@ Output:
 Depth indicated by leading `-`, `.`, `_`, or spaces. One character = one level (for spaces, the smallest non-zero indent is the unit).
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 tr[tree:
 root/
 -src/
@@ -410,7 +412,7 @@ root/
 One message per line: `Actor -> Actor: label`. Label is optional.
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 s[seq:
 Client -> Server: request
 Server -> DB: query
@@ -441,7 +443,7 @@ Output:
 One task per line: `name,start,duration` (integers, 1-indexed).
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 g[timeline:
 Design,1,4
 Build,3,8
@@ -463,7 +465,7 @@ Test    [...........####]
 Word-wrapped paragraph text (default wrap at 60 chars).
 
 ```python
-wb.note(input="""
+whiteboard.note(input="""
 n[note:
 This is a plain text annotation that will be
 word-wrapped and displayed in a code-font box.
@@ -478,48 +480,48 @@ word-wrapped and displayed in a code-font box.
 ### Architecture diagram with styling
 
 ```python
-wb.open()
-wb.draw(input='api["API Gateway"]; auth["Auth Service"]; users["Users DB"]; api-->auth; auth-->users')
-wb.style(ids=["api", "auth"], style="bc:#dae8fc,sc:#6c8ebf")
-wb.style(ids=["users"], style="bc:#d5e8d4,sc:#82b366")
-wb.note(input="""
+whiteboard.open()
+whiteboard.draw(input='api["API Gateway"]; auth["Auth Service"]; users["Users DB"]; api-->auth; auth-->users')
+whiteboard.style(ids=["api", "auth"], style="bc:#dae8fc,sc:#6c8ebf")
+whiteboard.style(ids=["users"], style="bc:#d5e8d4,sc:#82b366")
+whiteboard.note(input="""
 t[table:
 Service,Latency,Owner
 API Gateway,12ms,Platform
 Auth Service,8ms,Security
 ]
 """)
-wb.fit()
-wb.screenshot()
+whiteboard.fit()
+whiteboard.screenshot()
 ```
 
 ### Save and restore
 
 ```python
-wb.save(file="diagrams/arch.excalidraw")
+whiteboard.save(file="diagrams/arch.excalidraw")
 # ... later ...
-wb.open()
-wb.load(file="diagrams/arch.excalidraw")
+whiteboard.open()
+whiteboard.load(file="diagrams/arch.excalidraw")
 ```
 
 ### Incremental drawing
 
 ```python
-wb.draw(input='a["Start"]; b["Process"]')
-wb.draw(input='c["End"]; b-->c')   # additive, positions relative to existing
+whiteboard.draw(input='a["Start"]; b["Process"]')
+whiteboard.draw(input='c["End"]; b-->c')   # additive, positions relative to existing
 ```
 
 ### Upsert — update label or style without moving
 
 ```python
-wb.draw(input='a["API"]; b["DB"]')
-wb.draw(input='a["API Gateway"] bc:blue')   # updates label and colour; position preserved
+whiteboard.draw(input='a["API"]; b["DB"]')
+whiteboard.draw(input='a["API Gateway"] bc:blue')   # updates label and colour; position preserved
 ```
 
 ### Share a diagram
 
 ```python
-wb.draw(input='a["Hello"]; b["World"]; a-->b')
-wb.share()
+whiteboard.draw(input='a["Hello"]; b["World"]; a-->b')
+whiteboard.share()
 # Returns a URL like: https://excalidraw.com/#json=abc123,key456
 ```

@@ -1,4 +1,4 @@
-# wb DSL and Style Reference
+# whiteboard DSL and Style Reference
 
 Use `;` as statement separator — no multi-line strings needed for agent calls.
 
@@ -8,7 +8,7 @@ Use `;` as statement separator — no multi-line strings needed for agent calls.
 
 ### Shapes
 
-Only rectangles are supported. Use `wb.style()` to change shape after drawing.
+Only rectangles are supported. Use `whiteboard.style()` to change shape after drawing.
 
 ```
 id["Label"]                  rectangle
@@ -135,7 +135,7 @@ This is a plain text annotation.
 
 ## Style Shorthands
 
-Used in `wb.draw()` inline props and `wb.style()`. All keys and values are **case-insensitive**.
+Used in `whiteboard.draw()` inline props and `whiteboard.style()`. All keys and values are **case-insensitive**.
 
 Format: comma-separated `key:value` pairs, e.g. `bc:green,sw:2,ss:dashed`
 

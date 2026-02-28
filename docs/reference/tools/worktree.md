@@ -2,6 +2,8 @@
 
 Git worktree management for parallel agent tasks. Each task gets an isolated directory — agents never touch the main working copy.
 
+Short alias: `wt`
+
 ## Highlights
 
 - Trunk-mode only: one main repo, multiple isolated task worktrees

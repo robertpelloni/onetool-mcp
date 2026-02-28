@@ -1,4 +1,4 @@
-# OT Core
+# OneTool Core
 
 Core tools for OneTool introspection and management.
 

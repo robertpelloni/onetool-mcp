@@ -45,7 +45,7 @@ NAME_TO_PACK = {
     "Playwright Util": "play_util",
     "Ripgrep": "ripgrep",
     "Timer": "ot_timer",
-    "WB (Whiteboard)": "wb",
+    "WB (Whiteboard)": "whiteboard",
     "Webfetch": "webfetch",
     "Worktree": "worktree",
 }

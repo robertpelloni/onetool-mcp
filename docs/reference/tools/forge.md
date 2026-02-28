@@ -1,6 +1,8 @@
-# Forge
+# OneTool Forge
 
 Create, validate, and install extension tools and skill stubs.
+
+Short alias: `forge`
 
 ## Highlights
 

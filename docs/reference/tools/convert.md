@@ -2,6 +2,8 @@
 
 Convert PDF, Word, PowerPoint, and Excel documents to Markdown with LLM-optimised output. Each conversion produces two files: a pure content file with exact line numbers, and a separate TOC file with frontmatter and navigation.
 
+Short alias: `cv`
+
 ## Highlights
 
 - Two-file output: pure content + separate TOC with line numbers

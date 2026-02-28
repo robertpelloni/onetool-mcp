@@ -10,7 +10,7 @@ Requires the Playwright MCP server to be enabled:
 from __future__ import annotations
 
 # Pack declaration MUST be before other imports
-pack = "wb"
+pack = "whiteboard"
 
 __all__ = [
     "clear",
@@ -419,7 +419,7 @@ def _find_free_y(x: float, y: float) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Style property helpers (shared by wb.draw, wb.style, wb.erase docstrings)
+# Style property helpers (shared by whiteboard.draw, whiteboard.style, whiteboard.erase docstrings)
 # ---------------------------------------------------------------------------
 
 _STYLE_SHORTHANDS: dict[str, str] = {
@@ -528,13 +528,13 @@ def _try_shape(
         nid = _norm_id(line.split("(")[0].strip())
         raise ValueError(
             f"Ellipse syntax '((...))' is not supported. "
-            f"Draw a rectangle and use wb.style(ids=['{nid}'], style='shape:c') to change shape."
+            f"Draw a rectangle and use whiteboard.style(ids=['{nid}'], style='shape:c') to change shape."
         )
     if _RE_SHAPE_DIAMOND.match(line):
         nid = _norm_id(line.split("{")[0].strip())
         raise ValueError(
             f"Diamond syntax '{{...}}' is not supported. "
-            f"Draw a rectangle and use wb.style(ids=['{nid}'], style='shape:d') to change shape."
+            f"Draw a rectangle and use whiteboard.style(ids=['{nid}'], style='shape:d') to change shape."
         )
     if m := _RE_SHAPE_RECT.match(line):
         nid = _norm_id(m[1])
@@ -590,7 +590,7 @@ def parse_dsl(spec: str) -> dict[str, Any]:
         end
 
     Note: classDef/class and ellipse/diamond syntax are not supported.
-    Use ``wb.style`` to change colours and shapes after drawing.
+    Use ``whiteboard.style`` to change colours and shapes after drawing.
 
     Args:
         spec: DSL string. Statements may be separated by newlines or semicolons.
@@ -637,7 +637,7 @@ def parse_dsl(spec: str) -> dict[str, Any]:
         if re.match(r"^(?:classDef|class)\s", line):
             raise ValueError(
                 "classDef/class syntax is not supported. "
-                "Use wb.style() to apply colours and shapes after drawing."
+                "Use whiteboard.style() to apply colours and shapes after drawing."
             )
 
         # Bare node ID inside a subgraph — membership only
@@ -874,7 +874,7 @@ def draw(*, input: str) -> str:
         Summary like "+2 shapes, +1 edge [edge-a-b]".
 
     Example:
-        wb.draw(input='a["Service A"];b["DB"];a-->b')
+        whiteboard.draw(input='a["Service A"];b["DB"];a-->b')
     """
     with LogSpan(span="excalidraw.draw") as s:
         global _max_rendered_y
@@ -1236,7 +1236,7 @@ def erase(*, ids: list[str]) -> str:
         a-.->b              →  "edge-a-b-dashed"
         a-.->|Metrics|b     →  "edge-a-b-dashed-Metrics"
 
-    Use ``wb.draw`` output to see the generated edge IDs after drawing.
+    Use ``whiteboard.draw`` output to see the generated edge IDs after drawing.
 
     Args:
         ids: List of element IDs to remove.
@@ -1314,7 +1314,7 @@ def save(*, file: str) -> str:
 
     Writes the full Excalidraw scene (including user-added elements and
     live positions) plus a ``__otDSL`` text element that stores the
-    logical DSL for future ``wb.load`` / ``wb.sync`` calls.
+    logical DSL for future ``whiteboard.load`` / ``whiteboard.sync`` calls.
 
     The saved file can be opened directly in excalidraw.com.
 
@@ -1367,9 +1367,9 @@ def load(*, file: str) -> str:
     """Restore diagram from a native ``.excalidraw`` file.
 
     Loads the full Excalidraw scene and restores Python DSL state from the
-    embedded ``__otDSL`` element (written by ``wb.save``). If the file was
-    not created by ``wb.save`` and lacks a ``__otDSL`` element, Python state
-    will be empty (call ``wb.sync`` after manually adding a DSL element).
+    embedded ``__otDSL`` element (written by ``whiteboard.save``). If the file was
+    not created by ``whiteboard.save`` and lacks a ``__otDSL`` element, Python state
+    will be empty (call ``whiteboard.sync`` after manually adding a DSL element).
 
     Args:
         file: Path to a ``.excalidraw`` file.
@@ -1421,7 +1421,7 @@ def load(*, file: str) -> str:
             _parse_dsl_to_state(dsl_str)
             warning = ""
         else:
-            warning = " [warning: no __otDSL element — Python state is empty; call wb.sync() after adding one]"
+            warning = " [warning: no __otDSL element — Python state is empty; call whiteboard.sync() after adding one]"
 
         # Rebuild _rendered_ids from state
         for id_ in _dsl_state["shapes"]:
@@ -1449,7 +1449,7 @@ def sync() -> str:
 
     - Loading a file directly in the Excalidraw UI (File → Open)
     - Drag-and-dropping an ``.excalidraw`` file onto the canvas
-    - Any operation that bypasses ``wb.load``
+    - Any operation that bypasses ``whiteboard.load``
 
     Returns:
         Summary like ``"synced: 4 shapes, 3 edges"``.
@@ -1467,7 +1467,7 @@ def sync() -> str:
         if not dsl_str:
             return (
                 "sync: no __otDSL element found on canvas. "
-                "Canvas may have been created outside wb, or wb.save() was not used."
+                "Canvas may have been created outside whiteboard, or whiteboard.save() was not used."
             )
 
         _parse_dsl_to_state(dsl_str)
@@ -1488,9 +1488,9 @@ def sync() -> str:
 
 
 def help() -> str:
-    """Return the full DSL and style reference. Call this before using wb.draw or wb.style.
+    """Return the full DSL and style reference. Call this before using whiteboard.draw or whiteboard.style.
 
-    Returns the complete wb DSL syntax and style shorthand reference as plain text.
+    Returns the complete whiteboard DSL syntax and style shorthand reference as plain text.
     No browser interaction needed.
 
     Returns:
@@ -1509,7 +1509,7 @@ def style(*, ids: list[str], style: str) -> str:
     ``_dsl_state`` — styling is a purely visual operation.
 
     Style string is comma-separated ``key:value`` pairs using the shorthand
-    table shared with ``wb.draw`` inline styles:
+    table shared with ``whiteboard.draw`` inline styles:
 
     +---------+----------------------+------------------------------------------+
     | Key     | Excalidraw property  | Notes                                    |
@@ -1838,7 +1838,7 @@ def open() -> str:
 
     Navigates to excalidraw.com and initialises the drawing API if not
     already ready, then clears the canvas and resets all Python state.
-    To restore previous content after opening, call wb.load().
+    To restore previous content after opening, call whiteboard.load().
 
     Returns:
         "whiteboard ready" on success, or an error string.
@@ -1863,7 +1863,7 @@ def close() -> str:
     """Close the excalidraw tab and reset all Python state.
 
     Resets DSL state unconditionally, then closes the browser tab so it is
-    not left open. On the next wb tool call a fresh excalidraw.com tab will
+    not left open. On the next whiteboard tool call a fresh excalidraw.com tab will
     be opened automatically.
 
     If Playwright is unavailable, only the Python state is reset.

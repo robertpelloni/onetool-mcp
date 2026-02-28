@@ -2,6 +2,8 @@
 
 Excel file manipulation using openpyxl. Create, read, write workbooks, apply formulas, manage tables, and inspect spreadsheet structure.
 
+Short alias: `xls`
+
 ## Highlights
 
 - 25 functions covering all spreadsheet operations

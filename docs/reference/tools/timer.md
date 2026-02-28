@@ -1,6 +1,8 @@
-# Timer
+# OneTool Timer
 
 Named stopwatch timers for performance measurement across tool calls.
+
+Short alias: `tmr`
 
 ## Highlights
 

@@ -1,6 +1,8 @@
-# play_util
+# Playwright Util
 
 Visual element annotation for the [Playwright MCP](../servers/playwright.md) server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+
+Short alias: `play`
 
 ## Tools
 

@@ -13,6 +13,31 @@ ServerInfoLevel = Literal["min", "default", "full", "resources", "prompts"]
 PACK_NAME = "ot"
 
 # Documentation URL mapping for packs with misaligned slugs
+# Short-name aliases for packs with verbose names.
+# Injected into the execution namespace so e.g. `wf.fetch()` == `webfetch.fetch()`.
+# Packs already short (db, mem, aws, ot) are not listed here.
+PACK_SHORT_NAMES: dict[str, str] = {
+    "brave": "br",
+    "context7": "c7",
+    "webfetch": "wf",
+    "tavily": "tav",
+    "ground": "g",
+    "diagram": "diag",
+    "package": "pkg",
+    "ripgrep": "rg",
+    "chrome_util": "chrome",
+    "play_util": "play",
+    "worktree": "wt",
+    "convert": "cv",
+    "excel": "xls",
+    "file": "f",
+    "ot_forge": "forge",
+    "ot_llm": "llm",
+    "ot_secrets": "sec",
+    "ot_timer": "tmr",
+    "whiteboard": "wb",
+}
+
 DOC_SLUGS: dict[str, str] = {
     "brave": "brave-search",
     "db": "database",

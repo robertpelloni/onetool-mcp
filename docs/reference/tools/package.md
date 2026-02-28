@@ -2,6 +2,8 @@
 
 Check latest versions for npm, PyPI packages and search OpenRouter AI models.
 
+Short alias: `pkg`
+
 ## Highlights
 
 - Unified version checking across npm and PyPI

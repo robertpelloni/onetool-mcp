@@ -244,6 +244,8 @@ def packs(
         except PromptsError:
             packs_descriptions = {}
 
+        from ot.meta._constants import PACK_SHORT_NAMES
+
         packs_list: list[dict[str, Any] | str] = []
 
         for pack_name in all_pack_names:
@@ -255,17 +257,25 @@ def packs(
             if not description and is_local:
                 description = _get_pack_module_description(runner_registry, pack_name)
 
+            short = PACK_SHORT_NAMES.get(pack_name)
+
             if info == "default":
-                packs_list.append({"name": pack_name, "description": description or "(no description)"})
+                entry: dict[str, Any] = {"name": pack_name, "description": description or "(no description)"}
+                if short:
+                    entry["short"] = short
+                packs_list.append(entry)
             else:
                 # info == "full"
                 tool_names = _get_pack_tool_names(runner_registry, proxy, pack_name, is_local)
-                packs_list.append({
+                full_entry: dict[str, Any] = {
                     "name": pack_name,
                     "source": source,
                     "description": description or "(no description)",
                     "tool_names": tool_names,
-                })
+                }
+                if short:
+                    full_entry["short"] = short
+                packs_list.append(full_entry)
 
         s.add("count", len(packs_list))
         return packs_list

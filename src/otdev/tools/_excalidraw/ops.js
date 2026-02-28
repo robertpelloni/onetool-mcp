@@ -226,7 +226,7 @@
 
   // ---------------------------------------------------------------------------
   // Patch existing elements (upsert — label and/or style only, position preserved)
-  // Used by wb.draw for existing nodes and wb.style.
+  // Used by whiteboard.draw for existing nodes and whiteboard.style.
   // patches: [{id, text?, strokeColor?, backgroundColor?, ...excalidraw props}]
   // ---------------------------------------------------------------------------
   window._patch_elements = (patches) => {
@@ -369,7 +369,7 @@
           .then(data => {
             window.__downloadQueue.push({ name, data, ts: Date.now() });
           })
-          .catch(err => console.warn('[wb] download intercept failed:', err));
+          .catch(err => console.warn('[whiteboard] download intercept failed:', err));
         return;
       }
       return _origClick.call(this);

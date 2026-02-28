@@ -2,6 +2,8 @@
 
 Web, news, image, and video search via Brave Search API.
 
+Short alias: `br`
+
 ## Highlights
 
 - Four search types: web, news, image, video

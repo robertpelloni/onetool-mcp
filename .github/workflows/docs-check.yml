@@ -41,7 +41,7 @@ jobs:
       - name: Check generated pack summaries
         run: |
           uv run python scripts/sync_docs_generated.py
-          git diff --exit-code -- docs/llms.txt docs/reference/tools/wb.md
+          git diff --exit-code -- docs/llms.txt docs/reference/tools/whiteboard.md
 
       - name: Check docs registry counts
         run: uv run python scripts/check_docs_registry.py

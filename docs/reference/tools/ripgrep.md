@@ -2,6 +2,8 @@
 
 Fast text and regex search in files using ripgrep.
 
+Short alias: `rg`
+
 ## Highlights
 
 - Search, count, and list files with regex or literal patterns

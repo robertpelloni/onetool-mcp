@@ -2,6 +2,8 @@
 
 Web search with Google's grounding capabilities via Gemini API. Provides current information with source citations.
 
+Short alias: `g`
+
 ## Highlights
 
 - Real-time web search with Google grounding

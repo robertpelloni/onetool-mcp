@@ -98,7 +98,7 @@ secrets-check:
 docs-serve *args:
     uv run mkdocs serve --dev-addr 127.0.0.1:8000 {{ args }}
 
-# Sync generated docs blocks (pack summaries, wb help table) from source
+# Sync generated docs blocks (pack summaries, whiteboard help table) from source
 docs-sync:
     uv run python scripts/sync_docs_generated.py
 

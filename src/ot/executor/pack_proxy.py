@@ -292,6 +292,8 @@ def build_execution_namespace(
     config = get_config()
     namespace: dict[str, Any] = {}
 
+    from ot.meta._constants import PACK_SHORT_NAMES
+
     # Add pack proxies for dot notation
     for pack_name, pack_funcs in registry.packs.items():
         if isinstance(pack_funcs, WorkerPackProxy):
@@ -299,6 +301,11 @@ def build_execution_namespace(
             namespace[pack_name] = pack_funcs
         else:
             namespace[pack_name] = _create_pack_proxy(pack_name, pack_funcs)
+
+    # Inject short-name aliases (e.g. wf → webfetch, wb → whiteboard)
+    for full_name, short_name in PACK_SHORT_NAMES.items():
+        if full_name in namespace and short_name not in namespace:
+            namespace[short_name] = namespace[full_name]
 
     # Add MCP proxy packs (only if not already defined locally)
     for server_name in proxy_mgr.servers:

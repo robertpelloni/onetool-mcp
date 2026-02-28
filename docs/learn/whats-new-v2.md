@@ -19,19 +19,19 @@ AWS publishes 57 official MCP servers (awslabs) covering everything from S3 and 
 
 Also provides `check`, `use`, `mfa`, `roles`, `packs`, `stop_packs`, `refresh_packs`, `services`, `regions`, `arn`, `attributes`, and `values`.
 
-### wb (excalidraw) — Live whiteboard `[dev]`
+### whiteboard (excalidraw) — Live whiteboard `[dev]`
 
 Turns Excalidraw into a tool-driven canvas. Agents can generate architecture diagrams, flowcharts, and sketches using a Mermaid-compatible DSL, then screenshot or save the result — all without manual drawing. Useful for visual planning, documentation, and sharing ideas that are easier to show than describe.
 
 ```python
->>> wb.open()
->>> wb.draw(input="A --> B --> C")
->>> wb.screenshot()
->>> wb.save(path="arch.json")
->>> wb.close()
+>>> whiteboard.open()
+>>> whiteboard.draw(input="A --> B --> C")
+>>> whiteboard.screenshot()
+>>> whiteboard.save(path="arch.json")
+>>> whiteboard.close()
 ```
 
-Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, and `hard_reset`.
+Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, and `hard_reset`. Short alias: `wb`.
 
 ### tavily — AI-powered search and URL extraction `[util]`
 
@@ -189,7 +189,7 @@ In v1, all tools shipped in a single install. v2 splits heavy-dependency packs i
 | Extra    | Packs                                                                              |
 | -------- | ---------------------------------------------------------------------------------- |
 | `[util]` | brave, convert, excel, file, ground, mem                                           |
-| `[dev]`  | aws, context7, db, diagram, package, ripgrep, web, worktree, wb, and browser utils |
+| `[dev]`  | aws, context7, db, diagram, package, ripgrep, web, worktree, whiteboard, and browser utils |
 | `[all]`  | Everything                                                                         |
 
 ---

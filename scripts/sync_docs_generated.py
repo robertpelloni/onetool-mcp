@@ -3,7 +3,7 @@
 
 Current generated blocks:
 - PACK_SUMMARY: from prompts.yaml -> docs/llms.txt
-- WB_HELP_SUMMARY: from src/otdev/tools/excalidraw.py -> docs/reference/tools/wb.md
+- WB_HELP_SUMMARY: from src/otdev/tools/excalidraw.py -> docs/reference/tools/whiteboard.md
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ DOC_MAP = {
     "package": "package.md",
     "play_util": "play-util.md",
     "ripgrep": "ripgrep.md",
-    "wb": "wb.md",
+    "whiteboard": "whiteboard.md",
     "webfetch": "webfetch.md",
     "worktree": "worktree.md",
 }
@@ -64,7 +64,7 @@ EXTRA_MAP = {
     "package": "[dev]",
     "play_util": "[dev]",
     "ripgrep": "[dev]",
-    "wb": "[dev]",
+    "whiteboard": "[dev]",
     "webfetch": "[dev]",
     "worktree": "[dev]",
 }
@@ -133,17 +133,17 @@ def _render_wb_help_table() -> str:
     if str(src) not in sys.path:
         sys.path.insert(0, str(src))
 
-    from otdev.tools import excalidraw as wb
+    from otdev.tools import excalidraw as whiteboard
 
     lines = [
         "| Function | Summary |",
         "|---|---|",
     ]
-    for name in wb.__all__:
-        fn = getattr(wb, name)
+    for name in whiteboard.__all__:
+        fn = getattr(whiteboard, name)
         sig = inspect.signature(fn, eval_str=True)
         doc = (inspect.getdoc(fn) or "").splitlines()[0].strip()
-        lines.append(f"| `wb.{name}{sig}` | {doc} |")
+        lines.append(f"| `whiteboard.{name}{sig}` | {doc} |")
     return "\n".join(lines)
 
 
@@ -159,7 +159,7 @@ def sync_all() -> None:
 
     # WB_HELP_SUMMARY block
     _replace_block(
-        ROOT / "docs/reference/tools/wb.md",
+        ROOT / "docs/reference/tools/whiteboard.md",
         "WB_HELP_SUMMARY",
         _render_wb_help_table(),
     )

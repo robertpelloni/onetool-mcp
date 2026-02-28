@@ -2,6 +2,8 @@
 
 AI-powered web search and URL content extraction via Tavily API. Optimized for LLM applications with clean, relevant results.
 
+Short alias: `tav`
+
 ## Highlights
 
 - AI-synthesised answer + numbered results + sources in one call

@@ -124,6 +124,78 @@ class TestBuildExecutionNamespaceAliases:
 
 @pytest.mark.unit
 @pytest.mark.core
+class TestPackShortNameAliases:
+    """Tests for PACK_SHORT_NAMES injection in build_execution_namespace."""
+
+    def _build_namespace_with_packs(self, packs: dict) -> dict:
+        from ot.executor.pack_proxy import build_execution_namespace, reset
+
+        reset()
+
+        mock_proxy = MagicMock()
+        mock_proxy.servers = []
+
+        mock_registry = MagicMock()
+        mock_registry.packs = packs
+
+        mock_config = MagicMock()
+        mock_config.servers = {}
+
+        with (
+            patch("ot.proxy.get_proxy_manager", return_value=mock_proxy),
+            patch("ot.executor.pack_proxy.get_config", return_value=mock_config),
+        ):
+            ns = build_execution_namespace(mock_registry)
+
+        return ns
+
+    def test_whiteboard_gets_wb_short_alias(self) -> None:
+        """whiteboard pack should appear as both 'whiteboard' and 'wb'."""
+        packs = {"whiteboard": {"draw": MagicMock(), "open": MagicMock()}}
+        ns = self._build_namespace_with_packs(packs)
+
+        assert "whiteboard" in ns
+        assert "wb" in ns
+        assert ns["wb"] is ns["whiteboard"]
+
+    def test_webfetch_gets_wf_short_alias(self) -> None:
+        """webfetch pack should appear as both 'webfetch' and 'wf'."""
+        packs = {"webfetch": {"fetch": MagicMock()}}
+        ns = self._build_namespace_with_packs(packs)
+
+        assert "webfetch" in ns
+        assert "wf" in ns
+        assert ns["wf"] is ns["webfetch"]
+
+    def test_short_alias_not_added_when_pack_absent(self) -> None:
+        """Short alias is only injected when the full pack is present."""
+        ns = self._build_namespace_with_packs({"brave": {"search": MagicMock()}})
+
+        assert "br" in ns   # brave → br is in PACK_SHORT_NAMES
+        assert "wb" not in ns  # whiteboard not loaded → wb not injected
+
+    def test_short_alias_does_not_overwrite_existing_pack(self) -> None:
+        """Short alias is skipped if that name is already a loaded pack."""
+        existing_wb = MagicMock()
+        packs = {
+            "whiteboard": {"draw": MagicMock()},
+            "wb": {"custom": existing_wb},
+        }
+        ns = self._build_namespace_with_packs(packs)
+
+        # 'wb' key should be the explicitly loaded pack, not the alias
+        assert ns["wb"] is not ns["whiteboard"]
+
+    def test_all_short_names_in_constants_are_valid_identifiers(self) -> None:
+        """All short names in PACK_SHORT_NAMES must be valid Python identifiers."""
+        from ot.meta._constants import PACK_SHORT_NAMES
+
+        for full, short in PACK_SHORT_NAMES.items():
+            assert short.isidentifier(), f"Short name '{short}' for '{full}' is not a valid identifier"
+
+
+@pytest.mark.unit
+@pytest.mark.core
 class TestMcpProxyPackToolPrefixFallback:
     """Tests for tool_prefix fallback in McpProxyPack.__getattr__."""
 

@@ -26,27 +26,28 @@ Source of truth: `src/ot/config/global_templates/prompts.yaml` (`prompts.packs`)
 | Pack | Extra | Description |
 |---|---|---|
 | `ot` | `core` | ** Discover tools, packs. Get the help you need to call them correctly. The BEST PLACE to start. ** |
-| `brave` | `[util]` | Search the web, news, and images — fast, private, with batch support |
-| `ground` | `[util]` | Research any topic with Google AI-grounded search and source citations |
-| `web` | `[dev]` | Fetch any URL and extract clean, readable content |
-| `context7` | `[dev]` | Pull up-to-date docs for any library — React, FastAPI, etc. |
-| `ripgrep` | `[dev]` | Search code and text at speed — regex, globs, file types, context lines |
-| `file` | `[util]` | Read, write, edit, copy, move, and delete files; browse directory trees |
-| `worktree` | `[dev]` | Manage git worktrees — create, switch, merge, diff, and clean up |
-| `db` | `[dev]` | Explore and query databases — list tables, inspect schema, run SQL |
-| `excel` | `[util]` | Work with Excel files — read, write, search, pivot, and set formulas |
-| `convert` | `[util]` | Turn PDF, Word, Excel, and PowerPoint files into clean markdown |
-| `mem` | `[util]` | Persistent topic-based memory — write, search, grep, slice, and organise |
-| `ot_llm` | `core` | Run any text through an LLM — summarise, extract, reformat, translate |
-| `diagram` | `[dev]` | Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw |
-| `wb` | `[dev]` | Live whiteboard using Excalidraw — you can **draw** diagrams with a powerful DSL, assisted by AI. Additive drawing by design |
-| `package` | `[dev]` | Look up PyPI and npm packages, audit deps, find the latest AI models |
-| `chrome_util` | `[dev]` | Annotate and highlight page elements via Chrome DevTools |
-| `play_util` | `[dev]` | Annotate and highlight page elements via Playwright |
 | `aws` | `[dev]` | Manage AWS resources — dynamically enable any of their 50+ dedicated MCP tools |
+| `brave` | `[util]` | Search the web, news, and images — fast, private, with batch support |
+| `chrome_util` | `[dev]` | Annotate and highlight page elements via Chrome DevTools |
+| `context7` | `[dev]` | Pull up-to-date docs for any library — React, FastAPI, etc. |
+| `convert` | `[util]` | Turn PDF, Word, Excel, and PowerPoint files into clean markdown |
+| `db` | `[dev]` | Explore and query databases — list tables, inspect schema, run SQL |
+| `diagram` | `[dev]` | Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw |
+| `excel` | `[util]` | Work with Excel files — read, write, search, pivot, and set formulas |
+| `file` | `[util]` | Read, write, edit, copy, move, and delete files; browse directory trees |
+| `ground` | `[util]` | Research any topic with Google AI-grounded search and source citations |
+| `mem` | `[util]` | Persistent topic-based memory — write, search, grep, slice, and organise |
+| `ot_forge` | `core` | Scaffold and generate code from templates |
+| `ot_llm` | `core` | Run any text through an LLM — summarise, extract, reformat, translate |
 | `ot_secrets` | `core` | Store and retrieve API keys and secrets for OneTool services |
 | `ot_timer` | `core` | Time tool calls and report performance |
-| `ot_forge` | `core` | Scaffold and generate code from templates |
+| `package` | `[dev]` | Look up PyPI and npm packages, audit deps, find the latest AI models |
+| `play_util` | `[dev]` | Annotate and highlight page elements via Playwright |
+| `ripgrep` | `[dev]` | Search code and text at speed — regex, globs, file types, context lines |
+| `tavily` | `-` | Search the web with Tavily AI — clean results, answer summaries, URL extraction |
+| `webfetch` | `[dev]` | Fetch any URL and extract clean, readable content |
+| `whiteboard` | `[dev]` | Live whiteboard using Excalidraw — you can **draw** diagrams with a powerful DSL, assisted by AI |
+| `worktree` | `[dev]` | Manage git worktrees — create, switch, merge, diff, and clean up |
 <!-- END GENERATED:PACK_SUMMARY -->
 
 ## Documentation

@@ -2,6 +2,8 @@
 
 Secure file operations with configurable security boundaries. Read, write, edit, and manage files with path validation against allowed directories.
 
+Short alias: `f`
+
 ## Highlights
 
 - Configurable security boundaries with allowed directories

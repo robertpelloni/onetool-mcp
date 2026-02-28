@@ -2,6 +2,8 @@
 
 Generates and renders diagrams using Kroki as the unified backend, supporting Mermaid, PlantUML, D2, and 25+ other diagram types.
 
+Short alias: `diag`
+
 ## Highlights
 
 - Two-stage pipeline (generate source, then render)

@@ -2,11 +2,12 @@
 
 ## Purpose
 
-Playwright-driven live diagram manipulation on excalidraw.com. Exposes a `wb`
+Playwright-driven live diagram manipulation on excalidraw.com. Exposes a `whiteboard`
 pack with tools to draw, annotate, save, load, clear, scroll, and zoom
 diagrams using a Mermaid-compatible DSL. Requires the Playwright MCP server.
 
-Pack name: `wb` (used as `wb.draw(...)`, `wb.note(...)`, etc.)
+Pack name: `whiteboard` (used as `whiteboard.draw(...)`, `whiteboard.note(...)`, etc.)
+Short alias: `wb` — `wb.draw(...)` is equivalent to `whiteboard.draw(...)`.
 Source: `src/otdev/tools/excalidraw.py`
 
 ---
@@ -15,7 +16,7 @@ Source: `src/otdev/tools/excalidraw.py`
 
 ### Requirement: Draw diagram elements
 
-`wb.draw(input=)` SHALL add shapes, edges, and subgraphs to the live
+`whiteboard.draw(input=)` SHALL add shapes, edges, and subgraphs to the live
 Excalidraw canvas from a Mermaid-compatible DSL string. It SHALL be additive —
 elements already on canvas are never removed or repositioned. New shapes
 receive auto-layout positions computed using topological layering over the full
@@ -24,12 +25,12 @@ endArrowhead)`. Unknown edge endpoints are auto-created as shapes with their
 ID as label.
 
 #### Scenario: Add shapes and edges
-- **WHEN** `wb.draw(input='a["A"]\nb["B"]\na-->b')` is called
+- **WHEN** `whiteboard.draw(input='a["A"]\nb["B"]\na-->b')` is called
 - **THEN** two rectangles and a directed arrow SHALL appear on the canvas
 - **AND** the return value SHALL match `"+2 shapes, +1 edge(s): edge-a-b"` (format: `"+N shapes[, M updated][, +P edge(s): ids][, +Q group(s)]"`)
 
 #### Scenario: Additive — existing shapes untouched
-- **WHEN** `wb.draw(input='c["C"]')` is called after shapes `a` and `b` exist
+- **WHEN** `whiteboard.draw(input='c["C"]')` is called after shapes `a` and `b` exist
 - **THEN** only shape `c` SHALL be added; `a` and `b` SHALL be untouched
 
 #### Scenario: Subgraph bounding rect
@@ -60,7 +61,7 @@ ID as label.
 - **AND** `api gateway --> lambda fn` SHALL parse as an edge from `apigateway` to `lambdafn`
 
 #### Scenario: Subgraph return count
-- **WHEN** `wb.draw()` creates one or more new subgraphs
+- **WHEN** `whiteboard.draw()` creates one or more new subgraphs
 - **THEN** the return value SHALL include `, +N group(s)` at the end
 
 #### Scenario: Auto-layout overlap avoidance
@@ -73,12 +74,12 @@ ID as label.
 - **THEN** `_dsl_state` and `_edge_keys` SHALL remain unchanged
 
 #### Scenario: Single batch call per draw
-- **WHEN** `wb.draw()` is called with multiple shapes and edges
+- **WHEN** `whiteboard.draw()` is called with multiple shapes and edges
 - **THEN** exactly one `_js_batch_draw` call SHALL be issued
 
 ### Requirement: Insert ASCII text notes
 
-`wb.note(input=, background=)` SHALL parse tagged blocks and render each as a
+`whiteboard.note(input=, background=)` SHALL parse tagged blocks and render each as a
 code-font rectangle placed below any existing diagram content (below
 `_max_rendered_y + 100`). It SHALL NOT call `auto_layout`. The background
 colour defaults to beige (`#f5f5dc`).
@@ -125,30 +126,30 @@ colour defaults to beige (`#f5f5dc`).
 
 ### Requirement: Embed DSL as canvas element
 
-`wb.embed_dsl()` SHALL insert the current DSL text as a grey code-font
+`whiteboard.embed_dsl()` SHALL insert the current DSL text as a grey code-font
 rectangle with id `"dsl"` at `_max_rendered_y + 100`. Calling again overwrites
 the previous embed (idempotent). The element is excluded from `save()`
 snapshots. Returns `"nothing to embed — canvas is empty"` when state is empty.
 
 ### Requirement: Erase elements
 
-`wb.erase(ids=)` SHALL remove the specified element IDs from the canvas and
+`whiteboard.erase(ids=)` SHALL remove the specified element IDs from the canvas and
 Python state. Edges that become dangling (src or dst in the erased set) SHALL
 be removed automatically. Silently ignores IDs not currently rendered. Updates
 `_edge_keys` by matching against the actual edges being removed (not a
 reconstructed base ID string), covering both shape erasure and labeled-edge erasure.
 
 #### Scenario: Erase shape removes dangling edges
-- **WHEN** `wb.erase(ids=["b"])` is called and edges `a-->b` and `b-->c` exist
+- **WHEN** `whiteboard.erase(ids=["b"])` is called and edges `a-->b` and `b-->c` exist
 - **THEN** both edges SHALL be removed from state and canvas
 - **AND** the return value SHALL be `"erased 1 element(s), 2 dangling edge(s) removed"`
 
 #### Scenario: Erase unknown ID
-- **WHEN** `wb.erase(ids=["nonexistent"])` is called
+- **WHEN** `whiteboard.erase(ids=["nonexistent"])` is called
 - **THEN** the return value SHALL be `"erased 0 element(s)"`
 
 #### Scenario: Erase with no dangling edges
-- **WHEN** `wb.erase(ids=["a"])` is called and `a` has no connected edges
+- **WHEN** `whiteboard.erase(ids=["a"])` is called and `a` has no connected edges
 - **THEN** the return value SHALL be `"erased 1 element(s)"` (no dangling mention)
 
 #### Scenario: `_max_rendered_y` not reset when shapes remain
@@ -161,27 +162,27 @@ reconstructed base ID string), covering both shape erasure and labeled-edge eras
 
 ### Requirement: Save diagram to file
 
-`wb.save(file=)` SHALL write the current diagram as a native `.excalidraw` JSON
+`whiteboard.save(file=)` SHALL write the current diagram as a native `.excalidraw` JSON
 file (format: `{"type":"excalidraw","version":2,"elements":[...],...}`). Before
 writing, it SHALL upsert a `__otDSL` text element containing the current DSL so
-that `wb.load()` and `wb.sync()` can restore Python state. The file can be
+that `whiteboard.load()` and `whiteboard.sync()` can restore Python state. The file can be
 opened directly in excalidraw.com. Conventionally uses the `.excalidraw` extension.
 
 #### Scenario: File written in native .excalidraw format
-- **WHEN** `wb.save(file="arch.excalidraw")` is called
+- **WHEN** `whiteboard.save(file="arch.excalidraw")` is called
 - **THEN** the file SHALL be valid JSON with `"type": "excalidraw"`
 - **AND** `elements` SHALL include a `__otDSL` text element containing the DSL
 - **AND** the file SHALL be openable directly in excalidraw.com
 
 ### Requirement: Load diagram from file
 
-`wb.load(file=)` SHALL restore a diagram from a native `.excalidraw` JSON file.
+`whiteboard.load(file=)` SHALL restore a diagram from a native `.excalidraw` JSON file.
 It SHALL pass all elements to `updateScene`, then read the `__otDSL` element to
 restore Python DSL state. If `__otDSL` is absent, the canvas is restored but
 a warning is included in the return value.
 
 #### Scenario: Restore from .excalidraw file
-- **WHEN** `wb.load(file="arch.excalidraw")` is called
+- **WHEN** `whiteboard.load(file="arch.excalidraw")` is called
 - **THEN** all elements SHALL be restored to the canvas at saved positions
 - **AND** Python state SHALL be restored from the embedded `__otDSL` element
 - **AND** the return value SHALL be `"loaded N shapes, M edges"`
@@ -205,41 +206,41 @@ a warning is included in the return value.
 
 ### Requirement: Clear diagram
 
-`wb.clear()` SHALL remove all elements from the canvas and reset
+`whiteboard.clear()` SHALL remove all elements from the canvas and reset
 `_dsl_state`, `_edge_keys`, `_rendered_ids`, and `_max_rendered_y` to empty.
 
 ### Requirement: Open whiteboard
 
-`wb.open()` SHALL ensure excalidraw.com is open and bootstrapped, then always
+`whiteboard.open()` SHALL ensure excalidraw.com is open and bootstrapped, then always
 start fresh — reset Python state and clear canvas — regardless of existing
 canvas content. Untracked content warnings from `_ensure_ready()` are non-fatal.
 Returns `"whiteboard ready"` on success.
 
 ### Requirement: Close whiteboard
 
-`wb.close()` SHALL reset all Python state unconditionally, then close the
+`whiteboard.close()` SHALL reset all Python state unconditionally, then close the
 browser tab (or navigate to `about:blank` as fallback). If Playwright is
 unavailable, only Python state is reset.
 
 ### Requirement: Hard reset
 
-`wb.hard_reset()` SHALL reset Python state unconditionally and attempt canvas
+`whiteboard.hard_reset()` SHALL reset Python state unconditionally and attempt canvas
 clear if Playwright is available. Returns `"hard reset: state cleared, canvas
 cleared"` or `"hard reset: state cleared (browser unavailable)"`.
 
 ### Requirement: Screenshot
 
-`wb.screenshot(file=)` SHALL call `browser_take_screenshot` with `format="png"`
+`whiteboard.screenshot(file=)` SHALL call `browser_take_screenshot` with `format="png"`
 and `raw=False`. Without `file`, returns the raw result for inline display.
 With `file`, saves the image to disk (supports both temp-file path extraction
 and base64 fallback).
 
 ### Requirement: Scroll and zoom
 
-`wb.scroll(dx=, dy=)` SHALL pan the canvas by the given pixel offsets.
-`wb.zoom(level=)` SHALL set the zoom level; passing `0` SHALL fit all elements
+`whiteboard.scroll(dx=, dy=)` SHALL pan the canvas by the given pixel offsets.
+`whiteboard.zoom(level=)` SHALL set the zoom level; passing `0` SHALL fit all elements
 in view. Negative levels SHALL return an error string without calling the browser.
-`wb.fit()` SHALL delegate to `wb.zoom(level=0)`.
+`whiteboard.fit()` SHALL delegate to `whiteboard.zoom(level=0)`.
 
 ### Requirement: Automatic browser lifecycle management
 
@@ -281,7 +282,7 @@ lowercase with non-word characters stripped.
 | `id["Label"]` | Rectangle (only supported shape in DSL) |
 | `id["Line1\nLine2"]` | Multiline label |
 
-> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise an error directing the user to `wb.style()`. `classDef`/`class` syntax is also unsupported in the DSL; use `wb.style()` for colours and shapes after drawing.
+> **Note:** Ellipse `((...))` and diamond `{...}` syntax raise an error directing the user to `whiteboard.style()`. `classDef`/`class` syntax is also unsupported in the DSL; use `whiteboard.style()` for colours and shapes after drawing.
 
 #### Supported edge types
 | Syntax | Meaning |
@@ -345,20 +346,20 @@ All renderers accept `;` as a line separator in addition to newlines.
 
 ### Requirement: Apply visual styles
 
-`wb.style(ids=, style=)` SHALL apply Excalidraw style properties to existing
+`whiteboard.style(ids=, style=)` SHALL apply Excalidraw style properties to existing
 canvas elements in bulk. It SHALL never modify `_dsl_state` — styling is a
 purely visual operation. The `style` string uses the same shorthand key:value
-format as `wb.draw` inline styles. All keys and values are case-insensitive.
+format as `whiteboard.draw` inline styles. All keys and values are case-insensitive.
 
 Shape changes (`shape:d`, `shape:c`) SHALL use delete+recreate with the same ID
 so arrow connections survive.
 
 #### Scenario: Apply colour
-- **WHEN** `wb.style(ids=["a"], style="bc:green")` is called
+- **WHEN** `whiteboard.style(ids=["a"], style="bc:green")` is called
 - **THEN** shape `a` SHALL have `backgroundColor` set to `#bbf7d0`
 
 #### Scenario: Case-insensitive values
-- **WHEN** `wb.style(ids=["a"], style="bc:Green,ss:Solid,f:Hand,shape:R")` is called
+- **WHEN** `whiteboard.style(ids=["a"], style="bc:Green,ss:Solid,f:Hand,shape:R")` is called
 - **THEN** the values SHALL resolve identically to their lowercase equivalents
 
 #### Scenario: Named colours
@@ -372,16 +373,16 @@ so arrow connections survive.
 
 ### Requirement: Sync Python state from canvas
 
-`wb.sync()` SHALL read the `__otDSL` text element from the current Excalidraw
+`whiteboard.sync()` SHALL read the `__otDSL` text element from the current Excalidraw
 canvas and restore Python DSL state. Returns `"synced: N shapes, M edges"` on
 success. If no `__otDSL` element is found, returns an explanatory message.
 
 #### Scenario: Sync restores state
-- **WHEN** `wb.sync()` is called and a `__otDSL` element is present
+- **WHEN** `whiteboard.sync()` is called and a `__otDSL` element is present
 - **THEN** `_dsl_state` SHALL be restored from the embedded DSL text
 
 #### Scenario: No __otDSL element
-- **WHEN** `wb.sync()` is called and no `__otDSL` element is on canvas
+- **WHEN** `whiteboard.sync()` is called and no `__otDSL` element is on canvas
 - **THEN** a message explaining the absence SHALL be returned (no error)
 
 ### Requirement: __otDSL canvas element
@@ -389,38 +390,38 @@ success. If no `__otDSL` element is found, returns an explanatory message.
 The `__otDSL` element is a hidden text element on the Excalidraw canvas that
 stores the current DSL text. It SHALL be:
 
-- Written (upserted) by `wb.save()` before file output
-- Read by `wb.load()` and `wb.sync()` to restore Python state
-- Excluded from `wb.save()` scene snapshots (id starts with `__`)
-- Written by `wb.embed_dsl()` as a visible code-font element with id `"dsl"`
+- Written (upserted) by `whiteboard.save()` before file output
+- Read by `whiteboard.load()` and `whiteboard.sync()` to restore Python state
+- Excluded from `whiteboard.save()` scene snapshots (id starts with `__`)
+- Written by `whiteboard.embed_dsl()` as a visible code-font element with id `"dsl"`
   (separate from the `__otDSL` hidden element)
 
 #### Scenario: __otDSL written on save
-- **WHEN** `wb.save()` is called
+- **WHEN** `whiteboard.save()` is called
 - **THEN** a `__otDSL` text element SHALL be upserted on canvas with the current DSL
 
 #### Scenario: __otDSL absent on load
-- **WHEN** `wb.load()` is called on a file with no `__otDSL` element
+- **WHEN** `whiteboard.load()` is called on a file with no `__otDSL` element
 - **THEN** the canvas SHALL be restored and the return SHALL include a warning about empty Python state
 
 ### Requirement: DSL and style reference tool
 
-`wb.help()` SHALL return the full DSL syntax and style shorthand reference as a
+`whiteboard.help()` SHALL return the full DSL syntax and style shorthand reference as a
 plain-text string. No browser interaction is required. The content is loaded
 from the bundled `dsl-reference.md` asset file.
 
 #### Scenario: Returns non-empty string
-- **WHEN** `wb.help()` is called
+- **WHEN** `whiteboard.help()` is called
 - **THEN** a non-empty string covering DSL syntax and style shorthands SHALL be returned
 
 ### Requirement: Inline style props in draw()
 
-Shape declarations in `wb.draw()` MAY include style props after the closing `]`:
+Shape declarations in `whiteboard.draw()` MAY include style props after the closing `]`:
 
 ```
 a["Label"] bc:green,sw:2
 ```
 
 These props are applied to the shape element alongside label and position. The
-same shorthand key:value format used by `wb.style()` is supported. Values are
+same shorthand key:value format used by `whiteboard.style()` is supported. Values are
 case-insensitive.

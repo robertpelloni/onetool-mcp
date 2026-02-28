@@ -1,6 +1,6 @@
 # Tool Reference
 
-**23 Packs. 200 Tools.**
+**23 Packs. 206 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -12,7 +12,7 @@ Tools are split into optional install extras. Install only what you need:
 |-------|---------------|
 | *(core, always included)* | `ot`, `ot_forge`, `ot_llm`, `ot_secrets`, `ot_timer` |
 | `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem`, `tavily` |
-| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `wb`, `webfetch`, `worktree` |
+| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `whiteboard`, `webfetch`, `worktree` |
 | `[all]` | All of the above |
 
 ```bash
@@ -44,6 +44,6 @@ uv tool install 'onetool-mcp[util,dev]'  # most tools
 | [**Ripgrep**](ripgrep.md) | `[dev]` | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
 | [**Tavily**](tavily.md) | `[util]` | AI-powered web search and URL content extraction. | 5 | [Tavily](https://tavily.com/) (MIT) | `extract`, `extract_batch`, `research`, `search`, `search_batch` |
 | [**Timer**](timer.md) | core | Named stopwatch timers for performance measurement. | 4 | MIT | `clear`, `elapsed`, `list`, `start` |
-| [**WB (Whiteboard)**](wb.md) | `[dev]` | Live diagram drawing on excalidraw.com via Playwright. | 14 | MIT | `clear`, `close`, `draw`, `embed_dsl`, `erase`, `fit`, `hard_reset`, `load`, `note`, `open`, `save`, `screenshot`, `scroll`, `zoom` |
+| [**WB (Whiteboard)**](whiteboard.md) | `[dev]` | Live diagram drawing on excalidraw.com via Playwright. | 18 | MIT | `clear`, `close`, `draw`, `embed_dsl`, `erase`, `fit`, `hard_reset`, `help`, `load`, `note`, `open`, `save`, `screenshot`, `scroll`, `share`, `style`, `sync`, `zoom` |
 | [**Webfetch**](webfetch.md) | `[dev]` | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
 | [**Worktree**](worktree.md) | `[dev]` | Git worktree management for parallel agent tasks. | 14 | MIT | `add`, `checkout`, `clean`, `commit`, `diff`, `info`, `init`, `list`, `log`, `mark`, `message`, `prepare`, `remove`, `status` |

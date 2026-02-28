@@ -2,6 +2,8 @@
 
 Age-encrypted secrets management using an identity stored in your OS keychain.
 
+Short alias: `sec`
+
 ## Highlights
 
 - Generate and store an age X25519 identity in keychain (`init`)

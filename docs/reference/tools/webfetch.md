@@ -2,6 +2,8 @@
 
 Extracts main content from web pages, filtering navigation, ads, and boilerplate.
 
+Short alias: `wf`
+
 ## Highlights
 
 - Clean content extraction filtering navigation and ads

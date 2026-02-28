@@ -2,6 +2,8 @@
 
 Library documentation search and retrieval. Uses Context7 v2 API with semantic reranking.
 
+Short alias: `c7`
+
 ## Highlights
 
 - Flexible library ID formats (org/repo, shorthand names, GitHub URLs)

@@ -242,9 +242,9 @@ No pack-specific `tools.play_util` settings.
 | `timeout` | float | `60.0` | `1.0-300.0` | Command timeout in seconds |
 | `relative_paths` | bool | `true` | - | Return relative paths in output |
 
-### wb
+### whiteboard
 
-No pack-specific `tools.wb` settings.
+No pack-specific `tools.whiteboard` settings.
 
 ### web
 

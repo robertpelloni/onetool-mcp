@@ -98,7 +98,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-context7](otdev/tool-context7/spec.md) | Context7 library documentation API |
 | [tool-db](otdev/tool-db/spec.md) | SQL database queries via SQLAlchemy |
 | [tool-diagram](otdev/tool-diagram/spec.md) | Diagram generation |
-| [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via Playwright (`wb` pack) |
+| [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via Playwright (`whiteboard` pack, short alias `wb`) |
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
 | [tool-webfetch](otdev/tool-webfetch/spec.md) | Web content extraction via trafilatura |

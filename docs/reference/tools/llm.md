@@ -2,6 +2,8 @@
 
 LLM-powered data transformation tools. Takes input data and a prompt, uses an LLM to process/transform it.
 
+Short alias: `llm`
+
 ## Highlights
 
 - Single function for any data transformation

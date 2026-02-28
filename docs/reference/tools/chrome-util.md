@@ -1,6 +1,8 @@
-# chrome_util
+# Chrome DevTool Util
 
 Visual element annotation for the [Chrome DevTools MCP](../servers/chrome-devtools.md) server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+
+Short alias: `chrome`
 
 ## Tools
 
