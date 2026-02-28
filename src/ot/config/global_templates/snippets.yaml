@@ -4,31 +4,22 @@
 snippets:
 
   # ============================================================================
-  # BRAVE SEARCH (brv_)
+  # BRAVE SEARCH (br)
   # ============================================================================
 
-  brv:
+  br:
     description: Batch search using Brave (pipe-separated queries)
     params:
       q: { description: "Pipe-separated search queries" }
       count: { default: 10, description: "Results per query" }
     body: |
-      brave.search_batch(queries=[{% for item in q.split('|') %}"{{ item.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}], count={{ count }})
-
-
-  brv_research:
-    description: Search web and extract structured findings
-    params:
-      q: { description: "Topic to research" }
-      count: { default: 10, description: "Number of sources" }
-    body: |
-      results = brave.search(query="{{ q }}", count={{ count }})
-      ot_llm.transform(data=results, prompt="Extract key findings as bullet points with sources")
-
+      __format__="yml_h";__sanitize__=False
+      {% set _qs = q.split('|') | map('trim') | list %}
+      br.search_batch(queries=[{% for item in _qs %}"{{ item }}"{% if not loop.last %}, {% endif %}{% endfor %}], count={{ count }})
 
 
   # ============================================================================
-  # CONTEXT7 DOCS (c7_)
+  # CONTEXT7 DOCS (c7)
   # ============================================================================
 
   c7:
@@ -37,26 +28,13 @@ snippets:
       lib: { description: "Library ID (e.g., '/vercel/next.js', 'react', 'nextjs')" }
       q: { default: "", description: "Natural language question for semantic reranking (e.g., 'How do I configure middleware?')" }
     body: |
-      context7.doc(library_id="{{ lib }}", query="{{ q }}")
-
-  c7_lib:
-    description: Search for a library to get its Context7 ID
-    params:
-      q: { description: "Library name to search for (e.g., 'react', 'fastapi')" }
-    body: |
-      context7.search(query="{{ q }}", library_name="{{ q }}")
-
-  c7_eg:
-    description: Fetch library documentation (alias for c7)
-    params:
-      lib: { description: "Library ID (e.g., '/facebook/react', '/pallets/flask')" }
-      q: { description: "Natural language question (e.g., 'show me blueprint examples')" }
-    body: |
-      context7.doc(library_id="{{ lib }}", query="{{ q }}")
+      __format__="yml_h";__sanitize__=False
+      c7.doc(library_id="{{ lib }}", query="{{ q }}")
 
   # ============================================================================
-  # GROUND SEARCH (g_)
+  # GROUND SEARCH (g)
   # ============================================================================
+
   g:
     description: Batch search using Gemini grounding (pipe-separated queries)
     params:
@@ -64,18 +42,37 @@ snippets:
       tech: { default: "", description: "Technology stack context" }
       focus: { default: "general", description: "Focus mode: general, code, documentation, troubleshooting" }
     body: |
-      ground.search_batch(queries=[{% for item in q.split('|') %}"{{ item.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}], context="{{ tech }}", focus="{{ focus }}")
-
-  g_reddit:
-    description: Find community discussions on a topic
-    params:
-      q: { description: "Topic to discuss" }
-      subreddit: { default: "", description: "Specific subreddit" }
-    body: |
-      ground.reddit(query="{{ q }}"{% if subreddit %}, subreddit="{{ subreddit }}"{% endif %})
+      __format__="yml_h";__sanitize__=False
+      {% set _qs = q.split('|') | map('trim') | list %}
+      g.search_batch(queries=[{% for item in _qs %}"{{ item }}"{% if not loop.last %}, {% endif %}{% endfor %}], context="{{ tech }}", focus="{{ focus }}")
 
   # ============================================================================
-  # RIPGREP (rg_)
+  # TAVILY SEARCH (tav)
+  # ============================================================================
+
+  tav:
+    description: Search using Tavily AI (pipe-separated queries)
+    params:
+      q: { description: "Pipe-separated search queries" }
+      depth: { default: "basic", description: "Search depth: basic or advanced" }
+      count: { default: 5, description: "Max results per query" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      {% set _qs = q.split('|') | map('trim') | list %}
+      tav.search_batch(queries=[{% for item in _qs %}"{{ item }}"{% if not loop.last %}, {% endif %}{% endfor %}], max_results={{ count }}, search_depth="{{ depth }}")
+
+  tav_x:
+    description: Extract clean content from one or more URLs via Tavily (pipe-separate multiple)
+    params:
+      url: { description: "URL, or pipe-separated URLs to extract" }
+      depth: { default: "basic", description: "Extraction depth: basic or advanced" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      {% set _urls = url.split('|') | map('trim') | list %}
+      tav.extract(urls=[{% for u in _urls %}"{{ u }}"{% if not loop.last %}, {% endif %}{% endfor %}], extract_depth="{{ depth }}")
+
+  # ============================================================================
+  # RIPGREP (rg)
   # ============================================================================
 
   rg:
@@ -87,8 +84,10 @@ snippets:
       ft: { default: "", description: "File type filter (py, ts, js, etc.)" }
       ctx: { default: 0, description: "Lines of context before/after match" }
       count: { default: "", description: "Max matching lines to return" }
+      i: { default: false, description: "Case-insensitive search" }
     body: |
-      ripgrep.search(pattern="{{ p }}", path="{{ path }}"{% if glob %}, glob="{{ glob }}"{% endif %}{% if ft %}, file_type="{{ ft }}"{% endif %}{% if ctx %}, context={{ ctx }}{% endif %}{% if count %}, limit={{ count }}{% endif %})
+      __format__="yml_h";__sanitize__=False
+      rg.search(pattern="{{ p }}", path="{{ path }}"{% if glob %}, glob="{{ glob }}"{% endif %}{% if ft %}, file_type="{{ ft }}"{% endif %}{% if ctx %}, context={{ ctx }}{% endif %}{% if count %}, limit={{ count }}{% endif %}{% if i %}, case_sensitive=False{% endif %})
 
   rg_count:
     description: Count pattern occurrences by file
@@ -96,74 +95,188 @@ snippets:
       p: { description: "Pattern to count" }
       ft: { default: "", description: "File type filter (py, ts, etc.)" }
     body: |
-      {% if ft %}ripgrep.count(pattern="{{ p }}", file_type="{{ ft }}"){% else %}ripgrep.count(pattern="{{ p }}"){% endif %}
+      __format__="yml_h";__sanitize__=False
+      {% if ft %}rg.count(pattern="{{ p }}", file_type="{{ ft }}"){% else %}rg.count(pattern="{{ p }}"){% endif %}
 
   # ============================================================================
-  # PACKAGE (pkg_)
+  # PACKAGE (pkg)
   # ============================================================================
 
-  pkg:
+  pkg_a:
     description: Audit project dependencies against latest registry versions
     params:
       path: { default: ".", description: "Project directory path" }
     body: |
-      package.audit(path="{{ path }}")
+      __format__="yml_h";__sanitize__=False
+      pkg.audit(path="{{ path }}")
 
   pkg_npm:
     description: Check latest npm package versions
     params:
       packages: { description: "Comma-separated package names" }
     body: |
-      package.npm(packages=[{% for pkg in packages.split(',') %}"{{ pkg.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}])
+      __format__="yml_h";__sanitize__=False
+      {% set _pkgs = packages.split(',') | map('trim') | list %}
+      pkg.npm(packages=[{% for p in _pkgs %}"{{ p }}"{% if not loop.last %}, {% endif %}{% endfor %}])
 
-  pkg_pypi:
+  pkg_py:
     description: Check latest PyPI package versions
     params:
       packages: { description: "Comma-separated package names" }
     body: |
-      package.pypi(packages=[{% for pkg in packages.split(',') %}"{{ pkg.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}])
+      __format__="yml_h";__sanitize__=False
+      {% set _pkgs = packages.split(',') | map('trim') | list %}
+      pkg.pypi(packages=[{% for p in _pkgs %}"{{ p }}"{% if not loop.last %}, {% endif %}{% endfor %}])
 
-  pkg_model:
+  pkg_m:
     description: Search OpenRouter for AI models
     params:
       q: { default: "", description: "Search term (claude, gpt-4)" }
       provider: { default: "", description: "Filter by provider" }
     body: |
-      package.models(query="{{ q }}", provider="{{ provider }}", limit=10)
+      __format__="yml_h";__sanitize__=False
+      pkg.models(query="{{ q }}", provider="{{ provider }}", limit=10)
 
   # ============================================================================
-  # WEB FETCH (webfetch_)
+  # WEB FETCH (wf)
   # ============================================================================
-  webfetch:
-    description: Fetch multiple URLs concurrently
+
+  wf:
+    description: Fetch one or more URLs (pipe-separate multiple)
     params:
-      u: { description: "Pipe-separated URLs to fetch" }
-      f: { default: "markdown", description: "Output format: text, markdown, json" }
+      url: { description: "URL, or pipe-separated URLs for batch fetch" }
+      format: { default: "markdown", description: "Output format: text, markdown, json" }
       links: { default: false, description: "Include hyperlinks" }
       max: { default: "", description: "Max length per URL" }
     body: |
-      webfetch.fetch_batch(urls=[{% for url in u.split('|') %}"{{ url.strip() }}"{% if not loop.last %}, {% endif %}{% endfor %}], output_format="{{ f }}", include_links={{ links }}{% if max %}, max_length={{ max }}{% endif %})
+      __format__="yml_h";__sanitize__=False
+      {% set _urls = url.split('|') | map('trim') | list %}
+      {% if _urls | length == 1 %}
+      wf.fetch(url="{{ _urls[0] }}", output_format="{{ format }}", include_links={{ links }}{% if max %}, max_length={{ max }}{% endif %})
+      {% else %}
+      wf.fetch_batch(urls=[{% for u in _urls %}"{{ u }}"{% if not loop.last %}, {% endif %}{% endfor %}], output_format="{{ format }}", include_links={{ links }}{% if max %}, max_length={{ max }}{% endif %})
+      {% endif %}
 
-  webfetch_data:
+  wf_d:
     description: Extract structured data from a web page
     params:
-      u: { description: "URL to fetch" }
+      url: { description: "URL to fetch" }
       schema: { description: "What to extract (e.g., 'prices as {item, price}')" }
     body: |
-      content = webfetch.fetch(url="{{ u }}", include_tables=True)
-      ot_llm.transform(data=content, prompt="Extract {{ schema }} as YAML")
+      __format__="yml_h";__sanitize__=False
+      content = wf.fetch(url="{{ url }}", include_tables=True)
+      llm.transform(data=content, prompt="Extract {{ schema }} as YAML")
 
-  webfetch_summary:
+  wf_s:
     description: Fetch and summarize a web page
     params:
-      u: { description: "URL to fetch" }
+      url: { description: "URL to fetch" }
       focus: { default: "", description: "What to focus on" }
     body: |
-      content = webfetch.fetch(url="{{ u }}", output_format="markdown", fast=True)
-      ot_llm.transform(data=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
+      __format__="yml_h";__sanitize__=False
+      content = wf.fetch(url="{{ url }}", output_format="markdown", fast=True)
+      llm.transform(data=content, prompt="Summarize this page concisely{% if focus %}, focusing on {{ focus }}{% endif %}")
 
   # ============================================================================
-  # GITHUB (gh_)
+  # CONVERT (cv)
+  # ============================================================================
+
+  cv:
+    description: Convert documents (PDF, Word, Excel, PowerPoint) to markdown
+    params:
+      file: { description: "File path or glob pattern (e.g., 'docs/*.pdf', 'report.docx')" }
+      output_dir: { description: "Output directory for converted files" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      cv.auto(pattern="{{ file }}", output_dir="{{ output_dir }}")
+
+  # ============================================================================
+  # MEM (mem)
+  # ============================================================================
+
+  mem_s:
+    description: Semantic or hybrid search across memories (finds related content)
+    params:
+      q: { description: "Search query" }
+      mode: { default: "semantic", description: "Search mode: semantic, pattern, hybrid" }
+      topic: { default: "", description: "Topic prefix filter (e.g., 'projects/')" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      mem.search(query="{{ q }}", mode="{{ mode }}"{% if topic %}, topic="{{ topic }}"{% endif %})
+
+  mem_g:
+    description: Regex grep across memory content (finds exact text or patterns)
+    params:
+      p: { description: "Regex pattern (or literal string)" }
+      topic: { default: "", description: "Topic prefix filter" }
+      i: { default: false, description: "Case-insensitive search" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      # i=True maps to case_sensitive=False (inverted param name in mem.grep)
+      mem.grep(pattern="{{ p }}"{% if topic %}, topic="{{ topic }}"{% endif %}{% if i %}, case_sensitive=False{% endif %})
+
+  mem_r:
+    description: Read a memory topic by exact path
+    params:
+      topic: { description: "Exact topic path (e.g., 'projects/myapp/rules')" }
+      meta: { default: false, description: "Include metadata header (topic, category, tags)" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      mem.read(topic="{{ topic }}"{% if meta %}, meta=True{% endif %})
+
+  mem_w:
+    description: Write a file into memory under a topic
+    params:
+      topic: { description: "Topic path (e.g., 'projects/myapp/rules')" }
+      file: { description: "Path to file to store" }
+      category: { default: "note", description: "Category: rule, context, decision, mistake, discovery, note" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      mem.write(topic="{{ topic }}", file="{{ file }}", category="{{ category }}")
+
+  mem_l:
+    description: List all memory topics
+    params: {}
+    body: |
+      __format__="yml_h";__sanitize__=False
+      mem.list()
+
+  # ============================================================================
+  # FILE (f)
+  # ============================================================================
+
+  f_r:
+    description: Read a file, optionally from a specific line range
+    params:
+      path: { description: "File path" }
+      offset: { default: "", description: "Start line (1-indexed)" }
+      limit: { default: "", description: "Max lines to return" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      f.read(path="{{ path }}"{% if offset %}, offset={{ offset }}{% endif %}{% if limit %}, limit={{ limit }}{% endif %})
+
+  f_t:
+    description: Show directory tree
+    params:
+      path: { default: ".", description: "Root directory" }
+      depth: { default: 3, description: "Max depth" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      f.tree(path="{{ path }}", max_depth={{ depth }})
+
+  f_g:
+    description: Search file contents for a pattern (no external tools required)
+    params:
+      p: { description: "Regex pattern" }
+      path: { default: ".", description: "Root directory to search" }
+      glob: { default: "", description: "File glob filter (e.g., '*.py')" }
+      i: { default: false, description: "Case-insensitive search" }
+    body: |
+      __format__="yml_h";__sanitize__=False
+      f.grep(pattern="{{ p }}", path="{{ path }}"{% if glob %}, glob="{{ glob }}"{% endif %}{% if i %}, case_sensitive=False{% endif %})
+
+  # ============================================================================
+  # GITHUB (gh)
   # ============================================================================
 
   gh:
@@ -172,6 +285,7 @@ snippets:
       q: { description: "GitHub search query" }
       count: { default: 1, description: "Number of pages to fetch (30 results per page)" }
     body: |
+      __format__="yml_h";__sanitize__=False
       import json
       results = []
       for page in range(1, {{ count }} + 1):
@@ -189,26 +303,19 @@ snippets:
 
 
   # ============================================================================
-  # INTERNAL TOOLS (ot_)
+  # INTERNAL TOOLS (ot)
   # ============================================================================
-  ot_reload:
+
+  reload:
     description: Reload OneTool configuration and tools
+    params: {}
     body: |
+      __format__="yml_h";__sanitize__=False
       ot.reload()
 
-  
-  ot_status:
+  status:
     description: Show system health and configuration
     params: {}
     body: |
+      __format__="yml_h";__sanitize__=False
       {"health": ot.health(), "config": ot.config()}
-
-  ot_notify:
-    description: Notify external processes of LLM progress
-    params:
-      topic: { default: "status", description: "Status updates" }
-      msg:
-          required: true
-          description: "Status message"
-    body: |
-      ot.notify(topic="status:{{ topic }}", message="{{ msg }}")
