@@ -14,6 +14,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
+    import warnings as _warnings
+
+    # PyMuPDF's SWIG bindings emit DeprecationWarning for builtin types without
+    # __module__. Re-apply here because fastmcp (imported earlier via proxy.manager)
+    # calls warnings.simplefilter("default", DeprecationWarning) which inserts a
+    # "default" filter at position 0, overriding the suppression in cli.py.
+    _warnings.filterwarnings(
+        "ignore",
+        message="builtin type.*has no __module__ attribute",
+    )
     import fitz  # type: ignore[import-untyped]  # PyMuPDF
 except ImportError as e:
     raise ImportError(
