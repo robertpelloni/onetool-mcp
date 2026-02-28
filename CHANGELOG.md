@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1] - 2026-03-01
+
+### Documentation
+- Updated README: added all v2 tool packs, install extras, fixed broken links
+
+---
+
 ## [2.0.0] - 2026-03-01
 
 ### Highlights

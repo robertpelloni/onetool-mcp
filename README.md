@@ -50,21 +50,15 @@ Configure one MCP server. Use unlimited tools.
 
 ---
 
-## See It In Action
-
-| Demo                                                   | Description                     |
-| ------------------------------------------------------ | ------------------------------- |
-| [Compare the Search](https://youtu.be/Dv-_dtHVU_A)     | Side-by-side token comparison   |
-| [Build a Wikipedia Tool](https://youtu.be/AZz03Yw0s1E) | Create a custom tool in seconds |
-
----
-
 ## Install
 
 Requires [uv](https://docs.astral.sh/uv/):
 
 ```bash
-uv tool install onetool-mcp
+uv tool install 'onetool-mcp[all]'   # everything
+uv tool install 'onetool-mcp[util]'  # file, convert, excel, brave, ground, mem, tavily
+uv tool install 'onetool-mcp[dev]'   # aws, context7, db, diagram, ripgrep, whiteboard, ...
+uv tool install onetool-mcp          # core only
 onetool init -c ~/.onetool
 ```
 
@@ -97,39 +91,50 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 
 ## Features
 
-| Feature                 | Description                                            |
-| ----------------------- | ------------------------------------------------------ |
-| **96% Token Savings**   | ~2K tokens no matter how many tools you add            |
-| **100+ Built-in Tools** | Web search, databases, file ops, diagrams, conversions |
-| **Explicit Execution**  | See exactly what runs - `>>> brave.search(q="AI")`    |
-| **MCP Server Proxy**    | Wrap existing MCP servers without the tool tax         |
-| **Forge Tools**         | Build new tools as part of the conversation            |
-| **Smart Tools**         | Delegate to cheaper LLMs (10× savings)                 |
-| **Single YAML Config**  | Global configuration, per-pack settings, includes      |
-| **Security Layers**     | AST validation, path boundaries, output sanitisation   |
+| Feature                  | Description                                                   |
+| ------------------------ | ------------------------------------------------------------- |
+| **96% Token Savings**    | ~2K tokens no matter how many tools you add                   |
+| **100+ Built-in Tools**  | Web search, AWS, databases, file ops, diagrams, conversions   |
+| **Explicit Execution**   | See exactly what runs — `>>> brave.search(q="AI")`           |
+| **Dynamic AWS**          | Proxy all 57+ AWSlabs MCP servers; SSO and credentials handled |
+| **Live Whiteboard**      | Draw diagrams with a Mermaid-compatible DSL via Excalidraw    |
+| **MCP Server Proxy**     | Wrap existing MCP servers without the tool tax                |
+| **Encrypted Secrets**    | age-encrypted `secrets.yaml` backed by your OS keychain       |
+| **Forge Tools**          | Build new tools as part of the conversation                   |
+| **Smart Tools**          | Delegate to cheaper LLMs (10× savings)                        |
+| **Security Layers**      | AST validation, path boundaries, output sanitisation          |
 
 ---
 
 ## Tools
 
-15+ packs, 100+ tools ready to use:
+25+ packs, 100+ tools ready to use:
 
-| Pack       | Tools                                   | Description            |
-| ---------- | --------------------------------------- | ---------------------- |
-| `brave`    | `search`, `news`                        | Web and news search    |
-| `context7` | `search`, `doc`                         | Library documentation  |
-| `convert`  | `pdf_to_md`, `docx_to_md`, `pptx_to_md` | Document conversion    |
-| `db`       | `query`, `schema`, `tables`             | Database operations    |
-| `diagram`  | `create`                                | Mermaid diagrams       |
-| `excel`    | `read`, `write`, `query`                | Excel files            |
-| `file`     | `read`, `write`, `list`, `search`       | File operations        |
-| `ground`   | `search`                                | Google Grounding       |
-| `llm`      | `transform`, `transform_file`           | LLM-powered transforms |
-| `ot`       | `help`, `tools`, `stats`                | Introspection          |
-| `package`  | `npm`, `pypi`, `cargo`                  | Package versions       |
-| `ripgrep`  | `search`, `count`                       | Fast code search       |
-| `forge`    | `create_ext`, `install_skills`, `validate_ext` | Generate new tools |
-| `webfetch` | `fetch`, `fetch_batch`                  | Web fetching           |
+| Pack          | Tools                                          | Extra    | Description                    |
+| ------------- | ---------------------------------------------- | -------- | ------------------------------ |
+| `aws`         | `whoami`, `login`, `start_packs`, `roles`      | `[dev]`  | Dynamic AWS proxy (57+ servers)|
+| `brave`       | `search`, `news`                               | `[util]` | Web and news search            |
+| `chrome_util` | `highlight_element`, `guide_user`              | `[dev]`  | Browser annotations (DevTools) |
+| `context7`    | `search`, `doc`                                | `[dev]`  | Library documentation          |
+| `convert`     | `pdf_to_md`, `docx_to_md`, `pptx_to_md`        | `[util]` | Document conversion            |
+| `db`          | `query`, `schema`, `tables`                    | `[dev]`  | Database operations            |
+| `diagram`     | `create`, `get_playground_url`                 | `[dev]`  | Mermaid / Kroki diagrams       |
+| `excel`       | `read`, `write`, `query`                       | `[util]` | Excel files                    |
+| `file`        | `read`, `write`, `grep`, `slice`, `toc`        | `[util]` | File operations                |
+| `ground`      | `search`                                       | `[util]` | Google Grounding search        |
+| `mem`         | `write`, `read`, `search`, `grep`              | `[util]` | Persistent memory              |
+| `ot_forge`    | `create_ext`, `validate_ext`, `install_skills` |          | Scaffold new tool packs        |
+| `ot_llm`      | `transform`, `transform_file`                  |          | LLM-powered transforms         |
+| `ot_secrets`  | `init`, `encrypt`, `audit`, `rotate`           |          | Secrets encryption             |
+| `ot_timer`    | `start`, `elapsed`, `list`                     |          | Named timers                   |
+| `ot`          | `help`, `tools`, `stats`, `skills`             |          | Introspection                  |
+| `package`     | `npm`, `pypi`, `cargo`                         | `[dev]`  | Package versions               |
+| `play_util`   | `highlight_element`, `guide_user`              | `[dev]`  | Browser annotations (Playwright)|
+| `ripgrep`     | `search`, `count`                              | `[dev]`  | Fast code search               |
+| `tavily`      | `search`, `search_batch`, `research`           | `[util]` | AI-native search               |
+| `webfetch`    | `fetch`, `fetch_batch`                         | `[dev]`  | Web fetching                   |
+| `whiteboard`  | `open`, `draw`, `screenshot`, `save`           | `[dev]`  | Live Excalidraw canvas         |
+| `worktree`    | `add`, `commit`, `diff`, `remove`              | `[dev]`  | Parallel agent git worktrees   |
 
 [📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
 
@@ -179,7 +184,7 @@ def summary(*, title: str) -> str:
 >>> wiki.summary(title="Python_(programming_language)")
 ```
 
-[📖 Creating tools guide](https://onetool.beycom.online/learn/extending/extension-tools/)
+[📖 Creating tools guide](https://onetool.beycom.online/learn/extension-tools/)
 
 ---
 
@@ -190,9 +195,9 @@ def summary(*, title: str) -> str:
 - [Configuration](https://onetool.beycom.online/learn/configuration/) - YAML schema
 - [Tools Reference](https://onetool.beycom.online/reference/tools/) - All 100+ tools
 - [Security](https://onetool.beycom.online/learn/security/) - Security layers
-- [Extending](https://onetool.beycom.online/learn/extending/) - Build your own
-- [Dev Docs](dev/index.md) - Internal developer documentation
-- [Specifications](openspec/specs/INDEX.md) - OpenSpec specifications index
+- [Extending](https://onetool.beycom.online/learn/extension-tools/) - Build your own
+- [Dev Docs](https://github.com/beycom/onetool-mcp/blob/main/dev/index.md) - Internal developer documentation
+- [Specifications](https://github.com/beycom/onetool-mcp/blob/main/openspec/specs/INDEX.md) - OpenSpec specifications index
 
 ---
 
@@ -205,7 +210,7 @@ def summary(*, title: str) -> str:
 
 ## License
 
-**GPLv3** - Will transition to **MIT** at v2.0.
+GPLv3
 
 ---
 

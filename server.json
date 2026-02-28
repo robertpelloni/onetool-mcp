@@ -1,9 +1,9 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.beycom/onetool-mcp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "title": "OneTool MCP",
-  "description": "🧿 One MCP for developers. 100+ tools. Brave, Google, Context7, AWS, Excel, Excalidraw, DB, DevTools & more.",
+  "description": "One MCP for devs incl Brave,Google,Tavily,Context7,AWS,Excalidraw,DB,GitHub,DevTools,Playwright",
   "repository": {
     "url": "https://github.com/beycom/onetool-mcp",
     "source": "github"
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "onetool-mcp",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "transport": { "type": "stdio" },
       "runtimeHint": "uvx",
       "runtimeArguments": [
