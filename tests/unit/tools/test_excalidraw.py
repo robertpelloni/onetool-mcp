@@ -1999,6 +1999,26 @@ class TestIdPrenorm:
         result = parse_dsl('a b["hello world"]')
         assert result["shapes"]["ab"]["label"] == "hello world"
 
+    def test_chained_edges_with_spaces(self) -> None:
+        """A --> B --> C (spaces around -->) expands to two edges."""
+        result = parse_dsl("A --> B --> C")
+        assert len(result["edges"]) == 2
+        srcs = {e["src"] for e in result["edges"]}
+        dsts = {e["dst"] for e in result["edges"]}
+        assert "a" in srcs
+        assert "b" in srcs
+        assert "b" in dsts
+        assert "c" in dsts
+
+    def test_chained_edges_matches_semicolon_form(self) -> None:
+        """A --> B --> C produces the same edges as a-->b;b-->c."""
+        r1 = parse_dsl("A --> B --> C")
+        r2 = parse_dsl("a-->b;b-->c")
+        assert len(r1["edges"]) == len(r2["edges"]) == 2
+        r1_pairs = {(e["src"], e["dst"]) for e in r1["edges"]}
+        r2_pairs = {(e["src"], e["dst"]) for e in r2["edges"]}
+        assert r1_pairs == r2_pairs
+
 
 # ===========================================================================
 # Erase dangling edge count in return value

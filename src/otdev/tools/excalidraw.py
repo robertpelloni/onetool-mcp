@@ -570,6 +570,31 @@ def _try_edge(line: str, edges: list[dict[str, Any]]) -> bool:
     return False
 
 
+def _expand_edge_chains(raw: str) -> list[str]:
+    """Expand chained edge syntax into individual edge strings.
+
+    ``"A --> B --> C"`` → ``["A --> B", "B --> C"]``
+
+    Returns ``[raw]`` unchanged if there are fewer than two edge operators or
+    if any token between operators contains a label delimiter (``|``).
+    """
+    ops = list(_EDGE_OP_RE.finditer(raw))
+    if len(ops) < 2:
+        return [raw]
+    tokens: list[str] = []
+    op_strs: list[str] = []
+    prev_end = 0
+    for m in ops:
+        tokens.append(raw[prev_end : m.start()].strip())
+        op_strs.append(m.group())
+        prev_end = m.end()
+    tokens.append(raw[prev_end:].strip())
+    # Don't expand if labels are involved — let the existing parser handle it
+    if any("|" in t for t in tokens):
+        return [raw]
+    return [f"{tokens[i]}{op_strs[i]}{tokens[i + 1]}" for i in range(len(op_strs))]
+
+
 def parse_dsl(spec: str) -> dict[str, Any]:
     """Parse a Mermaid-compatible DSL string into a structured dict.
 
@@ -610,7 +635,11 @@ def parse_dsl(spec: str) -> dict[str, Any]:
     # survive line-splitting. Both `\n` (literal) and actual newlines work.
     spec = re.sub(r'"[^"]*"', lambda m: m.group(0).replace("\n", "\\n"), spec)
 
+    raw_lines: list[str] = []
     for raw in re.split(r"[;\n]", spec):
+        raw_lines.extend(_expand_edge_chains(raw.strip()))
+
+    for raw in raw_lines:
         line = _prenorm_line(raw.strip())
         if not line or line.startswith("#") or line.startswith("%%"):
             continue
@@ -1100,7 +1129,7 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
         Summary of notes inserted.
 
     Example:
-        excalidraw.note(input='''
+        whiteboard.note(input='''
         t[table:
         Name,Role
         Alice,Dev
