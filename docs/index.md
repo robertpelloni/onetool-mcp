@@ -176,7 +176,7 @@ The **bench** harness compares tools against other MCP servers using a real agen
 
 ### :material-check-circle: Engineering Practices
 
-1,200+ tests (smoke, unit, integration). OpenSpec for change proposals - specs before code. Type hints throughout. Ruff + Mypy.
+2,000+ tests (smoke, unit, integration). OpenSpec for change proposals - specs before code. Type hints throughout. Ruff + Mypy.
 
 </div>
 

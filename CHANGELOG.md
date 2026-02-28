@@ -1,25 +1,71 @@
 # Changelog
 
+## [2.0.0] - 2026-03-01
+
+### Highlights
+- **Dynamic AWS** — proxy all 57+ official AWSlabs MCP servers via a single interface; zero token tax, credentials and SSO handled automatically
+- **Live Whiteboard** — draw architecture diagrams and flowcharts with a Mermaid-compatible DSL, powered by Excalidraw
+- **Three Search Engines** — Brave, Google (Ground), and Tavily; each with batch support and AI-synthesised answer summaries
+- **Browser Annotations** — highlight page elements and guide users through workflows via Chrome DevTools or Playwright
+- **Interactive Setup** — `onetool init` opens a TUI to configure extensions; no manual YAML editing to get started
+- **Encrypted Secrets** — age-encrypted `secrets.yaml` backed by your OS keychain
+- **Leaner Install** — optional `[util]` and `[dev]` extras; install only the dependencies you need
+
+### New Tool Packs
+- **`aws`** `[dev]` — dynamic proxy to all 57+ AWSlabs MCP servers; role-based bundles, SSO, MFA, and credential preflight
+- **`whiteboard`** `[dev]` — live Excalidraw canvas with Mermaid-compatible DSL; screenshot and save results. Short alias: `wb`
+- **`tavily`** `[util]` — AI-native search with batch queries, URL extraction, and deep research mode
+- **`chrome_util` / `play_util`** `[dev]` — visual browser annotations via Chrome DevTools or Playwright
+- **`worktree`** `[dev]` *(beta)* — isolated git worktrees for parallel agent tasks; commit, rebase, and clean up automatically
+- **`ot_secrets`** — age encryption for `secrets.yaml`; audit, rotate, and check keychain status
+- **`ot_forge`** — scaffold new tool packs with correct structure, type hints, and docstrings
+- **`ot_timer`** — named timers that persist across tool calls for profiling workflows
+
+### New Features
+- **Interactive `onetool init`** — TUI checkbox interface to select extensions; backs up existing config automatically
+- **Slim prompts** — system prompt under 25 lines, freeing token budget for actual work
+- **`>>>` trigger prefix** — new recommended invocation style (replaces `__ot`)
+- **Smarter `ot.result()`** — `tail`, `search`, `context`, `progress`, and `next_query` params for navigating large outputs
+- **Bundled skills** — curated guides for AWS, Chrome DevTools, Playwright, and more via `ot.skills()`
+- **`ot_secrets` encryption** — transparent age/keyring decryption at load time
+- **Short pack aliases** — all verbose pack names have short aliases (e.g. `whiteboard→wb`, `webfetch→wf`, `ripgrep→rg`)
+
+### Improved Packs
+- **`file`** — `grep` with `.gitignore` awareness, `read_batch`, `slice`, `slice_batch`, and `toc` for markdown navigation
+- **`mem`** — `grep` for fast regex search across memory content with context lines
+- **`context7`** — updated to v2 API with better library resolution and semantic reranking
+- **`diagram`** — `get_playground_url()` generates shareable Kroki playground links
+
+### Breaking Changes
+- **Explicit config flags** — `--config` and `--secrets` must now be passed to the server; no implicit discovery
+- **Config version** — add `version: 2` to `onetool.yaml`; v1 configs are rejected with a clear error
+- **Config location** — moved from `~/.onetool/config/` to `~/.onetool/` (flat layout)
+- **User-defined skills removed** — use bundled skills via `ot.skills()` instead
+- **`__ot` prefix deprecated** — use `>>>` in saved prompts and documentation
+
+### Install Extras
+
+| Extra    | Packs                                                                 |
+| -------- | --------------------------------------------------------------------- |
+| `[util]` | brave, convert, excel, file, ground, mem, tavily                      |
+| `[dev]`  | aws, context7, db, diagram, package, ripgrep, webfetch, worktree, whiteboard, chrome_util, play_util |
+| `[all]`  | Everything                                                            |
+
+---
+
 ## [1.1.0] - 2026-02-18
 
 ### Added
 - `[util]` extra: file, excel, convert, brave, ground tool packs
 - `[dev]` extra: db, ripgrep, web, diagram, package, context7 tool packs
-- `[all]` convenience extra
+- `[all]` convenience extra installs everything
 - `--secrets` flag on `onetool serve`
-- AST-based ToolRegistry with change detection
-- `log_callback` on LogSpan for external telemetry
-- JSON auto-parsing for proxy tool responses
-- `file` tool: dry_run, symlinks, include_hidden, recursive delete, encoding
+- `file` tool: dry_run, symlinks, include_hidden, recursive delete, encoding options
 
 ### Changed
 - Global config location: `~/.onetool/onetool.yaml` (was `~/.onetool/config/onetool.yaml`)
 - Server starts with defaults if no config found — `onetool init` no longer required
-
-### Removed
-- `ConfigNotFoundError` — replaced by graceful defaults
-- `OT_GLOBAL_DIR` env override — single config location
-- `[file]` standalone extra — folded into `[util]`
+- `[file]` standalone extra folded into `[util]`
 
 ## [1.0.2] - 2026-02-16
 

@@ -190,6 +190,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `excel.read(filepath="tests/data/file_example_XLS_1000.xlsx")` not `excel.read(path="data.xlsx", sheet="Sales")`
   - `excel.read` uses `start_cell=`/`end_cell=` for range (no `limit=` param). Example: `excel.read(filepath="...", start_cell="A1", end_cell="H4")`
   - Use `pattern=` not `search_term=` for excel.search
+  - `excel.create` supports multi-sheet creation via `sheet_names=["A", "B", "C"]` (single sheet via `sheet_name=`)
+  - `excel.copy_range` uses `source_range=` and `target_cell=` (not `src_range=` or `dest_cell=`)
+- **file.grep**: Use `max_matches=` not `limit=` to cap results
+  - Example: `file.grep(pattern="def test_", path="tests/", glob="*.py", max_matches=10)`
 - **ground tools**: Use `max_sources` not `count` to limit results
   - Example: `ground.search(query="topic", max_sources=5)` not `ground.search(query="topic", count=5)`
 - **context7 tools**: Different parameters for search vs doc (v2 API)
