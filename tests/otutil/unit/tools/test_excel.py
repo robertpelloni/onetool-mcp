@@ -110,6 +110,20 @@ def test_create_workbook_with_sheet_name(excel_file: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
+def test_create_workbook_with_sheet_names(excel_file: Path) -> None:
+    """Verify excel.create() creates multiple sheets from sheet_names list."""
+    from otutil.tools.excel import create, sheets
+
+    create(filepath=str(excel_file), sheet_names=["Sales", "Config", "Summary"])
+    result = _to_str(sheets(filepath=str(excel_file)))
+
+    assert "Sales" in result
+    assert "Config" in result
+    assert "Summary" in result
+
+
+@pytest.mark.unit
+@pytest.mark.tools
 def test_create_workbook_creates_parent_dirs(tmp_path: Path) -> None:
     """Verify excel.create() creates parent directories."""
     from otutil.tools.excel import create
@@ -328,6 +342,31 @@ def test_formula_to_specific_sheet(excel_file: Path) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
+def test_read_empty_sheet_returns_no_data(excel_file: Path) -> None:
+    """Verify excel.read() returns 'No data' for a freshly-created empty sheet."""
+    from otutil.tools.excel import create, read
+
+    create(filepath=str(excel_file))
+    result = read(filepath=str(excel_file))
+
+    assert result == "No data in worksheet"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_read_empty_added_sheet_returns_no_data(excel_file: Path) -> None:
+    """Verify excel.read() returns 'No data' for an added-but-unwritten sheet."""
+    from otutil.tools.excel import add_sheet, create, read
+
+    create(filepath=str(excel_file))
+    add_sheet(filepath=str(excel_file), sheet_name="Empty")
+    result = read(filepath=str(excel_file), sheet_name="Empty")
+
+    assert result == "No data in worksheet"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
 def test_read_nonexistent_file() -> None:
     """Verify excel.read() returns error for missing file."""
     from otutil.tools.excel import read
@@ -457,8 +496,6 @@ def test_search_first_only(excel_file: Path) -> None:
     result = search(filepath=str(excel_file), pattern="Test*", first_only=True)
 
     # first_only=True returns a JSON list with one item for API consistency
-    import json
-
     data = json.loads(result)
     assert isinstance(data, list)
     assert len(data) == 1
@@ -494,8 +531,6 @@ def test_search_no_matches(excel_file: Path) -> None:
     result = search(filepath=str(excel_file), pattern="Gamma*")
 
     # Result is a JSON string of an empty list
-    import json
-
     assert result == "[]"
 
 
@@ -796,7 +831,7 @@ def test_copy_range(excel_file: Path) -> None:
 
     create(filepath=str(excel_file))
     write(filepath=str(excel_file), data=[["X", "Y"], [1, 2], [3, 4]])
-    result = copy_range(filepath=str(excel_file), source="A1:B3", target="D1")
+    result = copy_range(filepath=str(excel_file), source_range="A1:B3", target_cell="D1")
 
     assert "Copied" in result
     # Verify the data was copied
@@ -816,7 +851,7 @@ def test_copy_range_to_different_sheet(excel_file: Path) -> None:
     write(filepath=str(excel_file), data=[["Data"], [100], [200]])
     add_sheet(filepath=str(excel_file), sheet_name="Backup")
     result = copy_range(
-        filepath=str(excel_file), source="A1:A3", target="A1", target_sheet="Backup"
+        filepath=str(excel_file), source_range="A1:A3", target_cell="A1", target_sheet="Backup"
     )
 
     assert "Copied" in result
@@ -824,6 +859,20 @@ def test_copy_range_to_different_sheet(excel_file: Path) -> None:
     backup_str = _to_str(backup_data)
     assert "Data" in backup_str
     assert "100" in backup_str
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+def test_copy_range_old_params_raise_error(excel_file: Path) -> None:
+    """Verify copy_range raises TypeError for old param names source/target."""
+    import pytest as _pytest
+
+    from otutil.tools.excel import copy_range, create, write
+
+    create(filepath=str(excel_file))
+    write(filepath=str(excel_file), data=[["A"], [1]])
+    with _pytest.raises(TypeError, match="unexpected keyword argument"):
+        copy_range(filepath=str(excel_file), source="A1:A2", target="C1")
 
 
 # =============================================================================

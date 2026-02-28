@@ -46,6 +46,7 @@ __ot_requires__ = {
 import fnmatch
 import json
 import re
+from datetime import date, datetime, time
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -140,12 +141,18 @@ def _plural(count: int, singular: str, plural: str | None = None) -> str:
     return plural or f"{singular}s"
 
 
-def create(*, filepath: str, sheet_name: str = "Sheet1") -> str:
+def create(
+    *,
+    filepath: str,
+    sheet_name: str = "Sheet1",
+    sheet_names: list[str] | None = None,
+) -> str:
     """Create new Excel workbook.
 
     Args:
         filepath: Path to create the Excel file
-        sheet_name: Name for the initial sheet (default: "Sheet1")
+        sheet_name: Name for the initial sheet (default: "Sheet1"); ignored when sheet_names is given
+        sheet_names: Create multiple sheets in one call (e.g., ["Sales", "Config", "Summary"])
 
     Returns:
         Success message with filepath
@@ -153,13 +160,19 @@ def create(*, filepath: str, sheet_name: str = "Sheet1") -> str:
     Example:
         excel.create(filepath="output/report.xlsx")
         excel.create(filepath="data.xlsx", sheet_name="Sales")
+        excel.create(filepath="data.xlsx", sheet_names=["Sales", "Config", "Summary"])
     """
     with LogSpan(span="excel.create", filepath=filepath, sheet=sheet_name) as s:
         try:
             _ensure_parent_dir(filepath)
             wb = Workbook()
             ws = wb.active
-            ws.title = sheet_name
+            if sheet_names:
+                ws.title = sheet_names[0]
+                for name in sheet_names[1:]:
+                    wb.create_sheet(name)
+            else:
+                ws.title = sheet_name
             wb.save(_expand_path(filepath))
             s.add(created=True)
             return f"Created workbook: {filepath}"
@@ -241,12 +254,18 @@ def read(
                 cell_range = f"{start_cell}:{end_cell}"
             else:
                 # Auto-detect used range
-                if ws.max_row and ws.max_column:
-                    end_col = get_column_letter(ws.max_column)
-                    cell_range = f"{start_cell}:{end_col}{ws.max_row}"
-                else:
+                # openpyxl reports max_row=1, max_column=1 even for empty sheets,
+                # so check A1 value to distinguish truly empty from single-cell data.
+                empty = (
+                    ws.max_row == 1
+                    and ws.max_column == 1
+                    and ws["A1"].value is None
+                )
+                if empty:
                     s.add(rows=0)
                     return "No data in worksheet"
+                end_col = get_column_letter(ws.max_column)
+                cell_range = f"{start_cell}:{end_col}{ws.max_row}"
 
             # Read data
             rows = []
@@ -256,6 +275,8 @@ def read(
                     value = cell.value
                     if value is None:
                         row_data.append("")
+                    elif isinstance(value, (datetime, date, time)):
+                        row_data.append(value.isoformat())
                     else:
                         row_data.append(value)
                 rows.append(row_data)
@@ -448,7 +469,7 @@ def cell_range(
     left: int = 0,
     up: int = 0,
 ) -> str:
-    """Expand a cell into a range using CellRange.expand().
+    """(no file) Expand a cell into a range using CellRange.expand().
 
     Pure function - no file required.
 
@@ -484,7 +505,7 @@ def cell_shift(
     rows: int = 0,
     cols: int = 0,
 ) -> str:
-    """Shift a cell reference using CellRange.shift().
+    """(no file) Shift a cell reference using CellRange.shift().
 
     Pure function - no file required.
 
@@ -752,7 +773,13 @@ def table_data(
                     header = (
                         headers[col_idx] if col_idx < len(headers) else f"col_{col_idx}"
                     )
-                    row_dict[header] = cell.value if cell.value is not None else ""
+                    v = cell.value
+                    if v is None:
+                        row_dict[header] = ""
+                    elif isinstance(v, (datetime, date, time)):
+                        row_dict[header] = v.isoformat()
+                    else:
+                        row_dict[header] = v
                 rows_data.append(row_dict)
 
             wb.close()
@@ -961,8 +988,8 @@ def delete_cols(
 def copy_range(
     *,
     filepath: str,
-    source: str,
-    target: str,
+    source_range: str,
+    target_cell: str,
     sheet_name: str | None = None,
     target_sheet: str | None = None,
 ) -> str:
@@ -970,8 +997,8 @@ def copy_range(
 
     Args:
         filepath: Path to Excel file
-        source: Source range (e.g., "A1:C10")
-        target: Target cell (top-left of destination)
+        source_range: Source range (e.g., "A1:C10")
+        target_cell: Target cell (top-left of destination)
         sheet_name: Source sheet (default: active sheet)
         target_sheet: Target sheet (default: same as source)
 
@@ -979,10 +1006,10 @@ def copy_range(
         Success message
 
     Example:
-        excel.copy_range(filepath="data.xlsx", source="A1:C10", target="E1")
-        excel.copy_range(filepath="data.xlsx", source="A1:C10", target="A1", target_sheet="Backup")
+        excel.copy_range(filepath="data.xlsx", source_range="A1:C10", target_cell="E1")
+        excel.copy_range(filepath="data.xlsx", source_range="A1:C10", target_cell="A1", target_sheet="Backup")
     """
-    with LogSpan(span="excel.copy_range", filepath=filepath, source=source, target=target) as s:
+    with LogSpan(span="excel.copy_range", filepath=filepath, source=source_range, target=target_cell) as s:
         try:
             if not _expand_path(filepath).exists():
                 s.add(error="file_not_found")
@@ -1006,18 +1033,18 @@ def copy_range(
                 ws_target = ws_source
 
             # Parse source range
-            source_range = CellRange(source)
+            src_range = CellRange(source_range)
             # Parse target cell
-            target_col_letter, target_row = coordinate_from_string(target)
+            target_col_letter, target_row = coordinate_from_string(target_cell)
             target_col = column_index_from_string(target_col_letter)
 
             # Copy cells
             for row_offset, row in enumerate(
                 ws_source.iter_rows(
-                    min_row=source_range.min_row,
-                    max_row=source_range.max_row,
-                    min_col=source_range.min_col,
-                    max_col=source_range.max_col,
+                    min_row=src_range.min_row,
+                    max_row=src_range.max_row,
+                    min_col=src_range.min_col,
+                    max_col=src_range.max_col,
                 )
             ):
                 for col_offset, cell in enumerate(row):
@@ -1029,15 +1056,15 @@ def copy_range(
 
             # Calculate destination range for message
             dest_end_col = get_column_letter(
-                target_col + source_range.max_col - source_range.min_col
+                target_col + src_range.max_col - src_range.min_col
             )
-            dest_end_row = target_row + source_range.max_row - source_range.min_row
-            dest_range = f"{target}:{dest_end_col}{dest_end_row}"
+            dest_end_row = target_row + src_range.max_row - src_range.min_row
+            dest_range = f"{target_cell}:{dest_end_col}{dest_end_row}"
 
             wb.save(_expand_path(filepath))
             wb.close()
             s.add(copied=True)
-            return f"Copied {source} to {dest_range}"
+            return f"Copied {source_range} to {dest_range}"
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
