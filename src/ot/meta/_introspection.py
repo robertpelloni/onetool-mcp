@@ -60,6 +60,66 @@ def aliases(
         return [{"name": k, "target": v} for k, v in items]
 
 
+def _build_param_entry(param_def: Any) -> dict[str, Any]:
+    """Build a single param metadata dict with explicit required flag."""
+    entry: dict[str, Any] = {}
+    if param_def.default is None:
+        entry["required"] = True
+    else:
+        entry["default"] = param_def.default
+    if param_def.description:
+        entry["description"] = param_def.description
+    return entry
+
+
+def _build_snippet_detail(name: str, snippet_def: Any, info: InfoLevel) -> dict[str, Any]:
+    """Build a detail dict for a single snippet at the given info level."""
+    if info == "min":
+        entry: dict[str, Any] = {
+            "name": name,
+            "description": snippet_def.description or "(no description)",
+        }
+        if snippet_def.params:
+            entry["params"] = list(snippet_def.params.keys())
+        return entry
+
+    # Build example invocation: required params first, then first meaningful optional
+    example_args = []
+    for param_name, param_def in snippet_def.params.items():
+        if param_def.default is None:
+            example_args.append(f'{param_name}="..."')
+    _trivial: set[Any] = {"", False}
+    for param_name, param_def in snippet_def.params.items():
+        if param_def.default is not None and param_def.default not in _trivial:
+            example_args.append(f"{param_name}={param_def.default}")
+            break
+    example = f"${name}"
+    if example_args:
+        example += " " + " ".join(example_args)
+
+    # Build params detail with explicit required flag
+    params_detail: dict[str, Any] = {
+        pn: _build_param_entry(pd) for pn, pd in snippet_def.params.items()
+    }
+
+    if info == "default":
+        return {
+            "name": name,
+            "description": snippet_def.description or "(no description)",
+            "params": params_detail,
+            "example": example,
+        }
+
+    # info == "full"
+    return {
+        "name": name,
+        "description": snippet_def.description or "(no description)",
+        "params": params_detail,
+        "body": snippet_def.body,
+        "example": example,
+    }
+
+
 def snippets(
     *,
     pattern: str = "",
@@ -73,7 +133,8 @@ def snippets(
     Args:
         pattern: Filter snippets by name/description pattern (case-insensitive substring)
         info: Output verbosity level - "min" (names only), "default" (name +
-              description dicts, default), or "full" (name + description + params)
+              description dicts, default), or "full" (name + description + params
+              as structured dicts with required/default/description per param)
 
     Returns:
         List of snippet names (info="min") or dicts (info="default"/"full")
@@ -106,7 +167,7 @@ def snippets(
         if info == "min":
             return [k for k, v in items]
 
-        # info="full" - name + description + params summary
+        # info="full" - name + description + params as structured dicts
         if info == "full":
             results: list[dict[str, Any] | str] = []
             for snippet_name, snippet_def in items:
@@ -115,7 +176,10 @@ def snippets(
                     "description": snippet_def.description or "(no description)",
                 }
                 if snippet_def.params:
-                    entry["params"] = list(snippet_def.params.keys())
+                    entry["params"] = {
+                        pn: _build_param_entry(pd)
+                        for pn, pd in snippet_def.params.items()
+                    }
                 results.append(entry)
             return results
 
@@ -129,80 +193,65 @@ def snippets(
 def snippet_info(
     *,
     name: str = "",
+    pattern: str = "",
     info: InfoLevel = "default",
-) -> dict[str, Any]:
-    """Get detailed info for a single snippet.
+) -> dict[str, Any] | list[dict[str, Any]]:
+    """Get detailed info for one or more snippets.
 
     Returns description, params, body, and example.
+    Use name= for exact lookup (returns dict), pattern= for bulk lookup (returns list).
 
     Args:
-        name: Snippet name (without $ prefix, e.g., "brv_research")
+        name: Exact snippet name (without $ prefix, e.g., "rg"). Returns a single dict.
+        pattern: Substring filter for snippet names/descriptions. Returns a list of dicts.
         info: Output verbosity level - "min" (name + description + param names),
-              "default" (+ param details + example, default), or "full"
-              (+ body template)
+              "default" (+ param details with required flag + example, default), or
+              "full" (+ body template)
 
     Returns:
-        Snippet info dict
+        Single snippet dict when name= is used, list of dicts when pattern= is used
 
     Example:
-        ot.snippet_info(name="brv_research")
+        ot.snippet_info(name="rg")
         ot.snippet_info(name="c7", info="full")
+        ot.snippet_info(pattern="mem")
     """
-    with log(span="ot.snippet_info", name=name or None, info=info) as s:
+    with log(span="ot.snippet_info", name=name or None, pattern=pattern or None, info=info) as s:
         cfg = get_config()
 
+        # Mutual exclusivity check
+        if name and pattern:
+            return {"error": "Provide either name= or pattern=, not both."}
+
+        # No args: return all snippets (same as pattern="")
+        if not name and not pattern:
+            items = sorted(cfg.snippets.items()) if cfg.snippets else []
+            s.add("count", len(items))
+            return [_build_snippet_detail(k, v, info) for k, v in items]
+
+        # Pattern mode: return list of matching snippets at detail level
+        if pattern:
+            items = sorted(cfg.snippets.items()) if cfg.snippets else []
+            pattern_lower = pattern.lower()
+            items = [
+                (k, v) for k, v in items
+                if pattern_lower in k.lower() or pattern_lower in (v.description or "").lower()
+            ]
+            s.add("count", len(items))
+            return [_build_snippet_detail(k, v, info) for k, v in items]
+
+        # Name mode: return single dict
         if not cfg.snippets or name not in cfg.snippets:
             s.add("found", False)
             available = sorted(cfg.snippets.keys()) if cfg.snippets else []
+            hint = ""
+            if name.startswith("$"):
+                hint = f" Did you mean '{name[1:]}'? Use name= without the '$' prefix."
             return {
-                "error": f"Snippet '{name}' not found.",
+                "error": f"Snippet '{name}' not found.{hint}",
                 "available": available,
             }
 
         snippet_def = cfg.snippets[name]
         s.add("found", True)
-
-        if info == "min":
-            entry: dict[str, Any] = {
-                "name": name,
-                "description": snippet_def.description or "(no description)",
-            }
-            if snippet_def.params:
-                entry["params"] = list(snippet_def.params.keys())
-            return entry
-
-        # Build example invocation
-        example_args = []
-        for param_name, param_def in snippet_def.params.items():
-            if param_def.default is None:
-                example_args.append(f'{param_name}="..."')
-        example = f"${name}"
-        if example_args:
-            example += " " + " ".join(example_args)
-
-        # Build params detail
-        params_detail: dict[str, Any] = {}
-        for param_name, param_def in snippet_def.params.items():
-            param_entry: dict[str, Any] = {}
-            if param_def.default is not None:
-                param_entry["default"] = param_def.default
-            if param_def.description:
-                param_entry["description"] = param_def.description
-            params_detail[param_name] = param_entry
-
-        if info == "default":
-            return {
-                "name": name,
-                "description": snippet_def.description or "(no description)",
-                "params": params_detail,
-                "example": example,
-            }
-
-        # info == "full"
-        return {
-            "name": name,
-            "description": snippet_def.description or "(no description)",
-            "params": params_detail,
-            "body": snippet_def.body,
-            "example": example,
-        }
+        return _build_snippet_detail(name, snippet_def, info)

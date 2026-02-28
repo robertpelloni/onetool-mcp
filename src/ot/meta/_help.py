@@ -62,6 +62,7 @@ def help(*, query: str = "", info: InfoLevel = "default") -> str:
             from ot.meta._discovery import tool_info as _tool_info
             detail = _tool_info(name=query, info="full")
             if detail:
+                assert isinstance(detail, dict)
                 pack = query.split(".")[0]
                 s.add("type", "tool")
                 s.add("match", query)
@@ -91,6 +92,7 @@ def help(*, query: str = "", info: InfoLevel = "default") -> str:
             from ot.meta._introspection import snippet_info as _snippet_info
             si = _snippet_info(name=snippet_name, info="full")
             if "error" not in si:
+                assert isinstance(si, dict)
                 s.add("type", "snippet")
                 s.add("match", query)
                 return _format_snippet_help(si)

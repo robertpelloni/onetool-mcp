@@ -374,8 +374,8 @@ def test_aliases_pattern_no_match_returns_empty(override_config: Any) -> None:
 @pytest.mark.unit
 @pytest.mark.serve
 def test_snippets_info_full(override_config: Any) -> None:
-    """Verify ot.snippets(info=full) returns dicts with name, description, params."""
-    from ot.config import SnippetDef
+    """Verify ot.snippets(info=full) returns params as structured dicts, not a flat list."""
+    from ot.config import SnippetDef, SnippetParam
     from ot.meta import snippets
 
     with override_config(
@@ -383,19 +383,184 @@ def test_snippets_info_full(override_config: Any) -> None:
             snippets={
                 "test_snip": SnippetDef(
                     description="Test snippet",
-                    body="demo.call()",
+                    body="demo.call(q={{ q }}, path={{ path }})",
+                    params={
+                        "q": SnippetParam(description="Search query"),
+                        "path": SnippetParam(default=".", description="Search path"),
+                    },
                 )
             }
         )
     ):
         result = snippets(pattern="test_snip", info="full")
-        # Result is list of dicts
         assert isinstance(result, list)
         assert len(result) == 1
-        snippet_entry = result[0]
-        assert isinstance(snippet_entry, dict)
-        assert snippet_entry["name"] == "test_snip"
-        assert snippet_entry["description"] == "Test snippet"
+        entry = result[0]
+        assert isinstance(entry, dict)
+        assert entry["name"] == "test_snip"
+        assert entry["description"] == "Test snippet"
+        # params must be a dict, not a flat list
+        assert isinstance(entry["params"], dict)
+        # required param has "required": True, no "default"
+        assert entry["params"]["q"] == {"required": True, "description": "Search query"}
+        # optional param has "default", no "required"
+        assert entry["params"]["path"] == {"default": ".", "description": "Search path"}
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_required_flag(override_config: Any) -> None:
+    """Verify ot.snippet_info() marks required params with required=True."""
+    from ot.config import SnippetDef, SnippetParam
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={
+                "rg": SnippetDef(
+                    description="Search files",
+                    body="rg.search(pattern={{ p }}, path={{ path }})",
+                    params={
+                        "p": SnippetParam(description="Pattern"),
+                        "path": SnippetParam(default=".", description="Search path"),
+                    },
+                )
+            }
+        )
+    ):
+        result = snippet_info(name="rg")
+        assert isinstance(result, dict)
+        params = result["params"]
+        # Required param: has "required": True, no "default"
+        assert params["p"].get("required") is True
+        assert "default" not in params["p"]
+        # Optional param: has "default", no "required"
+        assert params["path"]["default"] == "."
+        assert "required" not in params["path"]
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_example_includes_meaningful_optional(override_config: Any) -> None:
+    """Verify example includes first optional param with a non-trivial default."""
+    from ot.config import SnippetDef, SnippetParam
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={
+                "search": SnippetDef(
+                    description="Search",
+                    body="s.search(q={{ q }}, mode={{ mode }})",
+                    params={
+                        "q": SnippetParam(description="Query"),
+                        "empty": SnippetParam(default="", description="Trivial empty"),
+                        "mode": SnippetParam(default="semantic", description="Search mode"),
+                    },
+                )
+            }
+        )
+    ):
+        result = snippet_info(name="search")
+        example = result["example"]
+        # Required param always present
+        assert 'q="..."' in example
+        # Trivial default ("") skipped; meaningful default included
+        assert "empty" not in example
+        assert "mode=semantic" in example
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_pattern_returns_list(override_config: Any) -> None:
+    """Verify ot.snippet_info(pattern=...) returns a list of matching snippet dicts."""
+    from ot.config import SnippetDef, SnippetParam
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={
+                "mem_search": SnippetDef(description="Search memory", body="mem.search()"),
+                "mem_read": SnippetDef(
+                    description="Read memory",
+                    body="mem.read(topic={{ topic }})",
+                    params={"topic": SnippetParam(description="Topic path")},
+                ),
+                "rg": SnippetDef(description="Ripgrep search", body="rg.search()"),
+            }
+        )
+    ):
+        result = snippet_info(pattern="mem")
+        assert isinstance(result, list)
+        assert len(result) == 2
+        names = [e["name"] for e in result]
+        assert "mem_search" in names
+        assert "mem_read" in names
+        assert "rg" not in names
+        # Each entry has full detail (params, example)
+        mem_read = next(e for e in result if e["name"] == "mem_read")
+        assert "params" in mem_read
+        assert "example" in mem_read
+        assert mem_read["params"]["topic"].get("required") is True
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_no_args_returns_all(override_config: Any) -> None:
+    """ot.snippet_info() with no args returns all snippets as a list."""
+    from ot.config import SnippetDef
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={
+                "rg": SnippetDef(description="Ripgrep search", body="rg.search()"),
+                "mem": SnippetDef(description="Memory read", body="mem.read()"),
+            }
+        )
+    ):
+        result = snippet_info()
+        assert isinstance(result, list)
+        names = [e["name"] for e in result]
+        assert "rg" in names
+        assert "mem" in names
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_dollar_prefix_hint(override_config: Any) -> None:
+    """ot.snippet_info(name='$rg') returns a hint to drop the '$' prefix."""
+    from ot.config import SnippetDef
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={"rg": SnippetDef(description="Ripgrep search", body="rg.search()")}
+        )
+    ):
+        result = snippet_info(name="$rg")
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "Did you mean 'rg'" in result["error"]
+        assert "$" in result["error"]
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_snippet_info_both_name_and_pattern_errors(override_config: Any) -> None:
+    """ot.snippet_info(name=..., pattern=...) returns a mutual-exclusivity error."""
+    from ot.config import SnippetDef
+    from ot.meta import snippet_info
+
+    with override_config(
+        OneToolConfig(
+            snippets={"rg": SnippetDef(description="Ripgrep search", body="rg.search()")}
+        )
+    ):
+        result = snippet_info(name="rg", pattern="rg")
+        assert isinstance(result, dict)
+        assert "error" in result
+        assert "not both" in result["error"]
 
 
 @pytest.mark.unit

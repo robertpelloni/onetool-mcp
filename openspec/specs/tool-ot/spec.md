@@ -59,6 +59,7 @@ The `ot.tool_info()` function SHALL return detailed info (signature + args) for 
 - **GIVEN** `info="min"` parameter
 - **WHEN** `ot.tool_info(name="brave.search", info="min")` is called
 - **THEN** each entry SHALL include: `{name, signature, args}`
+- **NOTE** This differs from `ot.tools(info="min")` which returns name strings only. `tool_info` always returns dicts (detail mode), while `tools` returns compact list entries.
 
 #### Scenario: Info level default
 - **GIVEN** `info="default"` parameter (or no info parameter)
@@ -454,47 +455,61 @@ The `ot.snippets()` function SHALL list snippets with optional filtering. The `o
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.snippets(info="full")` is called
 - **THEN** it SHALL return structured data: `[{name, description, params}]`
-- **AND** each params entry SHALL include type and default when available
+- **AND** `params` SHALL be a dict mapping param name to a param detail dict
+- **AND** required params SHALL include `"required": true` and no `"default"` key
+- **AND** optional params SHALL include `"default"` and no `"required"` key
 
 ---
 
 ### Requirement: Snippet Detail
 
-The `ot.snippet_info()` function SHALL return the full definition of a specific snippet.
+The `ot.snippet_info()` function SHALL return detailed info for one or more snippets.
 
 #### Scenario: Exact name lookup
 - **GIVEN** `name="brv_research"` parameter
 - **WHEN** `ot.snippet_info(name="brv_research")` is called
 - **THEN** it SHALL return a single dict
 
+#### Scenario: Pattern lookup
+- **GIVEN** `pattern="mem"` parameter
+- **WHEN** `ot.snippet_info(pattern="mem")` is called
+- **THEN** it SHALL return a list of dicts for all snippets whose name or description matches
+- **AND** each entry SHALL be at the same detail level as an exact `name=` lookup
+
+#### Scenario: No args — return all snippets
+- **GIVEN** no `name=` or `pattern=` argument
+- **WHEN** `ot.snippet_info()` is called
+- **THEN** it SHALL return a list of all snippets (same as `pattern=""`)
+
+#### Scenario: Mutual exclusivity
+- **GIVEN** both `name=` and `pattern=` are provided
+- **WHEN** `ot.snippet_info(name="rg", pattern="rg")` is called
+- **THEN** it SHALL return `{"error": "Provide either name= or pattern=, not both."}`
+
+#### Scenario: Dollar-prefix hint
+- **GIVEN** `name="$rg"` (with `$` prefix, as used in snippet invocation syntax)
+- **WHEN** `ot.snippet_info(name="$rg")` is called
+- **THEN** it SHALL return an error dict including a hint: `"Did you mean 'rg'? Use name= without the '$' prefix."`
+
 #### Scenario: Info level default
 - **GIVEN** `info="default"` parameter (or no info parameter)
 - **WHEN** `ot.snippet_info(name="brv_research")` is called
 - **THEN** it SHALL return the snippet definition including:
   - description
-  - params with types and defaults
-  - body template
-  - example invocation
+  - params dict with explicit `required` flag or `default` per param
+  - example invocation (required params + first optional with a non-trivial default)
 
 #### Scenario: Snippet output format
-- **GIVEN** a valid snippet
+- **GIVEN** a valid snippet with required and optional params
 - **WHEN** definition is retrieved with `ot.snippet_info()`
 - **THEN** output SHALL be formatted as:
 ```yaml
 name: brv_research
 description: Search web and extract structured findings
 params:
-  topic: {description: "Topic to research"}
+  topic: {required: true, description: "Topic to research"}
   count: {default: 5, description: "Number of sources"}
-body: |
-  results = brave.search(query="{{ topic }}", count={{ count }})
-  ot_llm.transform(data=results, prompt="Extract key findings")
-
-# Example with defaults:
-# $brv_research topic=Python
-# Expands to:
-results = brave.search(query="Python", count=5)
-ot_llm.transform(data=results, prompt="Extract key findings")
+example: "$brv_research topic=\"...\" count=5"
 ```
 
 ### Requirement: Unified Help
