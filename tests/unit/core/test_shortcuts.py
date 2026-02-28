@@ -103,6 +103,66 @@ limit: 10'''
 
 @pytest.mark.unit
 @pytest.mark.core
+def test_parse_snippet_underscore_name() -> None:
+    """Verify parse_snippet correctly handles underscore snippet names."""
+    from ot.shortcuts import parse_snippet
+
+    # Single-line with params
+    result = parse_snippet("$rg_count p=def ft=py")
+    assert result.name == "rg_count"
+    assert result.params == {"p": "def", "ft": "py"}
+
+    # Multi-segment underscore
+    result = parse_snippet("$mem_s q=asyncio")
+    assert result.name == "mem_s"
+    assert result.params == {"q": "asyncio"}
+
+    # No params
+    result = parse_snippet("$f_t")
+    assert result.name == "f_t"
+    assert result.params == {}
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_parse_snippet_hyphenated_name() -> None:
+    """Verify parse_snippet correctly handles hyphenated snippet names (user-defined)."""
+    from ot.shortcuts import parse_snippet
+
+    result = parse_snippet("$my-snippet p=def")
+    assert result.name == "my-snippet"
+    assert result.params == {"p": "def"}
+
+    result = parse_snippet("$a-b-c")
+    assert result.name == "a-b-c"
+    assert result.params == {}
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_parse_snippet_equals_in_quoted_value() -> None:
+    """Verify parse_snippet handles = inside quoted values without truncating."""
+    from ot.shortcuts import parse_snippet
+
+    # = inside double-quoted value
+    result = parse_snippet('$rg p="key=value" path=src')
+    assert result.params == {"p": "key=value", "path": "src"}
+
+    # = inside single-quoted value
+    result = parse_snippet("$rg p='url=https' path=src")
+    assert result.params == {"p": "url=https", "path": "src"}
+
+    # Multiple = signs in quoted value
+    result = parse_snippet('$rg p="a=b=c" path=src')
+    assert result.params == {"p": "a=b=c", "path": "src"}
+
+    # = in first param, no subsequent params
+    result = parse_snippet('$rg p="key=val"')
+    assert result.params == {"p": "key=val"}
+
+
+@pytest.mark.unit
+@pytest.mark.core
 def test_parse_snippet_no_params() -> None:
     """Verify parse_snippet works with no parameters."""
     from ot.shortcuts import parse_snippet
@@ -263,6 +323,47 @@ def test_expand_snippet_prefix_resolution_first_in_order_wins() -> None:
     parsed = parse_snippet("$x q=abc")
     result = expand_snippet(parsed, config)
     assert 'quality="abc"' in result
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_expand_snippet_boolean_normalization() -> None:
+    """Verify expand_snippet normalizes 'true'/'false' strings to Python booleans for bool params."""
+    from ot.config import OneToolConfig, SnippetDef, SnippetParam
+    from ot.shortcuts import expand_snippet, parse_snippet
+
+    config = OneToolConfig(
+        snippets={
+            "wf": SnippetDef(
+                description="Fetch URL",
+                params={
+                    "url": SnippetParam(required=True),
+                    "links": SnippetParam(default=False),
+                },
+                body='wf.fetch(url="{{ url }}", include_links={{ links }})',
+            )
+        }
+    )
+
+    # links=true (YAML style) should render as True (valid Python)
+    parsed = parse_snippet("$wf url=http://localhost links=true")
+    result = expand_snippet(parsed, config)
+    assert "include_links=True" in result
+
+    # links=false (YAML style) should render as False (valid Python)
+    parsed = parse_snippet("$wf url=http://localhost links=false")
+    result = expand_snippet(parsed, config)
+    assert "include_links=False" in result
+
+    # Default (no links param) uses the bool default → False
+    parsed = parse_snippet("$wf url=http://localhost")
+    result = expand_snippet(parsed, config)
+    assert "include_links=False" in result
+
+    # Python-style True also works
+    parsed = parse_snippet("$wf url=http://localhost links=True")
+    result = expand_snippet(parsed, config)
+    assert "include_links=True" in result
 
 
 @pytest.mark.integration

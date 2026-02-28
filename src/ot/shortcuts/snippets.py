@@ -77,8 +77,8 @@ def parse_snippet(code: str) -> ParsedSnippet:
     lines = content.split("\n")
     first_line = lines[0].strip()
 
-    # Extract snippet name (first word)
-    name_match = re.match(r"^(\w+)", first_line)
+    # Extract snippet name — allows hyphens (e.g. "rg-count", "mem-s", "f-t")
+    name_match = re.match(r"^([\w][\w-]*)", first_line)
     if not name_match:
         raise ValueError(f"Invalid snippet name: {first_line[:50]}")
 
@@ -127,9 +127,10 @@ def _parse_singleline_snippet(name: str, params_str: str, raw: str) -> ParsedSni
     placeholder = "\x00EQUALS\x00"
     params_str = params_str.replace("\\=", placeholder)
 
-    # Find all key=value pairs
-    # Pattern: word followed by = and then value until next word= or end
-    pattern = r"(\w+)=((?:[^=]|$)*?)(?=\s+\w+=|$)"
+    # Find all key=value pairs.
+    # Quoted values ("..." or '...') are extracted atomically — = inside is allowed.
+    # Unquoted values extend until the next whitespace+key= boundary.
+    pattern = r"""(\w+)=("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(?:(?!\s+\w+=).)*?)(?=\s+\w+=|$)"""
     matches = re.findall(pattern, params_str)
 
     for key, value in matches:
@@ -212,13 +213,19 @@ def expand_snippet(
     param_names = list(snippet_def.params.keys())
     resolved_input = resolve_kwargs(cast("dict[str, object]", parsed.params), param_names)
 
-    # Apply provided values
+    # Apply provided values, normalizing boolean strings for bool-typed params
     for key, value in resolved_input.items():
         if key not in snippet_def.params:
             logger.warning(
                 f"Unknown parameter '{key}' for snippet '{parsed.name}' (ignored)"
             )
-        context[key] = value
+            context[key] = value
+            continue
+        param_def = snippet_def.params[key]
+        if isinstance(param_def.default, bool) and isinstance(value, str) and value.lower() in ("true", "false"):
+            context[key] = value.lower() == "true"
+        else:
+            context[key] = value
 
     # Check required parameters
     for param_name, param_def in snippet_def.params.items():
