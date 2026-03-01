@@ -22,9 +22,24 @@ class TestProxyManager:
 
         assert manager._clients == {}
         assert manager._tools_by_server == {}
+        assert manager._server_timeouts == {}
         assert manager._initialized is False
         assert manager._loop is None
         assert manager._connect_task is None
+
+    def test_get_server_timeout_returns_configured_value(self) -> None:
+        """Should return the timeout stored for a connected server."""
+        manager = ProxyManager()
+        manager._server_timeouts = {"chunkhound": 300.0, "github": 120.0}
+
+        assert manager.get_server_timeout("chunkhound") == 300.0
+        assert manager.get_server_timeout("github") == 120.0
+
+    def test_get_server_timeout_defaults_to_30(self) -> None:
+        """Should return 30.0 for unknown servers."""
+        manager = ProxyManager()
+
+        assert manager.get_server_timeout("unknown") == 30.0
 
     def test_servers_returns_client_keys(self) -> None:
         """Should return list of connected server names."""
@@ -75,8 +90,6 @@ class TestProxyManagerReconnectSync:
 
     def test_reconnect_sync_with_stored_loop_uses_it(self) -> None:
         """Should use stored loop for reconnection."""
-        import asyncio
-
         manager = ProxyManager()
         mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
         mock_loop.is_running.return_value = True

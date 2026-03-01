@@ -75,6 +75,7 @@ class ProxyManager:
         self._clients: dict[str, Client] = {}  # type: ignore[type-arg]
         self._tools_by_server: dict[str, list[types.Tool]] = {}
         self._errors: dict[str, str] = {}  # server name -> last error message
+        self._server_timeouts: dict[str, float] = {}  # server name -> configured timeout
         self._initialized = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._connect_task: asyncio.Task[None] | None = None
@@ -102,6 +103,10 @@ class ProxyManager:
         """Get a client by server name."""
         return self._clients.get(server)
 
+    def get_server_timeout(self, server: str) -> float:
+        """Return the configured timeout for a server, defaulting to 30s."""
+        return self._server_timeouts.get(server, 30.0)
+
     def get_error(self, server: str) -> str | None:
         """Get the last connection error for a server."""
         return self._errors.get(server)
@@ -115,32 +120,15 @@ class ProxyManager:
         Returns:
             List of ProxyToolInfo for available tools.
         """
-        tools: list[ProxyToolInfo] = []
-
-        if server:
-            if server in self._tools_by_server:
-                for tool in self._tools_by_server[server]:
-                    tools.append(
-                        ProxyToolInfo(
-                            server=server,
-                            name=tool.name,
-                            description=tool.description or "",
-                            input_schema=tool.inputSchema,
-                        )
-                    )
-        else:
-            for srv_name, srv_tools in self._tools_by_server.items():
-                for tool in srv_tools:
-                    tools.append(
-                        ProxyToolInfo(
-                            server=srv_name,
-                            name=tool.name,
-                            description=tool.description or "",
-                            input_schema=tool.inputSchema,
-                        )
-                    )
-
-        return tools
+        items = (
+            [(server, t) for t in self._tools_by_server.get(server, [])]
+            if server
+            else [(srv, t) for srv, ts in self._tools_by_server.items() for t in ts]
+        )
+        return [
+            ProxyToolInfo(server=srv, name=t.name, description=t.description or "", input_schema=t.inputSchema)
+            for srv, t in items
+        ]
 
     async def call_tool(
         self,
@@ -467,6 +455,7 @@ class ProxyManager:
 
                 self._clients[name] = client
                 self._tools_by_server[name] = tools
+                self._server_timeouts[name] = float(config.timeout)
 
                 span.add("toolCount", len(tools))
                 logger.info(
@@ -545,7 +534,7 @@ class ProxyManager:
             from ot.config import get_config
             root_config = get_config()
             root_env = root_config.env
-        except Exception:
+        except (ImportError, AttributeError):
             root_env = {}
 
         # Merge: root env first, then server-specific env (overrides parent/root)
@@ -576,6 +565,7 @@ class ProxyManager:
         self._clients.clear()
         self._tools_by_server.clear()
         self._errors.clear()
+        self._server_timeouts.clear()
         self._initialized = False
         self._connect_task = None
 
@@ -602,6 +592,7 @@ class ProxyManager:
             self._clients.clear()
             self._tools_by_server.clear()
             self._errors.clear()
+            self._server_timeouts.clear()
             self._initialized = False
 
     async def reconnect(self, configs: dict[str, McpServerConfig]) -> None:

@@ -115,8 +115,6 @@ def _create_mcp_proxy_pack(server_name: str, tool_prefix: str | None = None) -> 
         def __init__(self) -> None:
             # Cache callable proxies to avoid recreating on each access
             self._function_cache: dict[str, Callable[..., Any]] = {}
-            # Cache accessor -> actual tool name mappings
-            self._name_resolution_cache: dict[str, str] = {}
 
         def __getattr__(self, accessor_name: str) -> Any:
             if accessor_name.startswith("_"):
@@ -129,45 +127,39 @@ def _create_mcp_proxy_pack(server_name: str, tool_prefix: str | None = None) -> 
             proxy = get_proxy_manager()
             available_tools = [t.name for t in proxy.list_tools(server_name)]
 
-            # Check cache first
-            if accessor_name in self._name_resolution_cache:
-                actual_tool_name = self._name_resolution_cache[accessor_name]
-            else:
-                # Find matching tool via canonical normalization
-                try:
-                    match_result = find_canonical_match(accessor_name, available_tools)
-                except ValueError as e:
-                    # Ambiguous match
-                    raise AttributeError(str(e)) from None
+            # Find matching tool via canonical normalization
+            try:
+                match_result = find_canonical_match(accessor_name, available_tools)
+            except ValueError as e:
+                # Ambiguous match
+                raise AttributeError(str(e)) from None
 
-                if match_result is None and tool_prefix:
-                    # Server declares a tool_prefix (e.g. "aws_"): try matching with it
-                    # prepended so callers can omit it.
-                    match_result = find_canonical_match(
-                        f"{tool_prefix}{accessor_name}", available_tools
+            if match_result is None and tool_prefix:
+                # Server declares a tool_prefix (e.g. "aws_"): try matching with it
+                # prepended so callers can omit it.
+                match_result = find_canonical_match(
+                    f"{tool_prefix}{accessor_name}", available_tools
+                )
+
+            if match_result is None:
+                # No match found - provide suggestions
+                suggestions = suggest_similar_names(accessor_name, available_tools)
+                if suggestions:
+                    suggestion_list = ", ".join(f"'{s}'" for s in suggestions)
+                    raise AttributeError(
+                        f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
+                        f"Did you mean: {suggestion_list}? "
+                        f"Available tools: {len(available_tools)} total."
+                    )
+                else:
+                    available = ", ".join(f"'{t}'" for t in sorted(available_tools)[:10])
+                    more = f" (and {len(available_tools) - 10} more)" if len(available_tools) > 10 else ""
+                    raise AttributeError(
+                        f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
+                        f"Available: {available}{more}"
                     )
 
-                if match_result is None:
-                    # No match found - provide suggestions
-                    suggestions = suggest_similar_names(accessor_name, available_tools)
-                    if suggestions:
-                        suggestion_list = ", ".join(f"'{s}'" for s in suggestions)
-                        raise AttributeError(
-                            f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
-                            f"Did you mean: {suggestion_list}? "
-                            f"Available tools: {len(available_tools)} total."
-                        )
-                    else:
-                        available = ", ".join(f"'{t}'" for t in sorted(available_tools)[:10])
-                        more = f" (and {len(available_tools) - 10} more)" if len(available_tools) > 10 else ""
-                        raise AttributeError(
-                            f"Tool '{accessor_name}' not found in MCP server '{server_name}'. "
-                            f"Available: {available}{more}"
-                        )
-
-                # Cache the resolution (match_result is str at this point)
-                actual_tool_name = match_result
-                self._name_resolution_cache[accessor_name] = actual_tool_name
+            actual_tool_name = match_result
 
             def call_proxy_tool(**kwargs: Any) -> str | dict[str, Any] | list[Any]:
                 tool_full_name = f"{server_name}.{actual_tool_name}"
@@ -179,7 +171,8 @@ def _create_mcp_proxy_pack(server_name: str, tool_prefix: str | None = None) -> 
                         kwargs = resolve_kwargs(kwargs, param_names)
 
                 with timed_tool_call(tool_full_name):
-                    return proxy.call_tool_sync(server_name, actual_tool_name, kwargs)
+                    timeout = proxy.get_server_timeout(server_name)
+                    return proxy.call_tool_sync(server_name, actual_tool_name, kwargs, timeout=timeout)
 
             self._function_cache[accessor_name] = call_proxy_tool
             return call_proxy_tool
@@ -208,8 +201,6 @@ def _create_proxy_introspection_pack() -> Any:
             Returns:
                 List of dicts with server name, type, enabled, and connected status.
             """
-            from ot.config import get_config
-
             config = get_config()
             proxy = get_proxy_manager()
 
@@ -322,11 +313,11 @@ def build_execution_namespace(
         if server_name.startswith("aws-"):
             short_name = server_name[4:].replace("-", "_")
             if short_name not in namespace:
-                namespace[short_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
+                namespace[short_name] = namespace[server_name]
         elif "-" in server_name:
             safe_name = server_name.replace("-", "_")
             if safe_name not in namespace:
-                namespace[safe_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
+                namespace[safe_name] = namespace[server_name]
 
     # Add proxy introspection pack (always available)
     if "proxy" not in namespace:
