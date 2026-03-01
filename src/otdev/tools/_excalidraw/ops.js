@@ -20,6 +20,9 @@
       const lineCount = label.split('\n').length;
       const textH    = lineCount * fontSize * 1.25;
 
+      const shapeRoundness = styleProps.corners === 'sharp' ? null
+                           : 'roundness' in styleProps ? styleProps.roundness
+                           : { type: 3 };
       window.__drawElements[id] = {
         id, type: shape, x, y, width: w, height: h,
         strokeColor:     styleProps.strokeColor     || '#1e1e1e',
@@ -28,8 +31,9 @@
         strokeStyle:     styleProps.strokeStyle     || 'solid',
         roughness:       styleProps.roughness       ?? 1,
         opacity:         styleProps.opacity         ?? 100,
-        roundness:       'roundness' in styleProps ? styleProps.roundness : { type: 3 },
-        fillStyle: 'solid', angle: 0, groupIds: [], frameId: null,
+        roundness:       shapeRoundness,
+        fillStyle:       styleProps.fillStyle       || 'solid',
+        angle: 0, groupIds: [], frameId: null,
         isDeleted: false, link: null, locked: false,
         version: 1, versionNonce: rng(), updated: now,
         boundElements: [{ type: 'text', id: textId }],
@@ -71,6 +75,7 @@
     const parallelSpacing = 20;
     for (const e of edges) {
       const { id, srcId, dstId, label, startArrowhead, endArrowhead, strokeStyle } = e;
+      const sp = e.styleProps || {};
       // Prefer live position (user-moved), fall back to freshly placed
       const src = liveMap[srcId] || window.__drawElements[srcId];
       const dst = liveMap[dstId] || window.__drawElements[dstId];
@@ -84,6 +89,21 @@
       const sx = src.x + src.width  + gap,  sy = src.y + src.height / 2 + yOff;
       const ex = dst.x              - gap,  ey = dst.y + dst.height  / 2 + yOff;
 
+      let arrowX, arrowY, pts, bboxW, bboxH, roughness;
+      if (sp.arrowType === 'elbow') {
+        // Elbow arrows use a straight 2-point seed path. Excalidraw re-routes
+        // the connector orthogonally via elbowed:true + startBinding/endBinding.
+        arrowX = sx; arrowY = sy;
+        pts = [[0, 0], [ex - sx, ey - sy]];
+        bboxW = ex - sx; bboxH = ey - sy;
+        roughness = 0;
+      } else {
+        arrowX = sx; arrowY = sy;
+        pts = [[0, 0], [ex - sx, ey - sy]];
+        bboxW = ex - sx; bboxH = ey - sy;
+        roughness = 1;
+      }
+
       // Back-fill boundElements on src and dst in cache
       const srcEl = window.__drawElements[srcId] || src;
       const dstEl = window.__drawElements[dstId] || dst;
@@ -94,17 +114,25 @@
 
       const labelId = id + '-label';
       const boundEls = label ? [{ type: 'text', id: labelId }] : [];
+      const at = sp.arrowType;
+      const edgeRoundness = (at === 'sharp' || at === 'elbow') ? null : { type: 2 };
+      const elbowed = at === 'elbow' ? true : undefined;
       window.__drawElements[id] = {
         id, type: 'arrow',
-        x: sx, y: sy, width: ex - sx, height: ey - sy,
-        points: [[0, 0], [ex - sx, ey - sy]],
-        strokeColor: '#1e1e1e', backgroundColor: 'transparent',
-        fillStyle: 'solid', strokeWidth: 2, roughness: 1,
-        strokeStyle: strokeStyle || 'solid',
-        opacity: 100, angle: 0, groupIds: [], frameId: null,
+        x: arrowX, y: arrowY, width: bboxW, height: bboxH,
+        points: pts,
+        strokeColor:  sp.strokeColor  || '#1e1e1e',
+        backgroundColor: 'transparent',
+        fillStyle:    sp.fillStyle    || 'solid',
+        strokeWidth:  sp.strokeWidth  ?? 2,
+        roughness,
+        strokeStyle:  sp.strokeStyle  || strokeStyle || 'solid',
+        opacity:      sp.opacity      ?? 100,
+        angle: 0, groupIds: [], frameId: null,
         isDeleted: false, link: null, locked: false,
         version: 1, versionNonce: rng(), updated: now,
-        boundElements: boundEls, roundness: { type: 2 },
+        boundElements: boundEls, roundness: edgeRoundness,
+        ...(elbowed !== undefined ? { elbowed } : {}),
         startArrowhead: startArrowhead ?? null,
         endArrowhead:   endArrowhead   ?? 'arrow',
         startBinding: { elementId: srcId, focus: 0, gap },
@@ -131,8 +159,12 @@
       }
     }
 
-    // Phase 3: subgraphs — rendered as a bounding rectangle pushed to the back
+    // Phase 3: subgraphs — rendered as a bounding rectangle with bound label,
+    // pushed to the back so member shapes render in front.
     const pad = 40;
+    const labelFontSize = 13;
+    const labelHeight = labelFontSize * 1.25;
+    const labelPad = labelHeight + 12; // space reserved at top for the label
     for (const f of frames) {
       const { id, label, memberIds, savedBounds } = f;
       // Erase previous rect + label if they exist (redraw always)
@@ -153,37 +185,35 @@
         const maxX = Math.max(...members.map(e => e.x + (e.width  || 160)));
         const maxY = Math.max(...members.map(e => e.y + (e.height || 60)));
         x = minX - pad;
-        y = minY - pad * 2;
+        y = minY - labelPad - pad;
         w = (maxX - minX) + pad * 2;
-        h = (maxY - minY) + pad * 3;
+        h = (maxY - minY) + labelPad + pad * 2;
       }
 
       const labelId = id + '-label';
-      const fontSize = 13;
-      const groupIds = [id];
       const groupRect = {
         id, type: 'rectangle',
         x, y, width: w, height: h,
         strokeColor: '#868e96',
         backgroundColor: 'transparent',
         strokeWidth: 1, strokeStyle: 'dashed', roughness: 0, opacity: 80,
-        fillStyle: 'solid', angle: 0, groupIds, frameId: null,
+        fillStyle: 'solid', angle: 0, groupIds: [], frameId: null,
         isDeleted: false, link: null, locked: false,
         version: 1, versionNonce: rng(), updated: now,
         boundElements: [{ type: 'text', id: labelId }], roundness: null,
       };
-      // Container child — Excalidraw positions it; verticalAlign drives top placement
       const labelEl = {
         id: labelId, type: 'text',
-        x: x + 8, y: y + 8, width: w - 16, height: fontSize * 1.25,
-        text: label, fontSize,
+        x: x + 8, y: y + 8, width: w - 16, height: labelHeight,
+        text: label, fontSize: labelFontSize,
         fontFamily: 1, textAlign: 'center', verticalAlign: 'top',
+        containerId: id,
         strokeColor: '#868e96', backgroundColor: 'transparent',
         fillStyle: 'solid', strokeWidth: 1, roughness: 0,
-        opacity: 80, angle: 0, groupIds, frameId: null,
+        opacity: 80, angle: 0, groupIds: [], frameId: null,
         isDeleted: false, link: null, locked: false,
         version: 1, versionNonce: rng(), updated: now,
-        boundElements: [], containerId: id, lineHeight: 1.25, baseline: 13,
+        boundElements: [], lineHeight: 1.25, baseline: 13,
         originalText: label, autoResize: true,
       };
 
@@ -239,13 +269,18 @@
     }
 
     for (const patch of patches) {
-      const { id, text, shape: newType, ...styleProps } = patch;
+      const { id, text, shape: newType, corners: cornersVal, ...styleProps } = patch;
 
       const existing = liveMap[id] || window.__drawElements[id];
       if (!existing) continue;
 
       const textId = id + '-text';
       const existingText = liveMap[textId] || window.__drawElements[textId];
+
+      // Translate corners shorthand to Excalidraw's roundness property
+      if (cornersVal !== undefined) {
+        styleProps.roundness = cornersVal === 'sharp' ? null : { type: 3 };
+      }
 
       // Shape type change requires delete + recreate (Excalidraw cannot change type in-place)
       if (newType && newType !== existing.type) {
@@ -275,12 +310,16 @@
         const fontSize = styleProps.fontSize || existingText.fontSize || 16;
         const lineCount = newLabel.split('\n').length;
         const textH = lineCount * fontSize * 1.25;
+        // When x/y move the parent, translate the text child by the same delta
+        const dx = styleProps.x !== undefined ? styleProps.x - existing.x : 0;
+        const dy = styleProps.y !== undefined ? styleProps.y - existing.y : 0;
         window.__drawElements[textId] = {
           ...existingText,
           text: newLabel,
           originalText: newLabel,
           fontSize,
           height: textH,
+          ...(dx || dy ? { x: existingText.x + dx, y: existingText.y + dy } : {}),
           // Sync text stroke colour if sc was provided
           ...(styleProps.strokeColor ? { strokeColor: styleProps.strokeColor } : {}),
           ...(styleProps.fontFamily  ? { fontFamily: styleProps.fontFamily }   : {}),

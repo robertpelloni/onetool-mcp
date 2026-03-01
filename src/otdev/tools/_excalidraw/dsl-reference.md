@@ -31,6 +31,15 @@ a-.->|label|b                dashed directed arrow with label
 a-.-b                        dashed undirected
 ```
 
+Inline style props can be appended to any edge with a `{key:value,...}` block:
+
+```
+a --> b {sc:red,sw:2}          arrow with red thick stroke
+a --> b {at:elbow}             orthogonal self-routing connector
+a --> b {at:sharp,ss:dashed}   straight dashed line
+a --> b {at:curve,sc:blue,o:60,fi:solid}   bezier blue semi-transparent arrow
+```
+
 ### Subgraphs
 
 ```
@@ -133,6 +142,56 @@ This is a plain text annotation.
 
 ---
 
+## Layout and Alignment
+
+### `wb.layout()` — ELK.js graph layout
+
+Reads the live canvas (not just DSL-drawn shapes), runs ELK.js in the browser
+to compute layout positions, and applies them. If any elements are selected,
+only the selected nodes are laid out. Calls `wb.fit()` implicitly after layout.
+
+```python
+wb.layout(
+    direction="DOWN",      # DOWN | RIGHT | UP | LEFT
+    gap_layer=80,          # px between layers
+    gap_node=40,           # px between sibling nodes
+    algorithm="layered",   # layered | stress | mrtree | radial | force
+    node_placement="NETWORK_SIMPLEX",   # layered only
+    crossing_min="LAYER_SWEEP",         # layered only
+    cycle_breaking="GREEDY",            # layered only
+    arrow_type=None,       # None | "curve" | "sharp" | "elbow" — patch all arrows after layout
+    elk_options=None,      # dict of raw ELK key→value (merged last, overrides all)
+)
+```
+
+**Algorithms:**
+- `layered` — best for DAGs/pipelines; minimises crossings
+- `stress` — spring-based; good for undirected graphs; increase `gap_node` to avoid overlaps
+- `mrtree` — minimal-spanning-tree; good for single-root trees
+- `radial` — radial tree centred on one node
+- `force` — force-directed; good for clustered undirected graphs
+
+### `wb.align()` — align or distribute elements
+
+Aligns a set of elements using Excalidraw's built-in alignment actions.
+
+```python
+wb.align(ids=["a", "b", "c"], axis="top")
+```
+
+| `axis` | Effect |
+|---|---|
+| `"left"` | Snap left edges to leftmost element |
+| `"hcenter"` | Centre on vertical axis |
+| `"right"` | Snap right edges to rightmost element |
+| `"top"` | Snap top edges to topmost element |
+| `"vcenter"` | Centre on horizontal axis |
+| `"bottom"` | Snap bottom edges to lowest element |
+| `"hdistribute"` | Even horizontal spacing |
+| `"vdistribute"` | Even vertical spacing |
+
+---
+
 ## Style Shorthands
 
 Used in `whiteboard.draw()` inline props and `whiteboard.style()`. All keys and values are **case-insensitive**.
@@ -162,7 +221,7 @@ Named colours: `green`, `blue`, `red`, `purple`, `yellow`, `orange`, `pink`, `gr
 
 | Key | Excalidraw property | Values |
 |-----|---------------------|--------|
-| `f` | fontFamily | `hand`, `normal`, `mono` |
+| `f` | fontFamily | `hand`, `normal`, `mono`, `excalidraw` |
 | `fs` | fontSize | number (e.g. `fs:20`) |
 | `ta` | textAlign | `left`, `center`, `right` |
 | `va` | verticalAlign | `top`, `middle`, `bottom` |
@@ -180,9 +239,21 @@ Named colours: `green`, `blue`, `red`, `purple`, `yellow`, `orange`, `pink`, `gr
 | `x` / `y` | position | pixels |
 | `w` / `h` | width / height | pixels |
 
+New shapes are **auto-sized** from their label content: width scales with the longest line, height with the number of lines. Minimum size is 160×60 px. Use `w` / `h` to override: `a["Label"] w:300,h:80`.
+
 ### Roughness / opacity
 
 | Key | Excalidraw property | Values |
 |-----|---------------------|--------|
 | `r` | roughness | 0, 1, or 2 |
 | `o` | opacity | 0–100 |
+
+### Fill and corner style
+
+| Key | Applies to | Excalidraw property | Values |
+|-----|------------|---------------------|--------|
+| `fi` | shapes, arrows | fillStyle | `solid`, `hachure`, `cross-hatch`, `dots`, `zigzag`, `zigzag-line` |
+| `cr` | shapes only | corners | `round` (default), `sharp` |
+| `at` | arrows only | arrowType | `curve` (default), `sharp`, `elbow` |
+
+`at:curve` → bezier curve; `at:sharp` → straight line; `at:elbow` → orthogonal connector

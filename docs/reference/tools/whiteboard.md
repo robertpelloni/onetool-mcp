@@ -93,7 +93,7 @@ Add or update diagram elements from DSL. Additive — never clears existing elem
 
 - **New shapes** get auto-layout positions.
 - **Existing shapes** (by ID) are patched — label and inline style props are updated, position and size are preserved.
-- Edges are deduplicated by `(src, dst, label)`.
+- Edges are deduplicated by `(src, dst, label, startArrowhead, endArrowhead)`.
 
 ```python
 whiteboard.draw(input='a["Service A"]; b["DB"]; a-->b')
@@ -126,13 +126,15 @@ Style shorthand reference (all keys and values are **case-insensitive**):
 | `ss` | strokeStyle | `solid`, `dashed`, `dotted` |
 | `r` | roughness | 0-2 |
 | `o` | opacity | 0-100 |
-| `f` | fontFamily | `hand`, `normal`, `mono` |
+| `f` | fontFamily | `hand`, `normal`, `mono`, `excalidraw` |
 | `fs` | fontSize | number |
 | `ta` | textAlign | `left`, `center`, `right` |
 | `va` | verticalAlign | `top`, `middle`, `bottom` |
 | `shape` | element type | `r`=rect, `d`=diamond, `c`=circle |
 | `x`/`y` | position | pixels |
 | `w`/`h` | width/height | pixels |
+
+New shapes are **auto-sized** from their label content: width scales with the longest line, height with the number of lines (minimum 160×60 px). Use `w`/`h` to override the auto-computed size: `a["Label"] w:300,h:80`.
 
 Named colours: `green`, `blue`, `red`, `purple`, `yellow`, `orange`, `pink`, `gray`, `white`, `black`.
 

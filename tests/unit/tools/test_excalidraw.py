@@ -1,7 +1,7 @@
 """Unit tests for the whiteboard tool pack (pack name: whiteboard, short alias: wb).
 
-Tests cover: parse_dsl, _build_dsl, auto_layout, _parse_style_props, and
-smoke tests for public tools with mocked Playwright.
+Tests cover: parse_dsl, _build_dsl, auto_layout, _auto_size, _shape_payload,
+_parse_style_props, and smoke tests for public tools with mocked Playwright.
 """
 
 from __future__ import annotations
@@ -13,9 +13,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from otdev.tools.excalidraw import (
+    _SHAPE_MIN_H,
+    _SHAPE_MIN_W,
+    _auto_size,
     _build_dsl,
     _parse_style_props,
-    auto_layout,
+    _shape_payload,
     parse_dsl,
 )
 
@@ -303,75 +306,94 @@ class TestBuildDsl:
         state: dict[str, Any] = {"shapes": {}, "edges": [], "groups": {}}
         assert _build_dsl(state) == ""
 
+    def test_combined_both_labels(self) -> None:
+        """'a["Hello"] --> b["World"]' must parse to IDs a/b with correct labels.
+
+        Regression for: whiteboard-draw-combined-shape-edge-mangles-ids
+        """
+        result = parse_dsl('a["Hello"] --> b["World"]')
+        assert "a" in result["shapes"], "shape ID must be 'a', not 'ahello'"
+        assert "b" in result["shapes"], "shape ID must be 'b', not 'bworld'"
+        assert result["shapes"]["a"]["label"] == "Hello"
+        assert result["shapes"]["b"]["label"] == "World"
+        assert len(result["edges"]) == 1
+        assert result["edges"][0]["src"] == "a"
+        assert result["edges"][0]["dst"] == "b"
+        assert result["edges"][0]["id"] == "edge-a-b"
+
+    def test_combined_src_label_only(self) -> None:
+        """'a["Hello"] --> b' must preserve the label for a and use bare ID b."""
+        result = parse_dsl('a["Hello"] --> b')
+        assert result["shapes"]["a"]["label"] == "Hello"
+        assert result["edges"][0]["src"] == "a"
+        assert result["edges"][0]["dst"] == "b"
+
+    def test_combined_dst_label_only(self) -> None:
+        """'a --> b["World"]' must preserve the label for b and use bare ID a."""
+        result = parse_dsl('a --> b["World"]')
+        assert result["shapes"]["b"]["label"] == "World"
+        assert result["edges"][0]["src"] == "a"
+        assert result["edges"][0]["dst"] == "b"
+
+    def test_combined_with_edge_label(self) -> None:
+        """'a["Hello"] -->|calls| b["World"]' must keep shape labels and edge label."""
+        result = parse_dsl('a["Hello"] -->|calls| b["World"]')
+        assert result["shapes"]["a"]["label"] == "Hello"
+        assert result["shapes"]["b"]["label"] == "World"
+        assert result["edges"][0]["label"] == "calls"
+        assert result["edges"][0]["src"] == "a"
+        assert result["edges"][0]["dst"] == "b"
+
 
 # ===========================================================================
-# 6.3 auto_layout
+# 6.3 _auto_size and _shape_payload
 # ===========================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestAutoLayout:
-    def test_single_node(self) -> None:
-        shapes = {"a": {"label": "A", "classes": []}}
-        positions = auto_layout(shapes, [])
-        assert "a" in positions
-        x, y = positions["a"]
-        assert isinstance(x, (int, float))
-        assert isinstance(y, (int, float))
+class TestAutoSize:
+    def test_short_label_returns_min_size(self) -> None:
+        w, h = _auto_size("Hi")
+        assert w == _SHAPE_MIN_W
+        assert h == _SHAPE_MIN_H
 
-    def test_linear_chain(self) -> None:
-        shapes = {
-            "a": {"label": "A", "classes": []},
-            "b": {"label": "B", "classes": []},
-            "c": {"label": "C", "classes": []},
-        }
-        edges = [
-            {"id": "e1", "src": "a", "dst": "b", "label": ""},
-            {"id": "e2", "src": "b", "dst": "c", "label": ""},
-        ]
-        positions = auto_layout(shapes, edges)
-        ax, _ = positions["a"]
-        bx, _ = positions["b"]
-        cx, _ = positions["c"]
-        # a → b → c should be in increasing x-order
-        assert ax < bx < cx
+    def test_long_label_grows_width(self) -> None:
+        long_label = "A" * 60
+        w, h = _auto_size(long_label)
+        assert w > _SHAPE_MIN_W
 
-    def test_diamond_dag(self) -> None:
-        shapes = {
-            "top": {"label": "Top", "classes": []},
-            "left": {"label": "Left", "classes": []},
-            "right": {"label": "Right", "classes": []},
-            "bot": {"label": "Bottom", "classes": []},
-        }
-        edges = [
-            {"id": "e1", "src": "top", "dst": "left", "label": ""},
-            {"id": "e2", "src": "top", "dst": "right", "label": ""},
-            {"id": "e3", "src": "left", "dst": "bot", "label": ""},
-            {"id": "e4", "src": "right", "dst": "bot", "label": ""},
-        ]
-        positions = auto_layout(shapes, edges)
-        assert all(k in positions for k in ("top", "left", "right", "bot"))
-        assert positions["top"][0] < positions["bot"][0]
+    def test_multiline_label_grows_height(self) -> None:
+        label = "Line1\nLine2\nLine3\nLine4"
+        _, h = _auto_size(label)
+        assert h > _SHAPE_MIN_H
 
-    def test_disconnected_nodes(self) -> None:
-        shapes = {
-            "a": {"label": "A", "classes": []},
-            "b": {"label": "B", "classes": []},
-        }
-        positions = auto_layout(shapes, [])
-        assert "a" in positions
-        assert "b" in positions
+    def test_empty_label_returns_min_size(self) -> None:
+        w, h = _auto_size("")
+        assert w == _SHAPE_MIN_W
+        assert h == _SHAPE_MIN_H
 
-    def test_edges_outside_shapes_ignored(self) -> None:
-        shapes = {"a": {"label": "A", "classes": []}}
-        edges = [{"id": "e1", "src": "a", "dst": "z", "label": ""}]  # z not in shapes
-        positions = auto_layout(shapes, edges)
-        assert "a" in positions
+    def test_shape_payload_uses_auto_size(self) -> None:
+        long_label = "A" * 60
+        shape = {"label": long_label, "classes": []}
+        p = _shape_payload("n", shape, 0.0, 0.0)
+        assert p["w"] > _SHAPE_MIN_W
+
+    def test_shape_payload_style_width_overrides_auto_size(self) -> None:
+        shape = {"label": "short", "classes": []}
+        p = _shape_payload("n", shape, 0.0, 0.0, style={"width": 999, "height": 88})
+        assert p["w"] == 999
+        assert p["h"] == 88
+
+    def test_shape_payload_multiline_grows_height(self) -> None:
+        label = "Line1\nLine2\nLine3\nLine4"
+        shape = {"label": label, "classes": []}
+        p = _shape_payload("n", shape, 0.0, 0.0)
+        assert p["h"] > _SHAPE_MIN_H
 
 
 # ===========================================================================
-# 6.4 _parse_style_props (replaces _resolve_style)
+# 6.5 _parse_style_props (replaces _resolve_style)
 # ===========================================================================
 
 
@@ -457,8 +479,6 @@ def _reset_exc_state() -> None:
     exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
     exc._edge_keys = set()
     exc._rendered_ids = set()
-    exc._placed_positions = {}
-    exc._max_rendered_y = 0.0
 
 
 def _make_mock_proxy(servers: list[str] | None = None) -> MagicMock:
@@ -504,7 +524,7 @@ class TestPublicToolsSmoke:
         with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
-        assert "shapes" in result or "Error" not in result
+        assert "shapes" in result
         assert mock_proxy.call_tool_sync.called
 
     def test_draw_returns_error_when_playwright_not_connected(self) -> None:
@@ -757,10 +777,9 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}}
-        exc._rendered_ids = {"a"}
-        exc._edge_keys = set()
-        exc._max_rendered_y = 100.0
+        _reset_exc_state()
+        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
+        exc._rendered_ids.add("a")
 
         mock_proxy = _make_mock_proxy(servers=[])
 
@@ -770,7 +789,6 @@ class TestPublicToolsSmoke:
         assert "state cleared" in result
         assert exc._dsl_state["shapes"] == {}
         assert exc._rendered_ids == set()
-        assert exc._max_rendered_y == 0.0
 
     def test_hard_reset_clears_canvas_when_browser_available(self) -> None:
         from otdev.tools import excalidraw
@@ -813,13 +831,12 @@ class TestPublicToolsSmoke:
         self._reset_state()
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._rendered_ids = {"a"}
-        exc._max_rendered_y = 500.0
 
         evaluated: list[str] = []
 
         def capture_eval(fn: str) -> str:
             evaluated.append(fn)
-            return _playwright_eval_side_effect("browser_evaluate", {"function": fn})
+            return _playwright_eval_side_effect("playwright", "browser_evaluate", {"function": fn})
 
         mock_proxy = _make_mock_proxy()
 
@@ -830,7 +847,6 @@ class TestPublicToolsSmoke:
         assert result == "whiteboard ready"
         assert exc._dsl_state["shapes"] == {}, "state should be cleared"
         assert exc._rendered_ids == set(), "rendered_ids should be cleared"
-        assert exc._max_rendered_y == 0.0, "_max_rendered_y should be reset"
         assert any("clear" in e for e in evaluated), "canvas clear should be called"
 
     def test_open_returns_error_when_playwright_not_connected(self) -> None:
@@ -850,7 +866,6 @@ class TestPublicToolsSmoke:
         import otdev.tools.excalidraw as exc
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._rendered_ids = {"a"}
-        exc._max_rendered_y = 100.0
 
         mock_proxy = _make_mock_proxy(servers=[])
 
@@ -860,7 +875,6 @@ class TestPublicToolsSmoke:
         assert "closed" in result
         assert exc._dsl_state["shapes"] == {}
         assert exc._rendered_ids == set()
-        assert exc._max_rendered_y == 0.0
 
     def test_close_calls_tab_close_when_browser_available(self) -> None:
         from otdev.tools import excalidraw
@@ -1103,7 +1117,6 @@ class TestEdgeIdUniqueness:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1137,7 +1150,6 @@ class TestArrowLabels:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1154,58 +1166,6 @@ class TestArrowLabels:
             assert edges[0]["label"] == "writes"
 
 
-# ===========================================================================
-# 6.8 Cyclic graph layout
-# ===========================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-class TestCyclicLayout:
-    def test_cyclic_nodes_all_placed(self) -> None:
-        shapes = {
-            "a": {"label": "A", "classes": []},
-            "b": {"label": "B", "classes": []},
-            "c": {"label": "C", "classes": []},
-        }
-        edges = [
-            {"id": "e1", "src": "a", "dst": "b", "label": ""},
-            {"id": "e2", "src": "b", "dst": "c", "label": ""},
-            {"id": "e3", "src": "c", "dst": "a", "label": ""},
-        ]
-        positions = auto_layout(shapes, edges)
-        assert set(positions.keys()) == {"a", "b", "c"}, "all cyclic nodes must receive positions"
-
-    def test_cyclic_nodes_not_all_at_same_x(self) -> None:
-        shapes = {
-            "a": {"label": "A", "classes": []},
-            "b": {"label": "B", "classes": []},
-            "c": {"label": "C", "classes": []},
-        }
-        edges = [
-            {"id": "e1", "src": "a", "dst": "b", "label": ""},
-            {"id": "e2", "src": "b", "dst": "c", "label": ""},
-            {"id": "e3", "src": "c", "dst": "a", "label": ""},
-        ]
-        positions = auto_layout(shapes, edges)
-        xs = [pos[0] for pos in positions.values()]
-        assert len(set(xs)) > 1 or len(positions) <= 1, "cyclic nodes should not all stack at x=0"
-
-    def test_mixed_dag_and_cyclic(self) -> None:
-        shapes = {
-            "root": {"label": "Root", "classes": []},
-            "a": {"label": "A", "classes": []},
-            "b": {"label": "B", "classes": []},
-        }
-        edges = [
-            {"id": "e1", "src": "root", "dst": "a", "label": ""},
-            {"id": "e2", "src": "a", "dst": "b", "label": ""},
-            {"id": "e3", "src": "b", "dst": "a", "label": ""},
-        ]
-        positions = auto_layout(shapes, edges)
-        assert "root" in positions
-        assert "a" in positions
-        assert "b" in positions
 
 
 # ===========================================================================
@@ -1263,7 +1223,6 @@ class TestNoteToolParsing:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1280,7 +1239,6 @@ class TestNoteToolParsing:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1306,7 +1264,6 @@ class TestNoteToolParsing:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1325,7 +1282,6 @@ class TestNoteToolParsing:
         exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
         exc._edge_keys = set()
         exc._rendered_ids = set()
-        exc._max_rendered_y = 0.0
 
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
@@ -1343,6 +1299,39 @@ class TestNoteToolParsing:
         assert len(shapes) == 1
         assert shapes[0]["id"] == "t"
         assert shapes[0]["styleProps"]["fontFamily"] == 3  # code font
+
+    def test_note_multiblock_draws_each_block_separately(self) -> None:
+        """note() with multiple blocks calls _js_batch_draw once per block.
+
+        Uses block types that don't require tabulate (tree, seq, timeline, note).
+        """
+        from otdev.tools import excalidraw
+
+        import otdev.tools.excalidraw as exc
+        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
+        exc._edge_keys = set()
+        exc._rendered_ids = set()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        multi_input = (
+            "tr[tree:\nroot/\n-src/\n]\n"
+            "s[seq:\nA -> B: hi\n]\n"
+            "g[timeline:\nTask,1,3\n]\n"
+            "n[note:\nPlain text here.\n]"
+        )
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
+        ):
+            result = excalidraw.note(input=multi_input)
+
+        assert result == "inserted 4 note(s)"
+        assert mock_batch.call_count == 4, "one _js_batch_draw call per block"
+        drawn_ids = [c[1]["shapes"][0]["id"] for c in mock_batch.call_args_list]
+        assert drawn_ids == ["tr", "s", "g", "n"]
 
 
 # ===========================================================================
@@ -1465,18 +1454,18 @@ class TestRenderers:
 
 
 # ===========================================================================
-# 6.11 _max_rendered_y: note() avoids redundant auto_layout
+# 6.11 Note/draw placement: uses _get_canvas_max_y for vertical stacking
 # ===========================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestMaxRenderedY:
+class TestNotePlacement:
     def _reset(self) -> None:
         _reset_exc_state()
 
-    def test_note_uses_max_rendered_y_not_auto_layout(self) -> None:
-        """note() must not call auto_layout — it reads _max_rendered_y directly."""
+    def test_note_base_y_uses_canvas_max_y(self) -> None:
+        """Notes are placed 100px below the canvas max-y returned by _get_canvas_max_y."""
         from unittest.mock import patch
 
         from otdev.tools import excalidraw
@@ -1484,30 +1473,6 @@ class TestMaxRenderedY:
         self._reset()
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        import otdev.tools.excalidraw as exc
-        exc._max_rendered_y = 200.0
-
-        with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
-            patch("otdev.tools.excalidraw.auto_layout") as mock_layout,
-            patch("otdev.tools.excalidraw._js_batch_draw"),
-        ):
-            excalidraw.note(input="n[note:\nhello world\n]")
-            mock_layout.assert_not_called()
-
-    def test_note_base_y_uses_max_rendered_y(self) -> None:
-        """Notes are placed 100px below _max_rendered_y."""
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        import otdev.tools.excalidraw as exc
-        exc._max_rendered_y = 300.0
 
         captured: list[Any] = []
 
@@ -1516,16 +1481,17 @@ class TestMaxRenderedY:
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._get_canvas_max_y", return_value=300.0),
             patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_batch),
         ):
             excalidraw.note(input="n[note:\nhello\n]")
 
         assert captured, "batch draw should have been called"
         shapes = captured[0]["shapes"]
-        assert shapes[0]["y"] >= 400.0, "note y should be at least _max_rendered_y + 100"
+        assert shapes[0]["y"] >= 400.0, "note y should be at least canvas_max_y + 100"
 
-    def test_draw_updates_max_rendered_y(self) -> None:
-        """draw() should update _max_rendered_y after placing shapes."""
+    def test_draw_uses_canvas_max_y_for_stacking(self) -> None:
+        """draw() stacks new shapes below canvas max-y from _get_canvas_max_y."""
         from unittest.mock import patch
 
         from otdev.tools import excalidraw
@@ -1534,34 +1500,21 @@ class TestMaxRenderedY:
         mock_proxy = _make_mock_proxy()
         mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        import otdev.tools.excalidraw as exc
-        assert exc._max_rendered_y == 0.0
+        captured: list[Any] = []
+
+        def capture_batch(**kwargs: Any) -> None:
+            captured.append(kwargs)
 
         with (
             patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
-            patch("otdev.tools.excalidraw._js_batch_draw"),
+            patch("otdev.tools.excalidraw._get_canvas_max_y", return_value=500.0),
+            patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_batch),
         ):
-            excalidraw.draw(input='a["A"]\nb["B"]')
+            excalidraw.draw(input='a["A"]')
 
-        assert exc._max_rendered_y > 0.0, "draw() should update _max_rendered_y"
-
-    def test_clear_resets_max_rendered_y(self) -> None:
-        """clear_diag() should reset _max_rendered_y to 0."""
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        import otdev.tools.excalidraw as exc
-        exc._max_rendered_y = 500.0
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            excalidraw.clear()
-
-        assert exc._max_rendered_y == 0.0
+        assert captured, "batch draw should have been called"
+        shapes = captured[0]["shapes"]
+        assert shapes[0]["y"] >= 540.0, "shape y should be at least canvas_max_y + 40"
 
 
 # ===========================================================================
@@ -1715,47 +1668,6 @@ class TestErase:
         assert "edge-a-b" not in exc._rendered_ids
         assert "edge-b-c" not in exc._rendered_ids
 
-    def test_erase_keeps_max_rendered_y_when_shapes_remain(self) -> None:
-        """_max_rendered_y should not be reset to 0 when shapes still exist after erase."""
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        import otdev.tools.excalidraw as exc
-        self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-        exc._rendered_ids = {"a", "b"}
-        exc._max_rendered_y = 600.0
-
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            excalidraw.erase(ids=["a"])
-
-        assert exc._max_rendered_y == 600.0, "should not reset _max_rendered_y when shapes remain"
-
-    def test_erase_resets_max_rendered_y_when_all_shapes_gone(self) -> None:
-        """_max_rendered_y resets to 0 only when all shapes are erased."""
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        import otdev.tools.excalidraw as exc
-        self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids = {"a"}
-        exc._max_rendered_y = 600.0
-
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            excalidraw.erase(ids=["a"])
-
-        assert exc._max_rendered_y == 0.0
-
     def test_erase_docstring_documents_edge_id_format(self) -> None:
         """erase() docstring must document the edge ID format."""
         from otdev.tools import excalidraw
@@ -1785,6 +1697,27 @@ class TestShapeTypes:
     def test_rectangle_has_no_explicit_type(self) -> None:
         result = parse_dsl('a["Box"]')
         assert "type" not in result["shapes"]["a"]
+
+    def test_inline_xy_used_as_shape_position(self) -> None:
+        """Inline x/y in draw DSL props set the shape's position (not overridden by auto-layout)."""
+        from otdev.tools.excalidraw import _shape_payload
+
+        shape = {"label": "Foo", "classes": []}
+        payload = _shape_payload("a", shape, x=0.0, y=0.0, style={"x": 300, "y": 150})
+        assert payload["x"] == 300
+        assert payload["y"] == 150
+        # x/y must not leak into styleProps (would cause double-application)
+        assert "x" not in payload["styleProps"]
+        assert "y" not in payload["styleProps"]
+
+    def test_inline_xy_missing_falls_back_to_auto_layout(self) -> None:
+        """When inline x/y are absent, the auto-layout coordinates are used."""
+        from otdev.tools.excalidraw import _shape_payload
+
+        shape = {"label": "Foo", "classes": []}
+        payload = _shape_payload("a", shape, x=42.0, y=99.0, style={})
+        assert payload["x"] == 42.0
+        assert payload["y"] == 99.0
 
     def test_style_shape_d_maps_to_diamond(self) -> None:
         """whiteboard.style shape:d maps to 'diamond' excalidraw type."""
@@ -2110,6 +2043,29 @@ A,B
         blocks = _parse_note_blocks(spec)
         assert len(blocks) == 2
 
+    def test_triple_quoted_multiblock_finds_all_blocks(self) -> None:
+        """Triple-quoted multi-block strings must parse all blocks, not just the first.
+
+        Regression for: whiteboard-note-multiblock-triple-quoted-finds-one-block
+        When the second block ID has leading whitespace (as happens with indented
+        triple-quoted strings), the regex must still match it.
+        """
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = """t[table:
+Name,Role
+Alice,Dev
+]
+tr[tree:
+root/
+-src/
+]
+"""
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 2, f"expected 2 blocks, got {len(blocks)}: {blocks}"
+        assert blocks[0]["id"] == "t"
+        assert blocks[1]["id"] == "tr"
+
 
 # ===========================================================================
 # Subgraph count in draw() return value
@@ -2149,69 +2105,6 @@ class TestDrawSubgraphCount:
             result = excalidraw.draw(input='a["A"]\nb["B"]')
 
         assert "group" not in result
-
-
-# ===========================================================================
-# Auto-layout overlap avoidance
-# ===========================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-class TestAutoLayoutOverlap:
-    def test_find_free_y_no_conflict(self) -> None:
-        import otdev.tools.excalidraw as exc
-        from otdev.tools.excalidraw import _find_free_y
-
-        exc._placed_positions = {}
-        # No existing positions — proposed y should be returned unchanged
-        assert _find_free_y(500.0, 470.0) == 470.0
-
-    def test_find_free_y_conflict_shifts_below(self) -> None:
-        import otdev.tools.excalidraw as exc
-        from otdev.tools.excalidraw import _find_free_y
-
-        # Simulate a node already placed at (980, 470) with h=60, gap_y=40
-        exc._placed_positions = {"db": (980.0, 470.0)}
-        # New node proposed at same x, same y — should be shifted below
-        y = _find_free_y(980.0, 470.0)
-        # Should be placed below: 470 + 60 + 40 = 570
-        assert y > 470.0 + 60  # at least below db's bottom
-
-    def test_draw_stores_placed_positions(self) -> None:
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        import otdev.tools.excalidraw as exc
-        _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            excalidraw.draw(input='a["A"]\nb["B"]')
-
-        assert "a" in exc._placed_positions
-        assert "b" in exc._placed_positions
-
-    def test_erase_removes_placed_position(self) -> None:
-        from unittest.mock import patch
-
-        from otdev.tools import excalidraw
-
-        import otdev.tools.excalidraw as exc
-        _reset_exc_state()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids = {"a", "a-text"}
-        exc._placed_positions = {"a": (500.0, 470.0)}
-
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            excalidraw.erase(ids=["a"])
-
-        assert "a" not in exc._placed_positions
 
 
 # ===========================================================================
@@ -2416,3 +2309,782 @@ class TestHelp:
         mock_gpm.assert_not_called()
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+# ===========================================================================
+# layout() — parameter validation
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestLayout:
+    def test_layout_invalid_direction(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.layout(direction="SIDEWAYS")
+        assert "Error" in result or "error" in result.lower()
+
+    def test_layout_invalid_algorithm(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.layout(algorithm="random")
+        assert "Error" in result or "error" in result.lower()
+
+    def test_layout_valid_defaults_accepted(self) -> None:
+        """layout() with all defaults should pass validation (fails at browser, not param check)."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        # The call will fail at the browser step, not at validation — no "Error:" prefix
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.layout()
+
+        # Should not be a param-validation error (those start with "Error:")
+        assert not result.startswith("Error: direction"), "default params should pass validation"
+        assert not result.startswith("Error: algorithm"), "default params should pass validation"
+
+    def test_layout_invalid_arrow_type(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.layout(arrow_type="wavy")
+        assert "Error" in result
+
+    def test_layout_elk_non_dict_result_returns_error(self) -> None:
+        """layout() returns Error when ELK browser call returns non-dict."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        # Scene read returns valid scene; ELK returns bad string.
+        # _process_pending_downloads (called inside _ensure_ready) also calls
+        # _browser_evaluate_json with "__downloadQueue" — distinguish by JS content.
+        good_scene = {"nodes": [{"id": "a", "w": 160, "h": 60, "groupIds": []}],
+                      "edges": [], "selectedIds": []}
+        bad_elk = '"{\\"nodes\\":[],\\"edges\\":[]}"'
+
+        def _side_effect(js: str) -> Any:
+            if "__downloadQueue" in js:
+                return []  # download queue — empty, ignored by _process_pending_downloads
+            if "selectedIds" in js:
+                return good_scene  # scene read
+            return bad_elk  # ELK call
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch(
+                "otdev.tools.excalidraw._browser_evaluate_json",
+                side_effect=_side_effect,
+            ),
+        ):
+            result = excalidraw.layout()
+
+        assert result.startswith("Error:"), "double-encoded ELK result should return an error"
+        assert "ELK" in result
+
+    def test_layout_elk_dict_result_applied(self) -> None:
+        """layout() applies node positions when browser returns a proper dict."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        good_scene = {"nodes": [{"id": "a", "w": 160, "h": 60, "groupIds": []}],
+                      "edges": [], "selectedIds": []}
+        elk_response = {"nodes": [{"id": "a", "x": 100, "y": 60}], "edges": []}
+
+        def _side_effect(js: str) -> Any:
+            if "__downloadQueue" in js:
+                return []
+            if "selectedIds" in js:
+                return good_scene
+            return elk_response
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate") as mock_eval,
+        ):
+            result = excalidraw.layout()
+
+        assert not result.startswith("Error: ELK"), f"unexpected result: {result!r}"
+        assert mock_eval.called
+
+    def test_layout_straight_patches_edges(self) -> None:
+        """layout() with STRAIGHT routing must patch arrow positions after moving nodes."""
+        import otdev.tools.excalidraw as exc
+
+        _reset_exc_state()
+
+        good_scene = {
+            "nodes": [
+                {"id": "a", "w": 160, "h": 60, "groupIds": []},
+                {"id": "b", "w": 160, "h": 60, "groupIds": []},
+            ],
+            "edges": [{"id": "edge-a-b", "src": "a", "dst": "b"}],
+            "selectedIds": [],
+        }
+        elk_response = {
+            "nodes": [{"id": "a", "x": 60, "y": 60}, {"id": "b", "x": 300, "y": 60}],
+            "edges": [],
+        }
+        captured_patches: list[str] = []
+        call_count: list[int] = [0]
+
+        def _side(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "elk" in fn.lower() and "ELK" in fn:
+                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
+            # Scene read (first _browser_evaluate_json call via proxy)
+            if "getSceneElements" in fn or ("nodes" in fn and "selectedIds" in fn):
+                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
+            if "patches" in fn and "__drawElements" in fn:
+                captured_patches.append(fn)
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        from otdev.tools import excalidraw
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _side
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.layout(direction="RIGHT")
+
+        assert "layout applied" in result, f"unexpected result: {result}"
+        assert any("edge-a-b" in p for p in captured_patches), (
+            "STRAIGHT layout must patch edge positions; no patch for 'edge-a-b' found"
+        )
+
+
+# ===========================================================================
+# align() — parameter validation
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestAlign:
+    def test_align_invalid_axis(self) -> None:
+        from otdev.tools import excalidraw
+
+        result = excalidraw.align(ids=["a", "b"], axis="diagonal")
+        assert "Error" in result or "error" in result.lower()
+
+    def test_align_valid_axis_reaches_browser(self) -> None:
+        """align() with valid axis should pass validation and attempt browser call."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.align(ids=["a", "b"], axis="left")
+
+        # Should not be a param-validation error
+        assert not result.startswith("Error: axis"), "valid axis should pass validation"
+
+    def test_align_all_axes_accepted(self) -> None:
+        """All documented axis values must pass validation."""
+        from otdev.tools.excalidraw import _ALIGN_ACTIONS
+
+        from otdev.tools import excalidraw
+
+        valid_axes = list(_ALIGN_ACTIONS.keys())
+        assert len(valid_axes) == 8, "expected 8 alignment axes"
+        for axis in valid_axes:
+            result = excalidraw.align(ids=["x"], axis=axis)
+            assert not result.startswith("Error: axis"), f"axis={axis!r} should be valid"
+
+    def test_align_uses_perform_not_set_app_state(self) -> None:
+        """align() must use action.perform() directly — not the async setAppState() path."""
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.align(ids=["a", "b"], axis="top")
+
+        assert "aligned" in result
+        js_calls = [
+            str((c.args[2] if len(c.args) > 2 else {}).get("function", ""))
+            for c in mock_proxy.call_tool_sync.call_args_list
+        ]
+        assert any("perform" in js for js in js_calls), "align must use action.perform()"
+        assert not any("setAppState" in js for js in js_calls), "align must not use setAppState()"
+
+
+# ===========================================================================
+# _parse_style_props — fi / cr / at shorthands
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestStylePropNewShorthands:
+    def test_fi_fillstyle_solid(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("fi:solid")
+        assert result == {"fillStyle": "solid"}
+
+    def test_fi_fillstyle_hachure(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("fi:hachure")
+        assert result == {"fillStyle": "hachure"}
+
+    def test_fi_fillstyle_cross_hatch(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("fi:cross-hatch")
+        assert result == {"fillStyle": "cross-hatch"}
+
+    def test_fi_invalid_raises(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+        import pytest as pt
+
+        with pt.raises(ValueError, match="fillStyle"):
+            _parse_style_props("fi:wave")
+
+    def test_cr_round(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("cr:round")
+        assert result == {"corners": "round"}
+
+    def test_cr_sharp(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("cr:sharp")
+        assert result == {"corners": "sharp"}
+
+    def test_cr_invalid_raises(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+        import pytest as pt
+
+        with pt.raises(ValueError, match="corners"):
+            _parse_style_props("cr:beveled")
+
+    def test_at_curve(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("at:curve")
+        assert result == {"arrowType": "curve"}
+
+    def test_at_sharp(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("at:sharp")
+        assert result == {"arrowType": "sharp"}
+
+    def test_at_elbow(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+
+        result = _parse_style_props("at:elbow")
+        assert result == {"arrowType": "elbow"}
+
+    def test_at_invalid_raises(self) -> None:
+        from otdev.tools.excalidraw import _parse_style_props
+        import pytest as pt
+
+        with pt.raises(ValueError, match="arrowType"):
+            _parse_style_props("at:zigzag")
+
+
+# ===========================================================================
+# _try_edge — edge inline style parsing
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestEdgeInlineStyle:
+    def test_edge_with_style_block_parsed(self) -> None:
+        from otdev.tools.excalidraw import _try_edge
+
+        edges: list = []
+        matched = _try_edge("a --> b {at:elbow,sc:red}", edges)
+        assert matched
+        assert len(edges) == 1
+        sp = edges[0].get("styleProps", {})
+        assert sp.get("arrowType") == "elbow"
+        assert sp.get("strokeColor") == "#fecaca"
+
+    def test_edge_without_style_block_no_styleprops(self) -> None:
+        from otdev.tools.excalidraw import _try_edge
+
+        edges: list = []
+        _try_edge("a --> b", edges)
+        assert "styleProps" not in edges[0]
+
+    def test_edge_style_block_at_sharp(self) -> None:
+        from otdev.tools.excalidraw import _try_edge
+
+        edges: list = []
+        _try_edge("a --> b {at:sharp,ss:dashed}", edges)
+        sp = edges[0]["styleProps"]
+        assert sp["arrowType"] == "sharp"
+        assert sp["strokeStyle"] == "dashed"
+
+    def test_edge_style_preserves_id(self) -> None:
+        from otdev.tools.excalidraw import _try_edge
+
+        edges: list = []
+        _try_edge("a --> b {at:elbow}", edges)
+        assert edges[0]["id"] == "edge-a-b"
+
+    def test_labeled_edge_with_style(self) -> None:
+        from otdev.tools.excalidraw import _try_edge
+
+        edges: list = []
+        matched = _try_edge("a -->|send| b {at:elbow}", edges)
+        assert matched
+        assert edges[0]["label"] == "send"
+        assert edges[0]["styleProps"]["arrowType"] == "elbow"
+
+
+# ===========================================================================
+# Bug fixes: note() indented triple-quoted input (issue: whiteboard-note-multiblock)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestNoteBlocksIndentedInput:
+    """_parse_note_blocks handles indented triple-quoted strings and trailing whitespace."""
+
+    def test_indented_single_block(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = """
+        t[table:
+        A,B
+        1,2
+        ]"""
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["id"] == "t"
+        assert blocks[0]["type"] == "table"
+
+    def test_indented_multi_block(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = """
+        t[table:
+        Name,Role
+        Alice,Dev
+        ]
+        tr[tree:
+        root/
+        -src/
+        ]
+        """
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 2
+        assert blocks[0]["id"] == "t"
+        assert blocks[1]["id"] == "tr"
+
+    def test_trailing_whitespace_before_closing_bracket(self) -> None:
+        """Trailing spaces after ] must not prevent block matching."""
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        # Simulate trailing spaces that an editor or LLM might add
+        spec = "t[table:\nA,B\n1,2\n]   \n\nn[note:\nhello\n]  "
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 2
+
+    def test_mixed_indentation_and_crlf(self) -> None:
+        from otdev.tools.excalidraw import _parse_note_blocks
+
+        spec = "    t[table:\r\n    A,B\r\n    1,2\r\n    ]"
+        blocks = _parse_note_blocks(spec)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "table"
+
+
+# ===========================================================================
+# Bug fix: cr:sharp style prop (issue: whiteboard-cr-sharp-no-effect)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestCrSharpStyleProp:
+    """cr:sharp is parsed to corners='sharp' by _parse_style_props."""
+
+    def test_cr_sharp_parses_to_corners(self) -> None:
+        props = _parse_style_props("cr:sharp")
+        assert props["corners"] == "sharp"
+
+    def test_cr_round_parses_to_corners(self) -> None:
+        props = _parse_style_props("cr:round")
+        assert props["corners"] == "round"
+
+    def test_cr_invalid_raises(self) -> None:
+        with pytest.raises(ValueError, match="corners"):
+            _parse_style_props("cr:oval")
+
+
+# ===========================================================================
+# Bug fix: multi-subgraph column layout (issue: whiteboard-subgraph-merged-bbox)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestSubgraphColumnLayout:
+    """draw() places each subgraph's nodes in a separate x column."""
+
+    def _captured_shapes(self) -> list[dict]:
+        """Run draw() with two subgraphs and capture the shape payloads sent to JS."""
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        captured: list[dict] = []
+
+        def capture_side_effect(server: str, tool: str, arguments: dict | None = None) -> str:
+            result = _playwright_eval_side_effect(server, tool, arguments)
+            if tool == "browser_evaluate":
+                fn = (arguments or {}).get("function", "")
+                if "_batch_draw" in fn:
+                    # Extract the shapes JSON argument (first positional arg)
+                    import re as _re
+                    m = _re.search(r"_batch_draw\((\[.*?\]),", fn, _re.DOTALL)
+                    if m:
+                        import json as _json
+                        captured.extend(_json.loads(m.group(1)))
+            return result
+
+        mock_proxy.call_tool_sync.side_effect = capture_side_effect
+
+        dsl = (
+            'subgraph fe ["Frontend"]\n'
+            '  a["A"]\n'
+            '  b["B"]\n'
+            'end\n'
+            'subgraph be ["Backend"]\n'
+            '  c["C"]\n'
+            '  d["D"]\n'
+            'end'
+        )
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.draw(input=dsl)
+
+        return captured
+
+    def test_subgraph_nodes_in_separate_columns(self) -> None:
+        shapes = self._captured_shapes()
+        # Find x positions for each subgraph's nodes
+        a = next((s for s in shapes if s["id"] == "a"), None)
+        c = next((s for s in shapes if s["id"] == "c"), None)
+        assert a is not None and c is not None
+        # Nodes from different subgraphs must be in different columns
+        assert a["x"] != c["x"], (
+            f"Expected separate x columns: a.x={a['x']}, c.x={c['x']}"
+        )
+
+    def test_same_subgraph_nodes_share_column(self) -> None:
+        shapes = self._captured_shapes()
+        a = next((s for s in shapes if s["id"] == "a"), None)
+        b = next((s for s in shapes if s["id"] == "b"), None)
+        assert a is not None and b is not None
+        assert a["x"] == b["x"], (
+            f"Expected same x column: a.x={a['x']}, b.x={b['x']}"
+        )
+
+    def test_draw_two_subgraphs_reports_both_groups(self) -> None:
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        dsl = (
+            'subgraph fe ["Frontend"]\n'
+            '  a["A"]\n'
+            'end\n'
+            'subgraph be ["Backend"]\n'
+            '  b["B"]\n'
+            'end'
+        )
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.draw(input=dsl)
+
+        assert "+2 group(s)" in result
+
+
+# ===========================================================================
+# Bug fixes: layout() arrow binding + selection offset
+# (issues: whiteboard-layout-arrows-unbound, whiteboard-layout-selection-direction-ignored)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestLayoutArrowBinding:
+    """layout() must NOT clear startBinding/endBinding on arrow patches."""
+
+    def _run_layout_capture_patches(self, direction: str = "RIGHT") -> list[str]:
+        """Run layout() and return all browser_evaluate JS strings for the patch call."""
+        good_scene = {
+            "nodes": [
+                {"id": "a", "w": 160, "h": 60, "groupIds": [], "x": 100, "y": 100},
+                {"id": "b", "w": 160, "h": 60, "groupIds": [], "x": 360, "y": 100},
+            ],
+            "edges": [{"id": "edge-a-b", "src": "a", "dst": "b"}],
+            "selectedIds": [],
+        }
+        elk_response = {
+            "nodes": [{"id": "a", "x": 60, "y": 60}, {"id": "b", "x": 300, "y": 60}],
+            "edges": [],
+        }
+        captured: list[str] = []
+
+        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "ELK" in fn:
+                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
+            if "selectedIds" in fn:
+                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
+            if "patches" in fn and "__drawElements" in fn:
+                captured.append(fn)
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        from unittest.mock import patch
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _side
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.layout(direction=direction)
+
+        return captured
+
+    def test_arrow_patch_does_not_clear_start_binding(self) -> None:
+        captured = self._run_layout_capture_patches()
+        patch_js = " ".join(captured)
+        assert "startBinding: null" not in patch_js, (
+            "layout() must not write startBinding: null — arrows must stay bound"
+        )
+
+    def test_arrow_patch_does_not_clear_end_binding(self) -> None:
+        captured = self._run_layout_capture_patches()
+        patch_js = " ".join(captured)
+        assert "endBinding: null" not in patch_js, (
+            "layout() must not write endBinding: null — arrows must stay bound"
+        )
+
+    def test_arrow_patch_still_updates_points(self) -> None:
+        captured = self._run_layout_capture_patches(direction="RIGHT")
+        assert any("edge-a-b" in p for p in captured), (
+            "layout() must still patch arrow points after removing binding-clear"
+        )
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestLayoutSelectionOffset:
+    """layout() in selection mode anchors output to the selection's bounding box."""
+
+    def _run_selection_layout(
+        self, sel_x: float, sel_y: float
+    ) -> list[str]:
+        """Run layout() with 2 selected nodes at (sel_x, sel_y) and capture ELK JS."""
+        good_scene = {
+            "nodes": [
+                {"id": "a", "w": 160, "h": 60, "groupIds": [], "x": sel_x, "y": sel_y},
+                {"id": "b", "w": 160, "h": 60, "groupIds": [], "x": sel_x + 200, "y": sel_y + 100},
+            ],
+            "edges": [],
+            "selectedIds": ["a", "b"],
+        }
+        elk_response = {"nodes": [{"id": "a", "x": 0, "y": 0}, {"id": "b", "x": 200, "y": 100}], "edges": []}
+        captured_elk_js: list[str] = []
+
+        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "ELK" in fn:
+                captured_elk_js.append(fn)
+                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
+            if "selectedIds" in fn:
+                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        from unittest.mock import patch
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _side
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.layout()
+
+        return captured_elk_js
+
+    def test_selection_offset_uses_selection_min_x(self) -> None:
+        """ELK JS must use the selection's min-x as offsetX, not hardcoded 60."""
+        captured = self._run_selection_layout(sel_x=400.0, sel_y=300.0)
+        elk_js = " ".join(captured)
+        # The JS should contain offsetX = 400 (selection min-x), not 60
+        assert "400" in elk_js, (
+            "selection layout must anchor to selection min-x (400), not hardcoded 60"
+        )
+        assert "offsetX = 60" not in elk_js, (
+            "selection layout must not use hardcoded offsetX = 60"
+        )
+
+    def test_full_layout_offset_is_60(self) -> None:
+        """Full (non-selection) layout must still use offsetX = 60."""
+        good_scene = {
+            "nodes": [{"id": "a", "w": 160, "h": 60, "groupIds": [], "x": 500, "y": 500}],
+            "edges": [], "selectedIds": [],
+        }
+        elk_response = {"nodes": [{"id": "a", "x": 0, "y": 0}], "edges": []}
+        captured_elk_js: list[str] = []
+
+        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "ELK" in fn:
+                captured_elk_js.append(fn)
+                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
+            if "selectedIds" in fn:
+                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        from unittest.mock import patch
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _side
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.layout()
+
+        elk_js = " ".join(captured_elk_js)
+        assert "offsetX = 60" in elk_js, (
+            "full layout must use offsetX = 60 (standard canvas padding)"
+        )
+
+
+# ===========================================================================
+# Bug fix: layout() boundary arrows in selection mode
+# (issue: whiteboard-layout-selection-boundary-arrows-detach)
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestLayoutBoundaryArrows:
+    """layout() in selection mode must update boundary arrows (one endpoint in selection,
+    one outside) so they stay visually connected after nodes are repositioned."""
+
+    def _run_selection_layout_boundary(self, direction: str = "RIGHT") -> list[str]:
+        """Run selection layout with a boundary arrow and capture patch JS."""
+        # Nodes: b, c are selected; a and d are outside the selection.
+        # Edges: a→b (boundary: a outside), b→c (internal), c→d (boundary: d outside)
+        good_scene = {
+            "nodes": [
+                {"id": "a", "w": 160, "h": 60, "groupIds": [], "x": 0,   "y": 100},
+                {"id": "b", "w": 160, "h": 60, "groupIds": [], "x": 220, "y": 100},
+                {"id": "c", "w": 160, "h": 60, "groupIds": [], "x": 440, "y": 100},
+                {"id": "d", "w": 160, "h": 60, "groupIds": [], "x": 660, "y": 100},
+            ],
+            "edges": [
+                {"id": "edge-a-b", "src": "a", "dst": "b"},
+                {"id": "edge-b-c", "src": "b", "dst": "c"},
+                {"id": "edge-c-d", "src": "c", "dst": "d"},
+            ],
+            "selectedIds": ["b", "c"],
+        }
+        elk_response = {
+            "nodes": [{"id": "b", "x": 60, "y": 60}, {"id": "c", "x": 300, "y": 60}],
+            "edges": [],
+        }
+        captured_patches: list[str] = []
+
+        def _side(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "ELK" in fn:
+                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
+            if "selectedIds" in fn:
+                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
+            if "patches" in fn and "__drawElements" in fn:
+                captured_patches.append(fn)
+            return "### Result\nnull\n### Ran Playwright code\n..."
+
+        from unittest.mock import patch
+
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _side
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            excalidraw.layout(direction=direction)
+
+        return captured_patches
+
+    def test_boundary_arrow_src_outside_is_patched(self) -> None:
+        """a→b: a is outside selection, b is inside — arrow must be patched."""
+        captured = self._run_selection_layout_boundary()
+        patch_js = " ".join(captured)
+        assert "edge-a-b" in patch_js, (
+            "boundary arrow edge-a-b (a outside, b inside) must be patched after selection layout"
+        )
+
+    def test_boundary_arrow_dst_outside_is_patched(self) -> None:
+        """c→d: c is inside selection, d is outside — arrow must be patched."""
+        captured = self._run_selection_layout_boundary()
+        patch_js = " ".join(captured)
+        assert "edge-c-d" in patch_js, (
+            "boundary arrow edge-c-d (c inside, d outside) must be patched after selection layout"
+        )
+
+    def test_internal_arrow_still_patched(self) -> None:
+        """b→c: both inside selection — internal arrow must still be patched."""
+        captured = self._run_selection_layout_boundary()
+        patch_js = " ".join(captured)
+        assert "edge-b-c" in patch_js, (
+            "internal arrow edge-b-c must still be patched after selection layout"
+        )

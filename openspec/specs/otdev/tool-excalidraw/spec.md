@@ -19,10 +19,12 @@ Source: `src/otdev/tools/excalidraw.py`
 `whiteboard.draw(input=)` SHALL add shapes, edges, and subgraphs to the live
 Excalidraw canvas from a Mermaid-compatible DSL string. It SHALL be additive —
 elements already on canvas are never removed or repositioned. New shapes
-receive auto-layout positions computed using topological layering over the full
-merged graph. Edges are deduplicated by `(src, dst, label, startArrowhead,
-endArrowhead)`. Unknown edge endpoints are auto-created as shapes with their
-ID as label.
+receive column-based stacking positions: each subgraph's nodes are placed in a
+separate x column (300px apart); ungrouped nodes share one column. Edges are
+deduplicated by `(src, dst, label, startArrowhead, endArrowhead)`. Unknown edge
+endpoints are auto-created as shapes with their ID as label. New shapes are
+placed below existing canvas content. Call `whiteboard.layout()` to apply
+graph layout (topological layering via ELK).
 
 #### Scenario: Add shapes and edges
 - **WHEN** `whiteboard.draw(input='a["A"]\nb["B"]\na-->b')` is called
@@ -37,6 +39,12 @@ ID as label.
 - **WHEN** the DSL includes a `subgraph ... end` block naming existing shapes
 - **THEN** a bounding rectangle SHALL appear behind the member shapes
 - **AND** subgraphs are redrawn on every call to reflect current member positions
+- **AND** a subgraph label SHALL appear as bound text inside its bounding rect (`containerId` set on the text element, `boundElements` referencing the text on the rect), with `textAlign: 'center'` and `verticalAlign: 'top'`
+
+#### Scenario: Multiple subgraphs in separate columns
+- **WHEN** `draw()` receives DSL with two or more subgraphs in a single call
+- **THEN** each subgraph's member nodes SHALL be auto-laid-out in a separate x column (300px apart)
+- **AND** the bounding rectangles for each subgraph SHALL NOT overlap visually
 
 #### Scenario: Edge deduplication
 - **WHEN** `draw()` is called twice with the same edge
@@ -64,11 +72,6 @@ ID as label.
 - **WHEN** `whiteboard.draw()` creates one or more new subgraphs
 - **THEN** the return value SHALL include `, +N group(s)` at the end
 
-#### Scenario: Auto-layout overlap avoidance
-- **WHEN** a new node would be placed at the same column as an existing placed node
-- **AND** the computed y position conflicts (within node height + gap) with any existing placed node
-- **THEN** the new node SHALL be placed below all existing nodes in that column
-
 #### Scenario: State not committed on JS failure
 - **WHEN** the browser call raises an exception
 - **THEN** `_dsl_state` and `_edge_keys` SHALL remain unchanged
@@ -77,12 +80,17 @@ ID as label.
 - **WHEN** `whiteboard.draw()` is called with multiple shapes and edges
 - **THEN** exactly one `_js_batch_draw` call SHALL be issued
 
+#### Scenario: Inline x/y positions new shapes
+- **WHEN** `draw()` is called with `a["Foo"] x:100,y:200` (inline position props)
+- **THEN** shape `a` SHALL be placed at `x=100, y=200` instead of auto-layout coordinates
+- **AND** `x`/`y` SHALL be consumed from the style dict and NOT forwarded into `styleProps`
+
 ### Requirement: Insert ASCII text notes
 
 `whiteboard.note(input=, background=)` SHALL parse tagged blocks and render each as a
-code-font rectangle placed below any existing diagram content (below
-`_max_rendered_y + 100`). It SHALL NOT call `auto_layout`. The background
-colour defaults to beige (`#f5f5dc`).
+code-font rectangle placed below any existing diagram content (100px below the
+canvas max-y, as returned by `_get_canvas_max_y()`). The background colour
+defaults to beige (`#f5f5dc`).
 
 #### Scenario: Table note
 - **WHEN** a `table` block with CSV content is provided
@@ -121,13 +129,25 @@ colour defaults to beige (`#f5f5dc`).
 - **AND** no shape SHALL be inserted for that block
 
 #### Scenario: Note placed below existing content
-- **WHEN** `_max_rendered_y` is 300.0 and `note()` is called
-- **THEN** the note shape `y` SHALL be at least 400.0 (`_max_rendered_y + 100`)
+- **WHEN** `_get_canvas_max_y()` returns 300.0 and `note()` is called
+- **THEN** the note shape `y` SHALL be at least 400.0 (canvas max-y + 100)
+
+#### Scenario: Multi-block note renders all blocks
+- **WHEN** `note()` is called with multiple `id[type:\ncontent\n]` blocks in one call
+- **THEN** each block SHALL be drawn via a separate `_js_batch_draw` call (one per block)
+- **AND** the return value SHALL reflect the total count, e.g. `"inserted 4 note(s)"`
+
+#### Scenario: Indented triple-quoted input
+- **WHEN** `note()` is called with a triple-quoted string that has common leading indentation
+- **THEN** `_parse_note_blocks` SHALL strip common indentation (via `textwrap.dedent`) before parsing
+- **AND** trailing whitespace on each line (including the closing `]`) SHALL be stripped
+- **AND** blocks SHALL be parsed correctly regardless of surrounding whitespace
+- **AND** all blocks SHALL be found even when block IDs have leading whitespace (the regex anchor allows optional `\s*` before each block ID)
 
 ### Requirement: Embed DSL as canvas element
 
 `whiteboard.embed_dsl()` SHALL insert the current DSL text as a grey code-font
-rectangle with id `"dsl"` at `_max_rendered_y + 100`. Calling again overwrites
+rectangle with id `"dsl"` placed below existing canvas content (100px below canvas max-y). Calling again overwrites
 the previous embed (idempotent). The element is excluded from `save()`
 snapshots. Returns `"nothing to embed — canvas is empty"` when state is empty.
 
@@ -151,14 +171,6 @@ reconstructed base ID string), covering both shape erasure and labeled-edge eras
 #### Scenario: Erase with no dangling edges
 - **WHEN** `whiteboard.erase(ids=["a"])` is called and `a` has no connected edges
 - **THEN** the return value SHALL be `"erased 1 element(s)"` (no dangling mention)
-
-#### Scenario: `_max_rendered_y` not reset when shapes remain
-- **WHEN** one of two shapes is erased
-- **THEN** `_max_rendered_y` SHALL retain its current value
-
-#### Scenario: `_max_rendered_y` reset when all shapes gone
-- **WHEN** the last shape is erased
-- **THEN** `_max_rendered_y` SHALL be reset to `0.0`
 
 ### Requirement: Save diagram to file
 
@@ -207,7 +219,7 @@ a warning is included in the return value.
 ### Requirement: Clear diagram
 
 `whiteboard.clear()` SHALL remove all elements from the canvas and reset
-`_dsl_state`, `_edge_keys`, `_rendered_ids`, and `_max_rendered_y` to empty.
+`_dsl_state`, `_edge_keys`, and `_rendered_ids` to empty.
 
 ### Requirement: Open whiteboard
 
@@ -241,6 +253,11 @@ and base64 fallback).
 `whiteboard.zoom(level=)` SHALL set the zoom level; passing `0` SHALL fit all elements
 in view. Negative levels SHALL return an error string without calling the browser.
 `whiteboard.fit()` SHALL delegate to `whiteboard.zoom(level=0)`.
+
+When `zoom(0)` is called, the fit implementation SHALL compute bounds from
+`window.__drawElements` (the authoritative element cache) rather than relying on
+`api.scrollToContent()`, so that elements placed with explicit x/y coordinates
+are correctly included in the viewport.
 
 ### Requirement: Automatic browser lifecycle management
 
@@ -295,6 +312,7 @@ lowercase with non-word characters stripped.
 | `a --x b` | Bar arrowhead at end |
 | `a-.->b` | Dashed directed arrow |
 | `a-.-b` | Dashed undirected |
+| `a["X"] --> b["Y"]` | Combined shape+edge declaration (labels preserved, edge uses bare IDs) |
 
 #### Scenario: Mermaid header ignored
 - **WHEN** DSL starts with `flowchart TD` or `graph LR`
@@ -308,27 +326,130 @@ lowercase with non-word characters stripped.
 - **WHEN** a shape is defined as `id["Line1\nLine2"]`
 - **THEN** the shape label SHALL contain a newline character
 
-### Requirement: Auto-layout
+### Requirement: Graph layout via ELK.js
 
-`auto_layout(shapes, edges)` SHALL compute topological layer positions using
-Kahn's algorithm. Cyclic nodes (not resolved by Kahn's) SHALL be placed in a
-grid after the last DAG layer.
+`whiteboard.layout(...)` SHALL run ELK.js in the browser to compute and apply
+graph layout positions. It SHALL read the live canvas scene (not DSL state) to
+build the ELK graph, inject `elkjs@0.11.0` from CDN if not already loaded,
+await `elk.layout()`, patch node and text-child positions, recompute subgraph
+bounding boxes, and call `fit()` to zoom to content.
 
-#### Scenario: Linear chain
-- **WHEN** shapes form `a → b → c`
-- **THEN** x-positions SHALL satisfy `x(a) < x(b) < x(c)`
+**Selection scope:** If elements are selected (`appState.selectedElementIds`
+is non-empty), only selected nodes are laid out; edges between selected nodes
+are included. Edges with one endpoint inside the selection and one outside
+(**boundary arrows**) are excluded from ELK but SHALL have their selected-side
+endpoint updated to the node's new position after layout, while the unselected-side
+endpoint remains at its original coordinates. If nothing is selected, all eligible
+scene nodes are laid out.
 
-#### Scenario: Cyclic graph
-- **WHEN** all shapes form a cycle
-- **THEN** every shape SHALL receive a position
-- **AND** not all shapes SHALL share the same x-coordinate
+**Eligible nodes:** Non-deleted, non-text, non-arrow scene elements.
+
+**Eligible edges:** Non-deleted arrows where both `startBinding.elementId` and
+`endBinding.elementId` are present and both endpoints are in the node set.
+
+**Groups:** Elements sharing a `groupIds[0]` are treated as a single atomic ELK
+node sized to their combined bounding box; all members translate as a unit.
+
+The return string reflects scope: `"layout applied to N nodes"` (all) or
+`"layout applied to N nodes (selection)"` (selection-scoped).
+
+The browser JS SHALL return the `{nodes, edges}` object directly (not as a
+`JSON.stringify`-encoded string) so Playwright does not double-encode the result.
+
+Parameters:
+
+| Param | Default | Choices |
+|---|---|---|
+| `direction` | `"DOWN"` | `RIGHT` `DOWN` `LEFT` `UP` |
+| `gap_layer` | `80` | int px |
+| `gap_node` | `40` | int px |
+| `algorithm` | `"layered"` | `layered` `stress` `mrtree` `radial` `force` |
+| `node_placement` | `"NETWORK_SIMPLEX"` | `BRANDES_KOEPF` `NETWORK_SIMPLEX` `LINEAR_SEGMENTS` `SIMPLE` |
+| `crossing_min` | `"LAYER_SWEEP"` | `LAYER_SWEEP` `MEDIAN_LAYER_SWEEP` `NONE` |
+| `cycle_breaking` | `"GREEDY"` | `GREEDY` `DEPTH_FIRST` `MODEL_ORDER` |
+| `arrow_type` | `None` | `None` `curve` `sharp` `elbow` — patch all layout arrows after positioning |
+| `elk_options` | `None` | `dict` of raw ELK key→value (merged last, overrides all above) |
+
+Invalid `direction`, `algorithm`, `node_placement`, `crossing_min`, `cycle_breaking`,
+or `arrow_type` values SHALL return an `"Error: ..."` string without calling the browser.
+
+When `algorithm != "layered"`, `node_placement`, `crossing_min`, and
+`cycle_breaking` are omitted from the ELK options object.
+
+When `algorithm == "stress"`, `elk.stress.desiredEdgeLength` SHALL be set to
+`gap_node * 3` to reduce node overlap.
+
+#### Edge repositioning
+
+ELK returns no waypoints for edges. The implementation SHALL recompute each
+edge's start and end coordinates from the newly computed node positions and the
+layout direction, then include these as `points` patches alongside the node
+patches:
+
+| `direction` | Start point | End point |
+|---|---|---|
+| `RIGHT` | `(src.x + src.w, src.y + src.h/2)` | `(dst.x, dst.y + dst.h/2)` |
+| `LEFT` | `(src.x, src.y + src.h/2)` | `(dst.x + dst.w, dst.y + dst.h/2)` |
+| `DOWN` | `(src.x + src.w/2, src.y + src.h)` | `(dst.x + dst.w/2, dst.y)` |
+| `UP` | `(src.x + src.w/2, src.y)` | `(dst.x + dst.w/2, dst.y + dst.h)` |
+
+This ensures arrow lines connect the correct node edges after layout repositions
+nodes — without this step, arrows remain at stale absolute canvas coordinates
+and cross diagonally through the repositioned node boxes.
+
+Arrow patches SHALL NOT set `startBinding: null` or `endBinding: null`. The
+existing bindings from `window.__drawElements` SHALL be preserved so that
+Excalidraw can re-route arrows reactively after subsequent node moves.
+
+#### Layout offset
+
+For full (non-selection) layout, the ELK output origin is shifted by a fixed
+canvas padding of `offsetX = offsetY = 60` px.
+
+For selection-scoped layout, the offset SHALL be the bounding box top-left of
+the currently selected nodes (`min_x` / `min_y` across all selected nodes),
+so the repositioned group stays roughly at its current canvas position rather
+than jumping to the canvas origin.
+
+### Requirement: Align elements
+
+`whiteboard.align(ids=, axis=)` SHALL apply Excalidraw's built-in alignment or
+distribution actions to the specified element IDs.
+
+The implementation MUST call `action.perform(elements, appState, null, api.actionManager)`
+directly with a synthetic `appState` that includes `selectedElementIds` — it MUST NOT
+use `api.setAppState()` followed by `executeAction()`, because `setAppState()` schedules
+an async React update and the action would run against stale (empty) selection state.
+
+| `axis` | Action |
+|---|---|
+| `"left"` | `alignLeft` |
+| `"hcenter"` | `alignHorizontallyCentered` |
+| `"right"` | `alignRight` |
+| `"top"` | `alignTop` |
+| `"vcenter"` | `alignVerticallyCentered` |
+| `"bottom"` | `alignBottom` |
+| `"hdistribute"` | `distributeHorizontally` |
+| `"vdistribute"` | `distributeVertically` |
+
+Invalid `axis` values SHALL return an `"Error: ..."` string without calling the browser.
 
 ### Requirement: Style resolution
 
-`_resolve_style(shape, classes)` SHALL merge class style properties into an
-Excalidraw-compatible style dict. Unknown values for `edges`, `font-family`,
-`font-size`, `roughness`, `stroke-width`, and `opacity` SHALL be silently
-ignored (no exception raised).
+`_parse_style_props(s)` SHALL parse a comma-separated `key:value` style string
+and return an Excalidraw-compatible property dict. Shorthand keys are expanded
+to Excalidraw property names. Unknown keys SHALL be passed through as-is.
+
+The following new shorthands are supported:
+
+| Key | Expanded property | Valid values | Applies to |
+|-----|-------------------|-------------|------------|
+| `fi` | `fillStyle` | `solid`, `hachure`, `cross-hatch`, `dots`, `zigzag`, `zigzag-line` | shapes and arrows |
+| `cr` | `corners` | `round`, `sharp` | shapes only |
+| `at` | `arrowType` | `curve`, `sharp`, `elbow` | arrows only |
+
+Invalid values for `fi`, `cr`, and `at` SHALL raise `ValueError` (unlike other
+properties which are passed through).
 
 ### Requirement: Note DSL
 
@@ -366,6 +487,11 @@ so arrow connections survive.
 - **WHEN** the style string uses a named colour (e.g. `bc:blue`)
 - **THEN** it SHALL resolve to the corresponding hex value (`#bfdbfe`)
 - **AND** hex colours with `#` prefix SHALL be passed through unchanged
+
+#### Scenario: x/y moves shape and its text label together
+- **WHEN** `whiteboard.style(ids=["a"], style="x:100,y:200")` is called
+- **THEN** both shape `a` and its bound text child SHALL be moved by the same delta
+- **AND** the text SHALL remain visually attached to the box at its new position
 
 #### Scenario: Unknown IDs
 - **WHEN** an ID in `ids` is not on the canvas
@@ -422,6 +548,20 @@ Shape declarations in `whiteboard.draw()` MAY include style props after the clos
 a["Label"] bc:green,sw:2
 ```
 
-These props are applied to the shape element alongside label and position. The
-same shorthand key:value format used by `whiteboard.style()` is supported. Values are
+Edge declarations MAY include style props in a trailing `{key:value,...}` block:
+
+```
+a --> b {at:elbow,sc:red,sw:2}
+a --> b {at:sharp,ss:dashed}
+```
+
+These props are applied to the element alongside position. The same shorthand
+key:value format used by `whiteboard.style()` is supported. Values are
 case-insensitive.
+
+#### Scenario: Edge inline style block
+- **WHEN** `draw()` is called with `a --> b {at:elbow,sc:red}`
+- **THEN** the arrow SHALL render with elbow routing (`elbowed: true`) and red stroke
+- **AND** the arrow element SHALL carry a standard 2-point seed path `[[0,0],[dx,dy]]`
+  so Excalidraw has valid geometry to display; `elbowed: true` together with
+  `startBinding`/`endBinding` causes Excalidraw to re-route it orthogonally

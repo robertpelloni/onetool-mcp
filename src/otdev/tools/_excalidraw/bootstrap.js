@@ -31,9 +31,34 @@
     },
     scroll: (dx, dy) => api.setAppState(s => ({
               scrollX: s.scrollX + dx, scrollY: s.scrollY + dy })),
-    zoom:   (level) => level === 0
-              ? api.scrollToContent()
-              : api.setAppState({ zoom: { value: level } }),
+    zoom:   (level) => {
+      if (level !== 0) {
+        api.setAppState({ zoom: { value: level } });
+        return;
+      }
+      // Fit-to-content: compute bounds from our element cache (always authoritative
+      // after updateScene, unlike getSceneElements which may lag for explicit-position draws).
+      const els = Object.values(window.__drawElements || {})
+        .filter(e => !e.isDeleted && e.type !== 'text');
+      if (!els.length) { api.scrollToContent(); return; }
+      const margin = 60;
+      const minX = Math.min(...els.map(e => e.x));
+      const minY = Math.min(...els.map(e => e.y));
+      const maxX = Math.max(...els.map(e => e.x + (e.width  || 0)));
+      const maxY = Math.max(...els.map(e => e.y + (e.height || 0)));
+      const sceneW = maxX - minX + margin * 2;
+      const sceneH = maxY - minY + margin * 2;
+      const vpW = window.innerWidth  || 1280;
+      const vpH = window.innerHeight || 720;
+      const zoomVal = Math.min(1, vpW / sceneW, vpH / sceneH);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      api.setAppState({
+        scrollX: vpW / 2 - cx * zoomVal,
+        scrollY: vpH / 2 - cy * zoomVal,
+        zoom: { value: zoomVal },
+      });
+    },
     _raw:   api,
   };
   return true;

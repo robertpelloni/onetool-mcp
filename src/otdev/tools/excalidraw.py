@@ -13,6 +13,7 @@ from __future__ import annotations
 pack = "whiteboard"
 
 __all__ = [
+    "align",
     "clear",
     "close",
     "draw",
@@ -21,6 +22,7 @@ __all__ = [
     "fit",
     "hard_reset",
     "help",
+    "layout",
     "load",
     "note",
     "open",
@@ -37,7 +39,7 @@ import base64
 import contextlib
 import json
 import re
-from collections import defaultdict, deque
+import textwrap
 from importlib import resources
 from typing import Any
 
@@ -52,19 +54,14 @@ from ot.proxy import get_proxy_manager
 _dsl_state: dict[str, Any] = {"shapes": {}, "edges": [], "groups": {}}
 _edge_keys: set[tuple[str, str, str, str | None, str | None]] = set()
 _rendered_ids: set[str] = set()
-_placed_positions: dict[str, tuple[float, float]] = {}
-_max_rendered_y: float = 0.0
 
 
 def _reset_state() -> None:
     """Reset all module-level DSL and render state to empty."""
-    global _max_rendered_y
     _dsl_state.clear()
     _dsl_state.update({"shapes": {}, "edges": [], "groups": {}})
     _rendered_ids.clear()
     _edge_keys.clear()
-    _placed_positions.clear()
-    _max_rendered_y = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -166,20 +163,47 @@ def _js_style_elements(ids: list[str], style_props: dict[str, Any]) -> None:
     _browser_evaluate(f"() => window._style_elements({ids_json}, {props_json})")
 
 
+_DEFAULT_FONT_SIZE = 16
+_SHAPE_CHAR_W_RATIO = 0.62  # approximate char width as fraction of font size
+_SHAPE_PAD_X = 28
+_SHAPE_PAD_Y = 22
+_SHAPE_MIN_W = 160
+_SHAPE_MIN_H = 60
+
+
+def _auto_size(label: str, font_size: int = _DEFAULT_FONT_SIZE) -> tuple[int, int]:
+    """Compute shape dimensions from label content."""
+    lines = (label or "").split("\n")
+    max_chars = max((len(line) for line in lines), default=1)
+    w = max(_SHAPE_MIN_W, int(max_chars * font_size * _SHAPE_CHAR_W_RATIO + _SHAPE_PAD_X))
+    h = max(_SHAPE_MIN_H, int(len(lines) * font_size * 1.25 + _SHAPE_PAD_Y))
+    return w, h
+
+
 def _shape_payload(
     id_: str,
     shape: dict[str, Any],
     x: float,
     y: float,
-    w: float,
-    h: float,
     style: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build a shape payload dict for _js_batch_draw."""
+    """Build a shape payload dict for _js_batch_draw.
+
+    Dimensions are auto-computed from the label unless explicit
+    ``width``/``height`` keys are present in style.
+    """
+    style = dict(style or {})
+    label = shape["label"] or ""
+    font_size = int(style.get("fontSize", _DEFAULT_FONT_SIZE))
+    aw, ah = _auto_size(label, font_size)
+    final_w = style.pop("width", aw)
+    final_h = style.pop("height", ah)
+    final_x = style.pop("x", x)
+    final_y = style.pop("y", y)
     return {
-        "id": id_, "label": shape["label"],
-        "x": x, "y": y, "w": w, "h": h,
-        "shape": "rectangle", "styleProps": style or {},
+        "id": id_, "label": label,
+        "x": final_x, "y": final_y, "w": final_w, "h": final_h,
+        "shape": "rectangle", "styleProps": style,
     }
 
 
@@ -280,22 +304,29 @@ def _ensure_ready() -> str | None:
 def _rerender_from_state() -> None:
     """Re-render all content from _dsl_state after a page loss.
 
-    Visual positions revert to auto-layout. To preserve positions,
-    call save() before any risky operations.
+    Shapes are placed in a flat grid (4 cols x N rows, 160x60, gap 40/20)
+    as a recovery fallback. Call ``wb.layout()`` afterwards to apply proper
+    graph layout.
     """
-    global _max_rendered_y
     _rendered_ids.clear()
-    positions = auto_layout(_dsl_state["shapes"], _dsl_state["edges"])
 
+    # Flat grid: 4 columns, fixed 160x60 nodes, 40px h-gap, 20px v-gap
+    shape_ids = list(_dsl_state["shapes"].keys())
+    cols, node_w, node_h, gap_x, gap_y = 4, 160, 60, 40, 20
     shape_payloads = []
-    for id_, shape in _dsl_state["shapes"].items():
-        x, y = positions[id_]
-        shape_payloads.append(_shape_payload(id_, shape, x, y, 160, 60))
+    for i, id_ in enumerate(shape_ids):
+        shape = _dsl_state["shapes"][id_]
+        col = i % cols
+        row = i // cols
+        x = 100.0 + col * (node_w + gap_x)
+        y = 100.0 + row * (node_h + gap_y)
+        shape_payloads.append(_shape_payload(id_, shape, x, y))
 
     edge_payloads = [
         {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
          "label": e["label"], "startArrowhead": e.get("startArrowhead"),
-         "endArrowhead": e.get("endArrowhead", "arrow")}
+         "endArrowhead": e.get("endArrowhead", "arrow"),
+         "styleProps": e.get("styleProps", {})}
         for e in _dsl_state["edges"]
     ]
 
@@ -307,10 +338,24 @@ def _rerender_from_state() -> None:
     _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
     _rendered_ids.update(s["id"] for s in shape_payloads)
     _rendered_ids.update(e["id"] for e in edge_payloads)
-    for p in shape_payloads:
-        _placed_positions[p["id"]] = (p["x"], p["y"])
-    if shape_payloads:
-        _max_rendered_y = max(s["y"] + s["h"] for s in shape_payloads)
+
+
+def _get_canvas_max_y() -> float:
+    """Return the maximum bottom edge (y + height) of all non-deleted, non-text elements.
+
+    Returns 60.0 if the canvas is empty or the call fails.
+    """
+    result = _browser_evaluate_json(
+        "() => {"
+        "  const els = Array.from(window.__drawApi.read())"
+        "    .filter(e => !e.isDeleted && e.type !== 'text');"
+        "  return els.length ? Math.max(...els.map(e => e.y + (e.height || 0))) : 0;"
+        "}"
+    )
+    try:
+        return float(result)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +393,60 @@ def _norm_id(raw: str) -> str:
     return re.sub(r"[^\w]", "", raw).lower()
 
 
+def _expand_combined_shape_edge(line: str) -> list[str]:
+    """Expand a combined 'id["Label"] --> id["Label"]' line into separate declarations.
+
+    Splits ``a["Hello"] --> b["World"]`` into
+    ``['a["Hello"]', 'b["World"]', 'a-->b']`` so that shape labels are
+    preserved and the edge uses bare IDs.  Lines without embedded labels are
+    returned unchanged as a single-element list.
+    """
+    if "[" not in line:
+        return [line]
+    m = _EDGE_OP_RE.search(line)
+    if not m:
+        return [line]
+
+    op_start, op_end = m.start(), m.end()
+    src_raw = line[:op_start].strip()
+    rest = line[op_end:]
+
+    # Strip trailing inline style block {key:val,...}
+    style_suffix = ""
+    if sm := re.search(r"\s*(\{[^}]*\})\s*$", rest):
+        style_suffix = " " + sm.group(1).strip()
+        rest = rest[: sm.start()]
+
+    # Labeled edge: -->|label|dst
+    label_part = ""
+    if lm := re.match(r"^\s*\|([^|]*)\|\s*(.*)", rest):
+        label_part = "|" + lm[1] + "|"
+        dst_raw = lm[2].strip()
+    else:
+        dst_raw = rest.strip()
+
+    src_bracket = src_raw.find("[")
+    dst_bracket = dst_raw.find("[")
+    if src_bracket < 0 and dst_bracket < 0:
+        return [line]  # No embedded labels; handle normally
+
+    extra: list[str] = []
+    if src_bracket > 0:
+        extra.append(src_raw)           # e.g. 'a["Hello"]' → shape declaration
+        src_part = src_raw[:src_bracket].strip()
+    else:
+        src_part = src_raw
+
+    if dst_bracket > 0:
+        extra.append(dst_raw)           # e.g. 'b["World"]' → shape declaration
+        dst_part = dst_raw[:dst_bracket].strip()
+    else:
+        dst_part = dst_raw
+
+    edge_line = src_part + m.group() + label_part + dst_part + style_suffix
+    return [*extra, edge_line]
+
+
 def _prenorm_line(line: str) -> str:
     """Pre-normalise ID tokens in one DSL line before main parsing.
 
@@ -379,11 +478,16 @@ def _prenorm_line(line: str) -> str:
         op = m.group()
         src_raw = line[:op_start].strip()
         rest = line[op_end:]
+        # Strip trailing inline style block {key:val,...} before ID normalisation
+        style_suffix = ""
+        if sm := re.search(r"\s*(\{[^}]*\})\s*$", rest):
+            style_suffix = " " + sm.group(1).strip()
+            rest = rest[: sm.start()]
         # Labeled edge: -->|label|dst
         if lm := re.match(r"^\s*\|([^|]*)\|\s*(.*)", rest):
             dst_raw = lm[2].strip()
-            return _norm_id(src_raw) + op + "|" + lm[1] + "|" + _norm_id(dst_raw)
-        return _norm_id(src_raw) + op + _norm_id(rest.strip())
+            return _norm_id(src_raw) + op + "|" + lm[1] + "|" + _norm_id(dst_raw) + style_suffix
+        return _norm_id(src_raw) + op + _norm_id(rest.strip()) + style_suffix
 
     # Shape declaration: id["Label"] [optional inline style]
     bracket = line.find("[")
@@ -401,23 +505,6 @@ def _prenorm_line(line: str) -> str:
     return line
 
 
-def _find_free_y(x: float, y: float) -> float:
-    """Return y (or a shifted y) that does not overlap any already-placed node.
-
-    Checks ``_placed_positions`` for nodes in the same x-column. If the
-    proposed y conflicts with any existing node, places the new node below all
-    nodes in that column instead.
-    """
-    node_w, node_h, gap_y = 160, 60, 40
-    col_ys = [py for px, py in _placed_positions.values() if abs(px - x) < node_w]
-    if not col_ys:
-        return y
-    for py in col_ys:
-        if abs(py - y) < node_h + gap_y:
-            return max(col_ys) + node_h + gap_y
-    return y
-
-
 # ---------------------------------------------------------------------------
 # Style property helpers (shared by whiteboard.draw, whiteboard.style, whiteboard.erase docstrings)
 # ---------------------------------------------------------------------------
@@ -433,7 +520,10 @@ _STYLE_SHORTHANDS: dict[str, str] = {
     "fs":    "fontSize",
     "ta":    "textAlign",
     "va":    "verticalAlign",
-    "shape": "shape",   # special — triggers delete+recreate in JS
+    "fi":    "fillStyle",    # solid, hachure, cross-hatch, dots, zigzag, zigzag-line
+    "cr":    "corners",      # shape-only: round (default) | sharp
+    "at":    "arrowType",    # edge-only: curve (default) | sharp | elbow
+    "shape": "shape",        # special — triggers delete+recreate in JS
     "x":     "x",
     "y":     "y",
     "w":     "width",
@@ -458,6 +548,9 @@ _FONT_FAMILY_MAP: dict[str, int] = {"hand": 1, "normal": 2, "mono": 3, "excalidr
 _STROKE_STYLE_VALUES = {"solid", "dashed", "dotted"}
 _TEXT_ALIGN_VALUES   = {"left", "center", "right"}
 _VERT_ALIGN_VALUES   = {"top", "middle", "bottom"}
+_FILL_STYLE_VALUES   = {"solid", "hachure", "cross-hatch", "dots", "zigzag", "zigzag-line"}
+_CORNER_VALUES       = {"round", "sharp"}
+_ARROW_TYPE_VALUES   = {"curve", "sharp", "elbow"}
 _SHAPE_MAP: dict[str, str] = {"r": "rectangle", "d": "diamond", "c": "ellipse"}
 
 
@@ -505,8 +598,29 @@ def _parse_style_props(s: str) -> dict[str, Any]:
                 continue
             except ValueError:
                 pass
-        # Enum string props: normalise to lowercase for strokeStyle, textAlign, verticalAlign
+        # Enum string props: normalise to lowercase
         if prop in ("strokeStyle", "textAlign", "verticalAlign"):
+            props[prop] = v_lower
+            continue
+        if prop == "fillStyle":
+            if v_lower not in _FILL_STYLE_VALUES:
+                raise ValueError(
+                    f"Invalid fillStyle '{v}'. Must be one of: {sorted(_FILL_STYLE_VALUES)}"
+                )
+            props[prop] = v_lower
+            continue
+        if prop == "corners":
+            if v_lower not in _CORNER_VALUES:
+                raise ValueError(
+                    f"Invalid corners '{v}'. Must be one of: {sorted(_CORNER_VALUES)}"
+                )
+            props[prop] = v_lower
+            continue
+        if prop == "arrowType":
+            if v_lower not in _ARROW_TYPE_VALUES:
+                raise ValueError(
+                    f"Invalid arrowType '{v}'. Must be one of: {sorted(_ARROW_TYPE_VALUES)}"
+                )
             props[prop] = v_lower
             continue
         props[prop] = v
@@ -551,8 +665,15 @@ def _try_shape(
 
 def _try_edge(line: str, edges: list[dict[str, Any]]) -> bool:
     """Try to match line as an edge. Appends to edges. Returns True on match."""
+    # Strip trailing inline style block {key:val,...} before pattern matching
+    style_props: dict[str, Any] = {}
+    bare_line = line
+    if sm := re.search(r"\s*\{([^}]*)\}\s*$", line):
+        style_str = sm.group(1)
+        bare_line = line[: sm.start()]
+        style_props = _parse_style_props(style_str)
     for pat, id_sfx, has_label, s_head, e_head, directed, stroke in _EDGE_PATTERNS:
-        if m := pat.match(line):
+        if m := pat.match(bare_line):
             if has_label:
                 src, lbl, dst = _norm_id(m[1]), m[2] or "", _norm_id(m[3])
             else:
@@ -565,6 +686,8 @@ def _try_edge(line: str, edges: list[dict[str, Any]]) -> bool:
             }
             if stroke:
                 edge["strokeStyle"] = stroke
+            if style_props:
+                edge["styleProps"] = style_props
             edges.append(edge)
             return True
     return False
@@ -637,7 +760,8 @@ def parse_dsl(spec: str) -> dict[str, Any]:
 
     raw_lines: list[str] = []
     for raw in re.split(r"[;\n]", spec):
-        raw_lines.extend(_expand_edge_chains(raw.strip()))
+        for chain_line in _expand_edge_chains(raw.strip()):
+            raw_lines.extend(_expand_combined_shape_edge(chain_line))
 
     for raw in raw_lines:
         line = _prenorm_line(raw.strip())
@@ -739,81 +863,7 @@ def _build_dsl(state: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Auto-layout
-# ---------------------------------------------------------------------------
-
-
-def auto_layout(
-    shapes: dict[str, Any],
-    edges: list[dict[str, Any]],
-    node_w: int = 160,
-    node_h: int = 60,
-    gap_x: int = 80,
-    gap_y: int = 40,
-) -> dict[str, tuple[float, float]]:
-    """Compute topological layer positions for new shapes.
-
-    Args:
-        shapes: Dict of shape id → shape data.
-        edges: List of edge dicts with src/dst keys.
-        node_w: Node width in pixels.
-        node_h: Node height in pixels.
-        gap_x: Horizontal gap between layers.
-        gap_y: Vertical gap between nodes in a layer.
-
-    Returns:
-        Dict of id → (x, y) position tuples.
-    """
-    ids = list(shapes.keys())
-    in_e: dict[str, set[str]] = defaultdict(set)
-    out_e: dict[str, set[str]] = defaultdict(set)
-    for e in edges:
-        if e["src"] in shapes and e["dst"] in shapes:
-            out_e[e["src"]].add(e["dst"])
-            in_e[e["dst"]].add(e["src"])
-
-    # Track original incoming edges to identify cyclic nodes after Kahn's
-    had_incoming: set[str] = {id_ for id_ in ids if in_e[id_]}
-
-    layer: dict[str, int] = {}
-    queue: deque[str] = deque(id_ for id_ in ids if not in_e[id_])
-    while queue:
-        n = queue.popleft()
-        for dst in out_e[n]:
-            layer[dst] = max(layer.get(dst, 0), layer.get(n, 0) + 1)
-            in_e[dst].discard(n)
-            if not in_e[dst]:
-                queue.append(dst)
-
-    # Source nodes (no incoming) not yet in layer default to 0
-    for id_ in ids:
-        if id_ not in layer and id_ not in had_incoming:
-            layer[id_] = 0
-
-    # Nodes with original incoming edges still not placed are part of cycles
-    cyclic = [id_ for id_ in ids if id_ not in layer]
-    if cyclic:
-        max_layer = max(layer.values(), default=-1) + 1
-        cols = max(1, int(len(cyclic) ** 0.5 + 0.5))
-        for i, id_ in enumerate(cyclic):
-            layer[id_] = max_layer + i // cols
-
-    by_layer: dict[int, list[str]] = defaultdict(list)
-    for id_, lyr in sorted(layer.items(), key=lambda x: x[1]):
-        by_layer[lyr].append(id_)
-
-    positions: dict[str, tuple[float, float]] = {}
-    for lyr, members in by_layer.items():
-        x = 500 + lyr * (node_w + gap_x)
-        total_h = len(members) * node_h + (len(members) - 1) * gap_y
-        y_start = 500 - total_h // 2
-        for i, id_ in enumerate(members):
-            positions[id_] = (x, y_start + i * (node_h + gap_y))
-    return positions
-
-
-# ---------------------------------------------------------------------------
-# DSL canvas element helpers (issue #3)
+# DSL canvas element helpers
 # ---------------------------------------------------------------------------
 
 
@@ -900,13 +950,12 @@ def draw(*, input: str) -> str:
         input: DSL string. Semicolons or newlines separate statements.
 
     Returns:
-        Summary like "+2 shapes, +1 edge [edge-a-b]".
+        Summary like "+2 shapes, +1 edge(s): edge-a-b".
 
     Example:
         whiteboard.draw(input='a["Service A"];b["DB"];a-->b')
     """
     with LogSpan(span="excalidraw.draw") as s:
-        global _max_rendered_y
         err = _ensure_ready()
         if err:
             s.add("error", err)
@@ -932,8 +981,6 @@ def draw(*, input: str) -> str:
         }
         new_groups = {gid for gid in parsed["groups"] if gid not in _dsl_state["groups"]}
 
-        # Build merged state for layout (new shapes get correct layer positions)
-        merged_shapes = {**_dsl_state["shapes"], **parsed["shapes"]}
         merged_edges = list(_dsl_state["edges"])
         new_edges_to_commit: list[tuple[tuple[str, str, str, str | None, str | None], dict[str, Any]]] = []
         for e in parsed["edges"]:
@@ -943,16 +990,37 @@ def draw(*, input: str) -> str:
                 new_edges_to_commit.append((key, e))
         merged_groups = {**_dsl_state["groups"], **parsed["groups"]}
 
-        positions = auto_layout(merged_shapes, merged_edges)
+        # New shapes stack below existing canvas content
+        base_y = 0.0
+        if new_shapes:
+            base_y = _get_canvas_max_y() + 40
 
-        # Build payloads for new shapes, adjusting positions to avoid overlap
+        # Assign separate x columns for each subgraph so bounding boxes don't overlap.
+        # Nodes not in any subgraph share a single ungrouped column.
+        subgraph_of: dict[str, str | None] = dict.fromkeys(new_shapes, None)
+        for gid, group in parsed["groups"].items():
+            for mid in group["members"]:
+                if mid in new_shapes:
+                    subgraph_of[mid] = gid
+        col_x: dict[str | None, float] = {}
+        col_y: dict[str | None, float] = {}
+        next_x = 100.0
+        for id_ in new_shapes:
+            sg = subgraph_of[id_]
+            if sg not in col_x:
+                col_x[sg] = next_x
+                col_y[sg] = base_y
+                next_x += 300.0
+
         shape_payloads = []
         for id_, shape in new_shapes.items():
-            x, y = positions[id_]
-            y = _find_free_y(x, y)
+            sg = subgraph_of[id_]
+            x = col_x[sg]
+            y = col_y[sg]
+            col_y[sg] += 100.0
             # Apply inline styles for new shapes
             style = dict(inline_styles.get(id_, {}))
-            shape_payloads.append(_shape_payload(id_, shape, x, y, 160, 60, style))
+            shape_payloads.append(_shape_payload(id_, shape, x, y, style))
 
         # Build patch payloads for existing shapes that changed
         patch_payloads = []
@@ -981,7 +1049,8 @@ def draw(*, input: str) -> str:
                 {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
                  "label": e["label"], "startArrowhead": e.get("startArrowhead"),
                  "endArrowhead": e.get("endArrowhead", "arrow"),
-                 "strokeStyle": e.get("strokeStyle", "solid")}
+                 "strokeStyle": e.get("strokeStyle", "solid"),
+                 "styleProps": e.get("styleProps", {})}
             )
 
         # Redraw ALL subgraphs — bounding boxes must reflect current member positions
@@ -1009,10 +1078,6 @@ def draw(*, input: str) -> str:
             _edge_keys.add(key)
         _rendered_ids.update(s["id"] for s in shape_payloads)
         _rendered_ids.update(e["id"] for e in edge_payloads)
-        for p in shape_payloads:
-            _placed_positions[p["id"]] = (p["x"], p["y"])
-        if shape_payloads:
-            _max_rendered_y = max(_max_rendered_y, max(p["y"] + p["h"] for p in shape_payloads))
 
         new_edge_ids = [e["id"] for _, e in new_edges_to_commit]
         edge_msg = f", +{len(new_edge_ids)} edge(s): {', '.join(new_edge_ids)}" if new_edge_ids else ""
@@ -1029,7 +1094,7 @@ def draw(*, input: str) -> str:
 # ---------------------------------------------------------------------------
 
 _RE_NOTE_BLOCK = re.compile(
-    r"^(\w+)\[(\w+):[ \t]*\n(.*?)\]$", re.DOTALL | re.MULTILINE
+    r"^\s*(\w+)\[(\w+):[ \t]*\n(.*?)\]$", re.DOTALL | re.MULTILINE
 )
 
 _NOTE_RENDERERS: dict[str, Any] = {}
@@ -1056,8 +1121,13 @@ def _get_note_renderers() -> dict[str, Any]:
 
 def _parse_note_blocks(spec: str) -> list[dict[str, Any]]:
     """Parse id[type:\\n content] blocks from a note DSL string."""
+    # Normalize: CRLF → LF, dedent common indentation (handles indented triple-quoted
+    # strings), strip trailing whitespace per line (handles spaces before closing ]).
+    spec = spec.replace("\r\n", "\n")
+    spec = textwrap.dedent(spec)
+    spec = "\n".join(line.rstrip() for line in spec.splitlines())
     blocks = []
-    for m in _RE_NOTE_BLOCK.finditer(spec.replace("\r\n", "\n")):
+    for m in _RE_NOTE_BLOCK.finditer(spec):
         blocks.append({"id": m[1], "type": m[2], "content": m[3]})
     return blocks
 
@@ -1138,7 +1208,6 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
         ''')
     """
     with LogSpan(span="excalidraw.note") as s:
-        global _max_rendered_y
         err = _ensure_ready()
         if err:
             s.add("error", err)
@@ -1151,7 +1220,7 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
         renderers = _get_note_renderers()
 
         # Place notes below existing canvas content
-        base_y = _max_rendered_y + 100
+        base_y = _get_canvas_max_y() + 100
 
         shape_payloads = []
         y_cursor = base_y
@@ -1187,10 +1256,9 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
             y_cursor += h + 20
 
         inserted = len(shape_payloads)
-        if shape_payloads:
-            _js_batch_draw(shapes=shape_payloads, edges=[], subgraphs=[])
-            _rendered_ids.update(s["id"] for s in shape_payloads)
-            _max_rendered_y = y_cursor
+        for payload in shape_payloads:
+            _js_batch_draw(shapes=[payload], edges=[], subgraphs=[])
+            _rendered_ids.add(payload["id"])
 
         s.add("inserted", inserted)
         return f"inserted {inserted} note(s)"
@@ -1234,7 +1302,7 @@ def embed_dsl() -> str:
         }
         payload = {
             "id": "dsl", "label": dsl_text,
-            "x": 500.0, "y": _max_rendered_y + 100,
+            "x": 500.0, "y": _get_canvas_max_y() + 100,
             "w": w, "h": h, "shape": "rectangle", "styleProps": style,
         }
         _js_batch_draw(shapes=[payload], edges=[], subgraphs=[])
@@ -1277,8 +1345,6 @@ def erase(*, ids: list[str]) -> str:
         excalidraw.erase(ids=["a", "edge-a-b"])
     """
     with LogSpan(span="excalidraw.erase", ids=ids) as s:
-        global _max_rendered_y
-
         err = _ensure_ready()
         if err:
             s.add("error", err)
@@ -1307,7 +1373,6 @@ def erase(*, ids: list[str]) -> str:
             _rendered_ids.discard(id_)
             _rendered_ids.discard(id_ + "-text")
             _rendered_ids.discard(id_ + "-label")
-            _placed_positions.pop(id_, None)
 
         # Remove edges by their own ID or if their src/dst is being erased
         keys_to_remove = {
@@ -1324,10 +1389,6 @@ def erase(*, ids: list[str]) -> str:
         _edge_keys.difference_update(keys_to_remove)
         for eid in orphaned_edge_ids:
             _rendered_ids.discard(eid)
-
-        # Only reset _max_rendered_y when all shapes are gone
-        if not _dsl_state["shapes"]:
-            _max_rendered_y = 0.0
 
         n = len(to_erase)
         dangling = len(orphaned_edge_ids)
@@ -1769,6 +1830,495 @@ def fit() -> str:
         excalidraw.fit()
     """
     return zoom(level=0)
+
+
+_ELK_CDN = "https://unpkg.com/elkjs@0.11.0/lib/elk.bundled.js"
+_ELK_DIRECTIONS = {"RIGHT", "LEFT", "DOWN", "UP"}
+_ELK_ALGORITHMS = {"layered", "stress", "mrtree", "radial", "force"}
+_ELK_NODE_PLACEMENTS = {"BRANDES_KOEPF", "NETWORK_SIMPLEX", "LINEAR_SEGMENTS", "SIMPLE"}
+_ELK_CROSSING_MINS = {"LAYER_SWEEP", "MEDIAN_LAYER_SWEEP", "NONE"}
+_ELK_CYCLE_BREAKINGS = {"GREEDY", "DEPTH_FIRST", "MODEL_ORDER"}
+
+
+def layout(
+    *,
+    direction: str = "DOWN",
+    gap_layer: int = 80,
+    gap_node: int = 40,
+    algorithm: str = "layered",
+    node_placement: str = "NETWORK_SIMPLEX",
+    crossing_min: str = "LAYER_SWEEP",
+    cycle_breaking: str = "GREEDY",
+    arrow_type: str | None = None,
+    elk_options: dict[str, str] | None = None,
+) -> str:
+    """Apply ELK.js graph layout to the current whiteboard.
+
+    Loads ELK.js from CDN (once), runs the chosen layout algorithm in the
+    browser, patches every shape's position, recomputes subgraph bounding
+    boxes, and calls ``wb.fit()`` to zoom-to-fit.
+
+    Args:
+        direction:      Layout direction — ``RIGHT``, ``LEFT``, ``DOWN`` (default), ``UP``.
+        gap_layer:      Gap between layers in pixels (layered only).
+        gap_node:       Gap between nodes in the same layer in pixels.
+        algorithm:      ELK algorithm:
+
+                        - ``layered`` (default) — best for DAGs and pipelines; ranks
+                          nodes into layers, minimises edge crossings.
+                        - ``stress`` — spring-based; good for undirected/exploratory
+                          graphs. Can overlap nodes on dense directed graphs; increase
+                          ``gap_node`` to spread them out.
+                        - ``mrtree`` — minimal-spanning-tree layout; good for trees
+                          with a clear single root.
+                        - ``radial`` — radial tree layout centred on one node.
+                        - ``force`` — force-directed; good for clustered undirected
+                          graphs.
+
+        node_placement: Node placement strategy (layered only) —
+                        ``NETWORK_SIMPLEX`` (default), ``BRANDES_KOEPF``,
+                        ``LINEAR_SEGMENTS``, ``SIMPLE``.
+        crossing_min:   Crossing minimisation (layered only) —
+                        ``LAYER_SWEEP`` (default), ``MEDIAN_LAYER_SWEEP``, ``NONE``.
+        cycle_breaking: Cycle breaking (layered only) —
+                        ``GREEDY`` (default), ``DEPTH_FIRST``, ``MODEL_ORDER``.
+        arrow_type:     After layout, patch all positioned arrows to the given type:
+                        ``None`` (default, leave per-edge style unchanged),
+                        ``"curve"``, ``"sharp"``, or ``"elbow"``.
+        elk_options:    Dict of raw ELK key→value pairs merged last (overrides
+                        all named params).
+
+    Returns:
+        Summary string, e.g. ``"layout applied to 12 nodes"``.
+
+    Example:
+        wb.layout()
+        wb.layout(direction="RIGHT", gap_layer=120, gap_node=60)
+        wb.layout(algorithm="stress")
+    """
+    direction = direction.upper()
+    algorithm = algorithm.lower()
+    node_placement = node_placement.upper()
+    crossing_min = crossing_min.upper()
+    cycle_breaking = cycle_breaking.upper()
+
+    if direction not in _ELK_DIRECTIONS:
+        return f"Error: direction must be one of {sorted(_ELK_DIRECTIONS)}"
+    if algorithm not in _ELK_ALGORITHMS:
+        return f"Error: algorithm must be one of {sorted(_ELK_ALGORITHMS)}"
+    if node_placement not in _ELK_NODE_PLACEMENTS:
+        return f"Error: node_placement must be one of {sorted(_ELK_NODE_PLACEMENTS)}"
+    if crossing_min not in _ELK_CROSSING_MINS:
+        return f"Error: crossing_min must be one of {sorted(_ELK_CROSSING_MINS)}"
+    if cycle_breaking not in _ELK_CYCLE_BREAKINGS:
+        return f"Error: cycle_breaking must be one of {sorted(_ELK_CYCLE_BREAKINGS)}"
+    if arrow_type is not None and arrow_type not in _ARROW_TYPE_VALUES:
+        return f"Error: arrow_type must be None or one of {sorted(_ARROW_TYPE_VALUES)}"
+
+    with LogSpan(span="excalidraw.layout", direction=direction, algorithm=algorithm) as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        # Read the live scene: nodes, edges, selection, and group membership
+        scene_js = _browser_evaluate_json("""() => {
+  const elements = window.__drawApi ? window.__drawApi.read() : Object.values(window.__drawElements || {});
+  const raw = window.__drawApi ? window.__drawApi._raw : null;
+  const appState = raw ? (raw.state || (raw.getAppState ? raw.getAppState() : {})) : {};
+  const selectedIds = Object.keys(appState.selectedElementIds || {});
+  const nodes = [];
+  const edges = [];
+  for (const el of elements) {
+    if (el.isDeleted) continue;
+    if (el.type === 'text') continue;
+    if (el.type === 'arrow') {
+      if (el.startBinding && el.endBinding) {
+        edges.push({
+          id: el.id,
+          src: el.startBinding.elementId,
+          dst: el.endBinding.elementId,
+        });
+      }
+    } else {
+      nodes.push({id: el.id, w: el.width || 160, h: el.height || 60, groupIds: el.groupIds || [], x: el.x || 0, y: el.y || 0});
+    }
+  }
+  return {nodes, edges, selectedIds};
+}""")
+        if not isinstance(scene_js, dict):
+            return "Error: could not read live scene"
+
+        scene_nodes: list[dict[str, Any]] = scene_js.get("nodes", [])
+        scene_edges: list[dict[str, Any]] = scene_js.get("edges", [])
+        selected_ids: list[str] = scene_js.get("selectedIds", [])
+
+        # Determine scope: selection or all
+        use_selection = len(selected_ids) > 0
+        # Save full node map before selection filter (needed to look up positions of
+        # non-selected nodes when fixing boundary arrows later).
+        all_node_map: dict[str, dict[str, Any]] = {n["id"]: n for n in scene_nodes}
+        if use_selection:
+            selected_set = set(selected_ids)
+            scene_nodes = [n for n in scene_nodes if n["id"] in selected_set]
+
+        if not scene_nodes:
+            return "nothing to layout — canvas has no eligible shapes"
+
+        # ELK layout offset: for a selection layout anchor to the selection's top-left
+        # so nodes stay roughly in place; for a full layout use the standard canvas padding.
+        if use_selection and scene_nodes:
+            layout_offset_x = float(min(n.get("x", 0) for n in scene_nodes))
+            layout_offset_y = float(min(n.get("y", 0) for n in scene_nodes))
+        else:
+            layout_offset_x = 60.0
+            layout_offset_y = 60.0
+
+        # Collapse Excalidraw groups into atomic ELK nodes
+        # Elements sharing a groupId are treated as a single node (bounding box of members)
+        group_to_members: dict[str, list[dict[str, Any]]] = {}
+        ungrouped: list[dict[str, Any]] = []
+        for n in scene_nodes:
+            gids = n.get("groupIds") or []
+            if gids:
+                gid = gids[0]  # primary group
+                group_to_members.setdefault(gid, []).append(n)
+            else:
+                ungrouped.append(n)
+
+        # Map each element id → ELK node id (for edge lookup)
+        elem_to_elk: dict[str, str] = {}
+        elk_nodes = []
+        node_dims: dict[str, tuple[int, int]] = {}
+
+        for n in ungrouped:
+            eid = n["id"]
+            w, h = int(n["w"]), int(n["h"])
+            elk_nodes.append({"id": eid, "width": w, "height": h})
+            node_dims[eid] = (w, h)
+            elem_to_elk[eid] = eid
+
+        for gid, members in group_to_members.items():
+            min_x = min_y = float("inf")
+            max_x = max_y = float("-inf")
+            for m in members:
+                min_x = min(min_x, 0.0)  # positions unknown here, use sizes
+                max_x = max(max_x, float(m["w"]))
+                min_y = min(min_y, 0.0)
+                max_y = max(max_y, float(m["h"]))
+                elem_to_elk[m["id"]] = gid
+            w, h = int(max_x - min_x) or 160, int(max_y - min_y) or 60
+            elk_nodes.append({"id": gid, "width": w, "height": h})
+            node_dims[gid] = (w, h)
+
+        # Build ELK edge list from live scene arrows (both endpoints in node set)
+        elk_node_set = {n["id"] for n in elk_nodes}
+        elk_edges = []
+        seen_edge_ids: set[str] = set()
+        scene_edge_map: dict[str, dict[str, str]] = {}  # eid → {src, dst} for STRAIGHT recompute
+        # Boundary edges: exactly one endpoint is in the selection / elk_node_set.
+        # After layout we update the selected-side endpoint to its new position.
+        boundary_edges: list[dict[str, Any]] = []
+        for edge in scene_edges:
+            eid = edge["id"]
+            if eid in seen_edge_ids:
+                continue
+            src_elk = elem_to_elk.get(edge["src"])
+            dst_elk = elem_to_elk.get(edge["dst"])
+            src_in = src_elk is not None and src_elk in elk_node_set
+            dst_in = dst_elk is not None and dst_elk in elk_node_set
+            if src_in and dst_in:
+                seen_edge_ids.add(eid)
+                elk_edges.append({"id": eid, "sources": [src_elk], "targets": [dst_elk]})
+                scene_edge_map[eid] = {"src": src_elk, "dst": dst_elk}
+            elif src_in != dst_in:
+                # One endpoint is in the layout scope; track for post-layout fixup
+                boundary_edges.append({
+                    "id": eid,
+                    "src": edge["src"],
+                    "dst": edge["dst"],
+                    "src_elk": src_elk,
+                    "dst_elk": dst_elk,
+                    "src_in": src_in,
+                })
+
+        scope_label = "selection" if use_selection else None
+
+        layered_only = algorithm == "layered"
+        layout_opts: dict[str, str] = {
+            "elk.algorithm": algorithm,
+            "elk.direction": direction,
+            "elk.spacing.nodeNode": str(gap_node),
+            "elk.padding": "[top=60,left=60,bottom=60,right=60]",
+        }
+        if layered_only:
+            layout_opts.update({
+                "elk.layered.spacing.nodeNodeBetweenLayers": str(gap_layer),
+                "elk.layered.spacing.edgeNodeBetweenLayers": str(gap_layer // 2),
+                "elk.layered.spacing.edgeEdgeBetweenLayers": "10",
+                "elk.layered.nodePlacement.strategy": node_placement,
+                "elk.layered.crossingMinimization.strategy": crossing_min,
+                "elk.layered.cycleBreaking.strategy": cycle_breaking,
+            })
+        if algorithm == "stress":
+            layout_opts["elk.stress.desiredEdgeLength"] = str(gap_node * 3)
+        if elk_options:
+            layout_opts.update(elk_options)
+
+        graph = {
+            "id": "root",
+            "layoutOptions": layout_opts,
+            "children": elk_nodes,
+            "edges": elk_edges,
+        }
+        graph_json = json.dumps(graph)
+        cdn = _ELK_CDN
+
+        js = f"""
+async () => {{
+  if (typeof ELK === 'undefined') {{
+    await new Promise((resolve, reject) => {{
+      const sc = document.createElement('script');
+      sc.src = '{cdn}';
+      sc.onload = resolve;
+      sc.onerror = () => reject(new Error('Failed to load ELK from CDN'));
+      document.head.appendChild(sc);
+    }});
+  }}
+  const elk = new ELK();
+  const graph = {graph_json};
+  const result = await elk.layout(graph);
+  const offsetX = {layout_offset_x}, offsetY = {layout_offset_y};
+  const nodes = result.children.map(n => ({{id: n.id, x: n.x + offsetX, y: n.y + offsetY}}));
+  return {{nodes, edges: []}};
+}}
+"""
+        elk_result = _browser_evaluate_json(js)
+        if not isinstance(elk_result, dict):
+            return f"Error: ELK returned unexpected result: {elk_result!r}"
+
+        positions_list: list[dict[str, Any]] = elk_result.get("nodes", [])
+
+        # Patch node positions in the browser
+        patches: list[dict[str, Any]] = []
+        for pos in positions_list:
+            id_ = pos["id"]
+            x, y = float(pos["x"]), float(pos["y"])
+            w, h = node_dims.get(id_, (160, 60))
+            patches.append({"id": id_, "x": x, "y": y})
+            # Also reposition the DSL-drawn text element if present
+            dsl_shape = _dsl_state["shapes"].get(id_)
+            if dsl_shape is not None:
+                font_size = _DEFAULT_FONT_SIZE
+                line_count = len((dsl_shape.get("label") or "").split("\n"))
+                text_h = line_count * font_size * 1.25
+                patches.append({"id": id_ + "-text", "x": x + 8, "y": y + (h - text_h) / 2})
+
+        # Recompute each arrow's endpoints from the new node positions — ELK does not
+        # return waypoints; arrows stay bound via startBinding.
+        pos_map: dict[str, tuple[float, float]] = {
+            pos["id"]: (float(pos["x"]), float(pos["y"])) for pos in positions_list
+        }
+        for eid, einfo in scene_edge_map.items():
+            src_id, dst_id = einfo["src"], einfo["dst"]
+            if src_id not in pos_map or dst_id not in pos_map:
+                continue
+            sx, sy = pos_map[src_id]
+            ex, ey = pos_map[dst_id]
+            sw, sh = float(node_dims.get(src_id, (160, 60))[0]), float(node_dims.get(src_id, (160, 60))[1])
+            dw, dh = float(node_dims.get(dst_id, (160, 60))[0]), float(node_dims.get(dst_id, (160, 60))[1])
+            if direction == "RIGHT":
+                start: list[float] = [sx + sw, sy + sh / 2]
+                end: list[float] = [ex, ey + dh / 2]
+            elif direction == "LEFT":
+                start = [sx, sy + sh / 2]
+                end = [ex + dw, ey + dh / 2]
+            elif direction == "DOWN":
+                start = [sx + sw / 2, sy + sh]
+                end = [ex + dw / 2, ey]
+            else:  # UP
+                start = [sx + sw / 2, sy]
+                end = [ex + dw / 2, ey + dh]
+            patches.append({"id": eid, "points": [start, end]})
+
+        # Fix boundary arrows: one endpoint inside the selection, one outside.
+        # Move the inside endpoint to track its node's new position; outside stays put.
+        # The connection side depends on whether the anchored node is the arrow's
+        # source (arrow leaves → use the exit side) or destination (arrow arrives →
+        # use the entry side), which is the *opposite* side from the layout direction.
+        for bedge in boundary_edges:
+            eid = bedge["id"]
+            src_in: bool = bedge["src_in"]
+            anchored_elk = bedge["src_elk"] if src_in else bedge["dst_elk"]
+            free_id = bedge["dst"] if src_in else bedge["src"]
+            if anchored_elk not in pos_map:
+                continue
+            anc_x, anc_y = pos_map[anchored_elk]
+            anc_w, anc_h = float(node_dims.get(anchored_elk, (160, 60))[0]), float(node_dims.get(anchored_elk, (160, 60))[1])
+            free_node = all_node_map.get(free_id) or {}
+            free_x = float(free_node.get("x", 0))
+            free_y = float(free_node.get("y", 0))
+            free_w = float(free_node.get("w", 160))
+            free_h = float(free_node.get("h", 60))
+
+            # Determine connection points: the anchored node uses the side
+            # appropriate for its role (source=exit side, dest=entry side).
+            # For RIGHT layout: source exits right, dest enters left.
+            if direction == "RIGHT":
+                if src_in:
+                    anc_pt: list[float] = [anc_x + anc_w, anc_y + anc_h / 2]
+                    free_pt: list[float] = [free_x, free_y + free_h / 2]
+                else:
+                    anc_pt = [anc_x, anc_y + anc_h / 2]
+                    free_pt = [free_x + free_w, free_y + free_h / 2]
+            elif direction == "LEFT":
+                if src_in:
+                    anc_pt = [anc_x, anc_y + anc_h / 2]
+                    free_pt = [free_x + free_w, free_y + free_h / 2]
+                else:
+                    anc_pt = [anc_x + anc_w, anc_y + anc_h / 2]
+                    free_pt = [free_x, free_y + free_h / 2]
+            elif direction == "DOWN":
+                if src_in:
+                    anc_pt = [anc_x + anc_w / 2, anc_y + anc_h]
+                    free_pt = [free_x + free_w / 2, free_y]
+                else:
+                    anc_pt = [anc_x + anc_w / 2, anc_y]
+                    free_pt = [free_x + free_w / 2, free_y + free_h]
+            else:  # UP
+                if src_in:
+                    anc_pt = [anc_x + anc_w / 2, anc_y]
+                    free_pt = [free_x + free_w / 2, free_y + free_h]
+                else:
+                    anc_pt = [anc_x + anc_w / 2, anc_y + anc_h]
+                    free_pt = [free_x + free_w / 2, free_y]
+            start_pt, end_pt = (anc_pt, free_pt) if src_in else (free_pt, anc_pt)
+            patches.append({"id": eid, "points": [start_pt, end_pt]})
+
+        patches_json = json.dumps(patches)
+        _browser_evaluate(f"""() => {{
+  const now = Date.now();
+  const rng = () => Math.floor(Math.random() * 9999999);
+  const patches = {patches_json};
+  for (const p of patches) {{
+    const el = window.__drawElements[p.id];
+    if (!el) continue;
+    if (p.points) {{
+      const pts = p.points.map(pt => [pt[0] - p.points[0][0], pt[1] - p.points[0][1]]);
+      const xs = pts.map(pt => pt[0]), ys = pts.map(pt => pt[1]);
+      window.__drawElements[p.id] = {{ ...el,
+        x: p.points[0][0], y: p.points[0][1],
+        points: pts,
+        width: Math.max(...xs) - Math.min(...xs) || 1,
+        height: Math.max(...ys) - Math.min(...ys) || 1,
+        roughness: 0,
+        version: (el.version || 1) + 1, versionNonce: rng(), updated: now }};
+    }} else {{
+      window.__drawElements[p.id] = {{ ...el, x: p.x, y: p.y,
+        version: (el.version || 1) + 1, versionNonce: rng(), updated: now }};
+    }}
+  }}
+  window.__drawApi._raw.updateScene({{ elements: Object.values(window.__drawElements) }});
+}}""")
+
+        # Patch arrow_type on all layout-affected arrows if requested
+        if arrow_type is not None:
+            affected_edge_ids = list(scene_edge_map.keys())
+            if affected_edge_ids:
+                edge_ids_json = json.dumps(affected_edge_ids)
+                at_roundness = "null" if arrow_type in ("sharp", "elbow") else "{ type: 2 }"
+                at_elbowed = "true" if arrow_type == "elbow" else "false"
+                _browser_evaluate(f"""() => {{
+  const now = Date.now();
+  const rng = () => Math.floor(Math.random() * 9999999);
+  for (const eid of {edge_ids_json}) {{
+    const el = window.__drawElements[eid];
+    if (!el) continue;
+    window.__drawElements[eid] = {{ ...el,
+      roundness: {at_roundness},
+      elbowed: {at_elbowed},
+      version: (el.version || 1) + 1, versionNonce: rng(), updated: now }};
+  }}
+  window.__drawApi._raw.updateScene({{ elements: Object.values(window.__drawElements) }});
+}}""")
+
+        # Recompute subgraph bounding boxes using updated node positions
+        if _dsl_state["groups"]:
+            subgraph_payloads = [
+                {"id": gid, "label": group["label"],
+                 "memberIds": group["members"], "savedBounds": None}
+                for gid, group in _dsl_state["groups"].items()
+            ]
+            sg_json = json.dumps(subgraph_payloads)
+            _browser_evaluate(f"() => window._batch_draw([], [], {sg_json})")
+
+        fit()
+
+        n_nodes = len(positions_list)
+        s.add("nodes", n_nodes)
+        scope_suffix = " (selection)" if scope_label else ""
+        return f"layout applied to {n_nodes} nodes{scope_suffix}"
+
+
+_ALIGN_ACTIONS: dict[str, str] = {
+    "left":        "alignLeft",
+    "hcenter":     "alignHorizontallyCentered",
+    "right":       "alignRight",
+    "top":         "alignTop",
+    "vcenter":     "alignVerticallyCentered",
+    "bottom":      "alignBottom",
+    "hdistribute": "distributeHorizontally",
+    "vdistribute": "distributeVertically",
+}
+
+
+def align(*, ids: list[str], axis: str) -> str:
+    """Align or distribute a set of shapes using Excalidraw's built-in actions.
+
+    Args:
+        ids:  List of element IDs to align.
+        axis: Alignment axis — one of:
+              ``left``, ``hcenter``, ``right`` (snap left/centre/right edges),
+              ``top``, ``vcenter``, ``bottom`` (snap top/centre/bottom edges),
+              ``hdistribute``, ``vdistribute`` (even horizontal/vertical spacing).
+
+    Returns:
+        Summary like ``"aligned 3 element(s) (left)"``.
+
+    Example:
+        wb.align(ids=["a", "b", "c"], axis="top")
+        wb.align(ids=["a", "b", "c"], axis="hdistribute")
+    """
+    axis = axis.lower()
+    if axis not in _ALIGN_ACTIONS:
+        return f"Error: axis must be one of {sorted(_ALIGN_ACTIONS)}"
+
+    with LogSpan(span="excalidraw.align", axis=axis) as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        action_name = _ALIGN_ACTIONS[axis]
+        ids_json = json.dumps(ids)
+        # Use action.perform() directly with a synthetic appState so selection is
+        # visible synchronously — api.setAppState() schedules an async React update
+        # and the immediately following executeAction() would read stale state.
+        _browser_evaluate(
+            f"() => {{"
+            f"  const api = window.__drawApi._raw;"
+            f"  const elements = api.getSceneElements();"
+            f"  const base = api.state || (api.getAppState ? api.getAppState() : {{}});"
+            f"  const appState = {{ ...base, selectedElementIds: Object.fromEntries({ids_json}.map(id => [id, true])) }};"
+            f"  const action = api.actionManager.actions['{action_name}'];"
+            f"  const result = action.perform(elements, appState, null, api);"
+            f"  if (result && result.elements) api.updateScene({{ elements: result.elements }});"
+            f"  if (result && result.appState) api.updateScene({{ appState: result.appState }});"
+            f"}}"
+        )
+
+        s.add("count", len(ids))
+        return f"aligned {len(ids)} element(s) ({axis})"
 
 
 def screenshot(*, file: str | None = None) -> Any:
