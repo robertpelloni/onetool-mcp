@@ -257,3 +257,50 @@ New shapes are **auto-sized** from their label content: width scales with the lo
 | `at` | arrows only | arrowType | `curve` (default), `sharp`, `elbow` |
 
 `at:curve` → bezier curve; `at:sharp` → straight line; `at:elbow` → orthogonal connector
+
+---
+
+## Diagnostics
+
+### `wb.read_scene()` — inspect canvas elements
+
+Returns a structured text summary of all canvas elements without taking a screenshot.
+Use this as the primary way to verify `draw()`, `style()`, and `erase()` results.
+Excludes the `__otDSL` hidden element and any erased elements.
+
+```python
+wb.read_scene()                  # default detail
+wb.read_scene(info="min")        # one-line summary only
+wb.read_scene(info="full")       # all style properties
+```
+
+| `info` | What you get |
+|--------|-------------|
+| `"min"` | `Scene: N shapes, M edges` — count only |
+| `"default"` | Per-element: id, type, label, bc, sc, text-sc, groupIds; edges: arrowheads, stroke style |
+| `"full"` | All of default + sw, ss, roughness, opacity, fillStyle, corners, font, textAlign, position, size |
+
+**Example output (default):**
+
+```
+Scene: 4 shapes, 2 edges
+
+Shapes:
+  infra                   rectangle   "Infrastructure"  bc:transparent sc:#868e96 text-sc:#868e96
+  a                       diamond     "API Server"  bc:#bfdbfe sc:#1e1e1e text-sc:#1e1e1e
+  b                       rectangle   "Database"  bc:#bbf7d0 sc:#bbf7d0 text-sc:#1e1e1e
+  c                       rectangle   "Cache"  bc:#fecaca sc:#fecaca text-sc:#fecaca ⚠ TEXT=BG
+
+Edges:
+  edge-a-b                a -> b  [none/arrow solid]
+  edge-a-c-reads          a -> c  "reads"  [none/arrow solid]
+```
+
+**Warnings:**
+- `⚠ TEXT=BG` — text strokeColor matches backgroundColor (label is invisible)
+
+**When to use:**
+- After `draw()` / `style()` / `erase()` to verify the result
+- To diagnose invisible labels, missing elements, or incorrect styles
+- Prefer over `screenshot()` for structured data — faster and no image tokens
+- Use `info="full"` when debugging position, size, or font issues

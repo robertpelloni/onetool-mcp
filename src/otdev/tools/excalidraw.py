@@ -26,6 +26,7 @@ __all__ = [
     "load",
     "note",
     "open",
+    "read_scene",
     "save",
     "screenshot",
     "scroll",
@@ -151,16 +152,24 @@ def _js_batch_draw(
 
 
 def _js_patch_elements(patches: list[dict[str, Any]]) -> None:
-    """Patch existing elements (label and/or style) without changing position."""
+    """Patch existing elements (label and/or style) without changing position.
+
+    JS returns the matched element count, but draw() callers don't need it.
+    Use _js_style_elements when you need the count.
+    """
     p_json = json.dumps(patches)
     _browser_evaluate(f"() => window._patch_elements({p_json})")
 
 
-def _js_style_elements(ids: list[str], style_props: dict[str, Any]) -> None:
-    """Apply style properties to elements by ID."""
+def _js_style_elements(ids: list[str], style_props: dict[str, Any]) -> int:
+    """Apply style properties to elements by ID. Returns count of matched elements."""
     ids_json = json.dumps(ids)
     props_json = json.dumps(style_props)
-    _browser_evaluate(f"() => window._style_elements({ids_json}, {props_json})")
+    result = _browser_evaluate(f"() => window._style_elements({ids_json}, {props_json})")
+    try:
+        return int(result)
+    except (ValueError, TypeError):
+        return len(ids)
 
 
 _DEFAULT_FONT_SIZE = 16
@@ -1649,10 +1658,65 @@ def style(*, ids: list[str], style: str) -> str:
         if not style_props:
             return "Error: no valid style properties parsed from style string"
 
-        _js_style_elements(ids, style_props)
+        matched = _js_style_elements(ids, style_props)
 
-        s.add("count", len(ids))
-        return f"styled {len(ids)} element(s)"
+        s.add("count", matched)
+        return f"styled {matched} element(s)"
+
+
+_VALID_READ_SCENE_LEVELS = {"min", "default", "full", "debug"}
+
+
+def read_scene(*, info: str = "default") -> str:
+    """Return a structured text summary of all canvas elements.
+
+    Inspects the live Excalidraw canvas and returns a report listing every
+    shape and edge with their properties. Use this to verify ``draw()``,
+    ``style()``, and ``erase()`` results without taking a screenshot.
+
+    Detail levels:
+
+    - ``info="min"`` — One-line summary: ``"Scene: N shapes, M edges"``
+    - ``info="default"`` — Per-element listing with id, type, label, bc, sc,
+      text-sc, groupIds. Edges show arrowheads and stroke style.
+    - ``info="full"`` — All of default plus sw, ss, roughness, opacity,
+      fillStyle, corners, fontSize, fontFamily, textAlign, verticalAlign,
+      x, y, w, h. Edges additionally show sc, sw, opacity, arrowType,
+      position, and dimensions.
+
+    A ``⚠ TEXT=BG`` warning appears when a shape's text strokeColor matches
+    its backgroundColor, which makes the label invisible.
+
+    Args:
+        info: Detail level — ``"min"``, ``"default"``, ``"full"``, or ``"debug"``.
+
+    Returns:
+        Text summary of the scene at the requested detail level.
+
+    Example:
+        whiteboard.read_scene()
+        whiteboard.read_scene(info="full")
+        whiteboard.read_scene(info="min")
+        whiteboard.read_scene(info="debug")
+    """
+    if info not in _VALID_READ_SCENE_LEVELS:
+        raise ValueError(
+            f"info={info!r} is not valid. Use 'min', 'default', 'full', or 'debug'."
+        )
+
+    with LogSpan(span="excalidraw.read_scene", info=info) as s:
+        err = _ensure_ready()
+        if err:
+            s.add("error", err)
+            return err
+
+        result = _browser_evaluate_json(
+            f"() => window._read_scene({json.dumps(info)})"
+        )
+        if not isinstance(result, str):
+            result = str(result)
+        s.add("result_length", len(result) if result else 0)
+        return result
 
 
 def share() -> str:

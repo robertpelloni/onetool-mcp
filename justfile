@@ -29,21 +29,25 @@ dev *args:
 # TESTING
 # ============================================================================
 
-# Run all tests (strict - errors on missing requirements)
+# Run unit tests (strict - errors on missing requirements)
 test *args:
-    uv run pytest {{ args }}
+    uv run pytest -m "not integration" {{ args }}
 
 # Run tests with --allow-skips (lenient - skips on missing requirements)
 test-lenient *args:
-    uv run pytest --allow-skips {{ args }}
+    uv run pytest -m "not integration" --allow-skips {{ args }}
 
 # Run unit tests only
 test-unit:
     uv run pytest -m unit
 
 # Run integration tests only
-test-integration:
-    uv run pytest -m integration
+test-int *args:
+    uv run pytest -m integration {{ args }}
+
+# Run all tests including integration (strict)
+test-all *args:
+    uv run pytest {{ args }}
 
 # Download test data from beycom/onetool-mcp-test into tests/data/
 test-setup:

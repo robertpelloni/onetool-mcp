@@ -12,6 +12,15 @@ tools_dir:
 
 log_level: INFO
 
+# Playwright MCP server for whiteboard integration tests
+servers:
+  playwright:
+    type: stdio
+    command: npx
+    args: ["@playwright/mcp@latest"]
+    timeout: 120
+    enabled: true
+
 # Override: disable sanitization for tests (test_sanitize.py tests it explicitly)
 security:
   sanitize:

@@ -52,6 +52,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 | `whiteboard.load(*, file: str) -> str` | Restore diagram from a native ``.excalidraw`` file. |
 | `whiteboard.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
 | `whiteboard.open() -> str` | Open excalidraw.com and start with a clean canvas. |
+| `whiteboard.read_scene(*, info: str = 'default') -> str` | Return a structured text summary of all canvas elements. |
 | `whiteboard.save(*, file: str) -> str` | Save current diagram to a native ``.excalidraw`` JSON file. |
 | `whiteboard.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
 | `whiteboard.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
@@ -176,6 +177,25 @@ whiteboard.erase(ids=["a", "edge-a-b"])
 whiteboard.erase(ids=["b"])  # b has edges a-->b and b-->c
 # Returns: "erased 1 element(s), 2 dangling edge(s) removed"
 ```
+
+### `read_scene(info)`
+
+Return a structured text summary of all canvas elements. Use to verify `draw()`, `style()`, and `erase()` results without a screenshot.
+
+```python
+whiteboard.read_scene()                  # default detail
+whiteboard.read_scene(info="min")        # one-line count only
+whiteboard.read_scene(info="full")       # all style properties
+```
+
+| `info` | Output |
+|--------|--------|
+| `"min"` | `Scene: N shapes, M edges` — count only |
+| `"default"` | Per-element: id, type, label, bc, sc, text-sc, groupIds; edges: arrowheads, stroke style |
+| `"full"` | All of default + sw, ss, roughness, opacity, fillStyle, corners, font, textAlign, position, size |
+| `"debug"` | All of full + deleted elements, `__otDSL`, `deleted:` flag, arrow `points:`, bound text with `containerId` |
+
+A `⚠ TEXT=BG` warning appears when a shape's text colour matches its background (invisible label).
 
 ### `sync()`
 

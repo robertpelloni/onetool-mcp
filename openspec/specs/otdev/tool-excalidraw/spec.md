@@ -41,6 +41,10 @@ graph layout (topological layering via ELK).
 - **AND** subgraphs are redrawn on every call to reflect current member positions
 - **AND** a subgraph label SHALL appear as bound text inside its bounding rect (`containerId` set on the text element, `boundElements` referencing the text on the rect), with `textAlign: 'center'` and `verticalAlign: 'top'`
 
+#### Scenario: Subgraph groupIds are deduplicated
+- **WHEN** `draw()` is called multiple times with the same subgraph
+- **THEN** each member's `groupIds` array SHALL contain the group ID at most once (no duplicates)
+
 #### Scenario: Multiple subgraphs in separate columns
 - **WHEN** `draw()` receives DSL with two or more subgraphs in a single call
 - **THEN** each subgraph's member nodes SHALL be auto-laid-out in a separate x column (300px apart)
@@ -53,6 +57,11 @@ graph layout (topological layering via ELK).
 #### Scenario: Bidirectional and special arrowheads
 - **WHEN** the DSL contains `a<-->b`, `a --o b`, or `a --x b`
 - **THEN** arrows SHALL render with the correct arrowhead style at each end
+
+#### Scenario: Undirected edge renders without arrowheads
+- **WHEN** `a---b` is drawn
+- **THEN** the rendered arrow SHALL have `startArrowhead: null` and `endArrowhead: null`
+- **AND** the JS layer SHALL preserve explicit `null` values (not coalesce to `'arrow'`)
 
 #### Scenario: Dashed edges
 - **WHEN** the DSL contains `a-.->b` (dashed directed) or `a-.-b` (dashed undirected)
@@ -493,9 +502,63 @@ so arrow connections survive.
 - **THEN** both shape `a` and its bound text child SHALL be moved by the same delta
 - **AND** the text SHALL remain visually attached to the box at its new position
 
-#### Scenario: Unknown IDs
-- **WHEN** an ID in `ids` is not on the canvas
-- **THEN** the call SHALL still return `"styled N element(s)"` (no error for unknown IDs)
+#### Scenario: Accurate styled count
+- **WHEN** `whiteboard.style(ids=["a", "doesnotexist"], style="bc:red")` is called and only `a` exists
+- **THEN** the return value SHALL be `"styled 1 element(s)"` (count reflects actual matches, not input length)
+
+#### Scenario: All IDs missing
+- **WHEN** `whiteboard.style(ids=["x", "y"], style="bc:red")` is called and neither exists
+- **THEN** the return value SHALL be `"styled 0 element(s)"`
+
+### Requirement: Inspect canvas elements
+
+`whiteboard.read_scene(info=)` SHALL return a structured text summary of all
+non-deleted canvas elements (excluding `__otDSL` and deleted elements). The
+`info` parameter controls detail level.
+
+| `info` | Output |
+|--------|--------|
+| `"min"` | One-line summary: `"Scene: N shapes, M edges"` |
+| `"default"` | Per-element listing: id, type, label, bc, sc, text-sc, groupIds; edges show arrowheads and stroke style |
+| `"full"` | All of default plus sw, ss, roughness, opacity, fillStyle, corners, fontSize, fontFamily, textAlign, verticalAlign, x, y, w, h; edges add sc, sw, opacity, arrowType, position, dimensions |
+| `"debug"` | All of full plus: deleted elements and `__otDSL` are included (not filtered); each element shows `deleted:true/false`; arrows show raw `points:[...]`; bound and standalone text elements listed in a separate `Text elements:` section with `containerId` |
+
+Invalid `info` values SHALL raise `ValueError` without calling the browser.
+
+A `⚠ TEXT=BG` warning SHALL appear when a shape's text `strokeColor` matches
+its `backgroundColor` (invisible label).
+
+#### Scenario: Read empty scene
+- **WHEN** `whiteboard.read_scene()` is called with no elements on canvas
+- **THEN** the return SHALL start with `"Scene: 0 shapes, 0 edges"`
+
+#### Scenario: Read scene with shapes and edges
+- **WHEN** canvas has shapes `a`, `b` and edge `a→b`
+- **THEN** the return SHALL list both shapes with their properties and the edge with arrowhead info
+
+#### Scenario: Invisible label warning
+- **WHEN** a shape's text `strokeColor` equals its `backgroundColor`
+- **THEN** the shape line SHALL include `⚠ TEXT=BG`
+
+#### Scenario: info=min returns summary only
+- **WHEN** `whiteboard.read_scene(info="min")` is called
+- **THEN** the return SHALL be a single line `"Scene: N shapes, M edges"` with no element details
+
+#### Scenario: info=full includes all properties
+- **WHEN** `whiteboard.read_scene(info="full")` is called
+- **THEN** each shape SHALL include sw, ss, r, o, cr, x, y, w, h, and text properties (f, fs, ta, va)
+- **AND** each edge SHALL include sc, sw, o, at, x, y, w, h
+
+#### Scenario: info=debug shows all elements including deleted
+- **WHEN** `whiteboard.read_scene(info="debug")` is called
+- **THEN** deleted elements and `__otDSL` SHALL be included in the output
+- **AND** each element SHALL show `deleted:true` or `deleted:false`
+- **AND** arrows SHALL show their raw `points:[...]` array
+- **AND** bound text elements SHALL appear in a `Text elements:` section with `containerId`
+
+#### Scenario: Invalid info raises
+- **WHEN** `whiteboard.read_scene(info="bad")` is called
+- **THEN** a `ValueError` SHALL be raised
 
 ### Requirement: Sync Python state from canvas
 

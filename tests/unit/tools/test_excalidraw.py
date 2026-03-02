@@ -7,6 +7,7 @@ _parse_style_props, and smoke tests for public tools with mocked Playwright.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -3088,3 +3089,187 @@ class TestLayoutBoundaryArrows:
         assert "edge-b-c" in patch_js, (
             "internal arrow edge-b-c must still be patched after selection layout"
         )
+
+
+# ===========================================================================
+# Undirected edge payload sends null endArrowhead (not "arrow")
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestUndirectedEdgePayload:
+    def test_undirected_edge_sends_none_arrowheads(self) -> None:
+        """a---b must send endArrowhead=None and startArrowhead=None to JS."""
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
+        ):
+            excalidraw.draw(input='a["A"]\nb["B"]\na---b')
+            assert mock_batch.called
+            _, kwargs = mock_batch.call_args
+            edges = kwargs["edges"]
+            assert len(edges) == 1
+            assert edges[0]["endArrowhead"] is None
+            assert edges[0]["startArrowhead"] is None
+
+    def test_dashed_undirected_edge_sends_none_arrowheads(self) -> None:
+        """a-.-b must also send None arrowheads."""
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+
+        with (
+            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
+        ):
+            excalidraw.draw(input='a["A"]\nb["B"]\na-.-b')
+            assert mock_batch.called
+            _, kwargs = mock_batch.call_args
+            edges = kwargs["edges"]
+            assert len(edges) == 1
+            assert edges[0]["endArrowhead"] is None
+            assert edges[0]["startArrowhead"] is None
+
+
+# ===========================================================================
+# Style returns actual matched count (not input length)
+# ===========================================================================
+
+
+def _style_elements_side_effect(count: int) -> Callable[..., str]:
+    """Return a side-effect that reports `count` matched elements from _style_elements."""
+    def side_effect(server: str, tool: str, arguments: Any = None) -> str:
+        fn = (arguments or {}).get("function", "")
+        if tool == "browser_navigate":
+            return "### Result\nnull\n### Ran Playwright code\n..."
+        if "__drawApi?.backend" in fn:
+            return "### Result\ntrue\n### Ran Playwright code\n..."
+        if "__drawApi.read" in fn:
+            return '### Result\n[]\n### Ran Playwright code\n...'
+        if "_style_elements" in fn:
+            return f"### Result\n{count}\n### Ran Playwright code\n..."
+        return "### Result\nnull\n### Ran Playwright code\n..."
+    return side_effect
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestStyleReturnCount:
+    def test_style_returns_actual_matched_count(self) -> None:
+        """style() with non-existent IDs should report 0 styled, not len(ids)."""
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _style_elements_side_effect(0)
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.style(ids=["doesnotexist"], style="bc:red")
+
+        assert result == "styled 0 element(s)"
+
+    def test_style_returns_count_for_existing_elements(self) -> None:
+        """style() with 2 existing IDs should report 2 styled."""
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = _style_elements_side_effect(2)
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.style(ids=["a", "b"], style="bc:red")
+
+        assert result == "styled 2 element(s)"
+
+
+# ===========================================================================
+# read_scene tool smoke test
+# ===========================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestReadScene:
+    def _make_scene_side_effect(self, scene_text: str) -> Callable[..., str]:
+        def side_effect(server: str, tool: str, arguments: Any = None) -> str:
+            fn = (arguments or {}).get("function", "")
+            if tool == "browser_navigate":
+                return "### Result\nnull\n### Ran Playwright code\n..."
+            if "__drawApi?.backend" in fn:
+                return "### Result\ntrue\n### Ran Playwright code\n..."
+            if "__drawApi.read" in fn:
+                return '### Result\n[]\n### Ran Playwright code\n...'
+            if "_read_scene" in fn:
+                return f"### Result\n{scene_text}\n### Ran Playwright code\n..."
+            return "### Result\nnull\n### Ran Playwright code\n..."
+        return side_effect
+
+    def test_read_scene_calls_browser_and_returns_result(self) -> None:
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
+            "Scene: 2 shapes, 1 edges\n\nShapes:\n  a\n  b\n\nEdges:\n  e\n"
+        )
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.read_scene()
+
+        assert "Scene: 2 shapes" in result
+
+    def test_read_scene_returns_error_when_playwright_not_connected(self) -> None:
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy(servers=[])
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.read_scene()
+
+        assert "Error" in result
+
+    def test_read_scene_info_min_passes_level_to_js(self) -> None:
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
+            "Scene: 3 shapes, 0 edges"
+        )
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.read_scene(info="min")
+
+        assert result == "Scene: 3 shapes, 0 edges"
+
+    def test_read_scene_info_full_passes_level_to_js(self) -> None:
+        from otdev.tools import excalidraw
+
+        _reset_exc_state()
+        mock_proxy = _make_mock_proxy()
+        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
+            "Scene: 1 shapes, 0 edges\n\nShapes:\n  a  rectangle  bc:#fff sw:2\n"
+        )
+
+        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+            result = excalidraw.read_scene(info="full")
+
+        assert "sw:2" in result
+
+    def test_read_scene_invalid_info_raises(self) -> None:
+        from otdev.tools import excalidraw
+
+        with pytest.raises(ValueError, match="info='bad'"):
+            excalidraw.read_scene(info="bad")

@@ -133,8 +133,8 @@
         version: 1, versionNonce: rng(), updated: now,
         boundElements: boundEls, roundness: edgeRoundness,
         ...(elbowed !== undefined ? { elbowed } : {}),
-        startArrowhead: startArrowhead ?? null,
-        endArrowhead:   endArrowhead   ?? 'arrow',
+        startArrowhead: startArrowhead !== undefined ? startArrowhead : null,
+        endArrowhead:   endArrowhead   !== undefined ? endArrowhead   : 'arrow',
         startBinding: { elementId: srcId, focus: 0, gap },
         endBinding:   { elementId: dstId, focus: 0, gap },
       };
@@ -220,17 +220,19 @@
       for (const mid of memberIds) {
         const el = window.__drawElements[mid] || liveMap[mid];
         if (el) {
+          const gids = el.groupIds || [];
           window.__drawElements[mid] = {
             ...el,
-            groupIds: [...(el.groupIds || []), id],
+            groupIds: gids.includes(id) ? gids : [...gids, id],
           };
         }
         const tid = mid + '-text';
         const tel = window.__drawElements[tid] || liveMap[tid];
         if (tel) {
+          const tgids = tel.groupIds || [];
           window.__drawElements[tid] = {
             ...tel,
-            groupIds: [...(tel.groupIds || []), id],
+            groupIds: tgids.includes(id) ? tgids : [...tgids, id],
           };
         }
       }
@@ -262,6 +264,7 @@
   window._patch_elements = (patches) => {
     const now = Date.now();
     const rng = () => Math.floor(Math.random() * 9999999);
+    let matched = 0;
 
     const liveMap = {};
     for (const el of window.__drawApi.read()) {
@@ -273,6 +276,7 @@
 
       const existing = liveMap[id] || window.__drawElements[id];
       if (!existing) continue;
+      matched++;
 
       const textId = id + '-text';
       const existingText = liveMap[textId] || window.__drawElements[textId];
@@ -332,7 +336,7 @@
     }
 
     window.__drawApi._raw.updateScene({ elements: Object.values(window.__drawElements) });
-    return true;
+    return matched;
   };
 
   // ---------------------------------------------------------------------------
@@ -386,6 +390,148 @@
 
     window.__drawApi._raw.updateScene({ elements: Object.values(window.__drawElements) });
     return true;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Read scene — structured text summary of all canvas elements.
+  // Returns a compact text report for agent inspection (no screenshots needed).
+  // ---------------------------------------------------------------------------
+  window._read_scene = (level) => {
+    // level: "min" | "default" | "full" | "debug"
+    const isDebug = level === 'debug';
+    const detailLevel = isDebug ? 'full' : level;
+    // debug: show everything including deleted and __otDSL; normal: filter them out
+    const allEls = window.__drawApi.read();
+    const els = isDebug ? allEls : allEls.filter(e => !e.isDeleted && e.id !== '__otDSL');
+
+    // Build lookup: containerId → text element
+    const textChildren = {};
+    for (const e of els) {
+      if (e.type === 'text' && e.containerId) {
+        textChildren[e.containerId] = e;
+      }
+    }
+
+    const shapes = [];
+    const edges = [];
+    const textEls = [];
+
+    for (const e of els) {
+      if (e.type === 'arrow') {
+        const src = e.startBinding ? e.startBinding.elementId : '?';
+        const dst = e.endBinding ? e.endBinding.elementId : '?';
+        const labelEl = textChildren[e.id];
+        const label = labelEl ? labelEl.text : '';
+        const startAH = e.startArrowhead ?? 'none';
+        const endAH = e.endArrowhead ?? 'none';
+        const ss = e.strokeStyle || 'solid';
+        let line = '  ' + e.id.padEnd(24) + src + ' -> ' + dst;
+        if (label) line += '  "' + label + '"';
+        line += '  [' + startAH + '/' + endAH + ' ' + ss + ']';
+        if (detailLevel === 'full') {
+          line += '  sc:' + (e.strokeColor || '#1e1e1e');
+          line += ' sw:' + (e.strokeWidth ?? 2);
+          line += ' o:' + (e.opacity ?? 100);
+          const r = e.roundness;
+          const at = e.elbowed ? 'elbow' : (r === null ? 'sharp' : 'curve');
+          line += ' at:' + at;
+          line += ' x:' + Math.round(e.x) + ',y:' + Math.round(e.y);
+          line += ' w:' + Math.round(e.width) + ',h:' + Math.round(e.height);
+        }
+        if (isDebug) {
+          line += ' deleted:' + (!!e.isDeleted);
+          const pts = e.points || [];
+          line += ' points:[' + pts.map(p => '[' + p.join(',') + ']').join(',') + ']';
+        }
+        edges.push(line);
+      } else if (e.type === 'text' && e.containerId) {
+        // Bound text — handled inline with parent; only show standalone in debug
+        if (isDebug) {
+          let line = '  ' + e.id.padEnd(24) + 'text'.padEnd(12);
+          line += '"' + (e.text || '').split('\n')[0].slice(0, 40) + '"';
+          line += '  containerId:' + e.containerId;
+          line += ' deleted:' + (!!e.isDeleted);
+          textEls.push(line);
+        }
+      } else if (e.type === 'text' && !e.containerId) {
+        // Standalone text (e.g. __otDSL)
+        if (isDebug) {
+          let line = '  ' + e.id.padEnd(24) + 'text'.padEnd(12);
+          const preview = (e.text || '').split('\n')[0].slice(0, 40);
+          line += '"' + preview + '"';
+          line += '  deleted:' + (!!e.isDeleted);
+          line += ' o:' + (e.opacity ?? 100);
+          line += ' x:' + Math.round(e.x) + ',y:' + Math.round(e.y);
+          textEls.push(line);
+        }
+      } else if (e.type !== 'text') {
+        // Shape (rectangle, diamond, ellipse, etc.)
+        const textEl = textChildren[e.id];
+        const label = textEl ? textEl.text.split('\n')[0] : '';
+        const truncLabel = label.length > 40 ? label.slice(0, 37) + '...' : label;
+        const typeName = e.type === 'ellipse' ? 'circle' : e.type;
+        const bc = e.backgroundColor ?? 'transparent';
+        const sc = e.strokeColor ?? '#1e1e1e';
+        const gids = (e.groupIds || []).filter(g => g);
+
+        let line = '  ' + e.id.padEnd(24) + typeName.padEnd(12);
+        if (truncLabel) line += '"' + truncLabel + '"';
+        line += '  bc:' + bc + ' sc:' + sc;
+        if (textEl) line += ' text-sc:' + (textEl.strokeColor || '#1e1e1e');
+        if (gids.length) line += ' groups:[' + gids.join(',') + ']';
+
+        if (detailLevel === 'full') {
+          line += ' sw:' + (e.strokeWidth ?? 2);
+          line += ' ss:' + (e.strokeStyle || 'solid');
+          line += ' r:' + (e.roughness ?? 1);
+          line += ' o:' + (e.opacity ?? 100);
+          const fi = e.fillStyle || 'solid';
+          if (fi !== 'solid') line += ' fi:' + fi;
+          const cr = e.roundness === null ? 'sharp' : 'round';
+          line += ' cr:' + cr;
+          line += ' x:' + Math.round(e.x) + ',y:' + Math.round(e.y);
+          line += ' w:' + Math.round(e.width) + ',h:' + Math.round(e.height);
+          if (textEl) {
+            const ff = {1: 'hand', 2: 'normal', 3: 'mono'}[textEl.fontFamily] || textEl.fontFamily;
+            line += ' f:' + ff + ' fs:' + (textEl.fontSize || 16);
+            line += ' ta:' + (textEl.textAlign || 'center');
+            line += ' va:' + (textEl.verticalAlign || 'middle');
+          }
+        }
+        if (isDebug) {
+          line += ' deleted:' + (!!e.isDeleted);
+        }
+
+        // Warn if text strokeColor matches backgroundColor (invisible label)
+        if (textEl && bc !== 'transparent' && textEl.strokeColor === bc) {
+          line += ' ⚠ TEXT=BG';
+        }
+
+        shapes.push(line);
+      }
+    }
+
+    const header = 'Scene: ' + shapes.length + ' shapes, ' + edges.length + ' edges';
+    if (level === 'min') return header;
+
+    const parts = [header, ''];
+    if (shapes.length) {
+      parts.push('Shapes:');
+      for (const s of shapes) parts.push(s);
+      parts.push('');
+    }
+    if (edges.length) {
+      parts.push('Edges:');
+      for (const e of edges) parts.push(e);
+      parts.push('');
+    }
+    if (isDebug && textEls.length) {
+      parts.push('Text elements:');
+      for (const t of textEls) parts.push(t);
+      parts.push('');
+    }
+
+    return parts.join('\n');
   };
 
   // ---------------------------------------------------------------------------
