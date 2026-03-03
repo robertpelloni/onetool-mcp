@@ -20,6 +20,12 @@ The system SHALL sanitise trigger patterns in tool outputs to prevent indirect p
 - **WHEN** sanitisation is applied
 - **THEN** it SHALL be replaced with `[REDACTED:trigger]__run(command="...")`
 
+#### Scenario: >>> tool-call trigger pattern
+- **GIVEN** tool output containing `>>> file.write(path="x", content="y")` (or any `>>> pack.tool(` form)
+- **WHEN** sanitisation is applied
+- **THEN** `>>> file.write(` SHALL be replaced with `[REDACTED:trigger]`
+- **AND** bare `>>>` without a `pack.tool(` call (e.g. `>>> x = 1`) SHALL NOT be replaced
+
 #### Scenario: Case sensitivity
 - **GIVEN** tool output containing `__OT` or `__Ot` (mixed case)
 - **WHEN** sanitisation is applied

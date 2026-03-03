@@ -23,9 +23,10 @@ __all__ = [
 
 # Regex patterns for trigger detection (case-insensitive)
 # Matches legacy triggers: __ot, mcp__onetool, mcp__onetool__run
-# Note: >>> is not sanitized (too common in Python docs/notebooks)
+# Matches >>> tool-call form (>>> pack.tool() pattern) — bare >>> is NOT matched
+# to avoid false positives in Python REPL output and docstrings.
 TRIGGER_PATTERN = re.compile(
-    r"(__ot\b|__run\b|mcp__onetool\w*)",
+    r"(__ot\b|__run\b|mcp__onetool\w*|>>>\s+\w+\.\w+\s*\()",
     re.IGNORECASE,
 )
 
@@ -40,8 +41,9 @@ TAG_PATTERN = re.compile(
 def sanitize_triggers(content: str) -> str:
     """Replace trigger patterns that could invoke OneTool.
 
-    Replaces patterns like __ot, mcp__onetool, mcp__onetool__run (legacy triggers)
-    with [REDACTED:trigger] to prevent indirect prompt injection.
+    Replaces patterns like __ot, mcp__onetool__run (legacy triggers) and
+    >>> pack.tool( (primary trigger form) with [REDACTED:trigger] to prevent
+    indirect prompt injection. Bare >>> without a pack.tool( call is preserved.
 
     Args:
         content: String content that may contain trigger patterns
