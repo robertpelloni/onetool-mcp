@@ -80,6 +80,15 @@ openspec/       Specifications and proposals
 - ✅ Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`
 - ✅ Scopes: See `dev/practices/commit-scopes.md` or use `/p:stage`
 
+### Shared Utilities — Check Before Implementing
+- ✅ HTTP clients: `lazy_client()` from `ot.utils.factory` (not bare globals or `@lru_cache`)
+- ✅ HTTP errors: `_format_http_error()` from `ot.http_client`
+- ✅ Truncation: `truncate()` from `ot.utils.truncate` (not `[:N] + "..."`)
+- ✅ Caching: `CacheNamespace` from `ot.utils.cache`
+- ✅ Batch ops: `batch_execute`, `normalize_items` from `ot.utils.batch`
+- ✅ Storage dirs: `resolve_ot_path()` from `ot.meta`
+- ❌ Don't reimplement duration parsing, SQLite pools, handle generation — check `ot.utils` first
+
 ### Backwards Compatibility
 - ❌ No backwards compat - delete unused code completely
 - ❌ No renaming unused vars, no re-exports, no "removed" comments

@@ -289,6 +289,88 @@ def _get_client() -> "OpenAI":
 
 ---
 
+## Shared Utilities — Check Before You Implement
+
+Before writing any of the following, check whether a shared utility already
+exists in `ot.utils` or `ot.meta`. Reimplementing these is a common source of
+bugs and drift.
+
+### HTTP clients
+
+Use the shared client — don't create your own `httpx.Client`:
+
+```python
+from ot.utils.factory import lazy_client
+from ot.http_client import _format_http_error
+
+_client = lazy_client(lambda: httpx.Client(timeout=30.0))
+
+def _make_request(url: str, **kwargs) -> tuple[bool, dict | str]:
+    try:
+        r = _client().get(url, **kwargs)
+        r.raise_for_status()
+        return True, r.json()
+    except Exception as e:
+        return False, _format_http_error(e)
+```
+
+- `lazy_client()` — thread-safe lazy init with `.reset()` support (`ot.utils.factory`)
+- `_format_http_error()` — standard HTTP error message formatting (`ot.http_client`)
+- `_get_shared_client()` — project-wide singleton for generic HTTP (`ot.http_client`)
+
+**Do not use** `@functools.lru_cache` or bare module globals for HTTP clients.
+
+### Caching
+
+```python
+from ot.utils.cache import CacheNamespace
+
+_cache = CacheNamespace("mytool", ttl=300.0)
+_cache.set("key", value)
+val = _cache.get("key")  # None if expired
+```
+
+### Result truncation
+
+```python
+from ot.utils.truncate import truncate
+
+description = truncate(raw_description, max_length=200)
+```
+
+Don't write `text[:N-3] + "..."` — use `truncate()`.
+
+### Storage paths
+
+For any path under `.onetool/`, use:
+
+```python
+from ot.meta import resolve_ot_path  # resolve .onetool/<subdir>
+```
+
+Call `.mkdir(parents=True, exist_ok=True)` yourself if you need a directory.
+
+### Batch operations
+
+```python
+from ot.utils.batch import batch_execute, normalize_items, format_batch_results
+```
+
+Used by brave, tavily, ground, file — use the same pattern for consistency.
+
+### What NOT to reimplement
+
+| Pattern | Use instead |
+|---|---|
+| `[:N] + "..."` truncation | `ot.utils.truncate.truncate()` |
+| Manual HTTP client init | `ot.utils.factory.lazy_client()` |
+| `hasattr(e, "response")` error check | `ot.http_client._format_http_error()` |
+| `@lru_cache` on a client factory | `lazy_client()` (supports `.reset()`) |
+| `resolve_ot_path(x); x.mkdir(...)` | Same — just always pair them |
+| Duration strings (`"30m"`, `"2h"`) | `ot.utils.duration.parse_duration()` (if available) |
+
+---
+
 ## Path Handling
 
 | Function | Import From | Resolves Relative To |
@@ -416,6 +498,7 @@ from otutil.tools._mem import Config, _close_connection
 
 ## Checklist
 
+- [ ] Checked `ot.utils` for existing shared utilities before implementing HTTP clients, caching, truncation, batch ops, or path helpers
 - [ ] File at `src/ottools/<name>.py`
 - [ ] Module docstring with description
 - [ ] `pack = "..."` before imports

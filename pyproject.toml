@@ -190,6 +190,7 @@ markers = [
     "network: Requires network access",
     "api: Requires API keys",
     "docker: Requires Docker daemon",
+    "playwright: Requires Playwright MCP server",
 ]
 
 [tool.deptry]

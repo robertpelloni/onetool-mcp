@@ -2,6 +2,7 @@
 Read dev/agents/hints.md for quick reference (commands, rules, project structure).
 Read dev/agents/project-map.md for detailed project structure.
 Read dev/index.md for complete dev docs navigation.
+Read dev/project/guides/index.md before creating tools — it links to creating-tools.md, which covers shared utilities to check before implementing common patterns (HTTP clients, caching, truncation, etc.).
 
 ## Commands
 

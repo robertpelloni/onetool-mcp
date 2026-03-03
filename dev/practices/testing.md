@@ -218,6 +218,154 @@ def test_brave_search(request):
 
 ---
 
+## Integration Test Guidelines
+
+### What integration tests are for
+
+Unit tests own logic and edge cases. Integration tests verify the tool works with real
+dependencies end-to-end. They are not a second pass of unit tests.
+
+**Write integration tests to answer:** "Does this tool work at all against real I/O?"
+**Do not write integration tests to answer:** "Does this function handle every edge case?"
+
+Aim for 3–5 tests per tool: one happy path, one lifecycle check (create/delete). No more.
+
+### Prerequisites — all deps must be installed
+
+Integration tests require their full environment to be present. A missing dependency
+is a **failure**, not a skip. This keeps CI honest: a red test means "fix your
+environment", not "silently skipped".
+
+- **API keys** — configure them in `secrets.yaml` before running integration tests
+- **Libraries** — install the relevant extras (`pip install onetool-mcp[dev,util]`)
+- **CLIs** — install binaries like `rg` (ripgrep) before running tests that need them
+
+Use `pytest.fail()` (never `pytest.skip()`) when a dependency is absent:
+
+```python
+@pytest.fixture(autouse=True)
+def require_api_key(self):
+    if not get_test_secret("BRAVE_API_KEY"):
+        pytest.fail("BRAVE_API_KEY not configured")
+
+@pytest.fixture(autouse=True)
+def require_binary(self):
+    if shutil.which("rg") is None:
+        pytest.fail("ripgrep (rg) not installed")
+```
+
+### Three dependency tiers
+
+Tools fall into one of three tiers. The tier determines markers and check strategy.
+
+**Tier 1 — No external deps** (stdlib, local files, local SQLite)
+
+No check needed. Use `tmp_path` for file I/O. Clean up created state in `finally`.
+
+```python
+@pytest.mark.integration
+@pytest.mark.tools
+class TestCtxWriteRead:
+    def test_write_and_read(self) -> None:
+        from otutil.tools.ctx import delete, read, write
+
+        result = write("alpha\nbeta\ngamma")
+        handle = result["handle"]
+        try:
+            read_result = read(handle)
+            assert any("alpha" in ln for ln in read_result["lines"])
+        finally:
+            delete(handle)
+```
+
+**Tier 2 — Binary or library dep**
+
+Fail early using `shutil.which()` or a try/except import in an `autouse` fixture.
+
+```python
+@pytest.mark.integration
+@pytest.mark.tools
+class TestRipgrepLive:
+    @pytest.fixture(autouse=True)
+    def require_rg(self):
+        if shutil.which("rg") is None:
+            pytest.fail("ripgrep (rg) not installed")
+
+    def test_search_live(self, tmp_path):
+        ...
+```
+
+**Tier 3 — API key required**
+
+Add `@pytest.mark.network @pytest.mark.api`. Fail via `autouse` fixture that checks
+`get_test_secret()` from the conftest.
+
+```python
+@pytest.mark.integration
+@pytest.mark.network
+@pytest.mark.api
+@pytest.mark.tools
+class TestBraveSearchLive:
+    @pytest.fixture(autouse=True)
+    def require_api_key(self):
+        if not get_test_secret("BRAVE_API_KEY"):
+            pytest.fail("BRAVE_API_KEY not configured")
+
+    def test_search_live(self):
+        ...
+```
+
+### Isolation — never pollute real `.onetool/` state
+
+Integration tests must not read from or write to the real `.onetool/` directory.
+
+- **File-based tools:** always pass `tmp_path` — never hardcode paths under `.onetool/`
+- **Store-backed tools** (image, ctx): patch the storage path or clean up in `finally`
+- **Image store:** patch `_images_dir` on the store module
+
+```python
+from ottools._image import store
+
+with patch.object(store, "_images_dir", return_value=tmp_path):
+    result = load(img=str(img_path))
+```
+
+- **Ctx store:** don't patch (real pool); delete test handles in `finally`
+
+### Assertions — structural, not exact
+
+Check that the response has the right shape. Don't assert on exact strings returned by
+real APIs or real file contents beyond what you wrote yourself.
+
+```python
+# Good — checks structure
+assert "handle" in result
+assert result["handle"].startswith("#img_")
+
+# Good — checks content you wrote
+assert any("alpha" in ln for ln in read_result["lines"])
+
+# Bad — brittle against real API variation
+assert result == "A red square on a white background."
+```
+
+### Disabling broken tests
+
+Use `pytest.skip(..., allow_module_level=True)` to disable an entire file. Do **not**
+use `pytestmark = [..., pytest.mark.skip(...)]` — that form doesn't prevent `autouse`
+fixtures from running before the skip is evaluated.
+
+```python
+# Correct — skips at collection time, before any fixtures run
+import pytest
+pytest.skip("disabled: tests broken", allow_module_level=True)
+
+# Wrong — fixtures run first, causing errors before skip takes effect
+pytestmark = [pytest.mark.integration, pytest.mark.skip(reason="disabled")]
+```
+
+---
+
 ## Writing New Tests
 
 ### Checklist
@@ -228,6 +376,8 @@ def test_brave_search(request):
 - [ ] Write descriptive docstring explaining what is tested
 - [ ] Use class grouping for related tests
 - [ ] Mock external dependencies in unit tests
+- [ ] For integration tests: identify the dependency tier and apply the correct skip pattern
+- [ ] For integration tests: verify isolation — no writes to real `.onetool/`
 - [ ] Use clear assertions with descriptive messages
 
 ### Test File Location
