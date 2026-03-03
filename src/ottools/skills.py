@@ -58,7 +58,7 @@ def _parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
     return fm, body
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _load_skill_index() -> dict[str, tuple[dict[str, Any], str]]:
     """Load and parse all bundled skills. Cached for 1 hour.
 

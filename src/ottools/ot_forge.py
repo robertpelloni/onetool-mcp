@@ -334,7 +334,7 @@ def validate_ext(*, path: str) -> str:
 # =============================================================================
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _get_tools_config() -> dict:
     """Load tool path configuration from global_templates/skills.md."""
     import yaml
@@ -348,7 +348,7 @@ def _get_tools_config() -> dict:
     return raw.get("tools", {})
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _get_skill_stub_template() -> str:
     """Load the Jinja2 skill stub template."""
     from ot.paths import get_global_templates_dir
@@ -362,7 +362,7 @@ def _get_skill_stub_template() -> str:
     return tmpl.read_text(encoding="utf-8")
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _list_bundled_skills() -> list[str]:
     """Return sorted list of bundled skill names."""
     from ot.paths import get_global_templates_dir
@@ -373,7 +373,7 @@ def _list_bundled_skills() -> list[str]:
     return sorted(f.stem for f in skills_dir.glob("*.md") if not f.name.startswith("_"))
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _get_skill_description(skill_name: str) -> str:
     """Get the description from a bundled skill's frontmatter."""
     import yaml
@@ -396,7 +396,7 @@ def _get_skill_description(skill_name: str) -> str:
     return skill_name
 
 
-@cache(ttl=3600)
+@cache.memoize(ttl=3600)
 def _get_skill_body(skill_name: str) -> str:
     """Get the body content from a bundled skill."""
     from ot.paths import get_global_templates_dir
