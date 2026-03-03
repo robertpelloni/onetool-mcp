@@ -282,6 +282,18 @@ The `ot.packs()` function SHALL list packs with optional filtering. The `ot.pack
 
 ---
 
+### Requirement: ot_image pack has short alias `img`
+
+The `ot_image` pack SHALL be registered in `PACK_SHORT_NAMES` with the short alias `img`,
+consistent with the short-alias convention applied to other verbose pack names.
+
+#### Scenario: Short alias appears in packs full output
+
+- **WHEN** `ot.packs(pattern="ot_image", info="full")` is called
+- **THEN** the result SHALL include `short: "img"` for the `ot_image` pack entry
+
+---
+
 ### Requirement: Pack Detail
 
 The `ot.pack_info()` function SHALL return detailed info for one pack.
@@ -628,7 +640,7 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
 
 ### Requirement: Query Stored Results
 
-The `ot.result()` function SHALL query stored large outputs with pagination, filtering, and navigation hints.
+The `ot.result()` function SHALL query stored large outputs with pagination, filtering, and navigation hints. It delegates to the `ctx` pack backend.
 
 #### Scenario: Basic query with defaults
 - **GIVEN** a stored result with handle `abc123`
@@ -707,18 +719,19 @@ The `ot.result()` function SHALL query stored large outputs with pagination, fil
 
 ### Requirement: Stored Result Usage Hints
 
-When large output is stored, the returned summary SHALL include navigation hints.
+When large output is stored, the returned summary SHALL include navigation hints pointing to `ctx` tools.
 
 #### Scenario: Usage hints format
-- **GIVEN** a tool output is stored
+- **GIVEN** a tool output is auto-stored by the runner
 - **WHEN** the `StoredResult` summary is returned
-- **THEN** it SHALL include a `usage` dict (not `query` string) with keys:
-  - `page`: fetch first page
-  - `search`: filter by pattern
-  - `fuzzy`: fuzzy search
-  - `slice`: fetch a specific slice
-  - `tail`: fetch last N lines
-- **AND** each value SHALL be a ready-to-run `ot.result()` call containing the handle
+- **THEN** it SHALL include a `usage` dict with keys:
+  - `page`: fetch first page via `ctx.read`
+  - `search`: BM25 section search via `ctx.search`
+  - `toc`: view section index via `ctx.toc`
+  - `grep`: regex line search via `ctx.grep`
+  - `tail`: fetch last N lines via `ctx.read`
+- **AND** each value SHALL be a ready-to-run `ctx.*` call containing the handle
+- **AND** response SHALL include `status` indicating whether indexing is complete
 
 ---
 

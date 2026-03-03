@@ -1,6 +1,6 @@
 # Tool Reference
 
-**23 Packs. 206 Tools.**
+**24 Packs. 219 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -10,7 +10,7 @@ Tools are split into optional install extras. Install only what you need:
 
 | Extra | Tools included |
 |-------|---------------|
-| *(core, always included)* | `ot`, `ot_forge`, `ot_llm`, `ot_secrets`, `ot_timer` |
+| *(core, always included)* | `ctx`, `ot`, `ot_forge`, `ot_llm`, `ot_secrets`, `ot_timer` |
 | `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem`, `tavily` |
 | `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `whiteboard`, `webfetch`, `worktree` |
 | `[all]` | All of the above |
@@ -28,6 +28,7 @@ uv tool install 'onetool-mcp[util,dev]'  # most tools
 | [**Brave**](brave.md) | `[util]` | Web search via Brave Search API. | 5 | [brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server) (MIT) | `image`, `news`, `search`, `search_batch`, `video` |
 | [**Chrome DevTools Util**](chrome-util.md) | `[dev]` | Visual element annotation for the Chrome DevTools MCP server. | 5 | MIT | `clear_annotations`, `guide_user`, `highlight_element`, `inject_annotations`, `scan_annotations` |
 | [**Context7**](context7.md) | `[dev]` | Library documentation lookup. | 2 | [context7](https://github.com/upstash/context7) (MIT) | `doc`, `search` |
+| [**Context Store**](ctx.md) | core | TTL-expiring, BM25-indexed storage for large tool outputs. | 13 | MIT | `append`, `delete`, `grep`, `inspect`, `list`, `purge`, `read`, `search`, `slice`, `stats`, `toc`, `transform`, `write` |
 | [**Convert**](convert.md) | `[util]` | Convert PDF, Word, PowerPoint, Excel to Markdown. | 5 | MIT | `auto`, `excel`, `pdf`, `powerpoint`, `word` |
 | [**DB**](db.md) | `[dev]` | SQL database queries. | 3 | [mcp-alchemy](https://github.com/runekaagaard/mcp-alchemy) (MPL 2.0) | `query`, `schema`, `tables` |
 | [**Diagram**](diagram.md) | `[dev]` | Generate Mermaid, PlantUML, D2 diagrams. | 11 | [Kroki](https://kroki.io/) (MIT) | `batch_render`, `generate_source`, `get_diagram_instructions`, `get_diagram_policy`, `get_output_config`, `get_playground_url`, `get_render_status`, `get_template`, `list_providers`, `render_diagram`, `render_directory` |

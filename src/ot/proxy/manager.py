@@ -585,6 +585,12 @@ class ProxyManager:
             for name, client in list(self._clients.items()):
                 try:
                     await client.__aexit__(None, None, None)  # type: ignore[no-untyped-call]
+                    # transport.close() terminates the subprocess. Required for stdio
+                    # servers because keep_alive=True (the fastmcp default) leaves the
+                    # process running after __aexit__ exits the session.
+                    transport = getattr(client, "transport", None)
+                    if transport is not None and hasattr(transport, "close"):
+                        await transport.close()
                     logger.debug(f"Disconnected from MCP server '{name}'")
                 except (Exception, asyncio.CancelledError) as e:
                     logger.debug(f"Error disconnecting from '{name}': {e}")

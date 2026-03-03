@@ -57,15 +57,19 @@ def help(*, query: str = "", info: InfoLevel = "default") -> str:
 
         cfg = get_config()
 
-        # Check for exact tool match (contains ".")
+        # Check for exact tool match (contains "."); resolve short alias prefix
         if "." in query:
+            from ot.meta._constants import PACK_SHORT_NAMES
             from ot.meta._discovery import tool_info as _tool_info
-            detail = _tool_info(name=query, info="full")
+            _alias_to_full_t = {alias: full for full, alias in PACK_SHORT_NAMES.items()}
+            pack_prefix, _, tool_suffix = query.partition(".")
+            resolved_tool_query = f"{_alias_to_full_t.get(pack_prefix, pack_prefix)}.{tool_suffix}"
+            detail = _tool_info(name=resolved_tool_query, info="full")
             if detail:
                 assert isinstance(detail, dict)
-                pack = query.split(".")[0]
+                pack = resolved_tool_query.split(".")[0]
                 s.add("type", "tool")
-                s.add("match", query)
+                s.add("match", resolved_tool_query)
                 return _format_tool_help(detail, pack)
 
         # Check for exact server match (MCP proxy servers)
@@ -76,15 +80,19 @@ def help(*, query: str = "", info: InfoLevel = "default") -> str:
                 s.add("match", query)
                 return str(server_results[0])
 
-        # Check for exact pack match
+        # Check for exact pack match (also resolves short aliases like "img" → "ot_image")
+        from ot.meta._constants import PACK_SHORT_NAMES
+        _alias_to_full = {alias: full for full, alias in PACK_SHORT_NAMES.items()}
+        resolved_query = _alias_to_full.get(query, query)
+
         pack_names = packs(info="min")
-        if query in pack_names:
+        if resolved_query in pack_names:
             from ot.meta._discovery import pack_info as _pack_info
-            pi = _pack_info(name=query, info="default")
+            pi = _pack_info(name=resolved_query, info="default")
             if pi and "error" not in pi:
                 s.add("type", "pack")
-                s.add("match", query)
-                return _format_pack_help(query, pi)
+                s.add("match", resolved_query)
+                return _format_pack_help(resolved_query, pi)
 
         # Check for snippet match (starts with "$")
         if query.startswith("$"):
