@@ -195,8 +195,6 @@ def load(
             conn.commit()
             s.add("imported", imported)
             s.add("skipped", skipped)
-            from .cache import _cache_invalidate
-            _cache_invalidate()  # Bulk import: clear entire cache
             return f"Imported {imported} memories, skipped {skipped}"
 
         except ImportError as e:

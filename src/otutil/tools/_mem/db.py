@@ -2,24 +2,19 @@
 from __future__ import annotations
 
 import builtins
-import contextlib
 import json
 import math
-import sqlite3
 import struct
-import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from .config import _get_config
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    import sqlite3
+
+from ot.utils.sqlite_pool import SqlitePool
 
 _builtins_list = builtins.list
-
-# Thread lock for connection operations
-_connection_lock = threading.RLock()
-_connection: Any = None
 
 
 def _get_db_path():
@@ -54,42 +49,28 @@ def _cosine_similarity(a_blob: bytes | None, b_blob: bytes | None) -> float | No
     return dot / (norm_a * norm_b)
 
 
+def _mem_setup(conn: sqlite3.Connection) -> None:
+    """Setup function applied to every new mem connection."""
+    conn.create_function("cosine_similarity", 2, _cosine_similarity)
+    _ensure_tables(conn)
+
+
+_pool = SqlitePool(_get_db_path, _mem_setup)
+
+
 def _get_connection() -> sqlite3.Connection:
-    """Get or create a read-write SQLite connection with WAL mode.
-
-    Uses a module-level connection with thread lock for safety.
-    """
-    global _connection
-    with _connection_lock:
-        if _connection is not None:
-            try:
-                _connection.execute("SELECT 1").fetchone()
-                return _connection
-            except Exception:
-                _connection = None
-
-        db_path = _get_db_path()
-        conn = sqlite3.connect(str(db_path), check_same_thread=False)
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-
-        # Register UDFs
-        conn.create_function("cosine_similarity", 2, _cosine_similarity)
-
-        _connection = conn
-        _ensure_tables(_connection)
-        return _connection
+    """Get or create a read-write SQLite connection with WAL mode."""
+    return _pool.get()
 
 
-@contextlib.contextmanager
-def _use_connection() -> Generator[Any, None, None]:
-    """Context manager that holds the connection lock for the entire operation.
+def _use_connection():
+    """Context manager that holds the connection lock for the entire operation."""
+    return _pool.use()
 
-    Ensures thread-safe access to the shared SQLite connection.
-    """
-    conn = _get_connection()
-    with _connection_lock:
-        yield conn
+
+def _close_connection() -> None:
+    """Close the module-level connection (for testing)."""
+    _pool.close()
 
 
 def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
@@ -148,16 +129,6 @@ def _migrate_tables(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _close_connection() -> None:
-    """Close the module-level connection (for testing)."""
-    global _connection
-    with _connection_lock:
-        if _connection is not None:
-            with contextlib.suppress(Exception):
-                _connection.close()
-            _connection = None
-
-
 # ---------------------------------------------------------------------------
 # Serialisation helpers for SQLite columns
 # ---------------------------------------------------------------------------
@@ -204,8 +175,6 @@ def _deserialize_meta(raw: str | None) -> dict[str, str]:
 
 __all__ = [
     "_close_connection",
-    "_connection",
-    "_connection_lock",
     "_cosine_similarity",
     "_deserialize_embedding",
     "_deserialize_meta",

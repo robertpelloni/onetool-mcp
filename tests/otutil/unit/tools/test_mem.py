@@ -13,36 +13,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from otutil.tools._mem import (
-    VALID_CATEGORIES,
-    Config,
+from otutil.tools._mem import VALID_CATEGORIES, Config
+from otutil.tools._mem.content import (
     _build_toc,
-    _cache_get,
-    _cache_invalidate,
-    _cache_put,
     _content_hash,
     _decode_sections,
-    _deserialize_meta,
     _encode_sections,
     _parse_headings,
-    _read_cache,
-    _read_cache_lock,
     _redact,
-    _serialize_meta,
     _topic_filter,
     _validate_category,
     _validate_tags,
 )
-
-
-@pytest.fixture()
-def _clear_read_cache():
-    """Clear the read cache before and after each test."""
-    with _read_cache_lock:
-        _read_cache.clear()
-    yield
-    with _read_cache_lock:
-        _read_cache.clear()
+from otutil.tools._mem.db import _deserialize_meta, _serialize_meta
 
 
 @pytest.fixture()
@@ -176,155 +159,6 @@ class TestValidateCategory:
     def test_invalid_category_raises(self):
         with pytest.raises(ValueError, match="Invalid category"):
             _validate_category("invalid")
-
-
-# ---------------------------------------------------------------------------
-# Read cache tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-@pytest.mark.usefixtures("_clear_read_cache")
-class TestReadCache:
-    """Test read cache get/put/invalidate."""
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_put_and_get(self, _mock_config):
-        row = ("id-1", "topic/a", "content", "note", [], 5, 0)
-        _cache_put("topic:topic/a", row)
-        assert _cache_get("topic:topic/a") == row
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_miss_returns_none(self, _mock_config):
-        assert _cache_get("topic:nonexistent") is None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=0))
-    def test_disabled_cache_never_stores(self, _mock_config):
-        _cache_put("topic:a", ("row",))
-        assert _cache_get("topic:a") is None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=2, read_cache_ttl_seconds=300))
-    def test_evicts_oldest_at_capacity(self, _mock_config):
-        _cache_put("topic:a", ("row-a",))
-        _cache_put("topic:b", ("row-b",))
-        _cache_put("topic:c", ("row-c",))  # Should evict "a"
-        assert _cache_get("topic:a") is None
-        assert _cache_get("topic:b") is not None
-        assert _cache_get("topic:c") is not None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=0))
-    def test_ttl_zero_means_no_expiry(self, _mock_config):
-        _cache_put("topic:a", ("row",))
-        assert _cache_get("topic:a") is not None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_invalidate_by_topic(self, _mock_config):
-        _cache_put("topic:proj/a", ("row-a",))
-        _cache_put("topic:proj/b", ("row-b",))
-        _cache_put("topic:other/c", ("row-c",))
-        _cache_invalidate(topic="proj/a")
-        assert _cache_get("topic:proj/a") is None
-        assert _cache_get("topic:proj/b") is not None
-        assert _cache_get("topic:other/c") is not None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_invalidate_by_topic_prefix(self, _mock_config):
-        _cache_put("topic:proj/a", ("row-a",))
-        _cache_put("topic:proj/b", ("row-b",))
-        _cache_put("topic:other/c", ("row-c",))
-        _cache_invalidate(topic="proj")
-        # "proj" prefix invalidation removes proj/a and proj/b
-        assert _cache_get("topic:proj/a") is None
-        assert _cache_get("topic:proj/b") is None
-        assert _cache_get("topic:other/c") is not None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_invalidate_by_id_clears_all(self, _mock_config):
-        _cache_put("topic:a", ("row-a",))
-        _cache_put("id:123", ("row-123",))
-        _cache_invalidate(id="123")
-        # id invalidation clears entire cache (can't map id back to topic)
-        assert _cache_get("topic:a") is None
-        assert _cache_get("id:123") is None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_invalidate_no_args_clears_all(self, _mock_config):
-        _cache_put("topic:a", ("row-a",))
-        _cache_put("topic:b", ("row-b",))
-        _cache_invalidate()
-        assert _cache_get("topic:a") is None
-        assert _cache_get("topic:b") is None
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-@pytest.mark.usefixtures("_clear_read_cache")
-class TestReadCacheIntegration:
-    """Test that read() uses the cache."""
-
-    @patch("otutil.tools._mem.read._get_connection")
-    def test_second_read_hits_cache(self, mock_conn):
-        from otutil.tools.mem import read
-
-        conn = MagicMock()
-        mock_conn.return_value = conn
-        conn.execute.return_value.fetchone.return_value = (
-            "id-123", "test/topic", "cached content", "note",
-            '[]', 5, 0, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
-        )
-
-        # First read: cache miss
-        result1 = read(topic="test/topic")
-        assert result1 == "cached content"
-        # SELECT was called
-        select_calls_1 = len(conn.execute.call_args_list)
-
-        # Second read: cache hit — should not add another SELECT
-        result2 = read(topic="test/topic")
-        assert result2 == "cached content"
-        # Only the UPDATE (access_count) should have been added, no new SELECT
-        select_calls_2 = len(conn.execute.call_args_list)
-        # First read: 1 SELECT + 1 UPDATE = 2 calls. Second read: 1 UPDATE = 1 more call.
-        assert select_calls_2 == select_calls_1 + 1
-
-
-@pytest.mark.unit
-@pytest.mark.tools
-@pytest.mark.usefixtures("_clear_read_cache")
-class TestCacheClear:
-    """Test mem.cache_clear() public API."""
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_clear_all(self, _mock_config):
-        from otutil.tools.mem import cache_clear
-
-        _cache_put("topic:a", ("row-a",))
-        _cache_put("topic:b", ("row-b",))
-        result = cache_clear()
-        assert "2 entries evicted" in result
-        assert _cache_get("topic:a") is None
-        assert _cache_get("topic:b") is None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_clear_by_topic(self, _mock_config):
-        from otutil.tools.mem import cache_clear
-
-        _cache_put("topic:proj/a", ("row-a",))
-        _cache_put("topic:proj/b", ("row-b",))
-        _cache_put("topic:other/c", ("row-c",))
-        result = cache_clear(topic="proj")
-        assert "2 entries evicted" in result
-        assert "1 remaining" in result
-        assert _cache_get("topic:proj/a") is None
-        assert _cache_get("topic:other/c") is not None
-
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config(read_cache_max_size=128, read_cache_ttl_seconds=300))
-    def test_clear_empty_cache(self, _mock_config):
-        from otutil.tools.mem import cache_clear
-
-        result = cache_clear()
-        assert "0 entries evicted" in result
 
 
 # ---------------------------------------------------------------------------
@@ -762,7 +596,7 @@ class TestMaybeEmbed:
 
     @patch("otutil.tools._mem.embedding._get_config", return_value=Config(embeddings_enabled=False))
     def test_disabled_returns_none(self, _mock_config):
-        from otutil.tools._mem import _maybe_embed
+        from otutil.tools._mem.embedding import _maybe_embed
 
         result = _maybe_embed("mem-id", "some content")
         assert result is None
@@ -770,7 +604,7 @@ class TestMaybeEmbed:
     @patch("otutil.tools._mem.embedding._generate_embedding", return_value=[0.1, 0.2, 0.3])
     @patch("otutil.tools._mem.embedding._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=False))
     def test_sync_returns_vector(self, _mock_config, _mock_embed):
-        from otutil.tools._mem import _maybe_embed
+        from otutil.tools._mem.embedding import _maybe_embed
 
         result = _maybe_embed("mem-id", "some content")
         assert result == [0.1, 0.2, 0.3]
@@ -778,7 +612,7 @@ class TestMaybeEmbed:
     @patch("otutil.tools._mem.embedding._enqueue_embedding")
     @patch("otutil.tools._mem.embedding._get_config", return_value=Config(embeddings_enabled=True, embeddings_async=True))
     def test_async_enqueues_and_returns_none(self, _mock_config, mock_enqueue):
-        from otutil.tools._mem import _maybe_embed
+        from otutil.tools._mem.embedding import _maybe_embed
 
         result = _maybe_embed("mem-id", "some content")
         assert result is None
@@ -1723,7 +1557,7 @@ class TestGetOpenAIClient:
 
     @patch("otutil.tools._mem.embedding.get_secret")
     def test_raises_without_api_key(self, mock_secret):
-        from otutil.tools._mem import _get_openai_client
+        from otutil.tools._mem.embedding import _get_openai_client
 
         mock_secret.return_value = ""
 
@@ -1733,7 +1567,7 @@ class TestGetOpenAIClient:
     @patch("openai.OpenAI")
     @patch("otutil.tools._mem.embedding.get_secret")
     def test_creates_client_with_key(self, mock_secret, mock_openai):
-        from otutil.tools._mem import _get_openai_client
+        from otutil.tools._mem.embedding import _get_openai_client
 
         mock_secret.return_value = "sk-test"
 
@@ -1748,13 +1582,13 @@ class TestChunkTextByTokens:
     """Test _chunk_text_by_tokens token-aware splitting."""
 
     def test_short_text_single_chunk(self):
-        from otutil.tools._mem import _chunk_text_by_tokens
+        from otutil.tools._mem.embedding import _chunk_text_by_tokens
 
         chunks = _chunk_text_by_tokens("hello world", 8191, "text-embedding-3-small")
         assert chunks == ["hello world"]
 
     def test_long_text_splits_into_chunks(self):
-        from otutil.tools._mem import _chunk_text_by_tokens
+        from otutil.tools._mem.embedding import _chunk_text_by_tokens
 
         text = "word " * 20000  # ~20000 tokens
         chunks = _chunk_text_by_tokens(text, 100, "text-embedding-3-small")
@@ -1767,7 +1601,7 @@ class TestChunkTextByTokens:
     def test_exact_limit_single_chunk(self):
         import tiktoken
 
-        from otutil.tools._mem import _chunk_text_by_tokens
+        from otutil.tools._mem.embedding import _chunk_text_by_tokens
 
         encoding = tiktoken.encoding_for_model("text-embedding-3-small")
         text = "hello world this is a test"
@@ -1776,7 +1610,7 @@ class TestChunkTextByTokens:
         assert chunks == [text]
 
     def test_unknown_model_falls_back(self):
-        from otutil.tools._mem import _chunk_text_by_tokens
+        from otutil.tools._mem.embedding import _chunk_text_by_tokens
 
         chunks = _chunk_text_by_tokens("hello world", 8191, "unknown-model-xyz")
         assert chunks == ["hello world"]
@@ -1784,7 +1618,7 @@ class TestChunkTextByTokens:
     def test_chunks_cover_all_content(self):
         import tiktoken
 
-        from otutil.tools._mem import _chunk_text_by_tokens
+        from otutil.tools._mem.embedding import _chunk_text_by_tokens
 
         encoding = tiktoken.encoding_for_model("text-embedding-3-small")
         text = "word " * 500  # moderate text
@@ -1804,7 +1638,7 @@ class TestGenerateEmbedding:
 
     @patch("otutil.tools._mem.embedding._get_openai_client")
     def test_generates_embedding_short_text(self, mock_client):
-        from otutil.tools._mem import _generate_embedding
+        from otutil.tools._mem.embedding import _generate_embedding
 
         mock_openai = MagicMock()
         mock_client.return_value = mock_openai
@@ -1822,7 +1656,7 @@ class TestGenerateEmbedding:
     @patch("otutil.tools._mem.embedding._chunk_text_by_tokens")
     @patch("otutil.tools._mem.embedding._get_openai_client")
     def test_averages_multi_chunk_embeddings(self, mock_client, mock_chunk):
-        from otutil.tools._mem import _generate_embedding
+        from otutil.tools._mem.embedding import _generate_embedding
 
         # Simulate text splitting into 2 chunks
         mock_chunk.return_value = ["chunk one", "chunk two"]
@@ -1850,7 +1684,7 @@ class TestGenerateEmbedding:
     @patch("otutil.tools._mem.embedding._chunk_text_by_tokens")
     @patch("otutil.tools._mem.embedding._get_openai_client")
     def test_single_chunk_passes_string_not_list(self, mock_client, mock_chunk):
-        from otutil.tools._mem import _generate_embedding
+        from otutil.tools._mem.embedding import _generate_embedding
 
         mock_chunk.return_value = ["short text"]
 
@@ -1868,7 +1702,7 @@ class TestGenerateEmbedding:
         assert call_kwargs["input"] == "short text"
 
     def test_safety_margin_applied(self):
-        from otutil.tools._mem import _TOKEN_SAFETY_MARGIN
+        from otutil.tools._mem.embedding import _TOKEN_SAFETY_MARGIN
 
         assert _TOKEN_SAFETY_MARGIN == 100
 
@@ -2001,7 +1835,7 @@ class TestExportYaml:
     """Test _export_yaml handles multi-line content."""
 
     def test_multiline_content_uses_block_scalar(self):
-        from otutil.tools._mem import _export_yaml
+        from otutil.tools._mem.io import _export_yaml
 
         rows = [
             ("id-1", "topic/one", "line one\nline two\nline three", "note", '["tag"]', 5, 2, datetime.now().isoformat(), datetime.now().isoformat(), "{}"),
@@ -2264,7 +2098,6 @@ class TestSliceFunction:
 
 @pytest.mark.unit
 @pytest.mark.tools
-@pytest.mark.usefixtures("_clear_read_cache")
 class TestReadMode:
     """Test mem.read() mode parameter."""
 
@@ -2446,32 +2279,32 @@ class TestResolveLineRange:
     """Test _resolve_line_range helper."""
 
     def test_first_n_lines(self):
-        from otutil.tools._mem import _resolve_line_range
+        from otutil.tools._mem.slicing import _resolve_line_range
 
         lines = ["a", "b", "c", "d", "e"]
         assert _resolve_line_range(":3", lines, 5) == "a\nb\nc"
 
     def test_from_line_to_end(self):
-        from otutil.tools._mem import _resolve_line_range
+        from otutil.tools._mem.slicing import _resolve_line_range
 
         lines = ["a", "b", "c", "d", "e"]
         assert _resolve_line_range("4:", lines, 5) == "d\ne"
 
     def test_range(self):
-        from otutil.tools._mem import _resolve_line_range
+        from otutil.tools._mem.slicing import _resolve_line_range
 
         lines = ["a", "b", "c", "d", "e"]
         assert _resolve_line_range("2:4", lines, 5) == "b\nc\nd"
 
     def test_negative_start(self):
-        from otutil.tools._mem import _resolve_line_range
+        from otutil.tools._mem.slicing import _resolve_line_range
 
         lines = ["a", "b", "c", "d", "e"]
         result = _resolve_line_range("-2:", lines, 5)
         assert result == "d\ne"
 
     def test_empty_spec(self):
-        from otutil.tools._mem import _resolve_line_range
+        from otutil.tools._mem.slicing import _resolve_line_range
 
         lines = ["a", "b"]
         assert _resolve_line_range(":", lines, 2) is None
@@ -2488,20 +2321,20 @@ class TestCheckStaleness:
     """Test _check_staleness helper."""
 
     def test_skipped_no_source(self):
-        from otutil.tools._mem import _check_staleness
+        from otutil.tools._mem.content import _check_staleness
 
         assert _check_staleness({}) == "skipped"
         assert _check_staleness({"source": "/tmp/f.md"}) == "skipped"
         assert _check_staleness({"source_mtime": "123"}) == "skipped"
 
     def test_missing_source(self, tmp_path):
-        from otutil.tools._mem import _check_staleness
+        from otutil.tools._mem.content import _check_staleness
 
         meta = {"source": str(tmp_path / "gone.md"), "source_mtime": "123"}
         assert _check_staleness(meta) == "missing"
 
     def test_fresh_source(self, tmp_path):
-        from otutil.tools._mem import _check_staleness
+        from otutil.tools._mem.content import _check_staleness
 
         f = tmp_path / "fresh.md"
         f.write_text("content")
@@ -2510,7 +2343,7 @@ class TestCheckStaleness:
         assert _check_staleness(meta) == "fresh"
 
     def test_stale_source(self, tmp_path):
-        from otutil.tools._mem import _check_staleness
+        from otutil.tools._mem.content import _check_staleness
 
         f = tmp_path / "stale.md"
         f.write_text("old content")
@@ -2755,7 +2588,6 @@ class TestRefresh:
         with (
             _mock_use_conn(rows, conn=conn_mock),
             patch("otutil.tools._mem.refresh._maybe_embed", return_value=None),
-            patch("otutil.tools._mem.refresh._cache_invalidate"),
         ):
             result = refresh(topic="docs/", dry_run=False)
 
@@ -2820,7 +2652,6 @@ class TestRefresh:
         with (
             _mock_use_conn(rows, conn=conn_mock),
             patch("otutil.tools._mem.refresh._maybe_embed", return_value=None),
-            patch("otutil.tools._mem.refresh._cache_invalidate"),
         ):
             result = refresh(topic="docs/", dry_run=False)
 
@@ -2861,8 +2692,7 @@ def _make_read_row(
 class TestSliceBatch:
     """Test mem.slice_batch() batch section extraction."""
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_multiple_topics(self, _mock_config):
+    def test_multiple_topics(self):
         from otutil.tools.mem import slice_batch
 
         row_a = _make_read_row(id="1", topic="docs/a.md", content="# Intro\n\nHello\n\n# Details\n\nWorld",
@@ -2871,10 +2701,7 @@ class TestSliceBatch:
                                meta='{"sections": "Setup:1-3|Run:5-7", "section_count": "2"}')
         rows = [row_a, row_b]
 
-        with (
-            patch("otutil.tools._mem.slicing._get_connection") as mock_conn,
-            patch("otutil.tools._mem.slicing._cache_put"),
-        ):
+        with patch("otutil.tools._mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchall.return_value = rows
@@ -2887,15 +2714,11 @@ class TestSliceBatch:
         assert "docs/a.md [Intro]" in result
         assert "docs/b.md [Run]" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_mixed_selectors(self, _mock_config):
+    def test_mixed_selectors(self):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md", content="# H1\n\nLine2\n\n# H2\n\nLine6\nLine7")
-        with (
-            patch("otutil.tools._mem.slicing._get_connection") as mock_conn,
-            patch("otutil.tools._mem.slicing._cache_put"),
-        ):
+        with patch("otutil.tools._mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchall.return_value = [row]
@@ -2910,15 +2733,11 @@ class TestSliceBatch:
         assert "[H2]" in result
         assert "[:3]" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_missing_topic(self, _mock_config):
+    def test_missing_topic(self):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
-        with (
-            patch("otutil.tools._mem.slicing._get_connection") as mock_conn,
-            patch("otutil.tools._mem.slicing._cache_put"),
-        ):
+        with patch("otutil.tools._mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchall.return_value = [row]
@@ -2931,15 +2750,11 @@ class TestSliceBatch:
         assert "No memory found" in result
         assert "docs/missing.md" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_no_match_selector(self, _mock_config):
+    def test_no_match_selector(self):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
-        with (
-            patch("otutil.tools._mem.slicing._get_connection") as mock_conn,
-            patch("otutil.tools._mem.slicing._cache_put"),
-        ):
+        with patch("otutil.tools._mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchall.return_value = [row]
@@ -2949,16 +2764,14 @@ class TestSliceBatch:
 
         assert "No matching content" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_empty_items(self, _mock_config):
+    def test_empty_items(self):
         from otutil.tools.mem import slice_batch
 
         result = slice_batch(items=[])
         assert "Error" in result
         assert "non-empty" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_max_items_exceeded(self, _mock_config):
+    def test_max_items_exceeded(self):
         from otutil.tools.mem import slice_batch
 
         items = [{"topic": f"t/{i}", "select": 1} for i in range(21)]
@@ -2966,15 +2779,11 @@ class TestSliceBatch:
         assert "Error" in result
         assert "20" in result
 
-    @patch("otutil.tools._mem.cache._get_config", return_value=Config())
-    def test_invalid_item_missing_select(self, _mock_config):
+    def test_invalid_item_missing_select(self):
         from otutil.tools.mem import slice_batch
 
         row = _make_read_row(id="1", topic="docs/a.md")
-        with (
-            patch("otutil.tools._mem.slicing._get_connection") as mock_conn,
-            patch("otutil.tools._mem.slicing._cache_put"),
-        ):
+        with patch("otutil.tools._mem.slicing._get_connection") as mock_conn:
             conn = MagicMock()
             mock_conn.return_value = conn
             conn.execute.return_value.fetchall.return_value = [row]

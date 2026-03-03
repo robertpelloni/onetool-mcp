@@ -7,7 +7,6 @@ from pathlib import Path
 
 from ot.logging import LogSpan
 
-from .cache import _cache_invalidate
 from .content import (
     _check_staleness,
     _content_hash,
@@ -147,7 +146,6 @@ def refresh(
                             )
                             conn.commit()
 
-                        _cache_invalidate(topic=mem_topic)
                         parts.append(f"    - {mem_topic} ({len(old_content)} -> {len(new_content)} chars)")
 
             if missing_entries:

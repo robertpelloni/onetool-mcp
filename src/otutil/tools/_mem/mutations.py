@@ -6,7 +6,6 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-from .cache import _cache_invalidate
 from .content import (
     _content_hash,
     _encode_sections,
@@ -59,7 +58,6 @@ def delete(
                     conn.execute("DELETE FROM memory_history WHERE memory_id = ?", [id])
                     conn.commit()
                     s.add("deleted", 1)
-                    _cache_invalidate(id=id)
                     return f"Deleted memory {id}"
                 else:
                     s.add("deleted", 0)
@@ -91,7 +89,6 @@ def delete(
             conn.commit()
 
             s.add("deleted", match_count)
-            _cache_invalidate(topic=topic)
             return f"Deleted {match_count} memories matching topic '{topic}'"
 
         except Exception as e:
@@ -181,7 +178,6 @@ def update(
             conn.commit()
 
             s.add("memoryId", memory_id)
-            _cache_invalidate(topic=topic, id=memory_id)
             return f"Updated memory {memory_id} in topic '{topic}'"
 
         except Exception as e:
@@ -269,7 +265,6 @@ def append(
 
             s.add("memoryId", memory_id)
             s.add("newLen", len(new_content))
-            _cache_invalidate(topic=topic, id=memory_id)
             return f"Appended to memory {memory_id} in topic '{topic}' (now {len(new_content)} chars)"
 
         except Exception as e:

@@ -16,35 +16,8 @@ pack = "mem"
 
 __all__ = [
     "VALID_CATEGORIES",
-    "_TOKEN_SAFETY_MARGIN",
     "Config",
-    "_build_toc",
-    "_cache_get",
-    "_cache_invalidate",
-    "_cache_put",
-    "_check_staleness",
-    "_chunk_text_by_tokens",
-    "_close_connection",
-    "_content_hash",
-    "_decode_sections",
-    "_deserialize_meta",
-    "_encode_sections",
-    "_export_yaml",
-    "_generate_embedding",
-    "_get_connection",
-    "_get_openai_client",
-    "_maybe_embed",
-    "_parse_headings",
-    "_read_cache",
-    "_read_cache_lock",
-    "_redact",
-    "_resolve_line_range",
-    "_serialize_meta",
-    "_topic_filter",
-    "_validate_category",
-    "_validate_tags",
     "append",
-    "cache_clear",
     "context",
     "count",
     "decay",
@@ -81,44 +54,10 @@ __ot_requires__ = {
     # API key checked at runtime when embeddings enabled (not pack-level requirement)
 }
 
-from .cache import (
-    _cache_get,
-    _cache_invalidate,
-    _cache_put,
-    _read_cache,
-    _read_cache_lock,
-    cache_clear,
-)
 from .config import VALID_CATEGORIES, Config
-
-# Private functions re-exported for testing
-from .content import (
-    _build_toc,
-    _check_staleness,
-    _content_hash,
-    _decode_sections,
-    _encode_sections,
-    _parse_headings,
-    _redact,
-    _topic_filter,
-    _validate_category,
-    _validate_tags,
-)
-from .db import (
-    _close_connection,
-    _deserialize_meta,
-    _get_connection,
-    _serialize_meta,
-)
-from .embedding import (
-    _TOKEN_SAFETY_MARGIN,
-    _chunk_text_by_tokens,
-    _generate_embedding,
-    _get_openai_client,
-    _maybe_embed,
-)
+from .db import _close_connection, _get_connection  # noqa: F401
 from .formatting import stale
-from .io import _export_yaml, export, load
+from .io import export, load
 from .lifecycle import decay, embed, flush, stats
 from .listing import count, list
 from .maintenance import context, update_batch
@@ -126,6 +65,6 @@ from .mutations import append, delete, update
 from .read import read, read_batch
 from .refresh import refresh
 from .search import grep, search
-from .slicing import _resolve_line_range, slice, slice_batch, toc
+from .slicing import slice, slice_batch, toc
 from .snapshots import restore, snap
 from .write import write, write_batch

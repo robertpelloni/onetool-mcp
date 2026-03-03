@@ -6,7 +6,6 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-from .cache import _cache_get, _cache_put
 from .content import _build_toc, _decode_sections, _tags_filter_sql, _topic_filter
 from .db import _deserialize_meta, _deserialize_tags, _get_connection
 
@@ -47,35 +46,24 @@ def read(
 
     with LogSpan(span="mem.read", topic=topic, mode=mode) as s:
         try:
-            cache_key = f"id:{id}" if id else f"topic:{topic}"
-            cached_row = _cache_get(cache_key)
-
-            if cached_row is not None:
-                row = cached_row
-                s.add("cache", "hit")
-            else:
-                conn = _get_connection()
-
-                if id:
-                    row = conn.execute(
-                        f"SELECT {_READ_COLUMNS} FROM memories WHERE id = ?",
-                        [id],
-                    ).fetchone()
-                else:
-                    row = conn.execute(
-                        f"SELECT {_READ_COLUMNS} FROM memories WHERE topic = ?",
-                        [topic],
-                    ).fetchone()
-
-                if not row:
-                    s.add("found", False)
-                    return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
-
-                _cache_put(cache_key, row)
-                s.add("cache", "miss")
-
-            # Increment access count (always, even on cache hit)
             conn = _get_connection()
+
+            if id:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE id = ?",
+                    [id],
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    f"SELECT {_READ_COLUMNS} FROM memories WHERE topic = ?",
+                    [topic],
+                ).fetchone()
+
+            if not row:
+                s.add("found", False)
+                return f"No memory found for topic '{topic}'" if not id else f"No memory found with id '{id}'"
+
+            # Increment access count
             conn.execute(
                 "UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id = ?",
                 [row[0]],
@@ -84,7 +72,6 @@ def read(
 
             # Update row with incremented access_count for accurate display
             row = (*row[:6], row[6] + 1, *row[7:])
-            _cache_put(cache_key, row)
 
             s.add("found", True)
             s.add("memoryId", row[0])

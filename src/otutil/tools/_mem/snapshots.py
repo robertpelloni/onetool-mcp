@@ -8,7 +8,6 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-from .cache import _cache_invalidate
 from .config import _validate_file_path
 from .content import _content_hash, _topic_filter
 from .db import (
@@ -295,8 +294,6 @@ def restore(
             s.add("restored", restored)
             s.add("skipped", skipped)
             s.add("errors", len(errors))
-            _cache_invalidate()
-
             parts = [f"Restored {restored} memories, skipped {skipped}"]
             if errors:
                 parts.append(f", {len(errors)} errors")

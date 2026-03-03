@@ -10,7 +10,6 @@ from otutil.tools._content_util import resolve_line_range as _resolve_line_range
 from otutil.tools._content_util import resolve_slice as _resolve_slice
 from otutil.tools._content_util import selector_label as _selector_label
 
-from .cache import _cache_put
 from .content import _decode_sections
 from .db import _deserialize_meta, _get_connection
 from .read import _READ_COLUMNS
@@ -244,10 +243,6 @@ def slice_batch(
                         row_ids,
                     )
                     conn.commit()
-
-                # Populate cache
-                for row in rows:
-                    _cache_put(f"topic:{row[1]}", row)
 
             # Process each item
             result_parts: _builtins_list[str] = []

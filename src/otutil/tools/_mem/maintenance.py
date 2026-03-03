@@ -7,7 +7,6 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-from .cache import _cache_invalidate
 from .content import (
     _content_hash,
     _encode_sections,
@@ -181,7 +180,6 @@ def update_batch(
 
             conn.commit()
             s.add("updated", updated)
-            _cache_invalidate()  # Batch update: clear entire cache
             return f"Updated {updated} memories: replaced '{search_text}' with '{replace_text}'"
 
         except Exception as e:

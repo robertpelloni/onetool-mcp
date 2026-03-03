@@ -95,16 +95,6 @@ class Config(BaseModel):
         ge=1,
         description="Max tokens for embedding input (text-embedding-3-small limit: 8191)",
     )
-    read_cache_max_size: int = Field(
-        default=128,
-        ge=0,
-        description="Max entries in read cache (0 = disabled)",
-    )
-    read_cache_ttl_seconds: int = Field(
-        default=300,
-        ge=0,
-        description="Read cache TTL in seconds (0 = no expiry)",
-    )
     embeddings_enabled: bool = Field(
         default=False,
         description="Enable embedding generation for semantic search (requires OPENAI_API_KEY)",

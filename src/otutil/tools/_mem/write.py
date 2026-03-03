@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ot.logging import LogSpan
 
-from .cache import _cache_invalidate
 from .config import _validate_file_path
 from .content import (
     _content_hash,
@@ -126,7 +125,6 @@ def write(
 
             s.add("memoryId", memory_id)
             s.add("contentLen", len(content))
-            _cache_invalidate(topic=topic)
             toc_msg = f" (toc: {meta.get('section_count', '0')} sections)" if toc else ""
             return f"Stored memory {memory_id} in topic '{topic}'{toc_msg}"
 

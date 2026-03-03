@@ -13,7 +13,6 @@ pack = "mem"
 # Only public functions are exposed as MCP tools.
 __all__ = [
     "append",
-    "cache_clear",
     "context",
     "count",
     "decay",
@@ -52,7 +51,6 @@ __ot_requires__ = {
 
 from otutil.tools._mem import (
     append,
-    cache_clear,
     context,
     count,
     decay,
