@@ -25,7 +25,6 @@ from loguru import logger
 from ot.config import get_config
 from ot.executor.fence_processor import strip_fences
 from ot.executor.pack_proxy import build_execution_namespace
-from ot.executor.result_store import get_result_store
 from ot.executor.tool_loader import load_tool_functions, load_tool_registry
 from ot.logging import LogSpan
 from ot.utils import serialize_result
@@ -485,13 +484,28 @@ async def execute_command(
             max_size = config.output.max_inline_size
             result_size = len(text_result.encode("utf-8"))
 
-            if tool_name != "ot.result" and max_size > 0 and result_size > max_size:
-                # Store large output and return summary
-                store = get_result_store()
-                stored = store.store(text_result, tool=stripped[:50])
-                text_result = serialize_result(stored.to_dict(), "json")
-                raw_result = stored.to_dict()
-                span.add("storedHandle", stored.handle)
+            if tool_name != "ot.result" and tool_name != "ctx.read" and max_size > 0 and result_size > max_size:
+                # Store large output via ctx backend and return summary
+                from ot.ctx.write import ctx_write
+                write_result = ctx_write(text_result, source=stripped[:50])
+                handle = write_result["handle"]
+                summary_dict = {
+                    "handle": handle,
+                    "total_lines": write_result["total_lines"],
+                    "size_bytes": write_result["size_bytes"],
+                    "preview": write_result["preview"],
+                    "status": write_result.get("status", "pending"),
+                    "usage": {
+                        "page":   f"ctx.read('{handle}')",
+                        "search": f"ctx.search('{handle}', queries=['your query'])",
+                        "toc":    f"ctx.toc('{handle}')",
+                        "grep":   f"ctx.grep('{handle}', pattern='pattern')",
+                        "tail":   f"ctx.read('{handle}', tail=20)",
+                    },
+                }
+                text_result = serialize_result(summary_dict, "json")
+                raw_result = summary_dict
+                span.add("storedHandle", handle)
                 span.add("storedSize", result_size)
 
             span.add("resultLength", len(text_result))

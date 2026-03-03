@@ -1,58 +1,13 @@
-"""Large output result store for OneTool.
+"""Large output result store for OneTool — thin wrapper over the ctx pack.
 
-Stores tool outputs exceeding max_inline_size to disk and provides
-a query API for paginated retrieval.
-
-Storage:
-    .onetool/tmp/
-    ├── result-{guid}.meta.json    # Metadata
-    └── result-{guid}.txt          # Content
+The file-based implementation has been replaced with the SQLite+FTS5 ctx backend.
+The ResultStore class interface is preserved so existing call sites continue to work.
 """
 
 from __future__ import annotations
 
-import difflib
-import json
-import re
-import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
-
-from ot.config import get_config
-
-
-@dataclass
-class ResultMeta:
-    """Metadata for a stored result."""
-
-    handle: str
-    total_lines: int
-    size_bytes: int
-    created_at: str
-    tool: str = ""
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "handle": self.handle,
-            "total_lines": self.total_lines,
-            "size_bytes": self.size_bytes,
-            "created_at": self.created_at,
-            "tool": self.tool,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ResultMeta:
-        """Create from dictionary."""
-        return cls(
-            handle=data["handle"],
-            total_lines=data["total_lines"],
-            size_bytes=data["size_bytes"],
-            created_at=data["created_at"],
-            tool=data.get("tool", ""),
-        )
 
 
 @dataclass
@@ -65,6 +20,7 @@ class StoredResult:
     summary: str
     preview: list[str]
     usage: dict[str, str]
+    status: str = "pending"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to summary dictionary for MCP response."""
@@ -75,6 +31,7 @@ class StoredResult:
             "summary": self.summary,
             "preview": self.preview,
             "usage": self.usage,
+            "status": self.status,
         }
 
 
@@ -107,24 +64,16 @@ class QueryResult:
         if self.has_more and self.handle:
             next_offset = self.offset + self.returned
             result["next_query"] = (
-                f"ot.result(handle='{self.handle}', offset={next_offset}, limit={self.limit})"
+                f"ctx.read('{self.handle}', offset={next_offset}, limit={self.limit})"
             )
         return result
 
 
 @dataclass
 class ResultStore:
-    """Manages storage and retrieval of large tool outputs."""
+    """Manages storage and retrieval of large tool outputs via the ctx backend."""
 
-    store_dir: Path = field(default_factory=lambda: _get_default_store_dir())
     _store_count: int = field(default=0, repr=False)
-
-    # Run cleanup every N store calls (probabilistic cleanup)
-    _CLEANUP_INTERVAL: int = 10
-
-    def __post_init__(self) -> None:
-        """Ensure store directory exists."""
-        self.store_dir.mkdir(parents=True, exist_ok=True)
 
     def store(
         self,
@@ -133,7 +82,7 @@ class ResultStore:
         tool: str = "",
         preview_lines: int | None = None,
     ) -> StoredResult:
-        """Store large output to disk.
+        """Store large output via ctx backend.
 
         Args:
             content: The output content to store
@@ -143,45 +92,23 @@ class ResultStore:
         Returns:
             StoredResult with handle and summary
         """
-        # Probabilistic cleanup: run every N store calls instead of every call
-        self._store_count += 1
-        if self._store_count >= self._CLEANUP_INTERVAL:
-            self._store_count = 0
-            self.cleanup()
+        from ot.config import get_config
+        from ot.ctx.write import ctx_write
 
-        # Generate unique handle
-        handle = uuid.uuid4().hex[:12]
-
-        # Split into lines
-        lines = content.splitlines()
-        total_lines = len(lines)
-        size_bytes = len(content.encode("utf-8"))
-
-        # Write content file
-        content_path = self.store_dir / f"result-{handle}.txt"
-        content_path.write_text(content, encoding="utf-8")
-
-        # Create and write meta file
-        meta = ResultMeta(
-            handle=handle,
-            total_lines=total_lines,
-            size_bytes=size_bytes,
-            created_at=datetime.now(UTC).isoformat(),
-            tool=tool,
-        )
-        meta_path = self.store_dir / f"result-{handle}.meta.json"
-        meta_path.write_text(json.dumps(meta.to_dict(), indent=2), encoding="utf-8")
-
-        # Generate summary
-        summary = self._generate_summary(lines, tool)
-
-        # Get preview config from config if not specified
-        config = get_config()
+        config_obj = get_config()
         if preview_lines is None:
-            preview_lines = config.output.preview_lines
-        preview_max_chars = config.output.preview_max_chars
+            preview_lines = config_obj.output.preview_lines
 
+        write_result = ctx_write(content, source=tool)
+
+        handle = write_result["handle"]
+        total_lines = write_result["total_lines"]
+        size_bytes = write_result["size_bytes"]
+
+        # Build preview respecting preview_lines
+        lines = content.splitlines()
         raw_preview = lines[:preview_lines]
+        preview_max_chars = config_obj.output.preview_max_chars
         if preview_max_chars > 0:
             preview = [
                 line[:preview_max_chars] + "…" if len(line) > preview_max_chars else line
@@ -190,18 +117,21 @@ class ResultStore:
         else:
             preview = raw_preview
 
+        summary = f"{total_lines} lines from {tool}" if tool else f"{total_lines} lines stored"
+
         return StoredResult(
             handle=handle,
             total_lines=total_lines,
             size_bytes=size_bytes,
             summary=summary,
             preview=preview,
+            status=write_result.get("status", "pending"),
             usage={
-                "page":   f"ot.result(handle='{handle}', offset=1, limit=50)",
-                "search": f"ot.result(handle='{handle}', search='pattern')",
-                "fuzzy":  f"ot.result(handle='{handle}', search='term', fuzzy=True)",
-                "slice":  f"ot.result(handle='{handle}', offset=100, limit=20)",
-                "tail":   f"ot.result(handle='{handle}', tail=20)",
+                "page":   f"ctx.read('{handle}')",
+                "search": f"ctx.search('{handle}', queries=['your query'])",
+                "toc":    f"ctx.toc('{handle}')",
+                "grep":   f"ctx.grep('{handle}', pattern='pattern')",
+                "tail":   f"ctx.read('{handle}', tail=20)",
             },
         )
 
@@ -216,16 +146,16 @@ class ResultStore:
         tail: int = 0,
         context: int = 0,
     ) -> QueryResult:
-        """Query stored result with pagination and optional filtering.
+        """Query stored result via ctx backend.
 
         Args:
-            handle: The result handle from store()
-            offset: Starting line number (1-indexed, matching Claude's Read tool)
-            limit: Maximum lines to return
-            search: Regex pattern to filter lines (optional)
-            fuzzy: Use fuzzy matching instead of regex (optional)
-            tail: Return last N lines, overriding offset (optional)
-            context: Lines of context before/after each search match (optional)
+            handle: The result handle
+            offset: Starting line (1-indexed)
+            limit: Max lines to return
+            search: Regex pattern or fuzzy query
+            fuzzy: Use fuzzy matching
+            tail: Return last N lines
+            context: Context lines around search matches
 
         Returns:
             QueryResult with matching lines
@@ -233,200 +163,51 @@ class ResultStore:
         Raises:
             ValueError: If handle not found or expired
         """
-        # Normalize offset (0 treated as 1)
-        if offset < 1:
-            offset = 1
-
-        # Find and load meta file
-        meta = self._load_meta(handle)
-        if meta is None:
-            raise ValueError(f"Result not found: {handle}")
-
-        # Check TTL
-        if self._is_expired(meta):
-            # Clean up expired file
-            self._delete_result(handle)
-            raise ValueError(f"Result expired: {handle}")
-
-        # Load content
-        content_path = self.store_dir / f"result-{handle}.txt"
-        if not content_path.exists():
-            raise ValueError(f"Result file missing: {handle}")
-
-        content = content_path.read_text(encoding="utf-8")
-        lines = content.splitlines()
-
-        # Apply search filter if provided
         if search:
-            if fuzzy:
-                lines = self._fuzzy_filter(lines, search)
-            else:
-                try:
-                    pattern = re.compile(search, re.IGNORECASE)
-                    if context > 0:
-                        lines = self._filter_with_context(lines, pattern, context)
-                    else:
-                        lines = [line for line in lines if pattern.search(line)]
-                except re.error as e:
-                    raise ValueError(f"Invalid search pattern: {e}") from e
+            from ot.ctx.search import ctx_grep
+            result = ctx_grep(handle, search, context=context, fuzzy=fuzzy)
+            if "error" in result:
+                raise ValueError(result["error"])
+            lines = result["lines"]
+            total = len(lines)
+            if tail > 0:
+                offset = max(1, total - tail + 1)
+                limit = tail
+            start = offset - 1
+            end = start + limit
+            chunk = lines[start:end]
+            return QueryResult(
+                lines=chunk,
+                total_lines=total,
+                returned=len(chunk),
+                offset=offset,
+                has_more=end < total,
+                handle=handle,
+                limit=limit,
+                total_size_bytes=0,
+            )
 
-        total_lines = len(lines)
-
-        # tail: fetch last N lines, overriding offset
-        if tail > 0:
-            offset = max(1, total_lines - tail + 1)
-            limit = tail
-
-        # Apply offset/limit (1-indexed)
-        start_idx = offset - 1
-        end_idx = start_idx + limit
-        result_lines = lines[start_idx:end_idx]
+        from ot.ctx.read import ctx_read
+        result = ctx_read(handle, offset=offset, limit=limit, tail=tail)
+        if "error" in result:
+            raise ValueError(result["error"])
 
         return QueryResult(
-            lines=result_lines,
-            total_lines=total_lines,
-            returned=len(result_lines),
-            offset=offset,
-            has_more=end_idx < total_lines,
+            lines=result["lines"],
+            total_lines=result["total_lines"],
+            returned=result["returned"],
+            offset=result["offset"],
+            has_more=result["has_more"],
             handle=handle,
             limit=limit,
-            total_size_bytes=meta.size_bytes,
+            total_size_bytes=result.get("total_size_bytes", 0),
         )
 
     def cleanup(self) -> int:
-        """Remove expired result files.
-
-        Returns:
-            Number of files cleaned up
-        """
-        # Cache config outside loop to avoid repeated lookups
-        config = get_config()
-        ttl = config.output.result_ttl
-
-        cleaned = 0
-        for meta_path in self.store_dir.glob("result-*.meta.json"):
-            try:
-                meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
-                meta = ResultMeta.from_dict(meta_data)
-
-                if self._is_expired(meta, ttl=ttl):
-                    self._delete_result(meta.handle)
-                    cleaned += 1
-            except (json.JSONDecodeError, KeyError, OSError):
-                # Invalid meta file - try to clean up
-                handle = meta_path.stem.replace("result-", "").replace(".meta", "")
-                content_path = self.store_dir / f"result-{handle}.txt"
-                if content_path.exists():
-                    content_path.unlink()
-                meta_path.unlink()
-                cleaned += 1
-
-        return cleaned
-
-    def _generate_summary(self, lines: list[str], tool: str) -> str:
-        """Generate human-readable summary of stored content."""
-        total = len(lines)
-
-        if tool:
-            return f"{total} lines from {tool}"
-
-        return f"{total} lines stored"
-
-    def _load_meta(self, handle: str) -> ResultMeta | None:
-        """Load metadata for a result handle."""
-        meta_path = self.store_dir / f"result-{handle}.meta.json"
-        if not meta_path.exists():
-            return None
-
-        try:
-            data = json.loads(meta_path.read_text(encoding="utf-8"))
-            return ResultMeta.from_dict(data)
-        except (json.JSONDecodeError, KeyError):
-            return None
-
-    def _is_expired(self, meta: ResultMeta, *, ttl: int | None = None) -> bool:
-        """Check if a result has exceeded TTL.
-
-        Args:
-            meta: Result metadata.
-            ttl: TTL in seconds, or None to read from config.
-        """
-        if ttl is None:
-            config = get_config()
-            ttl = config.output.result_ttl
-
-        if ttl <= 0:
-            return False  # No expiry
-
-        created = datetime.fromisoformat(meta.created_at)
-        age = datetime.now(UTC) - created
-
-        return age.total_seconds() > ttl
-
-    def _delete_result(self, handle: str) -> None:
-        """Delete result files for a handle."""
-        content_path = self.store_dir / f"result-{handle}.txt"
-        meta_path = self.store_dir / f"result-{handle}.meta.json"
-
-        if content_path.exists():
-            content_path.unlink()
-        if meta_path.exists():
-            meta_path.unlink()
-
-    def _fuzzy_filter(self, lines: list[str], query: str) -> list[str]:
-        """Filter lines using fuzzy matching, sorted by match score."""
-        scored = []
-        query_lower = query.lower()
-
-        # Pre-compute lowered lines to avoid .lower() in hot loop
-        lines_lower = [line.lower() for line in lines]
-
-        for line, line_lower in zip(lines, lines_lower, strict=True):
-            # Use SequenceMatcher for fuzzy matching
-            ratio = difflib.SequenceMatcher(None, query_lower, line_lower).ratio()
-            if ratio > 0.3:  # Threshold for fuzzy match
-                scored.append((ratio, line))
-
-        # Sort by score descending
-        scored.sort(key=lambda x: x[0], reverse=True)
-
-        return [line for _, line in scored]
-
-    def _filter_with_context(
-        self, lines: list[str], pattern: re.Pattern[str], context: int
-    ) -> list[str]:
-        """Return matching lines plus N lines of surrounding context.
-
-        Deduplicates overlapping context windows. Preserves original order.
-        Inserts a '---' separator between non-contiguous groups.
-        """
-        total = len(lines)
-        include: set[int] = set()
-
-        for i, line in enumerate(lines):
-            if pattern.search(line):
-                for j in range(max(0, i - context), min(total, i + context + 1)):
-                    include.add(j)
-
-        if not include:
-            return []
-
-        result: list[str] = []
-        prev_idx: int | None = None
-
-        for idx in sorted(include):
-            if prev_idx is not None and idx > prev_idx + 1:
-                result.append("---")
-            result.append(lines[idx])
-            prev_idx = idx
-
-        return result
-
-
-def _get_default_store_dir() -> Path:
-    """Get default store directory from config."""
-    config = get_config()
-    return config.get_result_store_path()
+        """Delete expired entries from the ctx DB and compact it."""
+        from ot.ctx.maintenance import ctx_purge
+        result = ctx_purge()
+        return int(result.get("deleted", 0))
 
 
 # Global singleton instance

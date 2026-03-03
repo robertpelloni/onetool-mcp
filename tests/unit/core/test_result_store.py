@@ -1,52 +1,69 @@
 """Unit tests for large output result store.
 
-Tests the ResultStore class for storing and querying large outputs.
+Tests the ResultStore wrapper interface — the ctx backend is mocked.
 """
 
 from __future__ import annotations
 
-import json
-import tempfile
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import patch
+import asyncio
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ot.executor.result_store import QueryResult, ResultMeta, ResultStore
-
-if TYPE_CHECKING:
-    from collections.abc import Generator
-
-
-@pytest.fixture
-def temp_store_dir() -> Generator[Path, None, None]:
-    """Create a temporary store directory."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        store_dir = Path(tmpdir) / "result_store"
-        store_dir.mkdir()
-        yield store_dir
-
-
-@pytest.fixture
-def result_store(temp_store_dir: Path) -> ResultStore:
-    """Create a ResultStore with temp directory."""
-    return ResultStore(store_dir=temp_store_dir)
-
-
-@pytest.fixture
-def mock_config():
-    """Mock config to avoid needing real config file."""
-    with patch("ot.executor.result_store.get_config") as mock:
-        mock.return_value.output.preview_lines = 10
-        mock.return_value.output.preview_max_chars = 500
-        mock.return_value.output.result_ttl = 3600
-        yield mock
+from ot.executor.result_store import QueryResult, ResultStore, StoredResult
 
 
 # =============================================================================
-# STORE - Storing large outputs
+# Helpers
+# =============================================================================
+
+
+def _fake_write(handle: str = "testhandle0123", content: str = "") -> dict:
+    """Build a minimal ctx_write return value."""
+    lines = content.splitlines()
+    return {
+        "handle": handle,
+        "total_lines": len(lines),
+        "size_bytes": len(content.encode()),
+        "preview": lines[:5],
+        "status": "pending",
+    }
+
+
+def _fake_read(
+    lines: list[str],
+    offset: int = 1,
+    limit: int = 100,
+    tail: int = 0,
+) -> dict:
+    """Build a ctx_read return value."""
+    total = len(lines)
+    if tail > 0:
+        offset = max(1, total - tail + 1)
+        limit = tail
+    start = offset - 1
+    chunk = lines[start : start + limit]
+    returned = len(chunk)
+    has_more = (start + limit) < total
+    return {
+        "lines": chunk,
+        "total_lines": total,
+        "returned": returned,
+        "offset": offset,
+        "has_more": has_more,
+        "total_size_bytes": sum(len(ln.encode()) for ln in lines),
+    }
+
+
+def _mock_cfg(preview_lines: int = 10, preview_max_chars: int = 500) -> MagicMock:
+    cfg = MagicMock()
+    cfg.output.preview_lines = preview_lines
+    cfg.output.preview_max_chars = preview_max_chars
+    return cfg
+
+
+# =============================================================================
+# STORE — ResultStore.store()
 # =============================================================================
 
 
@@ -55,66 +72,66 @@ def mock_config():
 class TestStore:
     """Test storing large outputs."""
 
-    def test_store_basic(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Store basic content and get handle back."""
+    def test_store_returns_stored_result(self) -> None:
         content = "line1\nline2\nline3"
-        result = result_store.store(content, tool="test.tool")
-
-        assert result.handle
-        assert len(result.handle) == 12
+        fake = _fake_write("testhandle0123", content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            result = ResultStore().store(content, tool="test.tool")
+        assert result.handle == "testhandle0123"
         assert result.total_lines == 3
         assert result.size_bytes == len(content.encode())
-        assert "ot.result" in result.usage["page"]
 
-    def test_store_creates_files(
-        self,
-        result_store: ResultStore,
-        temp_store_dir: Path,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Store creates content and meta files."""
-        content = "test content\nline two"
-        result = result_store.store(content)
+    def test_store_usage_has_ctx_keys(self) -> None:
+        content = "line1\nline2"
+        fake = _fake_write("testhandle0123", content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            result = ResultStore().store(content)
+        for key in ("page", "search", "toc", "grep", "tail"):
+            assert key in result.usage, f"missing usage key: {key!r}"
 
-        # Check content file exists
-        content_file = temp_store_dir / f"result-{result.handle}.txt"
-        assert content_file.exists()
-        assert content_file.read_text() == content
-
-        # Check meta file exists
-        meta_file = temp_store_dir / f"result-{result.handle}.meta.json"
-        assert meta_file.exists()
-
-        meta = json.loads(meta_file.read_text())
-        assert meta["handle"] == result.handle
-        assert meta["total_lines"] == 2
-
-    def test_store_preview(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Store returns preview lines."""
+    def test_store_preview(self) -> None:
         lines = [f"line{i}" for i in range(20)]
         content = "\n".join(lines)
-
-        result = result_store.store(content, preview_lines=5)
-
+        fake = _fake_write("testhandle0123", content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            result = ResultStore().store(content, preview_lines=5)
         assert len(result.preview) == 5
         assert result.preview[0] == "line0"
         assert result.preview[4] == "line4"
 
-    def test_store_summary_with_tool(
-        self,
-        result_store: ResultStore,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Summary includes tool name."""
+    def test_store_summary_with_tool(self) -> None:
         content = "line1\nline2\nline3"
-        result = result_store.store(content, tool="ripgrep.search")
-
+        fake = _fake_write("testhandle0123", content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            result = ResultStore().store(content, tool="ripgrep.search")
         assert "ripgrep.search" in result.summary
         assert "3" in result.summary
 
+    def test_store_summary_without_tool(self) -> None:
+        content = "line1\nline2"
+        fake = _fake_write("testhandle0123", content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            result = ResultStore().store(content)
+        assert "stored" in result.summary.lower()
+
 
 # =============================================================================
-# QUERY - Retrieving stored outputs
+# QUERY — ResultStore.query()
 # =============================================================================
 
 
@@ -123,600 +140,231 @@ class TestStore:
 class TestQuery:
     """Test querying stored outputs."""
 
-    def test_query_basic(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query returns content with defaults."""
+    def _make_store_with_handle(self, content: str) -> tuple[ResultStore, str]:
+        handle = "queryhandle0123"
+        fake = _fake_write(handle, content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            store = ResultStore()
+            stored = store.store(content)
+        return store, stored.handle
+
+    def test_query_basic(self) -> None:
         lines = [f"line{i}" for i in range(50)]
         content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle)
-
+        store, handle = self._make_store_with_handle(content)
+        with patch("ot.ctx.read.ctx_read", return_value=_fake_read(lines)):
+            result = store.query(handle)
         assert result.total_lines == 50
         assert result.offset == 1
-        assert len(result.lines) <= 100  # Default limit
         assert result.lines[0] == "line0"
 
-    def test_query_offset_limit(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query with offset and limit."""
+    def test_query_offset_limit(self) -> None:
         lines = [f"line{i}" for i in range(100)]
         content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, offset=11, limit=10)
-
+        store, handle = self._make_store_with_handle(content)
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value=_fake_read(lines, offset=11, limit=10),
+        ):
+            result = store.query(handle, offset=11, limit=10)
         assert result.offset == 11
         assert result.returned == 10
-        assert result.lines[0] == "line10"  # 0-indexed, offset 11 is line10
+        assert result.lines[0] == "line10"
         assert result.lines[9] == "line19"
         assert result.has_more is True
 
-    def test_query_1_indexed(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query uses 1-indexed offset like Claude's Read tool."""
+    def test_query_1_indexed(self) -> None:
         lines = ["first", "second", "third"]
-        content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, offset=1)
+        store, handle = self._make_store_with_handle("\n".join(lines))
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value=_fake_read(lines, offset=1),
+        ):
+            result = store.query(handle, offset=1)
         assert result.lines[0] == "first"
 
-        result = result_store.query(stored.handle, offset=2)
-        assert result.lines[0] == "second"
-
-    def test_query_offset_zero_treated_as_one(
-        self,
-        result_store: ResultStore,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Query with offset=0 treated as offset=1."""
-        lines = ["first", "second", "third"]
-        content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, offset=0)
-        assert result.offset == 1
-        assert result.lines[0] == "first"
-
-    def test_query_search_regex(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query with regex search filter."""
-        lines = [
-            "error: something failed",
-            "info: all good",
-            "error: another failure",
-            "debug: verbose",
-        ]
-        content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, search="error")
-
-        assert result.total_lines == 2
-        assert all("error" in line for line in result.lines)
-
-    def test_query_search_fuzzy(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query with fuzzy search."""
-        lines = [
-            "configuration settings",
-            "config file loaded",
-            "user preferences",
-            "configuring system",
-        ]
-        content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, search="config", fuzzy=True)
-
-        assert result.returned > 0
-        # Fuzzy match should find config-related lines
-        assert any("config" in line.lower() for line in result.lines)
-
-    def test_query_has_more(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query indicates when more lines exist."""
+    def test_query_has_more_true(self) -> None:
         lines = [f"line{i}" for i in range(20)]
-        content = "\n".join(lines)
-        stored = result_store.store(content)
-
-        result = result_store.query(stored.handle, offset=1, limit=10)
+        store, handle = self._make_store_with_handle("\n".join(lines))
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value=_fake_read(lines, offset=1, limit=10),
+        ):
+            result = store.query(handle, offset=1, limit=10)
         assert result.has_more is True
 
-        result = result_store.query(stored.handle, offset=15, limit=10)
+    def test_query_has_more_false_at_end(self) -> None:
+        lines = [f"line{i}" for i in range(20)]
+        store, handle = self._make_store_with_handle("\n".join(lines))
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value=_fake_read(lines, offset=15, limit=10),
+        ):
+            result = store.query(handle, offset=15, limit=10)
         assert result.has_more is False
 
-    def test_query_invalid_handle(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """Query with invalid handle raises error."""
-        with pytest.raises(ValueError, match="not found"):
-            result_store.query("nonexistent123")
+    def test_query_search_regex(self) -> None:
+        lines = ["error: failed", "info: ok", "error: another", "debug: verbose"]
+        store, handle = self._make_store_with_handle("\n".join(lines))
+        error_lines = [ln for ln in lines if "error" in ln]
+        with patch(
+            "ot.ctx.search.ctx_grep",
+            return_value={"lines": error_lines},
+        ):
+            result = store.query(handle, search="error")
+        assert result.total_lines == 2
+        assert all("error" in ln for ln in result.lines)
 
-    def test_query_invalid_search_pattern(
-        self,
-        result_store: ResultStore,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Query with invalid regex raises error."""
-        content = "test content"
-        stored = result_store.store(content)
-
-        with pytest.raises(ValueError, match="Invalid search pattern"):
-            result_store.query(stored.handle, search="[invalid")
+    def test_query_invalid_handle(self) -> None:
+        fake_read = {"error": "Handle not found: nonexistent123"}
+        with patch("ot.ctx.read.ctx_read", return_value=fake_read):
+            with pytest.raises(ValueError, match="not found"):
+                ResultStore().query("nonexistent123")
 
 
 # =============================================================================
-# CLEANUP - TTL-based expiry
+# CLEANUP — ResultStore.cleanup()
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
 class TestCleanup:
-    """Test TTL-based cleanup."""
+    """Test cleanup delegating to ctx_purge."""
 
-    def test_cleanup_caches_config(
-        self, result_store: ResultStore, temp_store_dir: Path
-    ) -> None:
-        """Cleanup should call get_config once, not per file."""
-        from unittest.mock import MagicMock, patch
-
-        # Create multiple result files
-        for i in range(5):
-            content_path = temp_store_dir / f"result-test{i}.txt"
-            content_path.write_text(f"content {i}")
-            meta = {
-                "handle": f"test{i}",
-                "total_lines": 1,
-                "size_bytes": 10,
-                "created_at": datetime.now(UTC).isoformat(),
-                "tool": "",
-            }
-            meta_path = temp_store_dir / f"result-test{i}.meta.json"
-            meta_path.write_text(json.dumps(meta))
-
-        # Mock get_config to track calls
-        mock_cfg = MagicMock()
-        mock_cfg.output.result_ttl = 3600
-
+    def test_cleanup_returns_deleted_count(self) -> None:
         with patch(
-            "ot.executor.result_store.get_config", return_value=mock_cfg
-        ) as mock_get:
-            result_store.cleanup()
-
-            # Should only call get_config once, not 5 times
-            assert mock_get.call_count == 1
-
-    def test_cleanup_removes_expired(
-        self,
-        result_store: ResultStore,
-        temp_store_dir: Path,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Cleanup removes files older than TTL."""
-        # Store a result
-        content = "test content"
-        stored = result_store.store(content)
-
-        # Manually modify the meta to be expired
-        meta_path = temp_store_dir / f"result-{stored.handle}.meta.json"
-        meta = json.loads(meta_path.read_text())
-        expired_time = datetime.now(UTC) - timedelta(hours=2)
-        meta["created_at"] = expired_time.isoformat()
-        meta_path.write_text(json.dumps(meta))
-
-        # Run cleanup
-        cleaned = result_store.cleanup()
-
-        assert cleaned == 1
-        assert not meta_path.exists()
-
-    def test_cleanup_keeps_fresh(
-        self,
-        result_store: ResultStore,
-        temp_store_dir: Path,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Cleanup keeps files within TTL."""
-        content = "test content"
-        stored = result_store.store(content)
-
-        # Run cleanup immediately (files are fresh)
-        cleaned = result_store.cleanup()
-
-        assert cleaned == 0
-        meta_path = temp_store_dir / f"result-{stored.handle}.meta.json"
-        assert meta_path.exists()
-
-    def test_query_expired_raises(
-        self,
-        result_store: ResultStore,
-        temp_store_dir: Path,
-        mock_config,  # noqa: ARG002
-    ) -> None:
-        """Querying expired result raises error."""
-        content = "test content"
-        stored = result_store.store(content)
-
-        # Manually expire the result
-        meta_path = temp_store_dir / f"result-{stored.handle}.meta.json"
-        meta = json.loads(meta_path.read_text())
-        expired_time = datetime.now(UTC) - timedelta(hours=2)
-        meta["created_at"] = expired_time.isoformat()
-        meta_path.write_text(json.dumps(meta))
-
-        with pytest.raises(ValueError, match="expired"):
-            result_store.query(stored.handle)
-
-
-# =============================================================================
-# META - Metadata handling
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-class TestMeta:
-    """Test metadata handling."""
-
-    def test_result_meta_to_dict(self) -> None:
-        """ResultMeta converts to dict."""
-        meta = ResultMeta(
-            handle="abc123",
-            total_lines=100,
-            size_bytes=5000,
-            created_at="2026-01-31T10:00:00Z",
-            tool="ripgrep.search",
-        )
-
-        d = meta.to_dict()
-
-        assert d["handle"] == "abc123"
-        assert d["total_lines"] == 100
-        assert d["tool"] == "ripgrep.search"
-
-    def test_result_meta_from_dict(self) -> None:
-        """ResultMeta creates from dict."""
-        d = {
-            "handle": "xyz789",
-            "total_lines": 50,
-            "size_bytes": 2500,
-            "created_at": "2026-01-31T12:00:00Z",
-            "tool": "webfetch.fetch",
-        }
-
-        meta = ResultMeta.from_dict(d)
-
-        assert meta.handle == "xyz789"
-        assert meta.total_lines == 50
-        assert meta.tool == "webfetch.fetch"
-
-    def test_query_result_to_dict(self) -> None:
-        """QueryResult converts to dict."""
-        result = QueryResult(
-            lines=["line1", "line2", "line3"],
-            total_lines=100,
-            returned=3,
-            offset=1,
-            has_more=True,
-        )
-
-        d = result.to_dict()
-
-        assert d["lines"] == ["line1", "line2", "line3"]
-        assert d["total_lines"] == 100
-        assert d["returned"] == 3
-        assert d["has_more"] is True
-
-
-# =============================================================================
-# INTEGRATION - Runner integration
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-class TestRunnerIntegration:
-    """Test integration with runner.py."""
-
-    def test_large_output_stored(self, mock_config) -> None:  # noqa: ARG002
-        """Large output is stored and summary returned."""
-        from unittest.mock import MagicMock, patch
-
-        # Mock config with low threshold
-        mock_cfg = MagicMock()
-        mock_cfg.output.max_inline_size = 100
-        mock_cfg.output.preview_lines = 5
-        mock_cfg.output.preview_max_chars = 500
-        mock_cfg.output.result_ttl = 3600
-
-        with (
-            patch("ot.executor.runner.get_config", return_value=mock_cfg),
-            patch("ot.executor.result_store.get_config", return_value=mock_cfg),
+            "ot.ctx.maintenance.ctx_purge",
+            return_value={"deleted": 3, "bytes_freed": 1024},
         ):
-            # Create a large output
-            large_content = "x" * 200
+            cleaned = ResultStore().cleanup()
+        assert cleaned == 3
 
-            with tempfile.TemporaryDirectory() as tmpdir:
-                store_dir = Path(tmpdir) / "store"
-                store_dir.mkdir()
-
-                store = ResultStore(store_dir=store_dir)
-                result = store.store(large_content)
-
-                assert result.handle
-                assert result.size_bytes == 200
-                assert "ot.result" in result.usage["page"]
-
-    def test_small_output_not_stored(self, mock_config) -> None:  # noqa: ARG002
-        """Small output is returned inline, not stored."""
-        # This tests the runner behavior - small outputs pass through
-        small_content = "hello world"
-        assert len(small_content.encode()) < 50000  # Below default threshold
+    def test_cleanup_returns_zero_when_nothing_expired(self) -> None:
+        with patch(
+            "ot.ctx.maintenance.ctx_purge",
+            return_value={"deleted": 0, "bytes_freed": 0},
+        ):
+            cleaned = ResultStore().cleanup()
+        assert cleaned == 0
 
 
 # =============================================================================
-# OT.RESULT - ot.result() function
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-class TestOtResult:
-    """Test ot.result() function from meta.py."""
-
-    def test_result_basic(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() queries stored output."""
-        from unittest.mock import patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store_dir = Path(tmpdir) / "store"
-            store_dir.mkdir()
-
-            store = ResultStore(store_dir=store_dir)
-            lines = [f"line{i}" for i in range(50)]
-            content = "\n".join(lines)
-            stored = store.store(content)
-
-            # Mock get_result_store to return our store
-            with patch("ot.executor.result_store.get_result_store", return_value=store):
-                from ot.meta import result
-
-                query_result = result(handle=stored.handle)
-
-                assert query_result["total_lines"] == 50
-                assert query_result["offset"] == 1
-                assert len(query_result["lines"]) <= 100
-
-    def test_result_with_offset_limit(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() respects offset and limit."""
-        from unittest.mock import patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store_dir = Path(tmpdir) / "store"
-            store_dir.mkdir()
-
-            store = ResultStore(store_dir=store_dir)
-            lines = [f"line{i}" for i in range(100)]
-            content = "\n".join(lines)
-            stored = store.store(content)
-
-            with patch("ot.executor.result_store.get_result_store", return_value=store):
-                from ot.meta import result
-
-                query_result = result(handle=stored.handle, offset=11, limit=10)
-
-                assert query_result["offset"] == 11
-                assert query_result["returned"] == 10
-                assert query_result["lines"][0] == "line10"
-
-    def test_result_with_search(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() filters with search pattern."""
-        from unittest.mock import patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store_dir = Path(tmpdir) / "store"
-            store_dir.mkdir()
-
-            store = ResultStore(store_dir=store_dir)
-            lines = ["error: failed", "info: ok", "error: another"]
-            content = "\n".join(lines)
-            stored = store.store(content)
-
-            with patch("ot.executor.result_store.get_result_store", return_value=store):
-                from ot.meta import result
-
-                query_result = result(handle=stored.handle, search="error")
-
-                assert query_result["total_lines"] == 2
-                assert all("error" in line for line in query_result["lines"])
-
-    def test_result_invalid_handle(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() raises for invalid handle."""
-        from unittest.mock import patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store_dir = Path(tmpdir) / "store"
-            store_dir.mkdir()
-
-            store = ResultStore(store_dir=store_dir)
-
-            with patch("ot.executor.result_store.get_result_store", return_value=store):
-                from ot.meta import result
-
-                with pytest.raises(ValueError, match="not found"):
-                    result(handle="nonexistent")
-
-    def test_result_offset_validation(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() validates offset >= 1."""
-        from ot.meta import result
-
-        with pytest.raises(ValueError, match="offset must be >= 1"):
-            result(handle="abc123", offset=0)
-
-        with pytest.raises(ValueError, match="offset must be >= 1"):
-            result(handle="abc123", offset=-1)
-
-    def test_result_limit_validation(self, mock_config) -> None:  # noqa: ARG002
-        """ot.result() validates limit >= 1."""
-        from ot.meta import result
-
-        with pytest.raises(ValueError, match="limit must be >= 1"):
-            result(handle="abc123", limit=0)
-
-        with pytest.raises(ValueError, match="limit must be >= 1"):
-            result(handle="abc123", limit=-1)
-
-
-# =============================================================================
-# DOUBLE-WRAP PREVENTION
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-class TestDoubleWrapPrevention:
-    """Test that ot.result() output is never re-wrapped into a StoredResult."""
-
-    def test_ot_result_not_rewrapped(self) -> None:
-        """ot.result() with output > max_inline_size returns QueryResult, not StoredResult."""
-        import asyncio
-        from unittest.mock import MagicMock, patch
-
-        # Very low threshold — any other tool's output of > 100 bytes would be stored
-        mock_cfg = MagicMock()
-        mock_cfg.output.max_inline_size = 100
-        mock_cfg.output.preview_lines = 5
-        mock_cfg.output.preview_max_chars = 500
-        mock_cfg.output.result_ttl = 3600
-        mock_cfg.security.sanitize.enabled = True
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store_dir = Path(tmpdir) / "store"
-            store_dir.mkdir()
-
-            store = ResultStore(store_dir=store_dir)
-
-            # Store content that produces > 100 bytes when queried
-            lines = [f"line{i:04d}" for i in range(300)]
-            content = "\n".join(lines)
-            stored = store.store(content)
-
-            # Build a minimal ot proxy so ot.result(handle=...) works in exec
-            from ot.meta import result as _result_fn
-
-            class _OtProxy:
-                result = staticmethod(_result_fn)
-
-            with (
-                patch("ot.executor.runner.get_config", return_value=mock_cfg),
-                patch("ot.executor.result_store.get_config", return_value=mock_cfg),
-                patch("ot.executor.result_store.get_result_store", return_value=store),
-                patch("ot.proxy.get_proxy_manager") as mock_proxy_mgr,
-                patch("ot.executor.runner.load_tool_registry"),
-                patch(
-                    "ot.executor.runner.build_execution_namespace",
-                    return_value={"ot": _OtProxy()},
-                ),
-            ):
-                mock_proxy_mgr.return_value.servers = {}
-
-                cmd = f'ot.result(handle="{stored.handle}", limit=200)'
-                result = asyncio.run(
-                    __import__("ot.executor.runner", fromlist=["execute_command"]).execute_command(
-                        cmd,
-                        registry=MagicMock(),
-                        executor=MagicMock(),
-                    )
-                )
-
-                assert result.success, f"Command failed: {result.result}"
-                raw = result.raw
-                # Must be a QueryResult (has "lines", "total_lines"), NOT a StoredResult (has "handle", "preview")
-                assert raw is not None
-                assert "lines" in raw, f"Expected QueryResult dict, got: {list(raw.keys())}"
-                assert "total_lines" in raw
-                assert "handle" not in raw, "ot.result() was re-wrapped into a StoredResult"
-
-
-# =============================================================================
-# CHUNK METADATA
+# QUERY RESULT METADATA — QueryResult.to_dict()
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
 class TestQueryResultMetadata:
-    """Test new metadata fields on QueryResult chunks."""
+    """Test metadata fields on QueryResult.to_dict()."""
 
-    def test_chunk_has_progress(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = [f"line{i}" for i in range(100)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, offset=1, limit=50)
+    def test_has_progress(self) -> None:
+        result = QueryResult(
+            lines=[f"line{i}" for i in range(50)],
+            total_lines=100,
+            returned=50,
+            offset=1,
+            has_more=True,
+            handle="abc123",
+            limit=50,
+        )
         d = result.to_dict()
         assert "progress" in d
         assert "lines 1" in d["progress"]
         assert "of 100" in d["progress"]
 
-    def test_chunk_has_total_size_bytes(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        content = "line1\nline2\nline3"
-        stored = result_store.store(content)
-        result = result_store.query(stored.handle)
-        d = result.to_dict()
-        assert d["total_size_bytes"] == stored.size_bytes
+    def test_has_total_size_bytes(self) -> None:
+        result = QueryResult(
+            lines=["line1", "line2"],
+            total_lines=2,
+            returned=2,
+            offset=1,
+            has_more=False,
+            total_size_bytes=1234,
+        )
+        assert result.to_dict()["total_size_bytes"] == 1234
 
-    def test_chunk_has_next_query_when_more(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = [f"line{i}" for i in range(100)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, offset=1, limit=50)
+    def test_next_query_when_has_more(self) -> None:
+        result = QueryResult(
+            lines=[f"line{i}" for i in range(50)],
+            total_lines=100,
+            returned=50,
+            offset=1,
+            has_more=True,
+            handle="myhandle123",
+            limit=50,
+        )
         d = result.to_dict()
         assert "next_query" in d
         assert "offset=51" in d["next_query"]
-        assert stored.handle in d["next_query"]
+        assert "myhandle123" in d["next_query"]
 
-    def test_chunk_no_next_query_on_final_page(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = [f"line{i}" for i in range(20)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, offset=1, limit=100)
-        d = result.to_dict()
-        assert not d.get("next_query")
+    def test_no_next_query_on_final_page(self) -> None:
+        result = QueryResult(
+            lines=[f"line{i}" for i in range(20)],
+            total_lines=20,
+            returned=20,
+            offset=1,
+            has_more=False,
+            handle="myhandle123",
+        )
+        assert not result.to_dict().get("next_query")
 
-    def test_progress_percentage(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = [f"line{i}" for i in range(100)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, offset=51, limit=50)
-        d = result.to_dict()
-        assert "100%" in d["progress"]
+    def test_progress_percentage_at_end(self) -> None:
+        result = QueryResult(
+            lines=[f"line{i}" for i in range(50)],
+            total_lines=100,
+            returned=50,
+            offset=51,
+            has_more=False,
+            handle="myhandle123",
+        )
+        assert "100%" in result.to_dict()["progress"]
 
 
 # =============================================================================
-# STORED RESULT USAGE
+# STORED RESULT USAGE — StoredResult.usage
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
 class TestStoredResultUsage:
-    """Test that StoredResult.usage replaces the old single query hint."""
+    """Test that StoredResult.usage has the ctx.* hints."""
 
-    def test_usage_is_dict(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        stored = result_store.store("line1\nline2")
-        d = stored.to_dict()
-        assert isinstance(d["usage"], dict)
-        assert "page" in d["usage"]
-        assert "search" in d["usage"]
-        assert "fuzzy" in d["usage"]
-        assert "slice" in d["usage"]
-        assert "tail" in d["usage"]
+    def _store(self, handle: str = "testhandle0123") -> StoredResult:
+        content = "line1\nline2"
+        fake = _fake_write(handle, content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            return ResultStore().store(content)
 
-    def test_usage_contains_handle(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        stored = result_store.store("line1\nline2")
-        d = stored.to_dict()
+    def test_usage_is_dict(self) -> None:
+        assert isinstance(self._store().to_dict()["usage"], dict)
+
+    def test_usage_has_ctx_keys(self) -> None:
+        d = self._store().to_dict()
+        for key in ("page", "search", "toc", "grep", "tail"):
+            assert key in d["usage"], f"missing usage key: {key!r}"
+
+    def test_usage_contains_handle(self) -> None:
+        handle = "testhandle0123"
+        d = self._store(handle).to_dict()
         for key, val in d["usage"].items():
-            assert stored.handle in val, f"usage['{key}'] missing handle"
+            assert handle in val, f"usage[{key!r}] missing handle"
 
-    def test_no_query_field(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        stored = result_store.store("line1\nline2")
-        d = stored.to_dict()
-        assert "query" not in d
+    def test_no_legacy_query_field(self) -> None:
+        assert "query" not in self._store().to_dict()
 
 
 # =============================================================================
-# TAIL
+# TAIL — tail parameter
 # =============================================================================
 
 
@@ -725,66 +373,89 @@ class TestStoredResultUsage:
 class TestTail:
     """Test tail parameter."""
 
-    def test_tail_returns_last_n_lines(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+    def _make_store(self, content: str) -> tuple[ResultStore, str]:
+        handle = "tailhandle01234"
+        fake = _fake_write(handle, content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            store = ResultStore()
+            stored = store.store(content)
+        return store, stored.handle
+
+    def test_tail_returns_last_n_lines(self) -> None:
         lines = [f"line{i}" for i in range(20)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, tail=5)
+        store, handle = self._make_store("\n".join(lines))
+        fake = _fake_read(lines, tail=5)
+        with patch("ot.ctx.read.ctx_read", return_value=fake):
+            result = store.query(handle, tail=5)
         assert result.returned == 5
         assert result.lines[0] == "line15"
         assert result.lines[-1] == "line19"
 
-    def test_tail_larger_than_total(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+    def test_tail_larger_than_total(self) -> None:
         lines = ["a", "b", "c"]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, tail=10)
+        store, handle = self._make_store("\n".join(lines))
+        fake = _fake_read(lines, tail=10)
+        with patch("ot.ctx.read.ctx_read", return_value=fake):
+            result = store.query(handle, tail=10)
         assert result.returned == 3
         assert result.lines == ["a", "b", "c"]
 
-    def test_tail_with_search(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        """tail applies after search filter."""
+    def test_tail_with_search(self) -> None:
         lines = ["error: one", "info: ok", "error: two", "error: three"]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, search="error", tail=2)
+        store, handle = self._make_store("\n".join(lines))
+        error_lines = ["error: one", "error: two", "error: three"]
+        with patch(
+            "ot.ctx.search.ctx_grep",
+            return_value={"lines": error_lines},
+        ):
+            result = store.query(handle, search="error", tail=2)
         assert result.returned == 2
         assert "error: two" in result.lines
         assert "error: three" in result.lines
 
 
 # =============================================================================
-# CONTEXT
+# CONTEXT — context parameter for search
 # =============================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.core
 class TestContext:
-    """Test context parameter for search with surrounding lines."""
+    """Test context lines around search matches."""
 
-    def test_context_returns_surrounding_lines(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+    def _make_store(self, content: str) -> tuple[ResultStore, str]:
+        handle = "ctxhandle012345"
+        fake = _fake_write(handle, content)
+        with (
+            patch("ot.config.get_config", return_value=_mock_cfg()),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            store = ResultStore()
+            stored = store.store(content)
+        return store, stored.handle
+
+    def test_context_returns_surrounding_lines(self) -> None:
         lines = ["a", "b", "TARGET", "d", "e"]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, search="TARGET", context=1)
+        store, handle = self._make_store("\n".join(lines))
+        with patch(
+            "ot.ctx.search.ctx_grep",
+            return_value={"lines": ["b", "TARGET", "d"]},
+        ):
+            result = store.query(handle, search="TARGET", context=1)
         assert "b" in result.lines
         assert "TARGET" in result.lines
         assert "d" in result.lines
 
-    def test_context_separator_between_groups(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = ["a", "TARGET1", "c", "d", "e", "f", "TARGET2", "h"]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, search="TARGET", context=1)
-        assert "---" in result.lines
-
-    def test_context_no_effect_without_search(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
+    def test_context_no_effect_without_search(self) -> None:
         lines = [f"line{i}" for i in range(10)]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, context=2)
+        store, handle = self._make_store("\n".join(lines))
+        with patch("ot.ctx.read.ctx_read", return_value=_fake_read(lines)):
+            result = store.query(handle, context=2)
         assert result.total_lines == 10
-
-    def test_context_clamps_to_boundaries(self, result_store: ResultStore, mock_config) -> None:  # noqa: ARG002
-        lines = ["TARGET", "b", "c"]
-        stored = result_store.store("\n".join(lines))
-        result = result_store.query(stored.handle, search="TARGET", context=5)
-        assert "TARGET" in result.lines
 
 
 # =============================================================================
@@ -798,18 +469,14 @@ class TestOutputConfigDefaults:
     """Test OutputConfig default values."""
 
     def test_max_inline_size_default(self) -> None:
-        """OutputConfig.max_inline_size defaults to 10000."""
         from ot.config.models import OutputConfig
 
-        cfg = OutputConfig()
-        assert cfg.max_inline_size == 10000
+        assert OutputConfig().max_inline_size == 10000
 
     def test_preview_max_chars_default(self) -> None:
-        """OutputConfig.preview_max_chars defaults to 500."""
         from ot.config.models import OutputConfig
 
-        cfg = OutputConfig()
-        assert cfg.preview_max_chars == 500
+        assert OutputConfig().preview_max_chars == 500
 
 
 # =============================================================================
@@ -822,49 +489,171 @@ class TestOutputConfigDefaults:
 class TestPreviewTruncation:
     """Test that preview lines are truncated to preview_max_chars."""
 
-    def test_long_line_truncated(self, result_store: ResultStore) -> None:
-        """Preview line longer than preview_max_chars is truncated with ellipsis."""
-        long_line = "x" * 1000
-        with patch("ot.executor.result_store.get_config") as mock:
-            mock.return_value.output.preview_lines = 10
-            mock.return_value.output.preview_max_chars = 500
-            mock.return_value.output.result_ttl = 3600
-            result = result_store.store(long_line)
+    def _store(self, content: str, preview_max_chars: int = 500) -> StoredResult:
+        fake = _fake_write("prevhandle01234", content)
+        cfg = _mock_cfg(preview_max_chars=preview_max_chars)
+        with (
+            patch("ot.config.get_config", return_value=cfg),
+            patch("ot.ctx.write.ctx_write", return_value=fake),
+        ):
+            return ResultStore().store(content)
 
+    def test_long_line_truncated(self) -> None:
+        result = self._store("x" * 1000, preview_max_chars=500)
         assert len(result.preview) == 1
-        assert result.preview[0] == "x" * 500 + "…"
+        assert result.preview[0] == "x" * 500 + "\u2026"
 
-    def test_short_line_not_truncated(self, result_store: ResultStore) -> None:
-        """Preview line within preview_max_chars is not modified."""
-        short_line = "hello world"
-        with patch("ot.executor.result_store.get_config") as mock:
-            mock.return_value.output.preview_lines = 10
-            mock.return_value.output.preview_max_chars = 500
-            mock.return_value.output.result_ttl = 3600
-            result = result_store.store(short_line)
-
+    def test_short_line_not_truncated(self) -> None:
+        result = self._store("hello world", preview_max_chars=500)
         assert result.preview[0] == "hello world"
 
-    def test_preview_max_chars_zero_disables_truncation(self, result_store: ResultStore) -> None:
-        """preview_max_chars=0 disables truncation entirely."""
+    def test_preview_max_chars_zero_disables_truncation(self) -> None:
         long_line = "y" * 2000
-        with patch("ot.executor.result_store.get_config") as mock:
-            mock.return_value.output.preview_lines = 10
-            mock.return_value.output.preview_max_chars = 0
-            mock.return_value.output.result_ttl = 3600
-            result = result_store.store(long_line)
-
+        result = self._store(long_line, preview_max_chars=0)
         assert result.preview[0] == long_line
 
-    def test_large_single_line_preview_bounded(self, result_store: ResultStore) -> None:
-        """40KB single-line output produces a small preview regardless of preview_lines."""
-        large_json_line = '{"data": "' + "a" * 40_000 + '"}'
-        with patch("ot.executor.result_store.get_config") as mock:
-            mock.return_value.output.preview_lines = 10
-            mock.return_value.output.preview_max_chars = 500
-            mock.return_value.output.result_ttl = 3600
-            result = result_store.store(large_json_line)
-
+    def test_large_single_line_preview_bounded(self) -> None:
+        large_line = '{"data": "' + "a" * 40_000 + '"}'
+        result = self._store(large_line, preview_max_chars=500)
         assert len(result.preview) == 1
-        assert len(result.preview[0]) <= 501  # 500 chars + "…"
-        assert result.preview[0].endswith("…")
+        assert len(result.preview[0]) <= 501
+        assert result.preview[0].endswith("\u2026")
+
+
+# =============================================================================
+# OT.RESULT — ot.result() shim
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestOtResult:
+    """Test ot.result() delegating to ctx backend."""
+
+    def test_result_basic(self) -> None:
+        lines = [f"line{i}" for i in range(50)]
+        with patch("ot.ctx.read.ctx_read", return_value=_fake_read(lines)):
+            from ot.meta import result
+
+            r = result(handle="somehandle0123")
+        assert r["total_lines"] == 50
+        assert r["offset"] == 1
+        assert len(r["lines"]) <= 100
+
+    def test_result_with_offset_limit(self) -> None:
+        lines = [f"line{i}" for i in range(100)]
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value=_fake_read(lines, offset=11, limit=10),
+        ):
+            from ot.meta import result
+
+            r = result(handle="somehandle0123", offset=11, limit=10)
+        assert r["offset"] == 11
+        assert r["returned"] == 10
+        assert r["lines"][0] == "line10"
+
+    def test_result_with_search(self) -> None:
+        error_lines = ["error: failed", "error: another"]
+        with patch(
+            "ot.ctx.search.ctx_grep",
+            return_value={"lines": error_lines},
+        ):
+            from ot.meta import result
+
+            r = result(handle="somehandle0123", search="error")
+        assert r["total_lines"] == 2
+        assert all("error" in ln for ln in r["lines"])
+
+    def test_result_invalid_handle(self) -> None:
+        with patch(
+            "ot.ctx.read.ctx_read",
+            return_value={"error": "Handle not found: nonexistent"},
+        ):
+            from ot.meta import result
+
+            with pytest.raises(ValueError, match="not found"):
+                result(handle="nonexistent")
+
+    def test_result_offset_validation(self) -> None:
+        from ot.meta import result
+
+        with pytest.raises(ValueError, match="offset must be >= 1"):
+            result(handle="abc123", offset=0)
+        with pytest.raises(ValueError, match="offset must be >= 1"):
+            result(handle="abc123", offset=-1)
+
+    def test_result_limit_validation(self) -> None:
+        from ot.meta import result
+
+        with pytest.raises(ValueError, match="limit must be >= 1"):
+            result(handle="abc123", limit=0)
+        with pytest.raises(ValueError, match="limit must be >= 1"):
+            result(handle="abc123", limit=-1)
+
+    def test_result_next_query_uses_ot_result_format(self) -> None:
+        """next_query in ot.result() output uses ot.result() format, not ctx.read()."""
+        lines = [f"line{i}" for i in range(200)]
+        fake = _fake_read(lines, offset=1, limit=100)
+        # Inject a ctx-style next_query — ot.result() should remap it
+        fake["next_query"] = "ctx.read('h', offset=101)"
+        with patch("ot.ctx.read.ctx_read", return_value=fake):
+            from ot.meta import result
+
+            r = result(handle="somehandle0123", limit=100)
+        assert "ot.result(" in r.get("next_query", "")
+        assert "ctx.read(" not in r.get("next_query", "")
+
+
+# =============================================================================
+# DOUBLE-WRAP PREVENTION
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestDoubleWrapPrevention:
+    """ot.result() output must never be re-stored as a ctx result."""
+
+    def test_ot_result_not_rewrapped(self) -> None:
+        lines = [f"line{i:04d}" for i in range(300)]
+        fake_read = _fake_read(lines, offset=1, limit=200)
+
+        mock_cfg = MagicMock()
+        mock_cfg.output.max_inline_size = 100  # very low: any output > 100 bytes stored
+        mock_cfg.security.sanitize.enabled = True
+
+        from ot.meta import result as _result_fn
+
+        class _OtProxy:
+            result = staticmethod(_result_fn)
+
+        with (
+            patch("ot.executor.runner.get_config", return_value=mock_cfg),
+            patch("ot.ctx.read.ctx_read", return_value=fake_read),
+            patch("ot.proxy.get_proxy_manager") as mock_proxy_mgr,
+            patch("ot.executor.runner.load_tool_registry"),
+            patch(
+                "ot.executor.runner.build_execution_namespace",
+                return_value={"ot": _OtProxy()},
+            ),
+        ):
+            mock_proxy_mgr.return_value.servers = {}
+
+            cmd = 'ot.result(handle="somehandle0123", limit=200)'
+            cmd_result = asyncio.run(
+                __import__(
+                    "ot.executor.runner", fromlist=["execute_command"]
+                ).execute_command(
+                    cmd,
+                    registry=MagicMock(),
+                    executor=MagicMock(),
+                )
+            )
+
+        assert cmd_result.success, f"Command failed: {cmd_result.result}"
+        raw = cmd_result.raw
+        assert raw is not None
+        assert "lines" in raw, f"Expected QueryResult dict, got keys: {list(raw.keys())}"
+        assert "total_lines" in raw
+        assert "handle" not in raw, "ot.result() output was re-wrapped into a StoredResult"
