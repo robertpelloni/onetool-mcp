@@ -319,9 +319,9 @@ class TestGroundedSearch:
     """Test _grounded_search core function."""
 
     @patch("otutil.tools.ground._require_google_genai")
-    @patch("otutil.tools.ground._create_client")
+    @patch("otutil.tools.ground._get_client")
     @patch("otutil.tools.ground.get_tool_config")
-    def test_successful_grounded_search(self, mock_config, mock_create_client, mock_require):
+    def test_successful_grounded_search(self, mock_config, mock_get_client, mock_require):
         import sys
         from unittest.mock import MagicMock
 
@@ -330,7 +330,7 @@ class TestGroundedSearch:
         mock_config.return_value = Config(model="gemini-2.0-flash")
 
         mock_client = MagicMock()
-        mock_create_client.return_value = mock_client
+        mock_get_client.return_value = mock_client
 
         mock_response = MagicMock()
         mock_response.text = "Search result text"
@@ -344,9 +344,9 @@ class TestGroundedSearch:
         assert "Search result text" in result
 
     @patch("otutil.tools.ground._require_google_genai")
-    @patch("otutil.tools.ground._create_client")
+    @patch("otutil.tools.ground._get_client")
     @patch("otutil.tools.ground.get_tool_config")
-    def test_handles_api_error(self, mock_config, mock_create_client, mock_require):
+    def test_handles_api_error(self, mock_config, mock_get_client, mock_require):
         import sys
         from unittest.mock import MagicMock
 
@@ -355,7 +355,7 @@ class TestGroundedSearch:
         mock_config.return_value = Config(model="gemini-2.0-flash")
 
         mock_client = MagicMock()
-        mock_create_client.return_value = mock_client
+        mock_get_client.return_value = mock_client
         mock_client.models.generate_content.side_effect = Exception("API Error")
 
         mock_types = MagicMock()
@@ -365,13 +365,13 @@ class TestGroundedSearch:
         assert "Error" in result
 
     @patch("otutil.tools.ground._get_api_key")
-    def test_create_client_without_key(self, mock_key):
-        from otutil.tools.ground import _create_client
+    def test_build_client_without_key(self, mock_key):
+        from otutil.tools.ground import _build_client
 
         mock_key.return_value = ""
 
         with pytest.raises(ValueError, match="GEMINI_API_KEY"):
-            _create_client()
+            _build_client()
 
 
 # -----------------------------------------------------------------------------
@@ -707,25 +707,20 @@ class TestClientCaching:
     """Test client caching functionality."""
 
     def test_cached_client_reuses_instance(self):
-        """_get_cached_client should return same instance for same key."""
-        import sys
+        """lazy_client should create the factory exactly once across repeated calls."""
+        from ot.utils import lazy_client
 
-        from otutil.tools.ground import _get_cached_client
+        mock_client = MagicMock()
+        call_count = 0
 
-        # Clear cache before test
-        _get_cached_client.cache_clear()
+        def factory() -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            return mock_client
 
-        mock_genai = MagicMock()
-        mock_instance = MagicMock()
-        mock_genai.Client.return_value = mock_instance
+        get_client = lazy_client(factory)
+        client1 = get_client()
+        client2 = get_client()
 
-        with patch.dict(sys.modules, {"google": MagicMock(genai=mock_genai), "google.genai": mock_genai}):
-            client1 = _get_cached_client("test-key")
-            client2 = _get_cached_client("test-key")
-
-        # Should only create client once
-        assert mock_genai.Client.call_count == 1
         assert client1 is client2
-
-        # Clear cache after test
-        _get_cached_client.cache_clear()
+        assert call_count == 1

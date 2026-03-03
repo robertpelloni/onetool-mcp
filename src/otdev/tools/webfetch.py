@@ -138,7 +138,7 @@ def _is_html_content_type(content_type: str | None) -> bool:
     return ct_lower in ("text/html", "application/xhtml+xml")
 
 
-@cache(ttl=300)  # Cache fetched pages for 5 minutes
+@cache.memoize(ttl=300)  # Cache fetched pages for 5 minutes
 def _fetch_url_cached(url: str, timeout: float) -> tuple[str | None, str | None]:
     """Fetch URL with caching to avoid redundant requests.
 

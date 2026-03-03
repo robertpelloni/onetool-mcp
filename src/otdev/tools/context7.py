@@ -26,9 +26,10 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
-from ot.config import get_secret, get_tool_config
+from ot.config import get_tool_config
 from ot.logging import LogSpan
-from ot.utils import cache
+from ot.utils import cache, lazy_client, require_api_key
+from ot.utils.http import _format_http_error
 
 
 class Config(BaseModel):
@@ -52,13 +53,13 @@ def _get_config() -> Config:
     return get_tool_config("context7", Config)
 
 
-# Shared HTTP client for connection pooling
-_client = httpx.Client(timeout=30.0, follow_redirects=True)
+def _create_http_client() -> httpx.Client:
+    """Create HTTP client for Context7 API requests."""
+    return httpx.Client(timeout=30.0, follow_redirects=True)
 
 
-def _get_api_key() -> str:
-    """Get Context7 API key from secrets."""
-    return get_secret("CONTEXT7_API_KEY") or ""
+# Thread-safe lazy client using SDK utility
+_get_http_client = lazy_client(_create_http_client)
 
 
 def _make_request(
@@ -77,9 +78,9 @@ def _make_request(
         Tuple of (success, result). If success, result is parsed JSON or text.
         If failure, result is error message string.
     """
-    api_key = _get_api_key()
-    if not api_key:
-        return False, "[Context7 API key not configured]"
+    api_key, err = require_api_key("CONTEXT7_API_KEY")
+    if err:
+        return False, err
 
     if timeout is None:
         timeout = _get_config().timeout
@@ -88,7 +89,10 @@ def _make_request(
 
     with LogSpan(span="context7.request", url=url) as span:
         try:
-            response = _client.get(
+            client = _get_http_client()
+            if client is None:
+                return False, "Error: HTTP client not initialized"
+            response = client.get(
                 url,
                 params=params,
                 headers=headers,
@@ -103,12 +107,8 @@ def _make_request(
             return True, response.text
 
         except Exception as e:
-            error_type = type(e).__name__
-            span.add(error=f"{error_type}: {e}")
-            if hasattr(e, "response"):
-                status = getattr(e.response, "status_code", "unknown")
-                return False, f"HTTP error ({status}): {error_type}"
-            return False, f"Request failed: {e}"
+            span.add(error=f"{type(e).__name__}: {e}")
+            return False, _format_http_error(e)
 
 
 def _normalize_library_id(library_id: str) -> str:
@@ -271,7 +271,7 @@ def _pick_best_library(
     return lib_id if lib_id.count("/") >= 2 else None
 
 
-@cache(ttl=3600)  # Cache library ID resolutions for 1 hour
+@cache.memoize(ttl=3600)  # Cache library ID resolutions for 1 hour
 def _resolve_library_id(library_id: str) -> tuple[str, bool, bool]:
     """Resolve a library ID, searching if needed.
 

@@ -7,8 +7,6 @@ Requires GEMINI_API_KEY in secrets.yaml.
 
 from __future__ import annotations
 
-import functools
-
 # Pack for dot notation: ground.search(), ground.dev(), etc.
 pack = "ground"
 
@@ -23,7 +21,7 @@ from pydantic import BaseModel, Field
 
 from ot.config import get_secret, get_tool_config
 from ot.logging import LogSpan
-from ot.utils import batch_execute, format_batch_results, normalize_items
+from ot.utils import batch_execute, format_batch_results, lazy_client, normalize_items
 
 # Dependency declarations for CLI validation
 __ot_requires__ = {
@@ -56,27 +54,17 @@ def _get_api_key() -> str:
     return get_secret("GEMINI_API_KEY") or ""
 
 
-@functools.lru_cache(maxsize=1)
-def _get_cached_client(api_key: str) -> Any:
-    """Get or create a cached Gemini client.
-
-    Args:
-        api_key: The Gemini API key (used as cache key)
-
-    Returns:
-        Cached Gemini client instance
-    """
+def _build_client() -> Any:
+    """Build a Gemini client with API key."""
     from google import genai
 
-    return genai.Client(api_key=api_key)
-
-
-def _create_client() -> Any:
-    """Create a Gemini client with API key (cached)."""
     api_key = _get_api_key()
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set in secrets.yaml")
-    return _get_cached_client(api_key)
+    return genai.Client(api_key=api_key)
+
+
+_get_client = lazy_client(_build_client)
 
 
 def _extract_sources(response: Any) -> list[dict[str, str]]:
@@ -248,7 +236,7 @@ def _grounded_search(
         try:
             if model is None:
                 model = get_tool_config("ground", Config).model
-            client = _create_client()
+            client = _get_client()
 
             # Configure grounding with Google Search
             google_search_tool = types.Tool(google_search=types.GoogleSearch())

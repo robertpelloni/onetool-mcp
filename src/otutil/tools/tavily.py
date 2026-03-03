@@ -32,14 +32,16 @@ from typing import Any, Literal
 import httpx
 from pydantic import BaseModel, Field
 
-from ot.config import get_secret, get_tool_config
+from ot.config import get_tool_config
 from ot.logging import LogSpan
 from ot.utils import (
     batch_execute,
     format_batch_results,
     lazy_client,
     normalize_items,
+    require_api_key,
 )
+from ot.utils.http import _format_http_error
 
 # Type alias matching ground.py convention
 OutputFormat = Literal["full", "text_only", "sources_only"]
@@ -84,11 +86,6 @@ def _get_config() -> Config:
     return get_tool_config("tavily", Config)
 
 
-def _get_api_key() -> str:
-    """Get Tavily API key from secrets."""
-    return get_secret("TAVILY_API_KEY") or ""
-
-
 def _make_request(
     endpoint: str,
     payload: dict[str, Any],
@@ -105,9 +102,9 @@ def _make_request(
         Tuple of (success, result). If success, result is parsed JSON dict.
         If failure, result is error message string.
     """
-    api_key = _get_api_key()
-    if not api_key:
-        return False, "Error: TAVILY_API_KEY secret not configured"
+    api_key, err = require_api_key("TAVILY_API_KEY")
+    if err:
+        return False, err
 
     if timeout is None:
         timeout = _get_config().timeout
@@ -133,14 +130,8 @@ def _make_request(
             return True, result
 
         except Exception as e:
-            error_type = type(e).__name__
-            span.add(error=f"{error_type}: {e}")
-
-            if hasattr(e, "response"):
-                status = getattr(e.response, "status_code", "unknown")
-                text = getattr(e.response, "text", "")[:200]
-                return False, f"HTTP error ({status}): {text}"
-            return False, f"Request failed: {e}"
+            span.add(error=f"{type(e).__name__}: {e}")
+            return False, _format_http_error(e)
 
 
 def _make_get_request(
@@ -157,9 +148,9 @@ def _make_get_request(
         Tuple of (success, result). If success, result is parsed JSON dict.
         If failure, result is error message string.
     """
-    api_key = _get_api_key()
-    if not api_key:
-        return False, "Error: TAVILY_API_KEY secret not configured"
+    api_key, err = require_api_key("TAVILY_API_KEY")
+    if err:
+        return False, err
 
     try:
         client = _get_http_client()
@@ -173,11 +164,7 @@ def _make_get_request(
         return True, response.json()
 
     except Exception as e:
-        if hasattr(e, "response"):
-            status = getattr(e.response, "status_code", "unknown")
-            text = getattr(e.response, "text", "")[:200]
-            return False, f"HTTP error ({status}): {text}"
-        return False, f"Request failed: {e}"
+        return False, _format_http_error(e)
 
 
 def _format_sources(results: list[dict[str, Any]]) -> str:
@@ -753,9 +740,9 @@ def research(
     if error := _validate_research_model(model):
         return error
 
-    api_key = _get_api_key()
-    if not api_key:
-        return "Error: TAVILY_API_KEY secret not configured"
+    _, err = require_api_key("TAVILY_API_KEY")
+    if err:
+        return str(err)
 
     with LogSpan(span="tavily.research", model=model) as s:
         start_time = time.monotonic()

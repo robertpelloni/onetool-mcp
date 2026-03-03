@@ -32,9 +32,10 @@ class TestContext7Pack:
 
     def test_follow_redirects_enabled(self):
         """HTTP client must follow redirects to handle Context7 API 301s."""
-        from otdev.tools.context7 import _client
+        from otdev.tools.context7 import _create_http_client
 
-        assert _client.follow_redirects is True
+        client = _create_http_client()
+        assert client.follow_redirects is True
 
 
 @pytest.mark.unit

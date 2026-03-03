@@ -408,7 +408,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search(query="python documentation")
 
@@ -434,7 +434,7 @@ class TestSearch:
         assert "Error" in result
 
     def test_missing_api_key(self):
-        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+        with patch("otutil.tools.tavily.require_api_key", return_value=("", "Error: TAVILY_API_KEY secret not configured")):
             result = search(query="test")
         assert "TAVILY_API_KEY" in result
 
@@ -450,7 +450,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search(query="who created python", output_format="text_only")
 
@@ -469,7 +469,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search(query="test", output_format="sources_only")
 
@@ -488,7 +488,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search(query="test", min_score=0.5)
 
@@ -502,7 +502,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             search(
                 query="test",
@@ -522,7 +522,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             search(query="test")
 
@@ -539,7 +539,7 @@ class TestSearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search(query="test", output_format="full")
 
@@ -565,7 +565,7 @@ class TestExtract:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = extract(urls=["https://example.com/page"])
 
@@ -592,7 +592,7 @@ class TestExtract:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             extract(urls=["https://a.com"], extract_depth="advanced")
 
@@ -600,7 +600,7 @@ class TestExtract:
         assert payload["extract_depth"] == "advanced"
 
     def test_missing_api_key(self):
-        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+        with patch("otutil.tools.tavily.require_api_key", return_value=("", "Error: TAVILY_API_KEY secret not configured")):
             result = extract(urls=["https://example.com"])
         assert "TAVILY_API_KEY" in result
 
@@ -618,7 +618,7 @@ class TestExtractBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = extract_batch(url_sets=[
                 ["https://a.com"],
@@ -637,7 +637,7 @@ class TestExtractBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = extract_batch(url_sets=[
                 (["https://docs.react.dev"], "React Docs"),
@@ -671,7 +671,7 @@ class TestSearchBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search_batch(queries=["python", "javascript"])
 
@@ -695,7 +695,7 @@ class TestSearchBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search_batch(
                 queries=[("Python 3.13 features", "Python 3.13")]
@@ -710,7 +710,7 @@ class TestSearchBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search_batch(queries=[("some query", "")])
 
@@ -726,7 +726,7 @@ class TestSearchBatch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = search_batch(queries=["q"], output_format="text_only")
 
@@ -747,7 +747,7 @@ class TestResearch:
         assert "turbo" in result
 
     def test_missing_api_key(self):
-        with patch("otutil.tools.tavily._get_api_key", return_value=""):
+        with patch("otutil.tools.tavily.require_api_key", return_value=("", "Error: TAVILY_API_KEY secret not configured")):
             result = research(input="some topic")
         assert "TAVILY_API_KEY" in result
 
@@ -762,7 +762,7 @@ class TestResearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
             result = research(input="How does FastAPI work?")
 
@@ -779,7 +779,7 @@ class TestResearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
             patch("otutil.tools.tavily.time.sleep"),
         ):
             result = research(input="Some topic", timeout_seconds=60)
@@ -800,7 +800,7 @@ class TestResearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
             patch("otutil.tools.tavily.time.sleep"),
             patch("otutil.tools.tavily.time.monotonic", side_effect=time_values),
         ):
@@ -820,7 +820,7 @@ class TestResearch:
 
         with (
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
-            patch("otutil.tools.tavily._get_api_key", return_value="test-key"),
+            patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
             patch("otutil.tools.tavily.time.sleep"),
         ):
             result = research(input="Some topic", timeout_seconds=60)

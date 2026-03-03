@@ -24,11 +24,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from ot.config.secrets import get_secret
+from ot.utils.truncate import truncate
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-__all__ = ["api_headers", "check_api_key", "safe_request"]
+__all__ = ["api_headers", "check_api_key", "require_api_key", "safe_request"]
 
 T = TypeVar("T")
 
@@ -167,7 +168,7 @@ def _format_http_error(error: Exception) -> str:
     if hasattr(error, "response"):
         response = error.response
         status = getattr(response, "status_code", "unknown")
-        text = getattr(response, "text", "")[:200]
+        text = truncate(getattr(response, "text", ""), 200)
         return f"HTTP error ({status}): {text}" if text else f"HTTP error ({status})"
 
     # Check for common error types
@@ -178,6 +179,29 @@ def _format_http_error(error: Exception) -> str:
         return f"Connection error: {error}"
 
     return f"Request failed ({error_type}): {error}"
+
+
+def require_api_key(secret_name: str) -> tuple[str, str | None]:
+    """Return (key, None) on success or ("", error_msg) on missing.
+
+    Replaces the _get_api_key() + if-not-api_key pattern used across tools.
+    Standardises the error message format.
+
+    Args:
+        secret_name: Name of secret in secrets.yaml
+
+    Returns:
+        Tuple of (key, None) on success or ("", error_message) on missing
+
+    Example:
+        api_key, err = require_api_key("BRAVE_API_KEY")
+        if err:
+            return False, err
+    """
+    key = get_secret(secret_name) or ""
+    if not key:
+        return "", f"Error: {secret_name} secret not configured"
+    return key, None
 
 
 def check_api_key(secret_name: str) -> str | None:

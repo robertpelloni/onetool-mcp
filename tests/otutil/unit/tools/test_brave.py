@@ -763,11 +763,9 @@ class TestSearchBatch:
 class TestMakeRequest:
     """Test _make_request function."""
 
-    @patch("otutil.tools.brave._get_api_key")
-    def test_returns_error_without_api_key(self, mock_key):
+    @patch("otutil.tools.brave.require_api_key", return_value=("", "Error: BRAVE_API_KEY secret not configured"))
+    def test_returns_error_without_api_key(self, _mock_key):
         from otutil.tools.brave import _make_request
-
-        mock_key.return_value = ""
 
         success, result = _make_request("/web/search", {"q": "test"})
 

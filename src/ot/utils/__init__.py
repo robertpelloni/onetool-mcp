@@ -14,7 +14,7 @@ ot.* modules for logging, config, and inter-tool calling.
 """
 
 from ot.utils.batch import batch_execute, format_batch_results, normalize_items
-from ot.utils.cache import CacheNamespace, cache
+from ot.utils.cache import Cache, cache
 from ot.utils.deps import (
     Dependency,
     DepsCheckResult,
@@ -27,10 +27,11 @@ from ot.utils.deps import (
     requires_cli,
     requires_lib,
 )
+from ot.utils.duration import parse_duration
 from ot.utils.exceptions import flatten_exception_group
 from ot.utils.factory import LazyClient, lazy_client
 from ot.utils.format import serialize_result
-from ot.utils.http import api_headers, check_api_key, safe_request
+from ot.utils.http import api_headers, check_api_key, require_api_key, safe_request
 from ot.utils.pathsec import DEFAULT_EXCLUDE_PATTERNS, is_path_excluded, validate_path
 from ot.utils.platform import get_install_hint
 from ot.utils.sanitize import (
@@ -39,14 +40,16 @@ from ot.utils.sanitize import (
     sanitize_triggers,
     wrap_external_content,
 )
+from ot.utils.sqlite_pool import SqlitePool, open_db_connection
 from ot.utils.truncate import format_error, run_command, truncate
 
 __all__ = [
     "DEFAULT_EXCLUDE_PATTERNS",
-    "CacheNamespace",
+    "Cache",
     "Dependency",
     "DepsCheckResult",
     "LazyClient",
+    "SqlitePool",
     "api_headers",
     "batch_execute",
     "cache",
@@ -64,6 +67,9 @@ __all__ = [
     "is_path_excluded",
     "lazy_client",
     "normalize_items",
+    "open_db_connection",
+    "parse_duration",
+    "require_api_key",
     "requires_cli",
     "requires_lib",
     "run_command",

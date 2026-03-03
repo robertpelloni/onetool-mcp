@@ -25,14 +25,17 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
-from ot.config import get_secret, get_tool_config
+from ot.config import get_tool_config
 from ot.logging import LogSpan
 from ot.utils import (
     batch_execute,
     format_batch_results,
     lazy_client,
     normalize_items,
+    require_api_key,
+    truncate,
 )
+from ot.utils.http import _format_http_error
 
 
 class Config(BaseModel):
@@ -68,11 +71,6 @@ def _get_config() -> Config:
     return get_tool_config("brave", Config)
 
 
-def _get_api_key() -> str:
-    """Get Brave API key from secrets."""
-    return get_secret("BRAVE_API_KEY") or ""
-
-
 def _get_headers(api_key: str) -> dict[str, str]:
     """Get headers for Brave API requests.
 
@@ -100,9 +98,9 @@ def _make_request(
         Tuple of (success, result). If success, result is parsed JSON dict.
         If failure, result is error message string.
     """
-    api_key = _get_api_key()
-    if not api_key:
-        return False, "Error: BRAVE_API_KEY secret not configured"
+    api_key, err = require_api_key("BRAVE_API_KEY")
+    if err:
+        return False, err
 
     if timeout is None:
         timeout = _get_config().timeout
@@ -127,14 +125,8 @@ def _make_request(
             return True, result
 
         except Exception as e:
-            error_type = type(e).__name__
-            span.add(error=f"{error_type}: {e}")
-
-            if hasattr(e, "response"):
-                status = getattr(e.response, "status_code", "unknown")
-                text = getattr(e.response, "text", "")[:200]
-                return False, f"HTTP error ({status}): {text}"
-            return False, f"Request failed: {e}"
+            span.add(error=f"{type(e).__name__}: {e}")
+            return False, _format_http_error(e)
 
 
 def _format_web_results(data: dict[str, Any]) -> str:
@@ -251,9 +243,7 @@ def _format_video_results(data: dict[str, Any]) -> str:
         if views:
             lines.append(f"   Views: {views}")
         if description:
-            if len(description) > VIDEO_DESC_MAX_LENGTH:
-                description = description[: VIDEO_DESC_MAX_LENGTH - 3] + "..."
-            lines.append(f"   {description}")
+            lines.append(f"   {truncate(description, VIDEO_DESC_MAX_LENGTH)}")
         lines.append(f"   {url}")
         lines.append("")
 

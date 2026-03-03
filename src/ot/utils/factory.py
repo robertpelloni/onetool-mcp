@@ -100,6 +100,15 @@ def lazy_client(
 
             return result
 
+    def reset() -> None:
+        """Reset the cached client, forcing re-initialization on next call."""
+        nonlocal client, initialized
+        with lock:
+            client = None
+            initialized = False
+
+    get_client.reset = reset  # type: ignore[attr-defined]
+
     return get_client
 
 
