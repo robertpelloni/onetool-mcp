@@ -12,7 +12,7 @@ tools_dir:
 
 log_level: INFO
 
-# Playwright MCP server for whiteboard integration tests
+# MCP servers for browser integration tests (whiteboard, play_util, chrome_util)
 servers:
   playwright:
     type: stdio
@@ -21,7 +21,21 @@ servers:
     timeout: 120
     enabled: true
 
+  chrome-devtools:
+    type: stdio
+    command: npx
+    args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720", "--no-usage-statistics"]
+    timeout: 120
+    enabled: true
+
 # Override: disable sanitization for tests (test_sanitize.py tests it explicitly)
 security:
   sanitize:
     enabled: false
+
+tools:
+  ot_llm:
+    model: google/gemini-3-flash-preview
+    base_url: https://openrouter.ai/api/v1
+  ot_image:
+    vision_model: google/gemini-3-flash-preview

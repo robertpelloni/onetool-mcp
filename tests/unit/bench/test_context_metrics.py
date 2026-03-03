@@ -1,4 +1,4 @@
-"""Integration tests for multi-prompt task execution."""
+"""Unit tests for multi-prompt task execution context metrics."""
 
 import pytest
 
@@ -6,13 +6,13 @@ from bench.harness.metrics import LLMCallMetrics, TaskResult
 from bench.harness.runner import split_prompts
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 @pytest.mark.bench
-class TestMultiPromptIntegration:
-    """Integration tests for multi-prompt task execution."""
+class TestMultiPromptScenarios:
+    """Tests for multi-prompt task execution with realistic data."""
 
-    def test_split_prompts_integration(self) -> None:
-        """Verify split_prompts works with realistic multi-prompt YAML content."""
+    def test_split_prompts_multi_step(self) -> None:
+        """split_prompts works with realistic multi-prompt YAML content."""
         prompt = """>>>
 ```python
 npm = check_npm_versions(dependencies={"express": "4.0.0"})
@@ -35,8 +35,8 @@ Now combine all the results and list them as a markdown table with columns:
         assert "check_pypi_versions" in prompts[1]
         assert "markdown table" in prompts[2]
 
-    def test_multi_prompt_metrics_accumulation(self) -> None:
-        """Verify metrics accumulate correctly across prompts."""
+    def test_metrics_accumulate_across_prompts(self) -> None:
+        """Metrics accumulate correctly across a multi-prompt task."""
         metrics = [
             LLMCallMetrics(call_number=1, input_tokens=3000, output_tokens=200,
                            tool_calls_made=1, cumulative_input=3000, latency_ms=800),
@@ -64,7 +64,7 @@ Now combine all the results and list them as a markdown table with columns:
         assert 500 <= task.context_growth_avg <= 600
 
     def test_to_dict_preserves_multi_call_structure(self) -> None:
-        """Verify to_dict correctly serializes multi-call metrics."""
+        """to_dict correctly serializes multi-call metrics."""
         metrics = [
             LLMCallMetrics(call_number=1, input_tokens=1000, output_tokens=100,
                            tool_calls_made=1, cumulative_input=1000, latency_ms=300),

@@ -7,9 +7,12 @@ from __future__ import annotations
 
 import pytest
 
-pytest.importorskip("google.genai", reason="google-genai not installed (install onetool-mcp[util])")
+try:
+    import google.genai  # noqa: F401
+except ImportError:
+    pytest.fail("google-genai not installed (install onetool-mcp[util])", pytrace=False)
 
-from tests.otutil.integration.tools.conftest import get_test_secret
+from .conftest import get_test_secret
 
 
 @pytest.mark.integration
@@ -23,13 +26,12 @@ class TestGroundingSearchLive:
     def skip_if_no_api_key(self):
         """Skip tests if GEMINI_API_KEY is not set."""
         if not get_test_secret("GEMINI_API_KEY"):
-            pytest.skip("GEMINI_API_KEY not configured")
+            pytest.fail("GEMINI_API_KEY not configured")
 
     def test_search_live(self):
-        """Verify grounding search works."""
+        """Verify grounding search returns a non-empty result."""
         from otutil.tools.ground import search
 
         result = search(query="what is python programming language")
 
-        # Should get results or an error about the API key
         assert len(result) > 0

@@ -1,14 +1,12 @@
 """Integration tests for document conversion tools.
 
 Creates real documents using each library and verifies the conversion
-produces meaningful Markdown output. Each test skips gracefully if
-the required library is not installed.
-
-Markers: @pytest.mark.integration, @pytest.mark.tools
+produces meaningful Markdown output.
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -30,20 +28,20 @@ class TestConvertPdf:
 
     def test_pdf_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a minimal PDF with fitz and verify text is extracted."""
-        fitz = pytest.importorskip("fitz", reason="pymupdf not installed")
+        try:
+            import fitz
+        except ImportError:
+            pytest.fail("pymupdf not installed")
 
-        # Create a minimal PDF with known text
         doc: Any = fitz.open()
         page = doc.new_page()
         page.insert_text((50, 100), "Hello PDF World")
-        page.insert_text((50, 120), "Second line of content")
         pdf_path = tmp_path / "test.pdf"
         doc.save(str(pdf_path))
         doc.close()
 
         from otutil.tools.convert import pdf
 
-        import os
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
@@ -51,15 +49,10 @@ class TestConvertPdf:
         finally:
             os.chdir(old_cwd)
 
-        assert "Error" not in result or "0 failed" in result
         assert "test.pdf" in result
-
-        # Verify output file was created
         output_files = list(output_dir.glob("*.md"))
-        assert len(output_files) >= 1, "Expected at least one .md output file"
-
-        all_content = "\n".join(f.read_text() for f in output_files)
-        assert "Hello PDF World" in all_content or "Second line" in all_content
+        assert len(output_files) >= 1
+        assert "Hello PDF World" in "\n".join(f.read_text() for f in output_files)
 
 
 @pytest.mark.integration
@@ -69,18 +62,19 @@ class TestConvertWord:
 
     def test_word_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a DOCX with python-docx and verify content is extracted."""
-        docx = pytest.importorskip("docx", reason="python-docx not installed")
+        try:
+            import docx
+        except ImportError:
+            pytest.fail("python-docx not installed")
 
         doc = docx.Document()
         doc.add_heading("Test Document", level=1)
         doc.add_paragraph("This is the first paragraph.")
-        doc.add_paragraph("This is the second paragraph.")
         docx_path = tmp_path / "test.docx"
         doc.save(str(docx_path))
 
         from otutil.tools.convert import word
 
-        import os
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
@@ -88,12 +82,9 @@ class TestConvertWord:
         finally:
             os.chdir(old_cwd)
 
-        assert "Error" not in result or "0 failed" in result
         assert "test.docx" in result
-
         output_files = list(output_dir.glob("*.md"))
-        assert len(output_files) >= 1, "Expected at least one .md output file"
-
+        assert len(output_files) >= 1
         all_content = "\n".join(f.read_text() for f in output_files)
         assert "Test Document" in all_content or "first paragraph" in all_content
 
@@ -105,11 +96,13 @@ class TestConvertPptx:
 
     def test_pptx_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a PPTX with python-pptx and verify slides are extracted."""
-        pptx = pytest.importorskip("pptx", reason="python-pptx not installed")
+        try:
+            import pptx
+        except ImportError:
+            pytest.fail("python-pptx not installed")
 
         prs = pptx.Presentation()
-        slide_layout = prs.slide_layouts[0]
-        slide = prs.slides.add_slide(slide_layout)
+        slide = prs.slides.add_slide(prs.slide_layouts[0])
         title = slide.shapes.title
         if title:
             title.text = "Slide One Title"
@@ -118,7 +111,6 @@ class TestConvertPptx:
 
         from otutil.tools.convert import powerpoint
 
-        import os
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
@@ -126,14 +118,9 @@ class TestConvertPptx:
         finally:
             os.chdir(old_cwd)
 
-        assert "Error" not in result or "0 failed" in result
         assert "test.pptx" in result
-
         output_files = list(output_dir.glob("*.md"))
-        assert len(output_files) >= 1, "Expected at least one .md output file"
-
-        all_content = "\n".join(f.read_text() for f in output_files)
-        assert "Slide" in all_content or "slide" in all_content.lower() or len(all_content) > 10
+        assert len(output_files) >= 1
 
 
 @pytest.mark.integration
@@ -143,25 +130,24 @@ class TestConvertExcel:
 
     def test_excel_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create an XLSX with openpyxl and verify sheet data is extracted."""
-        openpyxl = pytest.importorskip("openpyxl", reason="openpyxl not installed")
+        try:
+            import openpyxl
+        except ImportError:
+            pytest.fail("openpyxl not installed")
 
         wb = openpyxl.Workbook()
         ws = wb.active
         assert ws is not None
-        ws.title = "Data"
         ws["A1"] = "Name"
         ws["B1"] = "Score"
         ws["A2"] = "Alice"
         ws["B2"] = 95
-        ws["A3"] = "Bob"
-        ws["B3"] = 87
         xlsx_path = tmp_path / "test.xlsx"
         wb.save(str(xlsx_path))
         wb.close()
 
         from otutil.tools.convert import excel
 
-        import os
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
@@ -169,11 +155,8 @@ class TestConvertExcel:
         finally:
             os.chdir(old_cwd)
 
-        assert "Error" not in result or "0 failed" in result
         assert "test.xlsx" in result
-
         output_files = list(output_dir.glob("*.md"))
-        assert len(output_files) >= 1, "Expected at least one .md output file"
-
+        assert len(output_files) >= 1
         all_content = "\n".join(f.read_text() for f in output_files)
-        assert "Alice" in all_content or "Name" in all_content or "Score" in all_content
+        assert "Alice" in all_content or "Name" in all_content

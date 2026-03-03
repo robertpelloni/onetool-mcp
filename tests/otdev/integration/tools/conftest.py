@@ -4,8 +4,8 @@ Loads API keys directly from project-root secrets.yaml.
 Injects them into the runtime secret cache so tools get keys without
 depending on the runtime secret resolver path resolution.
 
-Also starts the Playwright MCP server connection (session-scoped) so that
-whiteboard integration tests can run against a live browser.
+Starts all configured MCP server connections (session-scoped) so that
+whiteboard, play_util, and chrome_util integration tests can run.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import pytest
 import yaml
 
 import ot.config.secrets as _secrets_module
-from ot.config.loader import get_config, load_config
+from ot.config.loader import get_config
 from ot.proxy.manager import get_proxy_manager
 
 # tests/otdev/integration/tools/conftest.py → 5 parents to reach project root
@@ -49,6 +49,22 @@ def get_test_secret(name: str) -> str | None:
     return _secrets.get(name)
 
 
+def require_server(name: str) -> None:
+    """Fail the test if the named MCP server is not connected.
+
+    Args:
+        name: Server name (e.g., "playwright", "chrome-devtools")
+    """
+    proxy = get_proxy_manager()
+    if name not in proxy.servers:
+        connected = ", ".join(proxy.servers) or "none"
+        pytest.fail(
+            f"'{name}' MCP server not connected. "
+            f"Connected: {connected}. "
+            f"Check tests/.onetool/onetool.yaml."
+        )
+
+
 @pytest.fixture(autouse=True)
 def _inject_secrets():
     """Inject test secrets into the runtime cache.
@@ -66,13 +82,13 @@ _TEST_CONFIG = _PROJECT_ROOT / "tests" / ".onetool" / "onetool.yaml"
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _connect_playwright_proxy():
-    """Start a background event loop and connect the proxy manager to Playwright.
+def _connect_proxy_servers():
+    """Connect all MCP proxy servers configured in the test onetool.yaml.
 
-    Session-scoped: runs once, stays connected for the entire test session.
-    Fails the session immediately if the playwright server cannot connect.
+    Session-scoped: runs once for the entire test session.
+    Fails immediately if the connection attempt itself errors.
+    Individual tests call require_server() to check their specific server.
     """
-    # Initialize the global config singleton so proxy.connect can read env/secrets
     config = get_config(config_path=_TEST_CONFIG)
     if not config.servers:
         pytest.fail("No servers configured in test onetool.yaml — cannot run integration tests")
@@ -99,13 +115,7 @@ def _connect_playwright_proxy():
     ready.wait(timeout=180)
 
     if error:
-        pytest.fail(f"Playwright proxy connection failed: {error[0]}")
-    if "playwright" not in proxy.servers:
-        server_errors = proxy._errors  # noqa: SLF001
-        pytest.fail(
-            f"Playwright server not in proxy.servers after connect(). "
-            f"Servers: {proxy.servers}, errors: {server_errors}"
-        )
+        pytest.fail(f"Proxy connection failed: {error[0]}")
 
     yield
 
@@ -117,4 +127,4 @@ def _connect_playwright_proxy():
     thread.join(timeout=5)
 
 
-__all__ = ["get_test_secret"]
+__all__ = ["get_test_secret", "require_server"]

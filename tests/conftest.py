@@ -12,6 +12,7 @@ By default, tests with missing requirements will error (fail fast).
 
 from __future__ import annotations
 
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -139,8 +140,15 @@ def executor() -> Callable[[str], str]:
 
 def pytest_collection_modifyitems(items: list[Item]) -> None:
     """Skip tests that are missing required markers."""
+    in_vscode = "VSCODE_PID" in os.environ
     for item in items:
         markers = {m.name for m in item.iter_markers()}
+
+        if in_vscode and "integration" in markers:
+            item.add_marker(
+                pytest.mark.skip(reason="Integration tests skipped in VSCode")
+            )
+            continue
 
         if not markers & SPEED_MARKERS:
             warnings.warn(

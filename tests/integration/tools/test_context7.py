@@ -21,14 +21,12 @@ class TestContext7Live:
     def skip_if_unavailable(self):
         """Skip tests if Context7 is not available or API key not set."""
         if not get_test_secret("CONTEXT7_API_KEY"):
-            pytest.skip("CONTEXT7_API_KEY not configured")
+            pytest.fail("CONTEXT7_API_KEY not configured")
 
-        # Context7 module creates httpx client at import time which may fail
-        # if http.base_url config is not set
         try:
             from otdev.tools import context7  # noqa: F401
         except (ImportError, TypeError) as e:
-            pytest.skip(f"context7 module not available: {e}")
+            pytest.fail(f"context7 module not available: {e}")
 
     def test_search_live(self):
         """Verify Context7 library search works."""
@@ -36,5 +34,4 @@ class TestContext7Live:
 
         result = search(query="fastapi", library_name="fastapi")
 
-        # Should get results or API key error
         assert "fastapi" in result.lower() or "Context7" in result
