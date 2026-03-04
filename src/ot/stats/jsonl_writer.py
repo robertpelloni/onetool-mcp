@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 RecordType = Literal["run", "tool"]
+
+_PROCESS_PID: int = os.getpid()
 
 
 def _create_run_record(
@@ -45,6 +48,7 @@ def _create_run_record(
     record: dict[str, Any] = {
         "ts": datetime.now(UTC).isoformat(),
         "type": "run",
+        "pid": _PROCESS_PID,
         "client": client,
         "chars_in": chars_in,
         "chars_out": chars_out,
@@ -78,6 +82,7 @@ def _create_tool_record(
     record: dict[str, Any] = {
         "ts": datetime.now(UTC).isoformat(),
         "type": "tool",
+        "pid": _PROCESS_PID,
         "client": client,
         "tool": tool,
         "duration_ms": duration_ms,
