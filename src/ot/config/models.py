@@ -365,6 +365,18 @@ class OutputConfig(BaseModel):
     )
 
 
+# ==================== Telemetry Configuration ====================
+
+
+class TelemetryConfig(BaseModel):
+    """Anonymous startup telemetry configuration."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable anonymous startup telemetry (Scarf pixel)",
+    )
+
+
 # ==================== Stats Configuration ====================
 
 
@@ -584,6 +596,11 @@ class OneToolConfig(BaseModel):
     stats: StatsConfig = Field(
         default_factory=StatsConfig,
         description="Runtime statistics collection configuration",
+    )
+
+    telemetry: TelemetryConfig = Field(
+        default_factory=TelemetryConfig,
+        description="Anonymous startup telemetry configuration",
     )
 
     output: OutputConfig = Field(

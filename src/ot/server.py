@@ -109,6 +109,10 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
         registry = get_registry()
         start_span.add("toolCount", len(registry.tools))
 
+        # Fire anonymous startup telemetry (non-blocking daemon thread)
+        from ot.telemetry import ping as _telemetry_ping
+        _telemetry_ping()
+
         # Startup: initialize unified JSONL stats writer if enabled
         if _config.stats.enabled:
             stats_path = _config.get_stats_file_path()

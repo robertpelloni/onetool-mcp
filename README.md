@@ -208,9 +208,20 @@ def summary(*, title: str) -> str:
 
 ---
 
-## License
+## Telemetry
 
-GPLv3
+OneTool sends anonymous startup pings (event type, version, OS). No personal data. Opt out: `export DO_NOT_TRACK=1` or set `telemetry.enabled: false` in `onetool.yaml`. [Details](docs/telemetry.md)
+
+---
+
+## Issues
+
+**Check for existing issues first:**
+
+- Browse the tracker: [github.com/beycom/onetool-mcp/issues](https://github.com/beycom/onetool-mcp/issues)
+- Search with GitHub syntax: `is:issue repo:beycom/onetool-mcp <keyword>`
+
+**Raise a new issue:** [github.com/beycom/onetool-mcp/issues/new](https://github.com/beycom/onetool-mcp/issues/new)
 
 ---
 
@@ -219,3 +230,10 @@ GPLv3
 If you find OneTool useful:
 
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-ff5e5b?logo=ko-fi)](https://ko-fi.com/beycom)
+
+---
+
+## License
+
+GPLv3
+
