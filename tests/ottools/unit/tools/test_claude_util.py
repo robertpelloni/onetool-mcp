@@ -69,6 +69,7 @@ def _make_baseline_snapshot(
 @pytest.mark.tools
 class TestSessionId:
     def test_returns_stem_of_most_recent_jsonl(self, tmp_path: Path) -> None:
+        import os
         import time
 
         from ottools.claude_util import _project_slug, session_id
@@ -80,8 +81,10 @@ class TestSessionId:
         old_file = project_dir / "old-uuid.jsonl"
         new_file = project_dir / "new-uuid-abc.jsonl"
         old_file.write_text("")
-        time.sleep(0.01)
         new_file.write_text("")
+        # Force old_file to an explicitly older mtime — no sleep needed.
+        old_mtime = time.time() - 10
+        os.utime(old_file, (old_mtime, old_mtime))
 
         with patch("ottools.claude_util._claude_projects_dir", return_value=tmp_path):
             result = session_id()

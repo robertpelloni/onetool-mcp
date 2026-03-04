@@ -49,7 +49,7 @@ from ot.ctx.search import (
     ctx_slice,
 )
 from ot.ctx.transform import ctx_transform
-from ot.ctx.write import ctx_append, ctx_write, _events, _events_lock
+from ot.ctx.write import ctx_append, ctx_write
 
 
 # ---------------------------------------------------------------------------
@@ -328,17 +328,17 @@ class TestWrite:
         ).fetchone()
         assert row["status"] == "pending"
 
-    def test_write_creates_event(self) -> None:
+    def test_write_spawns_indexing_thread(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
              patch("ot.ctx.write.threading.Thread") as mock_thread:
             mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
+            spawned = MagicMock()
+            mock_thread.return_value = spawned
             from ot.ctx.config import Config
-            result = ctx_write("hello", db=conn, config=Config())
-        handle = result["handle"]
-        with _events_lock:
-            assert handle in _events
+            ctx_write("hello", db=conn, config=Config())
+        mock_thread.assert_called_once()
+        spawned.start.assert_called_once()
 
     def test_write_file_pointer_threshold(self) -> None:
         conn = _make_conn()
@@ -585,10 +585,7 @@ class TestSearch:
     def _ready_handle(self, conn: sqlite3.Connection, handle: str, content: str) -> None:
         _insert_handle(conn, handle, content, status="pending")
         build_index(handle, content, conn)
-        # Set up event as ready
-        from ot.ctx.write import _get_event
-        ev = _get_event(handle)
-        ev.set()
+        # build_index sets status='ready'; ctx_search skips the event wait for ready handles
 
     def test_porter_match(self) -> None:
         conn = _make_conn()

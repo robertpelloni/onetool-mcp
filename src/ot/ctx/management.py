@@ -29,7 +29,7 @@ def ctx_list(
     source: str = "",
     status: str = "",
     db: Any = None,
-) -> str | list[dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Return all active (non-expired) handles with summary information.
 
     Args:

@@ -84,7 +84,7 @@ def _force_single_quotes(code: str) -> str:
                     continue
             result.append(tok)
         return _tok.untokenize(result).strip()
-    except _tok.TokenizeError:
+    except _tok.TokenError:
         return code
 
 
@@ -548,11 +548,11 @@ async def execute_command(
                     "preview": write_result["preview"],
                     "status": write_result.get("status", "pending"),
                     "usage": {
-                        "page":   f"ctx.read('{handle}')",
+                        "page": f"ctx.read('{handle}')",
                         "search": f"ctx.search('{handle}', queries=['your query'])",
-                        "toc":    f"ctx.toc('{handle}')",
-                        "grep":   f"ctx.grep('{handle}', pattern='pattern')",
-                        "tail":   f"ctx.read('{handle}', tail=20)",
+                        "toc": f"ctx.toc('{handle}')",
+                        "grep": f"ctx.grep('{handle}', pattern='pattern')",
+                        "tail": f"ctx.read('{handle}', tail=20)",
                     },
                 }
                 text_result = serialize_result(summary_dict, "json")

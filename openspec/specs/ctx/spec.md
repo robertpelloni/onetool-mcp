@@ -12,7 +12,7 @@ The `ctx.write()` function SHALL store content immediately, begin background ind
 
 #### Scenario: Basic write
 - **WHEN** `ctx.write("some content")` is called
-- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `preview`, `status`, and `usage`
+- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `abstract`, `preview`, `status`, and `usage`
 - **AND** `status` SHALL be `"pending"` or `"indexing"` (never `"ready"` — indexing is async)
 - **AND** `handle` SHALL be a short opaque string (e.g. 8 hex chars)
 - **AND** `content_type` SHALL be `"markdown"` if the content contains markdown headings (`# ` lines), otherwise `"text"`
@@ -131,7 +131,7 @@ The `ctx.search()` function SHALL return BM25-ranked sections matching one or mo
 #### Scenario: Search on failed handle
 - **GIVEN** a handle with `status="failed"`
 - **WHEN** `ctx.search(h, queries=["foo"])` is called
-- **THEN** it SHALL return an error message with a `ctx.repair(handle)` hint
+- **THEN** it SHALL return an error dict with a `hint` field suggesting `ctx.purge(status='failed')` to clean up and `ctx.write()` to retry
 
 ---
 
@@ -346,47 +346,6 @@ The `ctx.purge()` function SHALL bulk-delete handles matching age, source, or st
 
 ---
 
-### Requirement: Repair Failed Handles
-
-The `ctx.repair()` function SHALL rebuild the FTS5 index for failed or specified handles.
-
-#### Scenario: Repair one handle
-- **GIVEN** a handle with `status="failed"`
-- **WHEN** `ctx.repair(h)` is called
-- **THEN** it SHALL re-run the full indexing pipeline for that handle
-- **AND** on success, `status` SHALL become `"ready"`
-
-#### Scenario: Repair all failed
-- **WHEN** `ctx.repair()` is called with no argument
-- **THEN** it SHALL repair all handles with `status="failed"`
-- **AND** return a count of repaired handles
-
----
-
-### Requirement: Vacuum Database
-
-The `ctx.vacuum()` function SHALL delete TTL-expired entries and compact the SQLite database.
-
-#### Scenario: Vacuum removes expired entries
-- **WHEN** `ctx.vacuum()` is called
-- **THEN** it SHALL delete all handles past their TTL
-- **AND** run SQLite `VACUUM` to compact the database
-- **AND** return bytes freed
-
----
-
-### Requirement: Flush All Handles
-
-The `ctx.flush()` function SHALL delete all session handles unconditionally.
-
-#### Scenario: Flush clears all handles
-- **WHEN** `ctx.flush()` is called
-- **THEN** all handles SHALL be deleted (content, chunks, vocabulary, embeddings, files)
-- **AND** the database SHALL remain intact (schema not dropped)
-- **AND** `ctx.list()` after flush SHALL return no active handles
-
----
-
 ### Requirement: Handle Status State Machine
 
 Handles SHALL follow a defined status lifecycle.
@@ -401,7 +360,7 @@ Handles SHALL follow a defined status lifecycle.
 #### Scenario: Stale indexing on restart
 - **GIVEN** a handle with `status="indexing"` when the process exits
 - **WHEN** the process restarts and `ctx.search` is called on that handle
-- **THEN** it SHALL be treated as `"failed"` and return the repair hint
+- **THEN** it SHALL be treated as `"failed"` and return the error dict with cleanup hint
 
 ---
 

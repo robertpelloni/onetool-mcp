@@ -309,7 +309,4 @@ The `ot_image` pack SHALL be configurable via `onetool.yaml` under `tools.ot_ima
 - **AND** `image.load(img="~/large.png")` is called with a 2000×1500px image
 - **THEN** the model-upload bytes SHALL be resized to fit within 800px on the long edge
 
-#### Scenario: storage_dir override
 
-- **WHEN** `tools.ot_image.storage_dir: "my_images"` is set in config
-- **THEN** all image files SHALL be stored in the session directory under `my_images/` instead of the default `images/`

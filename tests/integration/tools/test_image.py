@@ -150,5 +150,5 @@ class TestImageVision:
             handle = load(img=str(img_path))["handle"]
             result = ask(img=handle, q="What colour is this image?")
 
-        assert "answers" in result
-        assert result["answers"][0]
+        assert "result" in result
+        assert result["result"][0]["answer"]

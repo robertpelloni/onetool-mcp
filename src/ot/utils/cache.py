@@ -148,12 +148,14 @@ class Cache:
                 key_parts.extend(f"{k}={v!r}" for k, v in sorted(kwargs.items()))
                 cache_key = func_prefix + ":".join(key_parts)
 
+                # Wrap in a 1-tuple so None results are cached correctly.
+                # cache.get() returns None for misses; a tuple is never None.
                 cached = self.get(cache_key)
                 if cached is not None:
-                    return cached
+                    return cached[0]
 
                 result = func(*args, **kwargs)
-                self.set(cache_key, result, ttl=ttl)
+                self.set(cache_key, (result,), ttl=ttl)
                 return result
 
             return wrapper  # type: ignore[return-value]

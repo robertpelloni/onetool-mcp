@@ -57,6 +57,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 | `whiteboard.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
 | `whiteboard.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
 | `whiteboard.share() -> str` | Generate a shareable Excalidraw link for the current canvas. |
+| `whiteboard.align(*, ids: list[str], axis: str) -> str` | Align or distribute a set of shapes using Excalidraw's built-in actions. |
 | `whiteboard.style(*, ids: list[str], style: str) -> str` | Apply visual style properties to existing canvas elements in bulk. |
 | `whiteboard.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
 | `whiteboard.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
@@ -177,6 +178,28 @@ whiteboard.erase(ids=["a", "edge-a-b"])
 whiteboard.erase(ids=["b"])  # b has edges a-->b and b-->c
 # Returns: "erased 1 element(s), 2 dangling edge(s) removed"
 ```
+
+### `align(ids, axis)`
+
+Align or distribute a set of shapes using Excalidraw's built-in alignment actions.
+
+```python
+whiteboard.align(ids=["a", "b", "c"], axis="top")        # snap top edges
+whiteboard.align(ids=["a", "b", "c"], axis="hcenter")    # centre horizontally
+whiteboard.align(ids=["a", "b", "c"], axis="hdistribute") # even horizontal spacing
+# Returns: "aligned 3 element(s) (top)"
+```
+
+| `axis` | Effect |
+|--------|--------|
+| `left` | Snap left edges |
+| `hcenter` | Centre on vertical axis |
+| `right` | Snap right edges |
+| `top` | Snap top edges |
+| `vcenter` | Centre on horizontal axis |
+| `bottom` | Snap bottom edges |
+| `hdistribute` | Even horizontal spacing |
+| `vdistribute` | Even vertical spacing |
 
 ### `read_scene(info)`
 

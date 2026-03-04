@@ -21,7 +21,8 @@ from ot.utils.session import get_session_dir
 
 from .config import get_image_config
 
-# Session LRU cache — sized once at module load from config
+# Session LRU cache — sized once at module load from config.
+# Config changes after first import of this module are not reflected.
 _session_cache = Cache(max_size=get_image_config().session_cache_size)
 
 

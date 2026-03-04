@@ -205,11 +205,11 @@ def ctx_write(
             "preview": preview,
             "status": "pending",
             "usage": {
-                "page":   f"ctx.read('{handle}')",
+                "page": f"ctx.read('{handle}')",
                 "search": f"ctx.search('{handle}', queries=['your query'])",
-                "toc":    f"ctx.toc('{handle}')",
-                "grep":   f"ctx.grep('{handle}', pattern='pattern')",
-                "tail":   f"ctx.read('{handle}', tail=20)",
+                "toc": f"ctx.toc('{handle}')",
+                "grep": f"ctx.grep('{handle}', pattern='pattern')",
+                "tail": f"ctx.read('{handle}', tail=20)",
             },
         }
 

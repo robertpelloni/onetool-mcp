@@ -37,7 +37,7 @@ TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-windo
 | `ctx.inspect(handle)` | Detailed metadata for one handle |
 | `ctx.stats()` | Session storage metrics |
 | `ctx.delete(handle)` | Remove one handle |
-| `ctx.purge(all, older_than, source, status)` | Bulk-delete handles and compact DB |
+| `ctx.purge(all, minutes, source, status)` | Bulk-delete handles and compact DB |
 
 ## Key Parameters
 
@@ -91,7 +91,7 @@ Returns sections with `title`, `snippet`, `score`, and `matchLayer` (`porter`/`t
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `all` | bool | Delete all handles (schema preserved) |
+| `all` | bool | Bypass the age filter — delete all matching handles regardless of age |
 | `minutes` | int | Delete handles older than N minutes (default 15) |
 | `source` | str | Delete handles matching source substring |
 | `status` | str | Delete handles with this status |
@@ -100,13 +100,14 @@ With no arguments, deletes handles older than 15 minutes, then compacts the DB.
 
 ## Configuration
 
-Ctx reads from `config.yaml` under the `ctx` key:
+Ctx reads from `onetool.yaml` under `tools.ctx`:
 
 ```yaml
-ctx:
-  ttl: 3600           # Handle TTL in seconds (0 = no expiry)
-  max_inline_bytes: 1048576  # Spill to file above this size (default 1MB)
-  embedding_model: ""  # Optional: ot_llm model for semantic embeddings
+tools:
+  ctx:
+    ttl: 3600           # Handle TTL in seconds (0 = no expiry)
+    max_inline_bytes: 1048576  # Spill to file above this size (default 1MB)
+    embedding_model: ""  # Optional: ot_llm model for semantic embeddings
 ```
 
 ## Examples

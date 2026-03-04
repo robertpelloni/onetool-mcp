@@ -8,12 +8,16 @@ from typing import Any
 from ot.logging import LogSpan
 
 from .db import _get_connection, get_content
-from .indexing import _ETX, _STX, build_snippet, positions_from_highlight
+from .indexing import (
+    _ETX,
+    _SNIPPET_WINDOW,
+    _STX,
+    build_snippet,
+    positions_from_highlight,
+)
+from .read import _HEADING_RE
 
 log = LogSpan
-
-_SNIPPET_WINDOW = 300
-_HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)")
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +150,7 @@ def _fts_search(
 
     Returns list of section dicts with title, snippet, score.
     """
+    assert table in ("chunks", "chunks_trigram"), f"Unexpected FTS5 table: {table!r}"
     try:
         # Escape FTS5 query special characters for safety
         safe_query = _escape_fts5(query)

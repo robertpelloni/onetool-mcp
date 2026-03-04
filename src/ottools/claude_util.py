@@ -3,6 +3,18 @@
 Provides start/stop measurement of token usage and cost for a Claude Code
 session. Requires ``ccusage`` on PATH (Node.js tool, install with
 ``npm install -g ccusage``).
+
+.. important::
+
+   **Always call these tools from subagents, never from the main conversation.**
+
+   The main conversation context is loaded with CLAUDE.md, memory files,
+   system reminders, and other injected content that inflates token counts
+   significantly.  Calling ``start_usage`` / ``elapsed_usage`` directly in
+   the main turn captures all that overhead, making deltas unreliable.
+
+   Subagents start with a clean, minimal context, so measurements reflect
+   only the work being benchmarked.
 """
 
 from __future__ import annotations
@@ -35,7 +47,7 @@ def _project_slug(cwd: Path | None = None) -> str:
     keeping the leading ``-`` from the root ``/``).
     """
     p = cwd or Path.cwd()
-    return str(p).replace("/", "-")
+    return str(p).replace("\\", "-").replace("/", "-")
 
 
 def _run_ccusage(session_uuid: str) -> dict[str, Any] | str:
@@ -116,6 +128,13 @@ def start_usage(*, name: str = "_default") -> dict[str, Any] | str:
     baseline snapshot in ctx under source ``"cld_baseline_<name>"``. Call
     :func:`elapsed_usage` later with the same ``name`` to compute the delta.
 
+    .. warning::
+
+       Call this from a **subagent**, not from the main conversation.  The
+       main conversation carries injected context (CLAUDE.md, memory, system
+       reminders) that inflates the baseline token count and makes deltas
+       unreliable.
+
     Args:
         name: Recorder name, allowing multiple independent baselines.
             Defaults to ``"_default"``.
@@ -154,6 +173,13 @@ def elapsed_usage(*, name: str = "_default") -> dict[str, Any] | str:
 
     Retrieves the stored baseline from ctx, calls ``ccusage`` again, computes
     the difference, deletes the baseline, and returns a structured report.
+
+    .. warning::
+
+       Call this from a **subagent**, not from the main conversation.  The
+       main conversation carries injected context (CLAUDE.md, memory, system
+       reminders) that inflates token counts and obscures the delta being
+       measured.
 
     Args:
         name: Recorder name matching the one passed to :func:`start_usage`.
