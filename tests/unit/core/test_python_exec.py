@@ -706,3 +706,54 @@ for i, item in enumerate(items):
 ",".join(results)"""
         result = executor(code)
         assert result == "0:a,1:b,2:c"
+
+
+# =============================================================================
+# NORMALIZATION - Semicolons, non-ASCII, quote style
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestNormalization:
+    """Test code normalization: semicolons→newlines, non-ASCII safety, quote style."""
+
+    def test_semicolons_normalized(self, executor: Callable[[str], str]) -> None:
+        """Semicolon-separated statements execute correctly after normalization."""
+        result = executor("x = 1; x")
+        assert result == "1"
+
+    def test_non_ascii_return_injection(self, executor: Callable[[str], str]) -> None:
+        """Non-ASCII character before last expr does not corrupt return injection."""
+        # em dash (—) is 3 bytes in UTF-8; was off by 2 positions before fix
+        result = executor('x = "page \u2014 content"; len(x)')
+        assert result == str(len("page \u2014 content"))
+
+    def test_non_ascii_in_string_arg(self, executor: Callable[[str], str]) -> None:
+        """Non-ASCII string value round-trips through normalization correctly."""
+        result = executor('"\u00e9l\u00e8ve".upper()')
+        assert result == "\u00c9L\u00c8VE"
+
+    def test_normalize_code_helper(self) -> None:
+        """_normalize_code puts each statement on its own line."""
+        import ast
+
+        from ot.executor.runner import _normalize_code
+
+        code = "x = 1; y = 2; x + y"
+        tree = ast.parse(code)
+        normalized, new_tree = _normalize_code(code, tree)
+        lines = normalized.strip().splitlines()
+        assert len(lines) == 3
+        assert lines[0] == "x = 1"
+        assert lines[1] == "y = 2"
+        assert lines[2] == "x + y"
+
+    def test_force_single_quotes_helper(self) -> None:
+        """_force_single_quotes rewrites double-quoted strings to single quotes."""
+        from ot.executor.runner import _force_single_quotes
+
+        assert _force_single_quotes('"hello"') == "'hello'"
+        assert _force_single_quotes('"it\'s"') == "'it\\'s'"
+        # Triple-quoted strings left unchanged
+        assert '"""' in _force_single_quotes('"""triple"""')

@@ -11,7 +11,7 @@ prompts:
 
         Snippets: $snippet_name param=value (expanded server-side)
 
-        Discovery: `ot.help(query="topic")` to find tools, `ot.tool_info(name="tool.name")` for signatures.
+        Discovery: `ot.help(query='topic')` to find tools, `ot.tool_info(name='tool.name')` for signatures.
 
         CRITICAL: Pass code EXACTLY as-is to this tool.
         - DO NOT rewrite the code or implement it yourself
@@ -20,9 +20,9 @@ prompts:
         Args:
             command: tool call via Python code, function call, or $snippet (keyword args only)
       examples:
-        - "ot.help(query=\"search\")"
-        - "brave.search(query=\"AI news\")"
-        - "$pkg_npm packages=\"react\""
+        - "ot.help(query='search')"
+        - "brave.search(query='AI news')"
+        - "$pkg_npm packages=react"
 
   instructions: |
     OneTool calls pack tools via Python code through the `run` tool.
@@ -37,15 +37,17 @@ prompts:
 
     ## Call Rules
     1. Keyword args only: `foo.bar(x=1)` not `foo.bar(1)`
-    2. Batch when possible: `foo(items=["a","b"])` not multiple calls
-    3. Return last expression for multi-step code: `x = a(); y = b(); {"a": x, "b": y}`
+    2. Batch when possible: `foo(items=['a','b'])` not multiple calls
+    3. Return last expression for multi-step code: `x = a(); y = b(); {'a': x, 'b': y}`
+    4. Use single quotes for strings: `search(query='hello')` not `search(query="hello")`
+    5. Use `;` to separate statements on one line: `a(); b()` not newlines
 
     ## Available Packs
     {pack_summary}
     Use `ot.packs()` for details. Not all packs are installed by default.
 
     ## Discovery
-    - Find tools: `ot.help(query="search")` or `ot.tool_info(pattern="brave")`
+    - Find tools: `ot.help(query='search')` or `ot.tool_info(pattern='brave')`
     - Full reference: `ot.skills(name="ot-ref")`
 
     ## External Content Boundaries

@@ -644,11 +644,7 @@ class TestDoubleWrapPrevention:
             cmd_result = asyncio.run(
                 __import__(
                     "ot.executor.runner", fromlist=["execute_command"]
-                ).execute_command(
-                    cmd,
-                    registry=MagicMock(),
-                    executor=MagicMock(),
-                )
+                ).execute_command(cmd)
             )
 
         assert cmd_result.success, f"Command failed: {cmd_result.result}"

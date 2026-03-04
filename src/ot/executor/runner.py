@@ -16,6 +16,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import io
+import json
 from contextlib import redirect_stdout
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -32,8 +33,6 @@ from ot.utils import serialize_result
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from ot.executor import SimpleExecutor
-    from ot.registry import ToolRegistry
     from ot.utils.format import FormatMode
 
 
@@ -59,6 +58,49 @@ _NO_RETURN = object()
 # -----------------------------------------------------------------------------
 # Code Execution
 # -----------------------------------------------------------------------------
+
+
+def _force_single_quotes(code: str) -> str:
+    """Rewrite double-quoted string literals to use single quotes.
+
+    Triple-quoted strings and f-strings are left unchanged.
+    Falls back to original code on tokenize error.
+    """
+    import io
+    import tokenize as _tok
+
+    result = []
+    try:
+        for tok in _tok.generate_tokens(io.StringIO(code).readline):
+            if (
+                tok.type == _tok.STRING
+                and tok.string.startswith('"')
+                and not tok.string.startswith('"""')
+            ):
+                val = ast.literal_eval(tok.string)
+                if isinstance(val, str):
+                    escaped = val.replace("\\", "\\\\").replace("'", "\\'")
+                    result.append(tok._replace(string=f"'{escaped}'"))
+                    continue
+            result.append(tok)
+        return _tok.untokenize(result).strip()
+    except _tok.TokenizeError:
+        return code
+
+
+def _normalize_code(code: str, tree: ast.Module) -> tuple[str, ast.Module]:
+    """Normalize to one-statement-per-line with single-quoted strings.
+
+    Uses ast.unparse() to put each statement on its own line, which:
+    - Eliminates semicolon-separated statements (cleaner display in Claude UI)
+    - Ensures col_offset for each statement is 0 (fixes non-ASCII byte-offset bug)
+    - Converts double-quoted strings to single quotes (cleaner JSON wire format)
+    """
+    if not tree.body:
+        return code, tree
+    normalized = "\n".join(ast.unparse(stmt) for stmt in tree.body)
+    normalized = _force_single_quotes(normalized)
+    return normalized, ast.parse(normalized)
 
 
 def _has_top_level_return(tree: ast.Module) -> bool:
@@ -107,6 +149,8 @@ def prepare_code_for_exec(
         except SyntaxError:
             # Syntax error - return as-is and let exec() report the error
             return code, False
+
+    stripped, tree = _normalize_code(stripped, tree)
 
     if not tree.body:
         return code, False
@@ -384,6 +428,10 @@ def prepare_command(command: str) -> PreparedCommand:
     for warning in validation.warnings:
         logger.warning(f"Code validation warning: {warning}")
 
+    # Step 7: Normalize (reuse AST from validation — no extra parse)
+    if validation.ast_tree is not None:
+        stripped, _ = _normalize_code(stripped, validation.ast_tree)
+
     return PreparedCommand(
         code=stripped,
         original=command,
@@ -398,8 +446,6 @@ def prepare_command(command: str) -> PreparedCommand:
 
 async def execute_command(
     command: str,
-    registry: ToolRegistry,  # noqa: ARG001 - kept for API compatibility
-    executor: SimpleExecutor,  # noqa: ARG001 - kept for API compatibility
     tools_dir: Path | None = None,
     *,
     skip_validation: bool = False,
@@ -416,8 +462,6 @@ async def execute_command(
 
     Args:
         command: Raw command from LLM (may have fences)
-        registry: Tool registry (unused, kept for API compatibility)
-        executor: Executor (unused, kept for API compatibility)
         tools_dir: Path to tools directory
         skip_validation: If True, skip validation (use when already validated)
         prepared_code: Pre-processed code to execute (bypasses preparation steps)
@@ -484,15 +528,23 @@ async def execute_command(
             max_size = config.output.max_inline_size
             result_size = len(text_result.encode("utf-8"))
 
-            if tool_name != "ot.result" and tool_name != "ctx.read" and max_size > 0 and result_size > max_size:
+            _no_deflect = (tool_name or "").startswith("ctx.") or tool_name == "ot.result"
+            if not _no_deflect and max_size > 0 and result_size > max_size:
                 # Store large output via ctx backend and return summary
                 from ot.ctx.write import ctx_write
-                write_result = ctx_write(text_result, source=stripped[:50])
+                ctx_content = (
+                    json.dumps(raw_result, indent=2, ensure_ascii=False)
+                    if raw_result is not None and isinstance(raw_result, (dict, list))
+                    else text_result
+                )
+                write_result = ctx_write(ctx_content, source=stripped[:50])
                 handle = write_result["handle"]
+                content_type = write_result.get("content_type", "text")
                 summary_dict = {
                     "handle": handle,
                     "total_lines": write_result["total_lines"],
                     "size_bytes": write_result["size_bytes"],
+                    "content_type": content_type,
                     "preview": write_result["preview"],
                     "status": write_result.get("status", "pending"),
                     "usage": {

@@ -31,7 +31,8 @@ The server SHALL support configuration for statistics collection.
 - **GIVEN** no stats configuration specified
 - **WHEN** the server starts
 - **THEN** stats SHALL be enabled with defaults:
-  - persist_path: "{log_dir}/stats.jsonl"
+  - persist_dir: "stats" (relative to `.onetool/`)
+  - persist_path: "stats.jsonl" (filename within persist_dir)
   - flush_interval_seconds: 30
   - context_per_call: 30000
   - time_overhead_per_call_ms: 4000
@@ -39,7 +40,7 @@ The server SHALL support configuration for statistics collection.
 #### Scenario: Stats file location
 - **GIVEN** default configuration
 - **WHEN** stats are flushed
-- **THEN** records SHALL be written to `stats.jsonl` in the log directory
+- **THEN** records SHALL be written to `.onetool/stats/stats.jsonl`
 
 ### Requirement: Statistics Aggregation
 
@@ -148,6 +149,7 @@ Stats records SHALL follow a discriminated union schema based on the `type` fiel
 - **THEN** the record SHALL contain:
   - `ts`: ISO 8601 timestamp
   - `type`: "run"
+  - `pid`: OS process ID (integer) of the onetool process that wrote the record
   - `client`: MCP client name
   - `chars_in`: Input character count
   - `chars_out`: Output character count
@@ -161,6 +163,7 @@ Stats records SHALL follow a discriminated union schema based on the `type` fiel
 - **THEN** the record SHALL contain:
   - `ts`: ISO 8601 timestamp
   - `type`: "tool"
+  - `pid`: OS process ID (integer) of the onetool process that wrote the record
   - `client`: MCP client name
   - `tool`: Fully qualified tool name (e.g., "brave.search")
   - `duration_ms`: Execution time in milliseconds

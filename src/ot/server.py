@@ -294,10 +294,6 @@ def _get_run_description() -> str:
     },
 )
 async def run(command: str, ctx: Context) -> ToolResult:  # noqa: ARG001
-    # Get registry (cached, no rescan per request) and executor
-    registry = get_registry()
-    executor = _get_executor()
-
     # Record start time for stats
     start_time = time.monotonic()
 
@@ -310,8 +306,6 @@ async def run(command: str, ctx: Context) -> ToolResult:  # noqa: ARG001
     # Step 2: Execute through unified runner (skip validation since already done)
     result = await execute_command(
         command,
-        registry,
-        executor,
         prepared_code=prepared.code,
         skip_validation=True,
     )
