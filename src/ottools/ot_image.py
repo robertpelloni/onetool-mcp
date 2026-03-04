@@ -21,9 +21,9 @@ from __future__ import annotations
 # Must appear before other imports.
 pack = "ot_image"
 
-__all__ = ["ask", "delete", "list", "load", "load_batch", "purge", "summary"]
+__all__ = ["ask", "clip_ask", "clip_view", "delete", "list", "load", "load_batch", "purge", "summary"]
 
 from ottools._image.lifecycle import delete_image as delete
 from ottools._image.lifecycle import list_images as list
 from ottools._image.lifecycle import purge_images as purge
-from ottools._image.tools import ask, load, load_batch, summary
+from ottools._image.tools import ask, clip_ask, clip_view, load, load_batch, summary

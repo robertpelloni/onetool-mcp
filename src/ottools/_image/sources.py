@@ -97,7 +97,7 @@ def resolve_source(img: str) -> tuple[str, bytes | str]:
         NotImplementedError: If clipboard is requested on Linux.
         RuntimeError: For other unrecoverable load failures.
     """
-    if img == "clip":
+    if img in ("clip", "clipboard"):
         return "clipboard", _grab_clipboard()
 
     if img.startswith("#"):
@@ -201,6 +201,10 @@ def _grab_clipboard() -> bytes:
     img = ImageGrab.grabclipboard()
     if img is None:
         raise ValueError("No image found in clipboard")
+    if isinstance(img, list):
+        if not img:
+            raise ValueError("No image found in clipboard")
+        return _load_file(img[0])
     if not isinstance(img, Image.Image):
         raise ValueError(
             f"Clipboard does not contain an image (got {type(img).__name__})"

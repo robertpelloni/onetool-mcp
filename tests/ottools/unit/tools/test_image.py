@@ -245,6 +245,13 @@ class TestResolveSource:
             source_type, _ = resolve_source("clip")
         assert source_type == "clipboard"
 
+    def test_clipboard_alias_detected(self) -> None:
+        from ottools._image.sources import resolve_source
+
+        with patch("ottools._image.sources._grab_clipboard", return_value=b"png"):
+            source_type, _ = resolve_source("clipboard")
+        assert source_type == "clipboard"
+
     def test_handle_detected(self) -> None:
         from ottools._image.sources import resolve_source
 
@@ -285,6 +292,28 @@ class TestResolveSource:
 
         with pytest.raises(NotImplementedError, match="Linux"):
             _grab_clipboard()
+
+    @pytest.mark.skipif(sys.platform == "linux", reason="clipboard not supported on Linux")
+    def test_clipboard_file_reference_loads_first_path(self, tmp_path: Path) -> None:
+        """list return from ImageGrab.grabclipboard() resolves to first path."""
+        from ottools._image.sources import _grab_clipboard
+
+        png = _make_png_bytes()
+        img_path = tmp_path / "shot.png"
+        img_path.write_bytes(png)
+
+        with patch("PIL.ImageGrab.grabclipboard", return_value=[str(img_path)]):
+            result = _grab_clipboard()
+
+        assert result == png
+
+    @pytest.mark.skipif(sys.platform == "linux", reason="clipboard not supported on Linux")
+    def test_clipboard_empty_list_raises(self) -> None:
+        from ottools._image.sources import _grab_clipboard
+
+        with patch("PIL.ImageGrab.grabclipboard", return_value=[]):
+            with pytest.raises(ValueError, match="No image found in clipboard"):
+                _grab_clipboard()
 
 
 # ---------------------------------------------------------------------------
@@ -1066,6 +1095,30 @@ class TestSummary:
         assert result["cached"] is True
         # Model should only have been called once
         assert MockOAI.return_value.chat.completions.create.call_count == 1
+
+    def test_clip_ask_delegates_to_ask(self, tmp_path: Path) -> None:
+        from ottools._image import tools
+
+        with patch.object(tools, "ask", return_value={"result": [], "handle": "#h"}) as mock_ask:
+            tools.clip_ask(q="What is this?")
+
+        mock_ask.assert_called_once_with(img="clip", q="What is this?", max_edge=1568)
+
+    def test_clip_ask_custom_max_edge(self, tmp_path: Path) -> None:
+        from ottools._image import tools
+
+        with patch.object(tools, "ask", return_value={"result": [], "handle": "#h"}) as mock_ask:
+            tools.clip_ask(q="Describe", max_edge=800)
+
+        mock_ask.assert_called_once_with(img="clip", q="Describe", max_edge=800)
+
+    def test_clip_view_delegates_to_summary(self, tmp_path: Path) -> None:
+        from ottools._image import tools
+
+        with patch.object(tools, "summary", return_value={"summary": {}, "handle": "#h", "cached": False}) as mock_summary:
+            tools.clip_view()
+
+        mock_summary.assert_called_once_with(img="clip")
 
 
 # ---------------------------------------------------------------------------

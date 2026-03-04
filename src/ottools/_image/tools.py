@@ -320,7 +320,7 @@ def ask(
 
         # Resolve handle name
         handle_name: str
-        if img == "clip":
+        if img in ("clip", "clipboard"):
             # Reuse existing clipboard handle or auto-load
             if _clip_handle is not None and load_meta(_clip_handle) is not None:
                 handle_name = _clip_handle
@@ -390,7 +390,7 @@ def summary(*, img: str) -> dict[str, Any]:
 
         # Resolve handle name
         handle_name: str
-        if img == "clip":
+        if img in ("clip", "clipboard"):
             if _clip_handle is not None and load_meta(_clip_handle) is not None:
                 handle_name = _clip_handle
             else:
@@ -449,3 +449,29 @@ def summary(*, img: str) -> dict[str, Any]:
             "handle": f"#{handle_name}",
             "cached": False,
         }
+
+
+def clip_ask(*, q: str | list[str], max_edge: int = 1568) -> dict[str, Any]:
+    """Ask a question about the current clipboard image.
+
+    Shorthand for ``ask(img="clip", q=q, max_edge=max_edge)``.
+
+    Args:
+        q: Question string or list of question strings.
+        max_edge: Maximum longest edge for resize.
+
+    Returns:
+        Same as ``ask()``.
+    """
+    return ask(img="clip", q=q, max_edge=max_edge)
+
+
+def clip_view() -> dict[str, Any]:
+    """Extract a structured summary of the current clipboard image.
+
+    Shorthand for ``summary(img="clip")``.
+
+    Returns:
+        Same as ``summary()``.
+    """
+    return summary(img="clip")
