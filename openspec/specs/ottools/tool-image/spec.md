@@ -2,9 +2,19 @@
 
 ## Purpose
 
-Defines the `ot_image` pack providing image loading, querying, and lifecycle management for AI agents. Images are stored persistently in `.onetool/images/`, accessed via stable content-hash handles, and queried using a configurable vision model. A session-scoped LRU cache avoids re-reading files on repeated access.
+Defines the `ot_image` pack providing image loading, querying, and lifecycle management for AI agents. Images are stored in the session directory (`.onetool/sessions/<date-hex>/images/`), accessed via stable content-hash handles, and queried using a configurable vision model. A session-scoped LRU cache avoids re-reading files on repeated access.
 
 ## Requirements
+
+### Requirement: Supported image formats
+
+`image.load()` SHALL accept images in the following formats: PNG, JPEG, GIF, WebP, TIFF, HEIC, and AVIF.
+
+- TIFF is supported natively via Pillow (no extra dependency).
+- HEIC, HEIF, and AVIF require `pillow-heif` to be installed; if it is missing, `load()` SHALL surface a clear `ImportError` message directing the user to `pip install pillow-heif`.
+- SVG is supported via rasterisation with `cairosvg`; if it is missing, `load()` SHALL surface a clear `ImportError` message directing the user to `pip install cairosvg`.
+
+---
 
 ### Requirement: Load a single image into session storage
 
@@ -16,10 +26,17 @@ and image metadata.
 
 - **WHEN** `image.load(img="~/screenshots/ui.png")` is called
 - **THEN** it SHALL return `{"handle": "#img_<8hexchars>", "source": "<path>", "dims": [W, H], "resized": bool, "dedup": false}`
-- **AND** the original file SHALL be saved verbatim to `.onetool/images/img_<hash>.png`
+- **AND** the original file SHALL be saved verbatim to `.onetool/sessions/<date-hex>/images/img_<hash>.png`
 - **AND** `img_<hash>.meta.json` SHALL be created with `source`, `hash`,
   `original_dims`, `model_dims`, `resized`, `max_edge`, `original_format`,
   `created_at`, and `summary: null`
+- **AND** if `vision_model` is configured, a background daemon thread SHALL be spawned
+  to call `extract_summary()` and persist the result via `save_summary()` — the
+  `load()` call SHALL NOT block on this
+
+#### Scenario: Background summary skipped when no vision model
+- **WHEN** `image.load()` is called and `vision_model` is not configured (empty string)
+- **THEN** no background thread SHALL be spawned for auto-summary
 
 #### Scenario: Load from clipboard
 
@@ -110,16 +127,15 @@ model and return answers.
 #### Scenario: Single question
 
 - **WHEN** `image.ask(img="#img_a3f7b2c4", q="What framework is shown?")` is called
-- **THEN** it SHALL return `{"answers": ["<answer text>"], "handle": "#img_a3f7b2c4"}`
-- **AND** `answers` SHALL always be a list, even for a single question
+- **THEN** it SHALL return `{"result": [{"question": "What framework is shown?", "answer": "<answer text>"}], "handle": "#img_a3f7b2c4"}`
 
 #### Scenario: Batch questions — one model call
 
 - **WHEN** `image.ask(img="#img_a3f7b2c4", q=["Extract text", "Is this dark mode?"])`
   is called
 - **THEN** it SHALL send all questions in a single model call
-- **AND** it SHALL return `{"answers": ["<answer1>", "<answer2>"], "handle": "#img_a3f7b2c4"}`
-- **AND** answers SHALL be in the same order as the input list
+- **AND** it SHALL return `{"result": [{"question": "Extract text", "answer": "<answer1>"}, {"question": "Is this dark mode?", "answer": "<answer2>"}], "handle": "#img_a3f7b2c4"}`
+- **AND** result entries SHALL be in the same order as the input list
 
 #### Scenario: `"clip"` shorthand — auto-load
 
@@ -149,7 +165,7 @@ model and return answers.
 #### Scenario: Vision model not configured
 
 - **WHEN** `image.ask()` is called and no `vision_model` is set in config
-- **THEN** it SHALL return `{"answers": ["Error: ..."], "handle": "..."}` where `answers[0]` starts with `"Error:"`
+- **THEN** it SHALL return `{"error": "Error: ...", "handle": "..."}` where `error` starts with `"Error:"`
 - **AND** it SHALL NOT raise an exception
 
 ---
@@ -164,8 +180,7 @@ in `meta.json`, and return immediately on repeat calls.
 - **WHEN** `image.summary(img="#img_a3f7b2c4")` is called and `summary` is `null` in
   `meta.json`
 - **THEN** it SHALL call the vision model with the extraction prompt
-- **AND** return `{"summary": {"text": ..., "mode": ..., "type": ..., "colours": [...],
-  "shapes": [...], "description": ...}, "handle": "#img_a3f7b2c4", "cached": false}`
+- **AND** return `{"summary": {"type": ..., "mode": ..., "colours": [...], "description": ..., "content": ...}, "handle": "#img_a3f7b2c4", "cached": false}`
 - **AND** write the `summary` dict into `meta.json`
 
 #### Scenario: Repeat call — cached, no model call
@@ -178,16 +193,15 @@ in `meta.json`, and return immediately on repeat calls.
 #### Scenario: Summary JSON keys
 
 - **WHEN** a summary is returned
-- **THEN** it SHALL contain exactly the keys: `text`, `mode`, `type`, `colours`,
-  `shapes`, `description`
+- **THEN** it SHALL contain exactly the keys: `type`, `mode`, `colours`, `description`, `content`
 - **AND** `mode` SHALL be one of `"dark"`, `"light"`, `"unknown"`
-- **AND** `text` SHALL be an empty string (not null) if no text is visible
+- **AND** `content` SHALL be an empty string (not null) if no text is visible
 
 ---
 
 ### Requirement: List loaded images
 
-`image.list()` SHALL return metadata for all images currently in `.onetool/images/`.
+`image.list()` SHALL return metadata for all images currently in the session images directory.
 
 #### Scenario: Basic list
 
@@ -212,7 +226,7 @@ given handle.
 
 - **GIVEN** handle `"#img_a3f7b2c4"` is loaded
 - **WHEN** `image.delete(handle="#img_a3f7b2c4")` is called
-- **THEN** it SHALL delete `img_a3f7b2c4.png` and `img_a3f7b2c4.meta.json`
+- **THEN** it SHALL delete `img_a3f7b2c4.png` and `img_a3f7b2c4.meta.json` from the session images directory
 - **AND** remove the entry from the session LRU cache
 - **AND** return a confirmation string
 
@@ -243,7 +257,7 @@ given handle.
 #### Scenario: Purge all
 
 - **WHEN** `image.purge(all=True)` is called
-- **THEN** it SHALL delete all images in `.onetool/images/` regardless of age
+- **THEN** it SHALL delete all images in the session images directory regardless of age
 - **AND** return `{"deleted": N, "bytes_freed": N}`
 
 #### Scenario: Zero or negative minutes raises
@@ -275,22 +289,27 @@ memory growth.
 
 ### Requirement: Configuration via `tools.image` block
 
-The `ot_image` pack SHALL be configurable via `onetool.yaml` under `tools.image`.
+The `ot_image` pack SHALL be configurable via `onetool.yaml` under `tools.ot_image`.
 
 #### Scenario: vision_model required for ask and summary
 
-- **WHEN** `tools.image.vision_model` is not set
+- **WHEN** `tools.ot_image.vision_model` is not set
 - **AND** `image.ask()` or `image.summary()` is called
 - **THEN** it SHALL return an error string (not raise) indicating the setting is missing
 
 #### Scenario: Inherit api_key and base_url from ot_llm
 
-- **WHEN** `tools.image.api_key` is not set
+- **WHEN** `tools.ot_image.api_key` is not set
 - **AND** `tools.ot_llm.api_key` is set
 - **THEN** `image` SHALL use `tools.ot_llm.api_key` for vision model calls
 
 #### Scenario: max_edge override
 
-- **WHEN** `tools.image.max_edge: 800` is set in config
+- **WHEN** `tools.ot_image.max_edge: 800` is set in config
 - **AND** `image.load(img="~/large.png")` is called with a 2000×1500px image
 - **THEN** the model-upload bytes SHALL be resized to fit within 800px on the long edge
+
+#### Scenario: storage_dir override
+
+- **WHEN** `tools.ot_image.storage_dir: "my_images"` is set in config
+- **THEN** all image files SHALL be stored in the session directory under `my_images/` instead of the default `images/`

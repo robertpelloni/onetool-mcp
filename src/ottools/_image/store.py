@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
-from ot.meta import resolve_ot_path
 from ot.utils.cache import Cache
 from ot.utils.fs import unlink_tracking_bytes
+from ot.utils.session import get_session_dir
 
 from .config import get_image_config
 
@@ -26,8 +26,8 @@ _session_cache = Cache(max_size=get_image_config().session_cache_size)
 
 
 def _images_dir() -> Path:
-    """Return (and create) the .onetool/images/ directory."""
-    p = resolve_ot_path("images/")
+    """Return (and create) the images subdirectory within the session directory."""
+    p = get_session_dir() / "images"
     p.mkdir(parents=True, exist_ok=True)
     return p
 

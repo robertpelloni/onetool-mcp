@@ -32,15 +32,24 @@ def _get_client(config: Config) -> OpenAI:
 
 
 _SUMMARY_PROMPT = """\
-Analyse this image and return ONLY valid JSON with exactly these keys:
+You are an OCR and image analysis engine. Return ONLY valid JSON with exactly these keys:
 {
-  "text": "<all visible text in the image, or empty string if none>",
+  "type": "<one of: screenshot, diagram, photo, chart, code, ui, other>",
   "mode": "<one of: dark, light, unknown>",
-  "type": "<content type: screenshot, diagram, photo, chart, code, ui, other>",
-  "colours": ["<list of dominant colour names>"],
-  "shapes": ["<list of notable shapes or UI elements>"],
-  "description": "<one sentence describing what the image shows>"
-}"""
+  "colours": ["<2-5 dominant colour names>"],
+  "description": "<one sentence describing the overall purpose or subject>",
+  "content": "<full structured markdown OCR — see rules below>"
+}
+
+Rules for the 'content' field:
+- Extract ALL visible text verbatim. Do not paraphrase or summarise.
+- Use ## for top-level visual sections, ### for subsections, matching visual hierarchy.
+- Wrap code in triple-backtick blocks with language hint.
+- Render tables as markdown tables.
+- Render lists as markdown lists, preserving numbering or bullets.
+- Mark buttons and badges as **[Label]**, input fields as _[placeholder]_.
+- Include a ## Interactive Controls section at the end: a markdown table with columns Label | Type | Location.
+- Skip purely decorative elements (icons without labels, background imagery)."""
 
 
 def call_vision(model_bytes: bytes, prompt: str, config: Config) -> str:
@@ -114,8 +123,10 @@ def ask_questions(model_bytes: bytes, questions: list[str], config: Config) -> l
     else:
         numbered = "\n".join(f"{i + 1}. {q}" for i, q in enumerate(questions))
         prompt = (
-            "Answer each of the following questions about the image. "
-            f"Number your answers to match:\n{numbered}"
+            "Answer each of the following questions about the image.\n"
+            "Start each answer with only its question number followed by a period and space "
+            f"(e.g. '1. your answer'). Do not use headings or bold formatting.\n"
+            f"Questions:\n{numbered}"
         )
 
     result = call_vision(model_bytes, prompt, config)
@@ -129,12 +140,13 @@ def ask_questions(model_bytes: bytes, questions: list[str], config: Config) -> l
     answers: list[str] = []
     current_lines: list[str] = []
 
+    _num_pat = re.compile(r"^\s*(?:[#*]+\s*)?(\d+)[.)]\s*(?:[#*]*\s*)?")
     for line in result.strip().split("\n"):
-        m = re.match(r"^\s*(\d+)\.\s*", line)
+        m = _num_pat.match(line)
         if m and 1 <= int(m.group(1)) <= len(questions):
             if current_lines:
                 answers.append("\n".join(current_lines).strip())
-            current_lines = [re.sub(r"^\s*\d+\.\s*", "", line)]
+            current_lines = [_num_pat.sub("", line, count=1)]
         else:
             current_lines.append(line)
 
@@ -159,9 +171,10 @@ def extract_summary(model_bytes: bytes, config: Config) -> dict[str, object] | s
         config: Image pack config.
 
     Returns:
-        Summary dict with keys ``text``, ``mode``, ``type``, ``colours``,
-        ``shapes``, ``description``. Returns an error string if the model is
-        not configured or the response cannot be parsed.
+        Summary dict with keys ``type``, ``mode``, ``colours``, ``description``,
+        ``content`` (full structured markdown OCR of all visible text).
+        Returns an error string if the model is not configured or the response
+        cannot be parsed.
     """
     result = call_vision(model_bytes, _SUMMARY_PROMPT, config)
     if result.startswith("Error:"):
@@ -186,10 +199,9 @@ def extract_summary(model_bytes: bytes, config: Config) -> dict[str, object] | s
             return "Error: Could not parse vision model response as JSON"
 
     # Fill missing required keys with safe defaults
-    for key in ("colours", "shapes"):
-        if key not in data:
-            data[key] = []
-    for key in ("text", "mode", "type", "description"):
+    if "colours" not in data:
+        data["colours"] = []
+    for key in ("mode", "type", "description", "content"):
         if key not in data:
             data[key] = ""
 
@@ -197,8 +209,4 @@ def extract_summary(model_bytes: bytes, config: Config) -> dict[str, object] | s
     if data.get("mode") not in ("dark", "light", "unknown"):
         data["mode"] = "unknown"
 
-    # Ensure text is never null
-    if not data.get("text"):
-        data["text"] = ""
-
-    return {k: data[k] for k in ("text", "mode", "type", "colours", "shapes", "description")}
+    return {k: data[k] for k in ("type", "mode", "colours", "description", "content")}

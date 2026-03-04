@@ -44,6 +44,30 @@ def prepare_for_model(raw_bytes: bytes, max_edge: int) -> PreparedImage:
     """
     from PIL import Image
 
+    # SVG: rasterize to PNG using cairosvg before Pillow
+    stripped = raw_bytes.lstrip(b"\xef\xbb\xbf \t\r\n")
+    if stripped[:4].lower() == b"<svg" or stripped[:5] == b"<?xml":
+        try:
+            import cairosvg
+        except ImportError as exc:
+            raise ImportError(
+                "cairosvg is required for SVG support. "
+                "Install with: pip install cairosvg"
+            ) from exc
+        raw_bytes = cairosvg.svg2png(bytestring=raw_bytes)
+
+    # Register pillow-heif opener lazily for HEIC/HEIF/AVIF (ISOBMFF containers)
+    if len(raw_bytes) >= 12 and raw_bytes[4:8] == b"ftyp":
+        try:
+            import pillow_heif
+
+            pillow_heif.register_heif_opener()
+        except ImportError as exc:
+            raise ImportError(
+                "pillow-heif is required for HEIC/HEIF/AVIF support. "
+                "Install with: pip install pillow-heif"
+            ) from exc
+
     img = Image.open(io.BytesIO(raw_bytes))
     original_format = img.format or "PNG"
     original_dims = (img.width, img.height)

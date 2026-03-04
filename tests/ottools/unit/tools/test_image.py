@@ -10,8 +10,6 @@ import base64
 import io
 import json
 import sys
-import tempfile
-from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -43,6 +41,27 @@ def _make_jpeg_bytes(width: int = 50, height: int = 50) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     return buf.getvalue()
+
+
+def _make_meta(
+    handle_name: str,
+    dims: list[int] | None = None,
+    sha: str | None = None,
+) -> dict:
+    """Build a minimal image metadata dict for store tests."""
+    d = dims or [100, 100]
+    return {
+        "handle": handle_name,
+        "source": "file",
+        "hash": sha or "a" * 64,
+        "original_dims": d,
+        "model_dims": d,
+        "resized": False,
+        "max_edge": 1568,
+        "original_format": "PNG",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "summary": None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -135,11 +154,83 @@ class TestValidateImageBytes:
         fmt = validate_image_bytes(data)
         assert fmt == "JPEG"
 
+    def test_valid_tiff_le(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        # Little-endian TIFF magic
+        fmt = validate_image_bytes(b"II*\x00" + b"\x00" * 100)
+        assert fmt == "TIFF"
+
+    def test_valid_tiff_be(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        # Big-endian TIFF magic
+        fmt = validate_image_bytes(b"MM\x00*" + b"\x00" * 100)
+        assert fmt == "TIFF"
+
+    def test_valid_heic(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        # ISOBMFF with heic brand
+        data = b"\x00\x00\x00\x18" + b"ftyp" + b"heic" + b"\x00" * 100
+        fmt = validate_image_bytes(data)
+        assert fmt == "HEIC"
+
+    def test_valid_heif(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        data = b"\x00\x00\x00\x18" + b"ftyp" + b"heif" + b"\x00" * 100
+        fmt = validate_image_bytes(data)
+        assert fmt == "HEIC"
+
+    def test_valid_avif(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        data = b"\x00\x00\x00\x18" + b"ftyp" + b"avif" + b"\x00" * 100
+        fmt = validate_image_bytes(data)
+        assert fmt == "AVIF"
+
+    def test_valid_svg(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        fmt = validate_image_bytes(b"<svg xmlns='http://www.w3.org/2000/svg'>", "icon.svg")
+        assert fmt == "SVG"
+
+    def test_valid_svg_xml_declaration(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        fmt = validate_image_bytes(b"<?xml version='1.0'?><svg>", "diagram.svg")
+        assert fmt == "SVG"
+
+    def test_valid_svg_with_bom(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        fmt = validate_image_bytes(b"\xef\xbb\xbf<svg>", "icon.svg")
+        assert fmt == "SVG"
+
+    def test_valid_svg_uppercase(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        fmt = validate_image_bytes(b"<SVG xmlns='http://www.w3.org/2000/svg'>", "icon.svg")
+        assert fmt == "SVG"
+
     def test_invalid_format_raises(self) -> None:
         from ottools._image.sources import validate_image_bytes
 
         with pytest.raises(ValueError, match="Unsupported image format"):
             validate_image_bytes(b"this is not an image", "test.txt")
+
+    def test_error_message_lists_supported_formats(self) -> None:
+        from ottools._image.sources import validate_image_bytes
+
+        with pytest.raises(ValueError, match="TIFF"):
+            validate_image_bytes(b"garbage")
+        with pytest.raises(ValueError, match="HEIC"):
+            validate_image_bytes(b"garbage")
+        with pytest.raises(ValueError, match="AVIF"):
+            validate_image_bytes(b"garbage")
+        with pytest.raises(ValueError, match="SVG"):
+            validate_image_bytes(b"garbage")
 
 
 @pytest.mark.unit
@@ -237,6 +328,76 @@ class TestPrepareForModel:
         result = prepare_for_model(raw, max_edge=1568)
         assert result.original_dims == (800, 600)
 
+    def test_tiff_passthrough(self) -> None:
+        from PIL import Image
+
+        from ottools._image.resize import prepare_for_model
+
+        img = Image.new("RGB", (100, 100), color=(0, 0, 255))
+        buf = io.BytesIO()
+        img.save(buf, format="TIFF")
+        raw = buf.getvalue()
+        result = prepare_for_model(raw, max_edge=1568)
+        assert not result.resized
+        assert result.original_dims == (100, 100)
+        assert result.model_bytes[:4] == b"\x89PNG"
+
+    def test_heic_registers_pillow_heif(self) -> None:
+        from unittest.mock import MagicMock, call, patch
+
+        from ottools._image.resize import prepare_for_model
+
+        # Fake HEIC bytes (ISOBMFF with heic brand)
+        heic_bytes = b"\x00\x00\x00\x18" + b"ftyp" + b"heic" + b"\x00" * 100
+
+        mock_heif = MagicMock()
+        mock_img = MagicMock()
+        mock_img.format = "HEIF"
+        mock_img.width = 50
+        mock_img.height = 50
+        mock_img.mode = "RGB"
+
+        with patch.dict("sys.modules", {"pillow_heif": mock_heif}):
+            with patch("PIL.Image.open", return_value=mock_img) as mock_open:
+                mock_img.resize.return_value = mock_img
+                mock_img.save = MagicMock(side_effect=lambda buf, format: buf.write(b"\x89PNG\r\n\x1a\n"))
+                prepare_for_model(heic_bytes, max_edge=1568)
+
+        mock_heif.register_heif_opener.assert_called_once()
+
+    def test_heic_missing_pillow_heif_raises(self) -> None:
+        import sys
+
+        from ottools._image.resize import prepare_for_model
+
+        heic_bytes = b"\x00\x00\x00\x18" + b"ftyp" + b"heic" + b"\x00" * 100
+
+        # Remove pillow_heif from sys.modules and block its import
+        original = sys.modules.pop("pillow_heif", None)
+        try:
+            with patch.dict("sys.modules", {"pillow_heif": None}):
+                with pytest.raises(ImportError, match="pillow-heif"):
+                    prepare_for_model(heic_bytes, max_edge=1568)
+        finally:
+            if original is not None:
+                sys.modules["pillow_heif"] = original
+
+    def test_svg_rasterized_to_png(self) -> None:
+        from ottools._image.resize import prepare_for_model
+
+        svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='red'/></svg>"
+        result = prepare_for_model(svg_bytes, max_edge=1568)
+        assert result.model_bytes[:4] == b"\x89PNG"
+        assert result.original_dims == (100, 100)
+
+    def test_svg_missing_cairosvg_raises(self) -> None:
+        from ottools._image.resize import prepare_for_model
+
+        svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg'><rect/></svg>"
+        with patch.dict("sys.modules", {"cairosvg": None}):
+            with pytest.raises(ImportError, match="cairosvg"):
+                prepare_for_model(svg_bytes, max_edge=1568)
+
 
 # ---------------------------------------------------------------------------
 # Store tests
@@ -252,20 +413,7 @@ class TestStore:
         from ottools._image import store
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
-            raw = _make_png_bytes()
-            meta: dict[str, Any] = {
-                "handle": "img_abc12345",
-                "source": "file",
-                "hash": "abc12345" * 8,
-                "original_dims": [100, 100],
-                "model_dims": [100, 100],
-                "resized": False,
-                "max_edge": 1568,
-                "original_format": "PNG",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "summary": None,
-            }
-            store.save_image(raw, "img_abc12345", meta)
+            store.save_image(_make_png_bytes(), "img_abc12345", _make_meta("img_abc12345"))
             loaded = store.load_meta("img_abc12345")
             assert loaded is not None
             assert loaded["handle"] == "img_abc12345"
@@ -281,20 +429,7 @@ class TestStore:
         from ottools._image import store
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
-            raw = _make_png_bytes()
-            meta: dict[str, Any] = {
-                "handle": "img_test1",
-                "source": "file",
-                "hash": "x" * 64,
-                "original_dims": [50, 50],
-                "model_dims": [50, 50],
-                "resized": False,
-                "max_edge": 1568,
-                "original_format": "PNG",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "summary": None,
-            }
-            store.save_image(raw, "img_test1", meta)
+            store.save_image(_make_png_bytes(), "img_test1", _make_meta("img_test1", dims=[50, 50]))
             store.save_summary("img_test1", {"text": "hello", "mode": "light"})
             loaded = store.load_meta("img_test1")
             assert loaded is not None
@@ -305,19 +440,7 @@ class TestStore:
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
             sha = "a" * 64
-            meta: dict[str, Any] = {
-                "handle": "img_aaaaaaaa",
-                "source": "file",
-                "hash": sha,
-                "original_dims": [10, 10],
-                "model_dims": [10, 10],
-                "resized": False,
-                "max_edge": 1568,
-                "original_format": "PNG",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "summary": None,
-            }
-            store.save_image(_make_png_bytes(10, 10), "img_aaaaaaaa", meta)
+            store.save_image(_make_png_bytes(10, 10), "img_aaaaaaaa", _make_meta("img_aaaaaaaa", dims=[10, 10], sha=sha))
             found = store.find_by_hash(sha)
             assert found == "img_aaaaaaaa"
 
@@ -334,7 +457,6 @@ class TestStore:
         # Use a small temp cache to test eviction (session_cache is sized at import)
         small_cache = Cache(max_size=3)
         dummy = _make_png_bytes(10, 10)
-        import base64
         b64 = base64.b64encode(dummy).decode()
         for i in range(4):
             small_cache.set(f"handle_{i}", b64)
@@ -375,6 +497,16 @@ class TestStore:
         assert store.cache_get("evict_me") is None
 
         store._session_cache.clear()
+
+    def test_images_dir_resolves_to_session_dir(self, tmp_path: Path) -> None:
+        from ottools._image import store
+
+        session_dir = tmp_path / "2026-03-04-aabbccdd"
+        session_dir.mkdir()
+        with patch("ottools._image.store.get_session_dir", return_value=session_dir):
+            result = store._images_dir()
+        assert result == session_dir / "images"
+        assert result.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -460,12 +592,11 @@ class TestVision:
         config = self._make_config()
         summary_json = json.dumps(
             {
-                "text": "Hello world",
-                "mode": "light",
                 "type": "screenshot",
+                "mode": "light",
                 "colours": ["white", "black"],
-                "shapes": ["button", "input"],
                 "description": "A simple web form.",
+                "content": "## Form\n\nHello world\n\n**[Submit]**",
             }
         )
         mock_response = MagicMock()
@@ -476,9 +607,9 @@ class TestVision:
             result = extract_summary(_make_png_bytes(), config)
 
         assert isinstance(result, dict)
-        assert result["text"] == "Hello world"
+        assert result["type"] == "screenshot"
         assert result["mode"] == "light"
-        assert "button" in result["shapes"]
+        assert "Submit" in result["content"]
 
     def test_summary_fills_missing_keys(self) -> None:
         from ottools._image.vision import extract_summary
@@ -493,7 +624,7 @@ class TestVision:
             result = extract_summary(_make_png_bytes(), config)
 
         assert isinstance(result, dict)
-        assert result["text"] == ""
+        assert result["content"] == ""
         assert result["mode"] == "unknown"
         assert result["colours"] == []
 
@@ -510,6 +641,50 @@ class TestVision:
 
         assert result.startswith("Error:")
 
+    def test_batch_questions_markdown_header_format(self) -> None:
+        """Model returns answers with ### N. heading format — must be split correctly."""
+        from ottools._image.vision import ask_questions
+
+        config = self._make_config()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = (
+            "### 1. A screenshot of a terminal.\n### 2. Yes, it is dark mode."
+        )
+
+        with patch("ottools._image.vision.OpenAI") as MockOpenAI:
+            MockOpenAI.return_value.chat.completions.create.return_value = mock_response
+            answers = ask_questions(
+                _make_png_bytes(),
+                ["What is shown?", "Is it dark mode?"],
+                config,
+            )
+
+        assert len(answers) == 2
+        assert "terminal" in answers[0].lower() or "screenshot" in answers[0].lower()
+        assert "dark" in answers[1].lower()
+
+    def test_batch_questions_bold_number_format(self) -> None:
+        """Model returns answers with **N.** bold format — must be split correctly."""
+        from ottools._image.vision import ask_questions
+
+        config = self._make_config()
+        mock_response = MagicMock()
+        mock_response.choices[0].message.content = (
+            "**1.** Python code editor.\n**2.** Light mode."
+        )
+
+        with patch("ottools._image.vision.OpenAI") as MockOpenAI:
+            MockOpenAI.return_value.chat.completions.create.return_value = mock_response
+            answers = ask_questions(
+                _make_png_bytes(),
+                ["What is shown?", "What is the colour mode?"],
+                config,
+            )
+
+        assert len(answers) == 2
+        assert "python" in answers[0].lower() or "editor" in answers[0].lower()
+        assert "light" in answers[1].lower()
+
 
 # ---------------------------------------------------------------------------
 # Core tool tests
@@ -520,6 +695,15 @@ class TestVision:
 @pytest.mark.tools
 class TestLoad:
     """Tests for load()."""
+
+    def setup_method(self) -> None:
+        """Suppress background summary threads so they don't leak into other tests."""
+        self._thread_patcher = patch("ottools._image.tools.threading.Thread")
+        self._mock_thread_cls = self._thread_patcher.start()
+        self._mock_thread_cls.return_value = MagicMock()
+
+    def teardown_method(self) -> None:
+        self._thread_patcher.stop()
 
     def _patch_store(self, tmp_path: Path) -> Any:
         """Return a context manager that redirects store I/O to tmp_path."""
@@ -635,6 +819,47 @@ class TestLoad:
         assert "error" in result
         assert "linux" in result["error"].lower()
 
+    def test_background_summary_spawned_on_load(self, tmp_path: Path) -> None:
+        from ottools._image import store, tools
+        from ottools._image.config import Config
+
+        png = _make_png_bytes()
+        img_path = tmp_path / "bg_test.png"
+        img_path.write_bytes(png)
+
+        with (
+            patch.object(store, "_images_dir", return_value=tmp_path),
+            patch("ottools._image.tools.get_image_config") as mock_cfg,
+            patch("ottools._image.tools.threading.Thread") as mock_thread,
+        ):
+            mock_cfg.return_value = Config(
+                session_cache_size=10,
+                vision_model="openai/gpt-4o-mini",
+            )
+            tools._clip_handle = None
+            mock_t = MagicMock()
+            mock_thread.return_value = mock_t
+
+            tools.load(img=str(img_path))
+
+        # Thread should have been created and started for background summary
+        mock_thread.assert_called_once()
+        call_kwargs = mock_thread.call_args
+        assert call_kwargs.kwargs.get("daemon") is True
+        mock_t.start.assert_called_once()
+
+    def test_background_summary_worker_skips_when_no_vision_model(self, tmp_path: Path) -> None:
+        """Worker exits early when vision_model is not configured; no API call made."""
+        from ottools._image import tools
+        from ottools._image.config import Config
+
+        with patch("ottools._image.tools.get_image_config") as mock_cfg, \
+             patch("ottools._image.tools.extract_summary") as mock_extract:
+            mock_cfg.return_value = Config(session_cache_size=10, vision_model="")
+            tools._background_summarise("img_abc12345", b"fake_bytes")
+
+        mock_extract.assert_not_called()
+
 
 @pytest.mark.unit
 @pytest.mark.tools
@@ -645,6 +870,12 @@ class TestAsk:
         import ottools._image.vision as _v
         _v._client = None
         _v._client_key = ("", "")
+        self._thread_patcher = patch("ottools._image.tools.threading.Thread")
+        self._mock_thread_cls = self._thread_patcher.start()
+        self._mock_thread_cls.return_value = MagicMock()
+
+    def teardown_method(self) -> None:
+        self._thread_patcher.stop()
 
     def _setup(self, tmp_path: Path, mock_cfg: MagicMock) -> str:
         """Load a test image and return its handle name."""
@@ -682,8 +913,8 @@ class TestAsk:
                 MockOAI.return_value.chat.completions.create.return_value = mock_resp
                 result = tools.ask(img=handle, q="Describe the image.")
 
-        assert "answers" in result
-        assert result["answers"] == ["A red square."]
+        assert "result" in result
+        assert result["result"] == [{"question": "Describe the image.", "answer": "A red square."}]
         assert result["handle"] == handle
 
     def test_unknown_handle_returns_error(self, tmp_path: Path) -> None:
@@ -740,8 +971,8 @@ class TestAsk:
                 MockOAI.return_value.chat.completions.create.return_value = mock_resp
                 result = tools.ask(img=bare, q="Describe the image.")
 
-        assert "answers" in result
-        assert result["answers"] == ["A red square."]
+        assert "result" in result
+        assert result["result"] == [{"question": "Describe the image.", "answer": "A red square."}]
 
 
 @pytest.mark.unit
@@ -753,6 +984,12 @@ class TestSummary:
         import ottools._image.vision as _v
         _v._client = None
         _v._client_key = ("", "")
+        self._thread_patcher = patch("ottools._image.tools.threading.Thread")
+        self._mock_thread_cls = self._thread_patcher.start()
+        self._mock_thread_cls.return_value = MagicMock()
+
+    def teardown_method(self) -> None:
+        self._thread_patcher.stop()
 
     def test_first_call_calls_model(self, tmp_path: Path) -> None:
         from ottools._image import store, tools
@@ -763,12 +1000,11 @@ class TestSummary:
         img_path.write_bytes(png)
 
         summary_data = {
-            "text": "",
-            "mode": "light",
             "type": "screenshot",
+            "mode": "light",
             "colours": ["red"],
-            "shapes": [],
             "description": "A red square.",
+            "content": "A red square image.",
         }
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = json.dumps(summary_data)
@@ -801,12 +1037,11 @@ class TestSummary:
         img_path.write_bytes(png)
 
         summary_data = {
-            "text": "cached",
-            "mode": "dark",
             "type": "ui",
+            "mode": "dark",
             "colours": [],
-            "shapes": [],
             "description": "Cached.",
+            "content": "Cached content.",
         }
         mock_resp = MagicMock()
         mock_resp.choices[0].message.content = json.dumps(summary_data)

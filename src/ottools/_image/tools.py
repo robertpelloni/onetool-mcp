@@ -7,6 +7,7 @@ LRU cache, and LogSpan observability.
 from __future__ import annotations
 
 import hashlib
+import threading
 from datetime import UTC, datetime
 from typing import Any
 
@@ -31,6 +32,23 @@ from .vision import ask_questions, extract_summary
 
 # Track last clipboard handle so ask(img="clip") can reuse without re-loading
 _clip_handle: str | None = None
+
+
+def _background_summarise(handle_name: str, model_bytes: bytes) -> None:
+    """Run extract_summary() and persist the result — called in a daemon thread.
+
+    Silently skips if the vision model is not configured or if the call fails.
+    Does not modify load() return value.
+    """
+    try:
+        config = get_image_config()
+        if not config.vision_model:
+            return
+        result = extract_summary(model_bytes, config)
+        if isinstance(result, dict):
+            save_summary(handle_name, result)
+    except Exception:
+        pass  # background thread — never propagate
 
 
 def _sha256(data: bytes) -> str:
@@ -201,6 +219,14 @@ def load(*, img: str, handle: str | None = None, max_edge: int = 1568) -> dict[s
         save_image(raw_bytes, handle_name, meta)
         cache_put(handle_name, prep.model_bytes)
 
+        # Spawn background summary — silently skipped if vision_model not set
+        thread = threading.Thread(
+            target=_background_summarise,
+            args=(handle_name, prep.model_bytes),
+            daemon=True,
+        )
+        thread.start()
+
         if source_type == "clipboard":
             _clip_handle = handle_name
 
@@ -278,9 +304,10 @@ def ask(
         max_edge: Maximum longest edge for resize if the image is loaded fresh.
 
     Returns:
-        ``{"answers": list[str], "handle": str}`` — always a list, even for a
-        single question. Returns ``{"error": str, "handle": str}`` on failure
-        (handle not found, file missing, load error).
+        ``{"result": list[{"question": str, "answer": str}], "handle": str}`` —
+        each entry pairs the original question with its answer. Returns
+        ``{"error": str, "handle": str}`` on failure (handle not found, file
+        missing, load error).
 
     Example:
         image.ask(img="#img_a3f7b2c4", q="What framework is shown?")
@@ -337,7 +364,8 @@ def ask(
             s.add(error=answers[0])
             return {"error": answers[0], "handle": f"#{handle_name}"}
 
-        return {"answers": answers, "handle": f"#{handle_name}"}
+        pairs = [{"question": q, "answer": a} for q, a in zip(questions, answers, strict=False)]
+        return {"result": pairs, "handle": f"#{handle_name}"}
 
 
 def summary(*, img: str) -> dict[str, Any]:

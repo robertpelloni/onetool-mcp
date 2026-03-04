@@ -15,9 +15,17 @@ _MAGIC: list[tuple[bytes, str]] = [
     (b"GIF87a", "GIF"),
     (b"GIF89a", "GIF"),
     (b"RIFF", "WEBP"),  # verified below against bytes 8-12
-    (b"<svg", "SVG"),
-    (b"<?xml", "SVG"),
+    (b"II*\x00", "TIFF"),
+    (b"MM\x00*", "TIFF"),
 ]
+
+# ISOBMFF ftyp brands for HEIC/HEIF
+_HEIF_BRANDS: frozenset[bytes] = frozenset(
+    {b"heic", b"heix", b"heif", b"heis", b"heim", b"hevm", b"hevs", b"mif1", b"msf1"}
+)
+
+# ISOBMFF ftyp brands for AVIF
+_AVIF_BRANDS: frozenset[bytes] = frozenset({b"avif", b"avis"})
 
 
 def validate_image_bytes(data: bytes, label: str = "") -> str:
@@ -28,19 +36,33 @@ def validate_image_bytes(data: bytes, label: str = "") -> str:
         label: Optional label for error messages (e.g. file path).
 
     Returns:
-        Detected format string (e.g. "PNG", "JPEG").
+        Detected format string (e.g. "PNG", "JPEG", "HEIC", "AVIF").
 
     Raises:
         ValueError: If the format is not recognised.
     """
+    # ISOBMFF container (HEIC/HEIF/AVIF): ftyp box starts at offset 4
+    if len(data) >= 12 and data[4:8] == b"ftyp":
+        brand = data[8:12]
+        if brand in _HEIF_BRANDS:
+            return "HEIC"
+        if brand in _AVIF_BRANDS:
+            return "AVIF"
+
     for magic, fmt in _MAGIC:
         if data[: len(magic)] == magic:
             if fmt == "WEBP" and data[8:12] != b"WEBP":
                 continue
             return fmt
+
+    # SVG: text-based XML — strip UTF-8 BOM and whitespace before checking
+    stripped = data.lstrip(b"\xef\xbb\xbf \t\r\n")
+    if stripped[:4].lower() == b"<svg" or stripped[:5] == b"<?xml":
+        return "SVG"
+
     suffix = f" for {label}" if label else ""
     raise ValueError(
-        f"Unsupported image format{suffix}. Supported: PNG, JPEG, GIF, WebP"
+        f"Unsupported image format{suffix}. Supported: PNG, JPEG, GIF, WebP, TIFF, HEIC, AVIF, SVG"
     )
 
 
