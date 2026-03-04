@@ -339,6 +339,15 @@ class OutputConfig(BaseModel):
         default="tmp",
         description="Directory for result files (relative to .onetool/)",
     )
+    sessions_dir: str = Field(
+        default="sessions",
+        description="Directory for session subdirectories (relative to .onetool/)",
+    )
+    session_retention_days: int = Field(
+        default=1,
+        ge=0,
+        description="Number of days to retain session directories before purging at startup",
+    )
     result_ttl: int = Field(
         default=3600,
         ge=0,
