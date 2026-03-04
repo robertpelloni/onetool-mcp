@@ -1,3 +1,4 @@
+// Bootstrap script — injected once when excalidraw.com first loads.
 () => {
   const root = document.getElementById('root');
   const rk = Object.keys(root).find(k => k.startsWith('__reactContainer'));

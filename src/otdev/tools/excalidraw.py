@@ -3,6 +3,13 @@
 Opens excalidraw.com via Playwright and exposes tools to draw, save, load,
 clear, scroll, and zoom diagrams using a Mermaid-compatible DSL.
 
+Supports two usage modes:
+
+- **Headed** (default): user interacts directly with the visible canvas while
+  the agent assists — drawing, annotating, running layout, saving files.
+- **Headless**: agent-controlled only — user cannot see the canvas, but all
+  programmatic tools (draw, save, load, screenshot, layout, etc.) work fully.
+
 Requires the Playwright MCP server to be enabled:
     ot.server(enable='playwright')
 """
@@ -221,34 +228,6 @@ def _shape_payload(
 # ---------------------------------------------------------------------------
 
 
-def _process_pending_downloads() -> list[str]:
-    """Retrieve captured downloads from the browser and save to disk.
-
-    Excalidraw's 'Save to file' is intercepted by the JS download handler in
-    ops.js. This function drains the queue, writes each file to the current
-    working directory, and returns a list of saved paths.
-    """
-    try:
-        queue = _browser_evaluate_json(
-            "() => { const q = window.__downloadQueue || []; "
-            "window.__downloadQueue = []; return q; }"
-        )
-        if not isinstance(queue, list) or not queue:
-            return []
-        saved = []
-        for item in queue:
-            name = item.get("name", "download.excalidraw") if isinstance(item, dict) else "download.excalidraw"
-            data = item.get("data", "") if isinstance(item, dict) else ""
-            if not data:
-                continue
-            out_path = resolve_cwd_path(name)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            out_path.write_text(data, encoding="utf-8")
-            saved.append(str(out_path))
-        return saved
-    except Exception:
-        return []
-
 
 def _ensure_ready() -> str | None:
     """Ensure excalidraw.com is open and bootstrapped.
@@ -303,9 +282,6 @@ def _ensure_ready() -> str | None:
 
     # Always re-inject ops.js so in-place code changes take effect without a page reload
     _browser_evaluate(_load_js("ops.js"))
-
-    # Save any files the user downloaded via the Excalidraw UI
-    _process_pending_downloads()
 
     return None
 
@@ -2481,7 +2457,12 @@ def open() -> str:
 
     Navigates to excalidraw.com and initialises the drawing API if not
     already ready, then clears the canvas and resets all Python state.
-    To restore previous content after opening, call whiteboard.load().
+
+    **Warning:** any shapes the user has drawn directly in the browser that
+    were not saved via ``whiteboard.save()`` will be lost. Call
+    ``whiteboard.save()`` first to preserve them.
+
+    To restore previously saved content after opening, call whiteboard.load().
 
     Returns:
         "whiteboard ready" on success, or an error string.

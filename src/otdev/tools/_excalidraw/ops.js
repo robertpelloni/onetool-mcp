@@ -1,6 +1,8 @@
+// Ops script — re-injected on every tool call via _ensure_ready().
 () => {
   // Internal drawing helper — not exposed as tools.
   // Called from Python via browser_evaluate after bootstrap.js has run.
+
 
   window._batch_draw = (shapes, edges, frames) => {
     const now = Date.now();
@@ -534,32 +536,6 @@
     return parts.join('\n');
   };
 
-  // ---------------------------------------------------------------------------
-  // Download interceptor — captures Excalidraw "Save to file" downloads.
-  // Excalidraw uses <a href="blob:..." download="..."> + .click() to save.
-  // We intercept .click() on download anchors, read the blob, and store the
-  // file data in window.__downloadQueue for Python to retrieve and write.
-  // ---------------------------------------------------------------------------
-  if (!window.__downloadInterceptInstalled) {
-    window.__downloadInterceptInstalled = true;
-    window.__downloadQueue = [];
-
-    const _origClick = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function () {
-      if (this.download && this.href && this.href.startsWith('blob:')) {
-        const url  = this.href;
-        const name = this.download;
-        fetch(url)
-          .then(r => r.text())
-          .then(data => {
-            window.__downloadQueue.push({ name, data, ts: Date.now() });
-          })
-          .catch(err => console.warn('[whiteboard] download intercept failed:', err));
-        return;
-      }
-      return _origClick.call(this);
-    };
-  }
 
   return true;
 }
