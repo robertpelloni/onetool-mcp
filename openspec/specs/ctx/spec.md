@@ -12,9 +12,10 @@ The `ctx.write()` function SHALL store content immediately, begin background ind
 
 #### Scenario: Basic write
 - **WHEN** `ctx.write("some content")` is called
-- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `preview`, `status`, and `usage`
+- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `preview`, `status`, and `usage`
 - **AND** `status` SHALL be `"pending"` or `"indexing"` (never `"ready"` — indexing is async)
 - **AND** `handle` SHALL be a short opaque string (e.g. 8 hex chars)
+- **AND** `content_type` SHALL be `"markdown"` if the content contains markdown headings (`# ` lines), otherwise `"text"`
 
 #### Scenario: Write with source label
 - **WHEN** `ctx.write(content, source="webfetch:docs.example.com")` is called

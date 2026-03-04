@@ -1,11 +1,23 @@
 """Management tools for the ctx pack: list, inspect, stats."""
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from ot.logging import LogSpan
 
 from .db import _get_connection, get_db_path, is_expired, ttl_remaining
+
+
+def _meta_get(row: Any, key: str) -> Any:
+    """Extract a key from the JSON meta column, returning None if missing."""
+    raw = row.get("meta", None) if hasattr(row, "get") else row["meta"]
+    if not raw:
+        return None
+    try:
+        return json.loads(raw).get(key)
+    except (json.JSONDecodeError, AttributeError):
+        return None
 
 log = LogSpan
 
@@ -35,7 +47,7 @@ def ctx_list(
             db = _get_connection()
 
         rows = db.execute(
-            "SELECT handle, source, size_bytes, total_lines, status, expires_at "
+            "SELECT handle, source, size_bytes, total_lines, status, expires_at, meta "
             "FROM results ORDER BY rowid DESC"
         ).fetchall()
 
@@ -47,14 +59,18 @@ def ctx_list(
                 continue
             if status and row["status"] != status:
                 continue
-            active.append({
-                "handle": row["handle"],
+            handle = row["handle"]
+            entry: dict[str, Any] = {
+                "handle": handle,
                 "source": row["source"] or "",
                 "size_bytes": row["size_bytes"],
                 "total_lines": row["total_lines"],
                 "status": row["status"],
+                "abstract": _meta_get(row, "abstract"),
+                "command": f"ctx.read('{handle}')",
                 "ttl_remaining": int(ttl_remaining(row)),
-            })
+            }
+            active.append(entry)
 
         s.add("count", len(active))
         return active
@@ -77,7 +93,7 @@ def ctx_inspect(
 
         row = db.execute(
             "SELECT handle, source, size_bytes, total_lines, status, created_at, "
-            "expires_at, access_count, is_file FROM results WHERE handle=?",
+            "expires_at, access_count, is_file, meta FROM results WHERE handle=?",
             (handle,),
         ).fetchone()
         if row is None:
@@ -101,6 +117,7 @@ def ctx_inspect(
             "size_bytes": row["size_bytes"],
             "total_lines": row["total_lines"],
             "status": row["status"],
+            "abstract": _meta_get(row, "abstract"),
             "created_at": row["created_at"],
             "access_count": row["access_count"],
             "is_file_pointer": bool(row["is_file"]),

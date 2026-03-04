@@ -81,8 +81,8 @@ def _insert_handle(
     size = len(content.encode())
     lines = len(content.splitlines())
     conn.execute(
-        "INSERT INTO results(handle, source, size_bytes, total_lines, status, created_at, expires_at, is_file)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO results(handle, source, size_bytes, total_lines, status, created_at, expires_at, is_file, meta)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, '{}')",
         (handle, source, size, lines, status, created, exp, is_file),
     )
     conn.execute("INSERT INTO content(handle, body) VALUES (?, ?)", (handle, content))
@@ -303,10 +303,9 @@ class TestWrite:
     def test_write_returns_quickly(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write._open_connection") as mock_conn, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
+             patch("ot.ctx.write.threading.Thread") as mock_thread, \
+             patch("ot.ctx.write._generate_abstract", return_value="fast abstract"):
             mock_path.return_value = Path("/tmp/results.db")
-            mock_conn.return_value = conn
             mock_thread.return_value = MagicMock()
             from ot.ctx.config import Config
             start = time.time()
@@ -368,6 +367,28 @@ class TestWrite:
             result = ctx_write(content, db=conn, config=Config())
         assert len(result["preview"]) <= 5
 
+    def test_write_content_type_markdown(self) -> None:
+        conn = _make_conn()
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            content = "# Heading\n\nSome text under heading.\n\n## Sub\n\nMore."
+            result = ctx_write(content, db=conn, config=Config())
+        assert result["content_type"] == "markdown"
+
+    def test_write_content_type_text(self) -> None:
+        conn = _make_conn()
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            content = "line 1\nline 2\nline 3\nno headings here"
+            result = ctx_write(content, db=conn, config=Config())
+        assert result["content_type"] == "text"
+
     def test_write_with_intent_ot_llm_not_installed(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
@@ -380,10 +401,48 @@ class TestWrite:
             result = ctx_write("content", intent="summarize", db=conn, config=Config())
         assert "answer_error" in result
 
+    def test_generate_abstract_uses_llm(self) -> None:
+        from ot.ctx.write import _generate_abstract
+        import sys
+        fake_llm = MagicMock()
+        fake_llm.transform.return_value = "A clear LLM-generated abstract."
+        with patch.dict(sys.modules, {"ottools.ot_llm": fake_llm}):
+            result = _generate_abstract("Some content about FastAPI routing.")
+        assert result == "A clear LLM-generated abstract."
+
+    def test_generate_abstract_fallback_first_500_chars(self) -> None:
+        from ot.ctx.write import _generate_abstract
+        import sys
+        # Ensure ot_llm is not available
+        with patch.dict(sys.modules, {"ottools.ot_llm": None}):
+            short = _generate_abstract("Hello world")
+        assert short == "Hello world"
+
+    def test_generate_abstract_fallback_truncates_at_500(self) -> None:
+        from ot.ctx.write import _generate_abstract
+        long_content = "word " * 200  # 1000 chars
+        with patch.dict({"ottools.ot_llm": None}, {}):
+            with patch("ot.ctx.write._generate_abstract", wraps=lambda c: c[:500].strip() + "…"):
+                result = _generate_abstract(long_content)
+        # Should end with ellipsis and be under 502 chars
+        assert len(result) <= 502
+
+    def test_write_returns_abstract(self) -> None:
+        conn = _make_conn()
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread, \
+             patch("ot.ctx.write._generate_abstract", return_value="Test abstract."):
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            result = ctx_write("some content", db=conn, config=Config())
+        assert result["abstract"] == "Test abstract."
+
     def test_append_rebuilds_index(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
+             patch("ot.ctx.write.threading.Thread") as mock_thread, \
+             patch("ot.ctx.write._generate_abstract", return_value="Abstract."):
             mock_path.return_value = Path("/tmp/results.db")
             mock_t = MagicMock()
             mock_thread.return_value = mock_t
@@ -392,7 +451,8 @@ class TestWrite:
             handle = result["handle"]
             append_result = ctx_append(handle, " extra", db=conn, config=Config())
         assert append_result["status"] == "pending"
-        # Thread.start() called twice (once for write, once for append)
+        assert append_result["abstract"] == "Abstract."
+        # 1 indexing thread per write + 1 per append = 2 total
         assert mock_t.start.call_count == 2
 
     def test_append_unknown_handle(self) -> None:
@@ -718,6 +778,30 @@ class TestManagement:
         result = ctx_list(db=conn)
         assert isinstance(result, list)
         assert len(result) == 2
+        # abstract is None until background worker runs
+        assert result[0]["abstract"] is None
+        # command shows how to read the handle
+        assert result[0]["command"] == f"ctx.read('{result[0]['handle']}')"
+
+    def test_list_includes_abstract_when_set(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h_abs", "FastAPI content", source="docs")
+        conn.execute(
+            "UPDATE results SET meta=json_set(meta, '$.abstract', 'FastAPI routing docs.') WHERE handle='h_abs'"
+        )
+        conn.commit()
+        result = ctx_list(db=conn)
+        assert result[0]["abstract"] == "FastAPI routing docs."
+
+    def test_inspect_includes_abstract(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h_ins", "content", source="test")
+        conn.execute(
+            "UPDATE results SET meta=json_set(meta, '$.abstract', 'A test document.') WHERE handle='h_ins'"
+        )
+        conn.commit()
+        result = ctx_inspect("h_ins", db=conn)
+        assert result["abstract"] == "A test document."
 
     def test_list_empty(self) -> None:
         conn = _make_conn()

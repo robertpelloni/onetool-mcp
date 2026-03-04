@@ -8,6 +8,7 @@ from typing import Any
 
 from ot.logging import LogSpan
 
+from .chunking import _has_markdown_headings
 from .config import Config, _get_config
 from .db import (
     _get_connection,
@@ -47,6 +48,39 @@ def _remove_event(handle: str) -> None:
     """Remove event from registry (on delete/flush)."""
     with _events_lock:
         _events.pop(handle, None)
+
+
+# ---------------------------------------------------------------------------
+# Abstract generation (synchronous)
+# ---------------------------------------------------------------------------
+
+_ABSTRACT_PROMPT = (
+    "In 1-2 sentences, describe what this content is about. "
+    "Be specific: name the subject, tool, topic, or purpose. "
+    "Do not start with 'This content' or 'This document'."
+)
+_ABSTRACT_PREVIEW_BYTES = 4000
+_ABSTRACT_FALLBACK_CHARS = 500
+
+
+def _generate_abstract(content: str) -> str:
+    """Return a short abstract: LLM-generated if available, else first 500 chars."""
+    try:
+        from ottools.ot_llm import transform as llm_transform
+
+        result = llm_transform(data=content[:_ABSTRACT_PREVIEW_BYTES], prompt=_ABSTRACT_PROMPT)
+        if isinstance(result, str) and result.strip():
+            return result.strip()
+    except Exception:
+        pass
+    # Fallback: first 500 chars, truncated at last whitespace boundary
+    raw = content[:_ABSTRACT_FALLBACK_CHARS].strip()
+    if len(content) > _ABSTRACT_FALLBACK_CHARS:
+        boundary = raw.rfind(" ")
+        if boundary > 0:
+            raw = raw[:boundary]
+        raw += "…"
+    return raw
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +144,7 @@ def ctx_write(
         size_bytes = len(content.encode("utf-8"))
         lines = content.splitlines()
         total_lines = len(lines)
+        content_type = "markdown" if _has_markdown_headings(lines) else "text"
         created = now_ts()
         exp = expires_at(config.ttl)
 
@@ -137,6 +172,14 @@ def ctx_write(
         )
         db.commit()
 
+        # Generate abstract synchronously (LLM if available, else first 500 chars)
+        abstract = _generate_abstract(content)
+        db.execute(
+            "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
+            (abstract, handle),
+        )
+        db.commit()
+
         # Create event (initially unset)
         _get_event(handle)
 
@@ -157,6 +200,8 @@ def ctx_write(
             "source": source,
             "size_bytes": size_bytes,
             "total_lines": total_lines,
+            "content_type": content_type,
+            "abstract": abstract,
             "preview": preview,
             "status": "pending",
             "usage": {
@@ -262,6 +307,14 @@ def ctx_append(
         )
         db.commit()
 
+        # Regenerate abstract synchronously (content changed)
+        abstract = _generate_abstract(combined)
+        db.execute(
+            "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
+            (abstract, handle),
+        )
+        db.commit()
+
         # Reset event (clear old signal)
         with _events_lock:
             ev = _events.get(handle)
@@ -284,17 +337,13 @@ def ctx_append(
         return {
             "handle": handle,
             "status": "pending",
+            "abstract": abstract,
             "size_bytes": new_size,
             "total_lines": new_lines,
         }
 
 
 __all__ = [
-    "_events",
-    "_events_lock",
-    "_get_event",
-    "_remove_event",
-    "_set_event",
     "ctx_append",
     "ctx_write",
 ]

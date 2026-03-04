@@ -1,6 +1,6 @@
 """SQLite connection, schema, and TTL helpers for the ctx pack.
 
-Database location: .onetool/tmp/results.db
+Database location: .onetool/sessions/<date>-<id>/ctx.db
 
 Tables:
     results           - Handle metadata (status, source, TTL, etc.)
@@ -12,6 +12,7 @@ Tables:
 """
 from __future__ import annotations
 
+import contextlib
 import sqlite3
 import time
 from pathlib import Path
@@ -40,11 +41,10 @@ def _ctx_setup(conn: sqlite3.Connection) -> None:
 
 
 def get_db_path() -> Path:
-    """Return path to results.db, creating parent dirs as needed."""
-    from ot.config import get_config
+    """Return path to ctx.db in the session directory, creating it as needed."""
+    from ot.utils.session import get_session_dir
 
-    cfg = get_config()
-    db_path = cfg.get_result_store_path() / "results.db"
+    db_path = get_session_dir() / "ctx.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
     return db_path
 
@@ -89,7 +89,8 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             created_at   REAL NOT NULL,
             expires_at   REAL,
             access_count INTEGER DEFAULT 0,
-            is_file      INTEGER DEFAULT 0
+            is_file      INTEGER DEFAULT 0,
+            meta         TEXT DEFAULT '{}'
         );
 
         CREATE TABLE IF NOT EXISTS content (
@@ -150,10 +151,14 @@ def _migration_guard(conn: sqlite3.Connection) -> None:
     """Mark any handles stuck in 'indexing' status as 'failed'.
 
     Called once on connection open to clean up crash remnants.
+    Also applies additive schema migrations (ALTER TABLE ADD COLUMN).
     """
     conn.execute(
         "UPDATE results SET status='failed' WHERE status='indexing'"
     )
+    # Additive column migrations — safe to retry (ignored if column exists)
+    with contextlib.suppress(Exception):
+        conn.execute("ALTER TABLE results ADD COLUMN meta TEXT DEFAULT '{}'")
     conn.commit()
 
 
