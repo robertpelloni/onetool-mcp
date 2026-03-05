@@ -1,7 +1,7 @@
 """Unit tests for the ctx pack.
 
 Covers: db layer, chunking, indexing, write/append, read/toc, search/grep/slice,
-transform, management, and maintenance tools.
+ask, management, and maintenance tools.
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ from ot.ctx.search import (
     ctx_search,
     ctx_slice,
 )
-from ot.ctx.transform import ctx_transform
+from ot.ctx.ask import ctx_ask
 from ot.ctx.write import ctx_append, ctx_write
 
 
@@ -161,6 +161,27 @@ class TestDbSchema:
         row = {"expires_at": None}
         assert not is_expired(row)
         assert ttl_remaining(row) == 0.0
+
+    def test_get_content_returns_none_on_unicode_decode_error(self) -> None:
+        """get_content returns None if file-backed body contains invalid UTF-8."""
+        import tempfile
+        from ot.ctx.db import get_content
+
+        conn = _make_conn()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"\xff\xfe invalid utf-8")
+            bad_path = f.name
+
+        conn.execute(
+            "INSERT INTO results(handle, source, size_bytes, total_lines, status, created_at, is_file)"
+            " VALUES ('bad1', '', 5, 1, 'ready', ?, 1)",
+            (now_ts(),),
+        )
+        conn.execute("INSERT INTO content(handle, body) VALUES ('bad1', ?)", (bad_path,))
+        conn.commit()
+
+        result = get_content(conn, "bad1")
+        assert result is None
 
 
 # ===========================================================================
@@ -364,8 +385,30 @@ class TestWrite:
             mock_thread.return_value = MagicMock()
             from ot.ctx.config import Config
             content = "\n".join(f"line {i}" for i in range(20))
-            result = ctx_write(content, db=conn, config=Config())
+            result = ctx_write(content, verbose=True, db=conn, config=Config())
         assert len(result["preview"]) <= 5
+
+    def test_write_verbose_false_omits_preview_and_usage(self) -> None:
+        conn = _make_conn()
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            result = ctx_write("some content", db=conn, config=Config())
+        assert "preview" not in result
+        assert "usage" not in result
+
+    def test_write_verbose_true_includes_preview(self) -> None:
+        conn = _make_conn()
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            result = ctx_write("line one\nline two", verbose=True, db=conn, config=Config())
+        assert "preview" in result
+        assert "usage" not in result
 
     def test_write_content_type_markdown(self) -> None:
         conn = _make_conn()
@@ -427,22 +470,20 @@ class TestWrite:
         # Should end with ellipsis and be under 502 chars
         assert len(result) <= 502
 
-    def test_write_returns_abstract(self) -> None:
+    def test_write_abstract_is_empty_immediately(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread, \
-             patch("ot.ctx.write._generate_abstract", return_value="Test abstract."):
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
             mock_path.return_value = Path("/tmp/results.db")
             mock_thread.return_value = MagicMock()
             from ot.ctx.config import Config
             result = ctx_write("some content", db=conn, config=Config())
-        assert result["abstract"] == "Test abstract."
+        assert result["abstract"] == ""
 
     def test_append_rebuilds_index(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread, \
-             patch("ot.ctx.write._generate_abstract", return_value="Abstract."):
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
             mock_path.return_value = Path("/tmp/results.db")
             mock_t = MagicMock()
             mock_thread.return_value = mock_t
@@ -451,7 +492,7 @@ class TestWrite:
             handle = result["handle"]
             append_result = ctx_append(handle, " extra", db=conn, config=Config())
         assert append_result["status"] == "pending"
-        assert append_result["abstract"] == "Abstract."
+        assert append_result["abstract"] == ""
         # 1 indexing thread per write + 1 per append = 2 total
         assert mock_t.start.call_count == 2
 
@@ -459,6 +500,30 @@ class TestWrite:
         conn = _make_conn()
         from ot.ctx.config import Config
         result = ctx_append("nosuchhandle", "extra", db=conn, config=Config())
+        assert "error" in result
+
+    def test_write_accepts_handle_dict_and_dereferences(self) -> None:
+        """ctx_write dereferences a runner auto-offload handle dict transparently."""
+        conn = _make_conn()
+        _insert_handle(conn, "src1", "deref content here", status="ready")
+        with patch("ot.ctx.write.get_db_path") as mock_path, \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
+            mock_path.return_value = Path("/tmp/results.db")
+            mock_thread.return_value = MagicMock()
+            from ot.ctx.config import Config
+            result = ctx_write(
+                {"handle": "src1", "total_lines": 1},
+                source="test",
+                db=conn,
+                config=Config(),
+            )
+        assert "handle" in result
+        assert result["handle"] != "src1"  # new handle allocated
+
+    def test_write_handle_dict_unknown_returns_error(self) -> None:
+        conn = _make_conn()
+        from ot.ctx.config import Config
+        result = ctx_write({"handle": "nosuch"}, db=conn, config=Config())
         assert "error" in result
 
 
@@ -710,54 +775,73 @@ class TestSearch:
 
 
 # ===========================================================================
-# 7. Transform
+# 7. Ask
 # ===========================================================================
 
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestTransform:
-    def test_transform_ot_llm_not_installed(self) -> None:
+class TestAsk:
+    def test_single_question_returns_result_list(self) -> None:
         conn = _make_conn()
-        _insert_handle(conn, "h1", "some content")
+        _insert_handle(conn, "h1", "asyncio is great for IO-bound tasks")
+        mock_llm = MagicMock()
+        mock_llm.transform = MagicMock(return_value="asyncio is great for IO-bound work")
+        with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
+            result = ctx_ask("h1", q="What is asyncio good for?", db=conn)
+        assert "result" in result
+        assert result["handle"] == "h1"
+        assert len(result["result"]) == 1
+        assert result["result"][0]["question"] == "What is asyncio good for?"
+        assert result["result"][0]["answer"] == "asyncio is great for IO-bound work"
+
+    def test_batch_questions_single_llm_call(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h1", "Python asyncio content")
+        mock_llm = MagicMock()
+        mock_llm.transform = MagicMock(return_value="1. Use gather\n2. Avoid blocking")
+        with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
+            result = ctx_ask("h1", q=["Best practice?", "Common mistake?"], db=conn)
+        assert mock_llm.transform.call_count == 1
+        assert len(result["result"]) == 2
+        assert result["result"][0]["question"] == "Best practice?"
+        assert result["result"][1]["question"] == "Common mistake?"
+
+    def test_model_override_passed_to_llm(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h1", "content")
+        mock_llm = MagicMock()
+        mock_llm.transform = MagicMock(return_value="answer")
+        with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
+            ctx_ask("h1", q="What?", model="haiku", db=conn)
+        mock_llm.transform.assert_called_once()
+        _, kwargs = mock_llm.transform.call_args
+        assert kwargs.get("model") == "haiku"
+
+    def test_ot_llm_not_configured_returns_error_dict(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h1", "content")
         with patch.dict("sys.modules", {"ottools.ot_llm": None}):
-            result = ctx_transform("h1", intent="summarize", db=conn)
-        assert "Error" in result
-        assert "ot_llm" in result
+            result = ctx_ask("h1", q="What?", db=conn)
+        assert "error" in result
+        assert result["handle"] == "h1"
+        assert "ot_llm" in result["error"]
 
-    def test_transform_with_mock(self) -> None:
+    def test_unknown_handle_returns_error_dict(self) -> None:
         conn = _make_conn()
-        _insert_handle(conn, "h1", "some content about authentication")
+        result = ctx_ask("nosuch", q="What?", db=conn)
+        assert result == {"error": "Handle not found: nosuch", "handle": "nosuch"}
+
+    def test_large_content_sets_truncated(self) -> None:
+        conn = _make_conn()
+        big_content = "x" * (1024 * 1024 + 1)  # just over 1MB default
+        _insert_handle(conn, "h1", big_content)
         mock_llm = MagicMock()
-        mock_llm.transform = MagicMock(return_value="The answer is 42")
+        mock_llm.transform = MagicMock(return_value="answer")
         with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
-            result = ctx_transform("h1", intent="summarize", db=conn)
-        assert result == "The answer is 42"
-
-    def test_transform_json_mode(self) -> None:
-        conn = _make_conn()
-        _insert_handle(conn, "h1", "content")
-        mock_llm = MagicMock()
-        mock_llm.transform = MagicMock(return_value='{"key": "value"}')
-        with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
-            result = ctx_transform("h1", intent="list as JSON", json_mode=True, db=conn)
-        assert result == '{"key": "value"}'
-
-    def test_transform_unknown_handle(self) -> None:
-        conn = _make_conn()
-        result = ctx_transform("nosuch", intent="summarize", db=conn)
-        assert isinstance(result, dict)
-        assert result == {"error": "Handle not found: nosuch"}
-
-    def test_transform_graceful_when_not_configured(self) -> None:
-        conn = _make_conn()
-        _insert_handle(conn, "h1", "content")
-        mock_llm = MagicMock()
-        mock_llm.transform = MagicMock(side_effect=Exception("API key not configured"))
-        with patch.dict("sys.modules", {"ottools.ot_llm": mock_llm}):
-            result = ctx_transform("h1", intent="summarize", db=conn)
-        assert "Error" in result
-        assert isinstance(result, str)
+            result = ctx_ask("h1", q="What?", db=conn)
+        assert result.get("truncated") is True
+        assert "hint" in result
 
 
 # ===========================================================================
@@ -955,6 +1039,28 @@ class TestMaintenance:
         result = ctx_purge(db=conn)
         assert result["deleted"] == 0
 
+    def test_purge_skips_vacuum_when_nothing_deleted(self) -> None:
+        """VACUUM is not run when no handles are deleted."""
+        conn = _make_conn()
+        _insert_handle(conn, "h1", "A", status="ready")
+
+        vacuum_calls: list[str] = []
+
+        class _TrackingConn:
+            def __init__(self, real: sqlite3.Connection) -> None:
+                self._real = real
+
+            def execute(self, sql: str, *args: object, **kwargs: object):
+                if sql.strip().upper() == "VACUUM":
+                    vacuum_calls.append(sql)
+                return self._real.execute(sql, *args, **kwargs)
+
+            def __getattr__(self, name: str):
+                return getattr(self._real, name)
+
+        ctx_purge(db=_TrackingConn(conn))  # type: ignore[arg-type]
+        assert vacuum_calls == [], "VACUUM should not run when deleted == 0"
+
     def test_purge_old_handles_default_minutes(self) -> None:
         """ctx_purge() with default minutes=15 deletes handles older than 15 min."""
         conn = _make_conn()
@@ -987,11 +1093,11 @@ class TestMaintenance:
         assert result["bytes_freed"] == 800
 
     def test_purge_all_wipes_everything(self) -> None:
-        """ctx_purge(all=True) removes all handles and preserves schema."""
+        """ctx_purge(delete_all=True) removes all handles and preserves schema."""
         conn = _make_conn()
         _insert_handle(conn, "h1", "A")
         _insert_handle(conn, "h2", "B")
-        result = ctx_purge(all=True, db=conn)
+        result = ctx_purge(delete_all=True, db=conn)
         assert result["deleted"] == 2
         assert conn.execute("SELECT COUNT(*) FROM results").fetchone()[0] == 0
         # Schema preserved
@@ -1000,21 +1106,21 @@ class TestMaintenance:
         assert "content" in tables
 
     def test_purge_all_respects_source_filter(self) -> None:
-        """ctx_purge(all=True, source=...) deletes only matching handles."""
+        """ctx_purge(delete_all=True, source=...) deletes only matching handles."""
         conn = _make_conn()
         _insert_handle(conn, "h1", "A", source="brave")
         _insert_handle(conn, "h2", "B", source="webfetch")
-        result = ctx_purge(all=True, source="brave", db=conn)
+        result = ctx_purge(delete_all=True, source="brave", db=conn)
         assert result["deleted"] == 1
         assert conn.execute("SELECT COUNT(*) FROM results WHERE handle='h1'").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM results WHERE handle='h2'").fetchone()[0] == 1
 
     def test_purge_all_respects_status_filter(self) -> None:
-        """ctx_purge(all=True, status=...) deletes only matching handles."""
+        """ctx_purge(delete_all=True, status=...) deletes only matching handles."""
         conn = _make_conn()
         _insert_handle(conn, "h1", "A", status="failed")
         _insert_handle(conn, "h2", "B", status="ready")
-        result = ctx_purge(all=True, status="failed", db=conn)
+        result = ctx_purge(delete_all=True, status="failed", db=conn)
         assert result["deleted"] == 1
         assert conn.execute("SELECT COUNT(*) FROM results WHERE handle='h1'").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM results WHERE handle='h2'").fetchone()[0] == 1

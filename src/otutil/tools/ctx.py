@@ -10,7 +10,7 @@ Tools:
     grep     - Regex / fuzzy line search with context
     slice    - Extract by section number, heading, or line range
     toc      - Numbered section index with vocabulary hints
-    transform- LLM extraction via ot_llm (optional)
+    ask      - Multi-question LLM query over stored content (optional)
     append   - Add content and rebuild index
     list     - All active handles
     inspect  - Detailed metadata for one handle
@@ -27,12 +27,15 @@ pack = "ot_context"
 __ot_requires__: dict[str, str] = {}
 
 __all__ = [
-    "append", "delete", "grep", "inspect", "list", "purge", "read",
-    "search", "slice", "stats", "toc", "transform", "write",
+    "append", "ask", "delete", "grep", "inspect", "list", "purge", "read",
+    "search", "slice", "stats", "toc", "write",
 ]
 
 from ot.ctx import (
     ctx_append as append,
+)
+from ot.ctx import (
+    ctx_ask as ask,
 )
 from ot.ctx import (
     ctx_delete as delete,
@@ -63,9 +66,6 @@ from ot.ctx import (
 )
 from ot.ctx import (
     ctx_toc as toc,
-)
-from ot.ctx import (
-    ctx_transform as transform,
 )
 from ot.ctx import (
     ctx_write as write,

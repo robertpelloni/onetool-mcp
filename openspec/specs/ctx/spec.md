@@ -8,11 +8,12 @@ Defines the `ctx` pack providing a smart-context store backed by SQLite+FTS5. Th
 
 ### Requirement: Write Content to Context Store
 
-The `ctx.write()` function SHALL store content immediately, begin background indexing, and return a handle with preview.
+The `ctx.write()` function SHALL store content immediately, begin background indexing and abstract generation, and return a compact handle dict.
 
 #### Scenario: Basic write
 - **WHEN** `ctx.write("some content")` is called
-- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `abstract`, `preview`, `status`, and `usage`
+- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `abstract`, and `status`
+- **AND** `abstract` SHALL be `""` immediately (populated asynchronously in the background thread)
 - **AND** `status` SHALL be `"pending"` or `"indexing"` (never `"ready"` — indexing is async)
 - **AND** `handle` SHALL be a short opaque string (e.g. 8 hex chars)
 - **AND** `content_type` SHALL be `"markdown"` if the content contains markdown headings (`# ` lines), otherwise `"text"`
@@ -31,10 +32,16 @@ The `ctx.write()` function SHALL store content immediately, begin background ind
 - **THEN** it SHALL return in under 100ms
 - **AND** FTS5 indexing SHALL complete asynchronously in the background
 
-#### Scenario: Preview lines
-- **WHEN** `ctx.write(content)` is called
-- **THEN** `preview` SHALL contain the first 5 non-empty lines of content
-- **AND** `usage` SHALL be a dict of ready-to-run `ctx.*` calls containing the handle
+#### Scenario: Verbose mode
+- **WHEN** `ctx.write(content, verbose=True)` is called
+- **THEN** the response SHALL additionally include `preview` (first 5 non-empty lines of content)
+- **WHEN** `ctx.write(content)` is called (default `verbose=False`)
+- **THEN** `preview` SHALL NOT be present in the response
+
+#### Scenario: Handle-dict dereference
+- **WHEN** `ctx.write(content)` is called where `content` is a dict containing a `"handle"` key (runner auto-offload format)
+- **THEN** `ctx.write` SHALL transparently dereference the handle, read its content, and store it under a new handle
+- **AND** if the referenced handle is not found it SHALL return `{"error": ...}`
 
 ---
 
@@ -196,24 +203,53 @@ The `ctx.toc()` function SHALL return a numbered section index with line ranges 
 
 ---
 
-### Requirement: LLM Extraction
+### Requirement: Multi-question LLM Query
 
-The `ctx.transform()` function SHALL use `ot_llm` to synthesise a focused answer from stored content.
+The `ctx.ask()` function SHALL accept one or more questions about stored content, send them to `ot_llm` in a single call, and return structured question/answer pairs — mirroring the `img.ask` interface for text content.
 
-#### Scenario: Basic transform
-- **GIVEN** `ot_llm` is configured and a ready handle
-- **WHEN** `ctx.transform(h, intent="how to install")` is called
-- **THEN** it SHALL return a focused text answer relevant to the intent
+#### Scenario: Single question string
 
-#### Scenario: JSON mode
-- **WHEN** `ctx.transform(h, intent="list all endpoints", json_mode=True)` is called
-- **THEN** it SHALL return a JSON-parseable string
+- **WHEN** `ctx.ask(h, q="What is the recommended entry point?")` is called
+- **THEN** it SHALL return `{"result": [{"question": "What is the recommended entry point?", "answer": "<answer>"}], "handle": h}`
+
+#### Scenario: Batch questions list
+
+- **WHEN** `ctx.ask(h, q=["What is the recommended entry point?", "What are common mistakes?"])` is called
+- **THEN** it SHALL send both questions in a single `ot_llm` call
+- **AND** return `{"result": [{"question": "...", "answer": "..."}, {"question": "...", "answer": "..."}], "handle": h}`
+- **AND** the order of results SHALL match the order of questions provided
+
+#### Scenario: Model override
+
+- **WHEN** `ctx.ask(h, q="...", model="haiku")` is called
+- **THEN** it SHALL use the specified model for the `ot_llm` call
+- **AND** fall back to the `ot_llm` configured default if `model=None`
 
 #### Scenario: ot_llm not configured
-- **GIVEN** `ot_llm` is not configured (no base_url or API key)
-- **WHEN** `ctx.transform(h, intent="anything")` is called
-- **THEN** it SHALL return a clear error message explaining that `ot_llm` must be configured
-- **AND** SHALL NOT raise an unhandled exception
+
+- **WHEN** `ctx.ask(h, q="...")` is called and `ot_llm` is not configured
+- **THEN** it SHALL return `{"error": "<message explaining ot_llm must be configured>", "handle": h}`
+- **AND** it SHALL NOT raise an unhandled exception
+
+#### Scenario: Unknown handle
+
+- **WHEN** `ctx.ask("badhandle", q="...")` is called
+- **THEN** it SHALL return `{"error": "Handle not found: badhandle", "handle": "badhandle"}`
+
+#### Scenario: Handle still indexing
+
+- **GIVEN** a handle with `status="indexing"`
+- **WHEN** `ctx.ask(h, q="...")` is called
+- **THEN** it SHALL proceed using whatever content is available (same as `ctx.read` without waiting)
+- **AND** the response MAY include a `warning` field noting that indexing is still in progress
+
+#### Scenario: Large content truncation
+
+- **GIVEN** a handle whose total content exceeds `max_inline_bytes`
+- **WHEN** `ctx.ask(h, q="...")` is called
+- **THEN** it SHALL send the first `max_inline_bytes` characters of content to the model
+- **AND** the response SHALL include a `truncated: true` field
+- **AND** the response MAY include a `hint` suggesting `ctx.search` or `ctx.slice` to narrow scope before re-querying
 
 ---
 
@@ -326,13 +362,18 @@ The `ctx.purge()` function SHALL bulk-delete handles matching age, source, or st
 - **WHEN** `ctx.purge(status="failed")` is called
 - **THEN** it SHALL delete all handles with `status="failed"` AND older than 15 minutes (default)
 
+#### Scenario: Purge all (no filters)
+- **WHEN** `ctx.purge(delete_all=True)` is called with no source or status filters
+- **THEN** it SHALL delete every handle regardless of age
+- **AND** return `{"deleted": N, "bytes_freed": N}`
+
 #### Scenario: Purge all with source filter
-- **WHEN** `ctx.purge(all=True, source="brave")` is called
+- **WHEN** `ctx.purge(delete_all=True, source="brave")` is called
 - **THEN** it SHALL delete all handles whose source matches "brave" regardless of age
 - **AND** handles from other sources SHALL NOT be deleted
 
 #### Scenario: Purge all with status filter
-- **WHEN** `ctx.purge(all=True, status="failed")` is called
+- **WHEN** `ctx.purge(delete_all=True, status="failed")` is called
 - **THEN** it SHALL delete all handles with `status="failed"` regardless of age
 - **AND** handles with other statuses SHALL NOT be deleted
 
