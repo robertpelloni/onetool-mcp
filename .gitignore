@@ -92,6 +92,7 @@ credentials/
 .mcpregistry_*_token
 
 # Project
+docs/_wip/
 scratch/
 diagrams/
 msg/

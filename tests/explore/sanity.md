@@ -10,13 +10,13 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Do sanity testing and find issues.
 
 Test out the following packs:
-Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, package, ripgrep, ot_forge, tavily, webfetch
+Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
 
 When testing:
 - convert with files at tests/data/
 - db with db at tests/data/northwind.db (25MB, download via `just test-setup`)
 - excel with files at tests/data/
-- mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, cache_clear. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
+- mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, flush. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
 - ot_forge: create_ext, validate_ext, install_skills
 - web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
@@ -235,7 +235,6 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `mem.decay(dry_run=True)` - preview importance decay
   - Example: `mem.stale()` - check for outdated file-backed memories
   - Example: `mem.stats()` - get memory statistics
-  - Example: `mem.cache_clear()` - clear result cache
   - Clean up: `mem.delete(topic="tmp/", confirm=True)` after testing
 - **diagram tools**: Use `provider=` (not `diagram_type=`) and `source=` for rendering
   - Example: `diagram.list_providers()` - see available providers
@@ -266,6 +265,29 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Note: DB path is now `tests/data/northwind.db` (download via `just test-setup`)
 - **webfetch.fetch**: Use `max_length=` not `max_chars=` to limit output
   - Example: `webfetch.fetch(url="...", max_length=500)`
+- **brave tools**: Use `brave.news()` not `brave.search_news()`. Available: search, news, image, search_batch, video
+  - Example: `brave.news(query="AI", count=3)` not `brave.search_news(query="AI")`
+- **ot_image tools**: All tools use `img=` as the image reference parameter (not `path=` or `handle=`)
+  - `ot_image.load(img="tests/data/file_example_1.jpg")` — file path, URL, or `"clip"` for clipboard
+  - `ot_image.ask(img="#img_handle", q="What is in this image?")` — use `q=` not `questions=`
+  - `ot_image.summary(img="#img_handle")` — extracts and caches structured summary
+  - `ot_image.delete(handle="img_handle")` — handle without `#` prefix
+  - Handles are returned as `"#img_<8hexchars>"` from `load()`; use bare `"img_<8hexchars>"` for `delete()`
+- **whiteboard.draw**: Use `input=` not `dsl=`
+  - Example: `whiteboard.draw(input="A --> B --> C")` not `whiteboard.draw(dsl="...")`
+- **mem.flush**: Replaces `mem.cache_clear()` (removed in refactor). Flushes the background embedding queue.
+  - Example: `mem.flush()` → "All pending embeddings completed"
+- **ot_context tools**: Use `select=` not `sections=` for slice; `intent=` not `query=` for transform
+  - `ctx.slice(handle, select=2)` — int section number, str "N:M" line range, or heading substring
+  - `ctx.transform(handle, intent="list all section names")` — not `query=`
+- **whiteboard.note**: Uses `input=` not `content=` (same as draw and erase)
+  - Example: `wb.note(input="n1[note:\ntext here]")` — note type must be lowercase (table/tree/seq/timeline/note)
+- **whiteboard.erase**: Uses `ids=` not `targets=`
+  - Example: `wb.erase(ids=["nodeA", "nodeB"])`
+- **Large output → ctx handles**: `$f_r`, `$f_t`, `$f_g`, `$mem_r`, `$wf`, `$tav_x` return ctx handles for large output.
+  Use `ctx.read(handle)` to page through, `ctx.search(handle, queries=[...])` to search.
+- **ctx parallel write contention**: Avoid calling 5+ large-output tools simultaneously — SQLite may return
+  "database is locked". Retry succeeds. Filed: `wip/issues/ctx-db-locked-parallel-writes.md`
 
 ### Expected behaviors (not bugs)
 
