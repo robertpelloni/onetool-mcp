@@ -1,6 +1,6 @@
 # Tool Reference
 
-**25 Packs. 230 Tools.**
+**25 Packs. 231 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -42,7 +42,7 @@ uv tool install 'onetool-mcp[util,dev]'  # most tools
 | [**OT LLM**](ot_llm.md) | core | AI-powered data transformation. | 2 | MIT | `transform`, `transform_file` |
 | [**OT Secrets**](ot_secrets.md) | core | Age-encrypted secrets management. | 5 | MIT | `audit`, `encrypt`, `init`, `rotate`, `status` |
 | [**Package**](package.md) | `[dev]` | Package version lookup and security audits. | 5 | MIT | `audit`, `models`, `npm`, `pypi`, `version` |
-| [**Playwright Util**](play-util.md) | `[dev]` | Visual element annotation for the Playwright MCP server. | 5 | MIT | `clear_annotations`, `guide_user`, `highlight_element`, `inject_annotations`, `scan_annotations` |
+| [**Playwright Util**](play-util.md) | `[dev]` | Visual element annotation for the Playwright MCP server. | 6 | MIT | `clear_annotations`, `enable_auto_inject`, `guide_user`, `highlight_element`, `inject_annotations`, `scan_annotations` |
 | [**Ripgrep**](ripgrep.md) | `[dev]` | Fast regex file search. | 4 | [ripgrep](https://github.com/BurntSushi/ripgrep) (MIT) | `count`, `files`, `search`, `types` |
 | [**Tavily**](tavily.md) | `[util]` | AI-powered web search and URL content extraction. | 5 | [Tavily](https://tavily.com/) (MIT) | `extract`, `extract_batch`, `research`, `search`, `search_batch` |
 | [**OT Timer**](ot_timer.md) | core | Named stopwatch timers for performance measurement. | 4 | MIT | `clear`, `elapsed`, `list`, `start` |
