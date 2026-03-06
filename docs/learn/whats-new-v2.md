@@ -31,7 +31,7 @@ Turns Excalidraw into a tool-driven canvas. Agents can generate architecture dia
 >>> whiteboard.close()
 ```
 
-Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, and `hard_reset`. Short alias: `wb`.
+Also provides `load`, `clear`, `erase`, `note`, `scroll`, `zoom`, `fit`, `layout`, `align`, `read_scene`, and `hard_reset`. Short alias: `wb`.
 
 ### tavily — AI-powered search and URL extraction `[util]`
 
@@ -112,6 +112,41 @@ Simple named timers that persist across tool calls. Start a timer before a long 
 >>> ot_timer.list()
 ```
 
+### ot_context — Smart context store `[core]`
+
+Persistent SQLite + FTS5 store for large tool outputs. TTL-expiring, BM25-indexed. Write, search, grep, and navigate results across tool calls without burning your context window.
+
+```python
+>>> ctx.write(content="...", source="research")
+>>> ctx.search("async error handling")
+>>> ctx.grep(pattern="def.*handler")
+>>> ctx.read("abc123", offset=50)
+```
+
+Short alias: `ctx`.
+
+### ot_image — Dedicated image vision `[core]`
+
+Routes image analysis to a dedicated vision model in a separate API session — zero tokens charged to your host session. Substantially more accurate than direct attachment for structured extraction.
+
+Benchmark (4-column product price grid, 20 cells):
+
+| Metric                | `img.ask` | Direct attachment |
+| --------------------- | --------- | ----------------- |
+| Host session tokens   | **0**     | 190,221           |
+| Cost to host session  | **$0**    | $0.078            |
+| Rows extracted (of 5) | **5 / 5** | 3 / 5             |
+| Cell accuracy (of 20) | **~100%** | **25%**           |
+| Speed                 | 41s       | 34s               |
+
+```python
+>>> img.load("diagram.png")
+>>> img.ask(handle="diag_01", question="What services are in this architecture?")
+>>> img.summary(handle="diag_01")
+```
+
+Supports PNG, JPG, SVG, HEIC, AVIF, TIFF. Short alias: `img`.
+
 ---
 
 ## New and Changed Functions in Existing Packs
@@ -143,6 +178,44 @@ The Context7 integration has been simplified. `search()` now accepts a `limit` p
 ### diagram `[dev]`
 
 Adds `get_playground_url(source)` which generates a shareable Kroki playground link for any diagram source. Instead of rendering locally, you can hand someone a URL where they can view and edit the diagram interactively.
+
+### whiteboard `[dev]`
+
+**`layout` — ELK.js auto-layout**
+
+Runs ELK.js in the browser to automatically position all nodes, then calls `fit()`. Works on the full canvas or a selection.
+
+```python
+>>> wb.layout()                                    # layered, top-to-bottom
+>>> wb.layout(direction="RIGHT", gap_layer=120)    # left-to-right pipeline
+>>> wb.layout(algorithm="stress")                  # spring-based, undirected
+>>> wb.layout(algorithm="mrtree", direction="DOWN")
+>>> wb.layout(direction="RIGHT", arrow_type="elbow")
+```
+
+| Parameter        | Default            | Options                                                                  |
+| ---------------- | ------------------ | ------------------------------------------------------------------------ |
+| `algorithm`      | `layered`          | `layered`, `stress`, `mrtree`, `radial`, `force`                         |
+| `direction`      | `DOWN`             | `DOWN`, `RIGHT`, `UP`, `LEFT`                                            |
+| `gap_layer`      | `80`               | pixels between layers (`layered` only)                                   |
+| `gap_node`       | `40`               | pixels between nodes in the same layer                                   |
+| `arrow_type`     | `None`             | `"curve"`, `"sharp"`, `"elbow"` — patch all arrows after layout          |
+| `node_placement` | `NETWORK_SIMPLEX`  | `BRANDES_KOEPF`, `LINEAR_SEGMENTS`, `SIMPLE` (`layered` only)            |
+| `elk_options`    | —                  | `dict[str, str]` of raw ELK key→value pairs; overrides all named params  |
+
+**Other additions:**
+
+- **`align`** — align selected shapes (left, right, center, top, bottom, middle)
+- **`read_scene`** — read current canvas state back as structured data
+- **Auto-size shapes** — shapes resize from label content automatically
+- **Chained edge syntax** — `A --> B --> C --> D` in a single DSL line
+
+### excel `[util]`
+
+| Change                      | What it does                                              |
+| --------------------------- | --------------------------------------------------------- |
+| Multi-sheet `create`        | Create workbooks with multiple named sheets in one call   |
+| `datetime` serialization    | Dates round-trip correctly                                |
 
 ---
 
