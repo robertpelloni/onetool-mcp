@@ -343,7 +343,7 @@ Test data locations:
 - **Test context7 and ground BEFORE calling `$reload`** — `ot.reload()` clears
   env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
   tools to fail in the same session. These tools only work on fresh server startup.
-- **`$wf_s` and `$wf_d`** require `llm.transform` (OpenAI). Skip or expect failure if `OPENAI_API_KEY` is not configured.
+- **`$wf_s` and `$wf_d`** require `llm.transform` (OpenAI). Expect failure only if `OPENAI_API_KEY` is not configured.
 - **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index
   is only built during write. Calling `mem.write(content="# Heading\n...", toc=True)` is
   required before `mem.toc()` or `mem.slice()` will return results.
