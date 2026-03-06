@@ -32,7 +32,6 @@ dependencies = [
     "jinja2>=3.1.6",              # Snippets template engine
     "docstring-parser>=0.17",     # ot.help() and ot.tools() docstring parsing
     "aiofiles>=25.1.0",           # Message tool async file I/O
-    "questionary>=2.1.1",         # bench interactive prompts
     # === LLM & Search ===
     "openai>=2.22.0",             # mem embeddings, LLM tools
     "tiktoken>=0.12.0",           # Token counting for embedding truncation
@@ -62,6 +61,7 @@ util = [
 dev = [
     "boto3>=1.42.55",
     "filelock>=3.24.3",
+    "questionary>=2.1.1",         # bench interactive prompts
     "sqlalchemy>=2.0.46",
     "tabulate>=0.9.0",
     "trafilatura>=2.0.0",
@@ -70,7 +70,6 @@ all = ["onetool-mcp[util,dev]"]
 
 [project.scripts]
 onetool = "onetool.cli:cli"
-bench = "bench.cli:cli"
 
 [build-system]
 requires = ["hatchling"]
