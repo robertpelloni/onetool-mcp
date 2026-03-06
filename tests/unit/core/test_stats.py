@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -172,13 +173,14 @@ def test_stats_reader_aggregates_by_type() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         jsonl_path = Path(tmpdir) / "test_stats.jsonl"
 
+        now = datetime.now(UTC)
         # Write test data - both run and tool records
         records = [
-            {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
-            {"ts": "2024-01-15T10:01:00Z", "type": "run", "client": "test", "chars_in": 150, "chars_out": 600, "duration_ms": 1200, "success": True},
-            {"ts": "2024-01-15T10:00:30Z", "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 500, "success": True},
-            {"ts": "2024-01-15T10:01:30Z", "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 600, "success": True},
-            {"ts": "2024-01-15T10:02:00Z", "type": "tool", "client": "test", "tool": "ot.tools", "duration_ms": 100, "success": True},
+            {"ts": (now - timedelta(hours=1)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": (now - timedelta(minutes=30)).isoformat(), "type": "run", "client": "test", "chars_in": 150, "chars_out": 600, "duration_ms": 1200, "success": True},
+            {"ts": (now - timedelta(hours=1)).isoformat(), "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 500, "success": True},
+            {"ts": (now - timedelta(minutes=45)).isoformat(), "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 600, "success": True},
+            {"ts": (now - timedelta(minutes=20)).isoformat(), "type": "tool", "client": "test", "tool": "ot.tools", "duration_ms": 100, "success": True},
         ]
         jsonl_path.write_text("\n".join(json.dumps(r) for r in records))
 
@@ -212,10 +214,11 @@ def test_stats_reader_tool_filter() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         jsonl_path = Path(tmpdir) / "test_stats.jsonl"
 
+        now = datetime.now(UTC)
         records = [
-            {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
-            {"ts": "2024-01-15T10:00:30Z", "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 500, "success": True},
-            {"ts": "2024-01-15T10:01:30Z", "type": "tool", "client": "test", "tool": "ot.tools", "duration_ms": 100, "success": True},
+            {"ts": now.isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": now.isoformat(), "type": "tool", "client": "test", "tool": "brave.search", "duration_ms": 500, "success": True},
+            {"ts": now.isoformat(), "type": "tool", "client": "test", "tool": "ot.tools", "duration_ms": 100, "success": True},
         ]
         jsonl_path.write_text("\n".join(json.dumps(r) for r in records))
 
@@ -239,11 +242,12 @@ def test_stats_reader_success_rate() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         jsonl_path = Path(tmpdir) / "test_stats.jsonl"
 
+        now = datetime.now(UTC)
         records = [
-            {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
-            {"ts": "2024-01-15T10:01:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 0, "duration_ms": 500, "success": False, "error_type": "TimeoutError"},
-            {"ts": "2024-01-15T10:02:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
-            {"ts": "2024-01-15T10:03:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 0, "duration_ms": 500, "success": False, "error_type": "ValueError"},
+            {"ts": (now - timedelta(minutes=3)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": (now - timedelta(minutes=2)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 0, "duration_ms": 500, "success": False, "error_type": "TimeoutError"},
+            {"ts": (now - timedelta(minutes=1)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": now.isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 0, "duration_ms": 500, "success": False, "error_type": "ValueError"},
         ]
         jsonl_path.write_text("\n".join(json.dumps(r) for r in records))
 
@@ -267,8 +271,6 @@ def test_aggregated_stats_to_dict() -> None:
         total_calls=10,
         success_count=8,
         error_count=2,
-        total_chars_in=1000,
-        total_chars_out=5000,
         total_duration_ms=10000,
         avg_duration_ms=1000.0,
     )
@@ -286,7 +288,7 @@ def test_aggregated_stats_to_dict() -> None:
         context_saved=300000,
         time_saved_ms=40000,
         tools=[tool_stats],
-        model="anthropic/claude-opus-4.5",
+        model="anthropic/claude-opus-4-6",
         cost_estimate_usd=0.0975,
     )
 
@@ -296,7 +298,7 @@ def test_aggregated_stats_to_dict() -> None:
     assert d["total_calls"] == 10
     assert d["success_rate"] == 80.0
     assert d["context_saved"] == 300000
-    assert d["model"] == "anthropic/claude-opus-4.5"
+    assert d["model"] == "anthropic/claude-opus-4-6"
     assert d["cost_estimate_usd"] == 0.0975
     assert len(d["tools"]) == 1
     assert d["tools"][0]["tool"] == "test.tool"
@@ -326,8 +328,6 @@ def test_html_report_generation() -> None:
                 total_calls=50,
                 success_count=48,
                 error_count=2,
-                total_chars_in=5000,
-                total_chars_out=25000,
                 total_duration_ms=50000,
                 avg_duration_ms=1000.0,
             ),
@@ -359,7 +359,7 @@ def test_stats_config_defaults() -> None:
     assert config.flush_interval_seconds == 30
     assert config.context_per_call == 30000
     assert config.time_overhead_per_call_ms == 4000
-    assert config.model == "anthropic/claude-opus-4.5"
+    assert config.model == "anthropic/claude-opus-4-6"
     assert config.cost_per_million_input_tokens == 15.0
     assert config.cost_per_million_output_tokens == 75.0
     assert config.chars_per_token == 4.0
@@ -377,7 +377,7 @@ def test_stats_reader_cost_estimate() -> None:
         # 4000 chars in, 8000 chars out
         # With 4 chars/token: 1000 input tokens, 2000 output tokens
         # Cost: (1000/1M * 15) + (2000/1M * 75) = 0.015 + 0.15 = 0.165
-        record = {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 4000, "chars_out": 8000, "duration_ms": 1000, "success": True}
+        record = {"ts": datetime.now(UTC).isoformat(), "type": "run", "client": "test", "chars_in": 4000, "chars_out": 8000, "duration_ms": 1000, "success": True}
         jsonl_path.write_text(json.dumps(record))
 
         reader = StatsReader(
@@ -451,14 +451,15 @@ def _make_mock_cfg(tmpdir: str) -> tuple:
 
     stats_path = Path(tmpdir) / "stats.jsonl"
 
+    now = datetime.now(UTC)
     # Write 15 tools so we can verify top-10 truncation
     records = [
-        {"ts": "2024-01-15T10:00:00Z", "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
-        {"ts": "2024-01-15T10:01:00Z", "type": "run", "client": "test", "chars_in": 200, "chars_out": 600, "duration_ms": 800, "success": False, "error_type": "Err"},
+        {"ts": (now - timedelta(minutes=2)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+        {"ts": (now - timedelta(minutes=1)).isoformat(), "type": "run", "client": "test", "chars_in": 200, "chars_out": 600, "duration_ms": 800, "success": False, "error_type": "Err"},
     ]
     for i in range(15):
         records.append(
-            {"ts": f"2024-01-15T10:{i:02d}:30Z", "type": "tool", "client": "test", "tool": f"pack.tool_{i}", "duration_ms": 100 * (15 - i), "success": True},
+            {"ts": (now - timedelta(seconds=i * 10)).isoformat(), "type": "tool", "client": "test", "tool": f"pack.tool_{i}", "duration_ms": 100 * (15 - i), "success": True},
         )
     stats_path.write_text("\n".join(json.dumps(r) for r in records))
 
@@ -496,7 +497,7 @@ def test_ot_stats_info_list() -> None:
 @pytest.mark.unit
 @pytest.mark.core
 def test_ot_stats_info_min() -> None:
-    """ot.stats(info='min') returns summary + top 10 tools."""
+    """ot.stats(info='min') returns richer summary without tool breakdown."""
     from unittest.mock import patch
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -511,19 +512,12 @@ def test_ot_stats_info_min() -> None:
             assert "success_rate" in result
             assert "savings_usd" in result
             assert "coffees" in result
-            assert "top_tools" in result
-            # Max 10 tools
-            assert len(result["top_tools"]) == 10
-            # Compact tool format
-            first = result["top_tools"][0]
-            assert "tool" in first
-            assert "calls" in first
-            assert "success_rate" in first
-            assert "avg_ms" in first
-            # Should NOT have verbose fields
-            assert "total_chars_in" not in result
-            assert "model" not in result
+            assert "total_duration_ms" in result
+            # Should NOT have tool breakdown
+            assert "top_tools" not in result
             assert "tools" not in result
+            # Should NOT have verbose fields
+            assert "model" not in result
 
 
 @pytest.mark.unit
@@ -552,8 +546,8 @@ def test_ot_stats_info_full() -> None:
 
 @pytest.mark.unit
 @pytest.mark.core
-def test_ot_stats_default_is_min() -> None:
-    """ot.stats() defaults to info='min' behavior."""
+def test_ot_stats_default_has_top_tools() -> None:
+    """ot.stats() defaults to info='default' — includes top_tools."""
     from unittest.mock import patch
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -601,3 +595,30 @@ def test_ot_stats_html_write_error() -> None:
             assert result.startswith("Error: Cannot write to")
             assert "report.html" in result
 
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_stats_reader_period_day_filters_old_records() -> None:
+    """StatsReader with period='day' excludes records older than 24 hours."""
+    from ot.stats import StatsReader
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        jsonl_path = Path(tmpdir) / "test_stats.jsonl"
+
+        now = datetime.now(UTC)
+        records = [
+            # Recent — within 24h, should be included
+            {"ts": (now - timedelta(hours=1)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": (now - timedelta(hours=23)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            # Old — more than 24h ago, should be excluded
+            {"ts": (now - timedelta(hours=25)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+            {"ts": (now - timedelta(days=7)).isoformat(), "type": "run", "client": "test", "chars_in": 100, "chars_out": 500, "duration_ms": 1000, "success": True},
+        ]
+        jsonl_path.write_text("\n".join(json.dumps(r) for r in records))
+
+        reader = StatsReader(path=jsonl_path)
+        stats_day = reader.read(period="day")
+        stats_all = reader.read(period="all")
+
+        assert stats_day.total_calls == 2   # Only recent 2 records
+        assert stats_all.total_calls == 4   # All 4 records

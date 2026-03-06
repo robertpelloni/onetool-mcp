@@ -26,8 +26,6 @@ class ToolStats:
     total_calls: int
     success_count: int
     error_count: int
-    total_chars_in: int
-    total_chars_out: int
     total_duration_ms: int
     avg_duration_ms: float
 
@@ -46,8 +44,6 @@ class ToolStats:
             "success_count": self.success_count,
             "error_count": self.error_count,
             "success_rate": round(self.success_rate, 1),
-            "total_chars_in": self.total_chars_in,
-            "total_chars_out": self.total_chars_out,
             "total_duration_ms": self.total_duration_ms,
             "avg_duration_ms": round(self.avg_duration_ms, 1),
         }
@@ -125,7 +121,7 @@ class StatsReader:
         path: Path,
         context_per_call: int = 30000,
         time_overhead_per_call_ms: int = 4000,
-        model: str = "anthropic/claude-opus-4.5",
+        model: str = "anthropic/claude-opus-4-6",
         cost_per_million_input_tokens: float = 15.0,
         cost_per_million_output_tokens: float = 75.0,
         chars_per_token: float = 4.0,
@@ -148,6 +144,19 @@ class StatsReader:
         self._cost_per_m_input = cost_per_million_input_tokens
         self._cost_per_m_output = cost_per_million_output_tokens
         self._chars_per_token = chars_per_token
+
+    @classmethod
+    def from_config(cls, cfg: Any) -> StatsReader:
+        """Create a StatsReader from a config object."""
+        return cls(
+            path=cfg.get_stats_file_path(),
+            context_per_call=cfg.stats.context_per_call,
+            time_overhead_per_call_ms=cfg.stats.time_overhead_per_call_ms,
+            model=cfg.stats.model,
+            cost_per_million_input_tokens=cfg.stats.cost_per_million_input_tokens,
+            cost_per_million_output_tokens=cfg.stats.cost_per_million_output_tokens,
+            chars_per_token=cfg.stats.chars_per_token,
+        )
 
     def read(
         self,
@@ -277,8 +286,6 @@ class StatsReader:
                     total_calls=calls,
                     success_count=success,
                     error_count=calls - success,
-                    total_chars_in=0,
-                    total_chars_out=0,
                     total_duration_ms=duration,
                     avg_duration_ms=duration / calls if calls > 0 else 0,
                 )
@@ -293,6 +300,7 @@ class StatsReader:
             (input_tokens / 1_000_000) * self._cost_per_m_input
             + (output_tokens / 1_000_000) * self._cost_per_m_output
         )
+        # Savings are avoided context re-sends (input tokens only — no output avoided).
         savings_usd = (context_saved / 1_000_000) * self._cost_per_m_input
 
         return AggregatedStats(

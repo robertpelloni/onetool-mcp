@@ -55,6 +55,8 @@ The stats reader SHALL aggregate metrics into summary statistics.
 - **GIVEN** `period="day"` parameter
 - **WHEN** stats are loaded
 - **THEN** only records from the last 24 hours SHALL be included
+- **NOTE** periods use a rolling window from now, not calendar boundaries:
+  `"day"` = last 24h, `"week"` = last 7 days, `"month"` = last 30 days
 
 ### Requirement: HTML Report Display
 
@@ -169,6 +171,13 @@ Stats records SHALL follow a discriminated union schema based on the `type` fiel
   - `duration_ms`: Execution time in milliseconds
   - `success`: Boolean
   - `error_type`: String or null
+
+#### Scenario: pid field usage
+- **GIVEN** multiple onetool processes writing to the same stats file
+- **WHEN** records are read by external tooling
+- **THEN** the `pid` field SHALL allow attribution of records to specific processes
+- **NOTE** the reader and `ot.stats()` do not filter or group by `pid`; the field
+  is intended for external log analysis and debugging concurrent-process scenarios
 
 ### Requirement: Timed Tool Call Helper
 

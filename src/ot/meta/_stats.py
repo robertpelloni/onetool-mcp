@@ -26,17 +26,23 @@ def stats(
     durations, and estimated context/time savings from tool consolidation.
 
     Args:
-        period: Time period to filter - "day", "week", "month", or "all" (default: "all")
+        period: Time period to filter - "day", "week", "month", or "all" (default: "all").
+            "day"/"week"/"month" use a rolling window (e.g. "day" = last 24 hours from now,
+            not a calendar day).
         tool: Filter by tool name (e.g., "brave.search"). Empty for all tools.
-        info: Output verbosity level - "min" (summary only, no tools),
-              "default" (summary + top 10 tools, default), or "full" (everything)
+        info: Output verbosity level:
+            - "list": compact summary only (period, calls, success_rate, error_count, savings_usd)
+            - "min": summary with duration and coffees, no tool breakdown
+            - "default": summary + top 10 tools sorted by calls (default)
+            - "full": all fields including per-tool durations, model info
         output: Path to write HTML report. Empty for JSON output only.
 
     Returns:
         Dict with aggregated statistics. Detail depends on info level:
-        - "min": total_calls, success_rate, error_count, savings_usd
+        - "list": minimal fields, no tool breakdown
+        - "min": richer summary fields, no tool breakdown
         - "default": summary stats + top 10 tools sorted by calls
-        - "full": all fields including per-tool chars, durations, model info
+        - "full": all fields including per-tool durations, model info
 
     Example:
         ot.stats()
@@ -69,16 +75,7 @@ def stats(
             return "Error: Statistics collection is disabled in configuration"
 
         # Read stats
-        stats_path = cfg.get_stats_file_path()
-        reader = StatsReader(
-            path=stats_path,
-            context_per_call=cfg.stats.context_per_call,
-            time_overhead_per_call_ms=cfg.stats.time_overhead_per_call_ms,
-            model=cfg.stats.model,
-            cost_per_million_input_tokens=cfg.stats.cost_per_million_input_tokens,
-            cost_per_million_output_tokens=cfg.stats.cost_per_million_output_tokens,
-            chars_per_token=cfg.stats.chars_per_token,
-        )
+        reader = StatsReader.from_config(cfg)
 
         aggregated = reader.read(
             period=period,  # type: ignore[arg-type]
@@ -91,7 +88,7 @@ def stats(
 
         # Format based on info level
         if info == "list":
-            # Summary only, no tools breakdown
+            # Minimal compact summary, no tool breakdown
             result: dict[str, Any] = {
                 "period": full_result["period"],
                 "total_calls": full_result["total_calls"],
@@ -99,7 +96,18 @@ def stats(
                 "error_count": full_result["error_count"],
                 "savings_usd": full_result["savings_usd"],
             }
-        elif info == "min" or info == "default":
+        elif info == "min":
+            # Richer summary with duration and coffees, no tool breakdown
+            result = {
+                "period": full_result["period"],
+                "total_calls": full_result["total_calls"],
+                "success_rate": full_result["success_rate"],
+                "error_count": full_result["error_count"],
+                "total_duration_ms": full_result["total_duration_ms"],
+                "savings_usd": full_result["savings_usd"],
+                "coffees": full_result["coffees"],
+            }
+        elif info == "default":
             # Summary + top 10 tools by calls
             top_tools = sorted(
                 full_result["tools"], key=lambda t: t["total_calls"], reverse=True

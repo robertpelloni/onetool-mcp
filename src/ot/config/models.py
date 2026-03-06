@@ -412,8 +412,8 @@ class StatsConfig(BaseModel):
         description="Estimated time overhead in ms saved per consolidated tool call",
     )
     model: str = Field(
-        default="anthropic/claude-opus-4.5",
-        description="Model for cost estimation (e.g., anthropic/claude-opus-4.5)",
+        default="anthropic/claude-opus-4-6",
+        description="Model for cost estimation (e.g., anthropic/claude-opus-4-6)",
     )
     cost_per_million_input_tokens: float = Field(
         default=15.0,
