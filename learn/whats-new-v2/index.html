@@ -893,6 +893,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#ot_context-smart-context-store-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot_context — Smart context store [core]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ot_image-dedicated-image-vision-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot_image — Dedicated image vision [core]
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -948,6 +970,28 @@
     <span class="md-ellipsis">
       
         diagram [dev]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whiteboard-dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        whiteboard [dev]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#excel-util" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        excel [util]
       
     </span>
   </a>
@@ -2839,6 +2883,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#ot_context-smart-context-store-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot_context — Smart context store [core]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ot_image-dedicated-image-vision-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ot_image — Dedicated image vision [core]
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2894,6 +2960,28 @@
     <span class="md-ellipsis">
       
         diagram [dev]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whiteboard-dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        whiteboard [dev]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#excel-util" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        excel [util]
       
     </span>
   </a>
@@ -3170,7 +3258,7 @@
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;arch.json&quot;</span><span class="p">)</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">whiteboard</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
-<p>Also provides <code>load</code>, <code>clear</code>, <code>erase</code>, <code>note</code>, <code>scroll</code>, <code>zoom</code>, <code>fit</code>, and <code>hard_reset</code>. Short alias: <code>wb</code>.</p>
+<p>Also provides <code>load</code>, <code>clear</code>, <code>erase</code>, <code>note</code>, <code>scroll</code>, <code>zoom</code>, <code>fit</code>, <code>layout</code>, <code>align</code>, <code>read_scene</code>, and <code>hard_reset</code>. Short alias: <code>wb</code>.</p>
 <h3 id="tavily-ai-powered-search-and-url-extraction-util">tavily — AI-powered search and URL extraction <code>[util]</code><a class="headerlink" href="#tavily-ai-powered-search-and-url-extraction-util" title="Permanent link">&para;</a></h3>
 <p>Tavily is an AI-native search API optimised for LLM pipelines. Results come back clean — titles, URLs, content snippets, and an AI-synthesised answer — all in one call. <code>output_format</code> controls the response structure (<code>"full"</code>, <code>"text_only"</code>, <code>"sources_only"</code>), matching the convention used by the <code>ground</code> pack. <code>search_batch()</code> runs multiple queries in parallel with section labels. <code>extract_batch()</code> fetches multiple URL sets concurrently. <code>research()</code> submits a deep research task and polls until complete.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">tavily</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;LLM context window research&quot;</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="s2">&quot;text_only&quot;</span><span class="p">)</span>
@@ -3220,6 +3308,58 @@
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ot_timer</span><span class="o">.</span><span class="n">elapsed</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;build&quot;</span><span class="p">)</span>
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ot_timer</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
 </span></code></pre></div>
+<h3 id="ot_context-smart-context-store-core">ot_context — Smart context store <code>[core]</code><a class="headerlink" href="#ot_context-smart-context-store-core" title="Permanent link">&para;</a></h3>
+<p>Persistent SQLite + FTS5 store for large tool outputs. TTL-expiring, BM25-indexed. Write, search, grep, and navigate results across tool calls without burning your context window.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="o">=</span><span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;research&quot;</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;async error handling&quot;</span><span class="p">)</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">grep</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;def.*handler&quot;</span><span class="p">)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">ctx</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s2">&quot;abc123&quot;</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Short alias: <code>ctx</code>.</p>
+<h3 id="ot_image-dedicated-image-vision-core">ot_image — Dedicated image vision <code>[core]</code><a class="headerlink" href="#ot_image-dedicated-image-vision-core" title="Permanent link">&para;</a></h3>
+<p>Routes image analysis to a dedicated vision model in a separate API session — zero tokens charged to your host session. Substantially more accurate than direct attachment for structured extraction.</p>
+<p>Benchmark (4-column product price grid, 20 cells):</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th><code>img.ask</code></th>
+<th>Direct attachment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host session tokens</td>
+<td><strong>0</strong></td>
+<td>190,221</td>
+</tr>
+<tr>
+<td>Cost to host session</td>
+<td><strong>$0</strong></td>
+<td>$0.078</td>
+</tr>
+<tr>
+<td>Rows extracted (of 5)</td>
+<td><strong>5 / 5</strong></td>
+<td>3 / 5</td>
+</tr>
+<tr>
+<td>Cell accuracy (of 20)</td>
+<td><strong>~100%</strong></td>
+<td><strong>25%</strong></td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>41s</td>
+<td>34s</td>
+</tr>
+</tbody>
+</table>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;diagram.png&quot;</span><span class="p">)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">img</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">handle</span><span class="o">=</span><span class="s2">&quot;diag_01&quot;</span><span class="p">,</span> <span class="n">question</span><span class="o">=</span><span class="s2">&quot;What services are in this architecture?&quot;</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">img</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">handle</span><span class="o">=</span><span class="s2">&quot;diag_01&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Supports PNG, JPG, SVG, HEIC, AVIF, TIFF. Short alias: <code>img</code>.</p>
 <hr />
 <h2 id="new-and-changed-functions-in-existing-packs">New and Changed Functions in Existing Packs<a class="headerlink" href="#new-and-changed-functions-in-existing-packs" title="Permanent link">&para;</a></h2>
 <h3 id="file-util">file <code>[util]</code><a class="headerlink" href="#file-util" title="Permanent link">&para;</a></h3>
@@ -3274,11 +3414,92 @@
 <p>The Context7 integration has been simplified. <code>search()</code> now accepts a <code>limit</code> parameter to control how many results come back, and <code>doc()</code> has a cleaner signature — just pass the library identifier and your query. The underlying API was updated to v2 endpoints with better library resolution and semantic reranking.</p>
 <h3 id="diagram-dev">diagram <code>[dev]</code><a class="headerlink" href="#diagram-dev" title="Permanent link">&para;</a></h3>
 <p>Adds <code>get_playground_url(source)</code> which generates a shareable Kroki playground link for any diagram source. Instead of rendering locally, you can hand someone a URL where they can view and edit the diagram interactively.</p>
+<h3 id="whiteboard-dev">whiteboard <code>[dev]</code><a class="headerlink" href="#whiteboard-dev" title="Permanent link">&para;</a></h3>
+<p><strong><code>layout</code> — ELK.js auto-layout</strong></p>
+<p>Runs ELK.js in the browser to automatically position all nodes, then calls <code>fit()</code>. Works on the full canvas or a selection.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">wb</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span>                                    <span class="c1"># layered, top-to-bottom</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">wb</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">gap_layer</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>    <span class="c1"># left-to-right pipeline</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">wb</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;stress&quot;</span><span class="p">)</span>                  <span class="c1"># spring-based, undirected</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">wb</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;mrtree&quot;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;DOWN&quot;</span><span class="p">)</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">wb</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">arrow_type</span><span class="o">=</span><span class="s2">&quot;elbow&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Options</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>algorithm</code></td>
+<td><code>layered</code></td>
+<td><code>layered</code>, <code>stress</code>, <code>mrtree</code>, <code>radial</code>, <code>force</code></td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td><code>DOWN</code></td>
+<td><code>DOWN</code>, <code>RIGHT</code>, <code>UP</code>, <code>LEFT</code></td>
+</tr>
+<tr>
+<td><code>gap_layer</code></td>
+<td><code>80</code></td>
+<td>pixels between layers (<code>layered</code> only)</td>
+</tr>
+<tr>
+<td><code>gap_node</code></td>
+<td><code>40</code></td>
+<td>pixels between nodes in the same layer</td>
+</tr>
+<tr>
+<td><code>arrow_type</code></td>
+<td><code>None</code></td>
+<td><code>"curve"</code>, <code>"sharp"</code>, <code>"elbow"</code> — patch all arrows after layout</td>
+</tr>
+<tr>
+<td><code>node_placement</code></td>
+<td><code>NETWORK_SIMPLEX</code></td>
+<td><code>BRANDES_KOEPF</code>, <code>LINEAR_SEGMENTS</code>, <code>SIMPLE</code> (<code>layered</code> only)</td>
+</tr>
+<tr>
+<td><code>elk_options</code></td>
+<td>—</td>
+<td><code>dict[str, str]</code> of raw ELK key→value pairs; overrides all named params</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Other additions:</strong></p>
+<ul>
+<li><strong><code>align</code></strong> — align selected shapes (left, right, center, top, bottom, middle)</li>
+<li><strong><code>read_scene</code></strong> — read current canvas state back as structured data</li>
+<li><strong>Auto-size shapes</strong> — shapes resize from label content automatically</li>
+<li><strong>Chained edge syntax</strong> — <code>A --&gt; B --&gt; C --&gt; D</code> in a single DSL line</li>
+</ul>
+<h3 id="excel-util">excel <code>[util]</code><a class="headerlink" href="#excel-util" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Multi-sheet <code>create</code></td>
+<td>Create workbooks with multiple named sheets in one call</td>
+</tr>
+<tr>
+<td><code>datetime</code> serialization</td>
+<td>Dates round-trip correctly</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h2>
 <h3 id="interactive-setup-with-onetool-init">Interactive setup with <code>onetool init</code><a class="headerlink" href="#interactive-setup-with-onetool-init" title="Permanent link">&para;</a></h3>
 <p>Getting started no longer means editing YAML by hand. Run <code>onetool init</code> and a TUI opens — a checkbox list of every available extension (prompts, servers, security rules, diagram config, snippets, worktree config). Toggle what you want, press enter, and the config files are written for you. Existing files are backed up to <code>.bak</code> automatically.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>~/.onetool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>~/.onetool
 </span></code></pre></div>
 <h3 id="cleaner-config-layout">Cleaner config layout<a class="headerlink" href="#cleaner-config-layout" title="Permanent link">&para;</a></h3>
 <p>v2 simplifies how config is found and passed to the server:</p>
@@ -3287,7 +3508,7 @@
 <li><strong>Explicit flags</strong> — <code>--config</code> and <code>--secrets</code> are passed to the server; no implicit discovery</li>
 <li><strong>Versioned schema</strong> — add <code>version: 2</code> to <code>onetool.yaml</code>; configs without it are rejected with a clear error rather than silently misbehaving</li>
 </ul>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>onetool<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml<span class="w"> </span>--secrets<span class="w"> </span>~/.onetool/secrets.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>onetool<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml<span class="w"> </span>--secrets<span class="w"> </span>~/.onetool/secrets.yaml
 </span></code></pre></div>
 <h3 id="slim-prompts">Slim prompts<a class="headerlink" href="#slim-prompts" title="Permanent link">&para;</a></h3>
 <p>The system prompt sent to LLMs is now compact (under 25 lines), reducing context overhead and freeing up token budget for your actual work.</p>
@@ -3326,58 +3547,58 @@
 </table>
 <hr />
 <h2 id="upgrading">Upgrading<a class="headerlink" href="#upgrading" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>onetool-mcp
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>upgrade<span class="w"> </span>onetool-mcp
 </span></code></pre></div>
 <p>Or with optional tool packs:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[all]&#39;</span><span class="w">     </span><span class="c1"># everything</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[util]&#39;</span><span class="w">    </span><span class="c1"># file, convert, excel, brave, ground, mem</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[dev]&#39;</span><span class="w">     </span><span class="c1"># ripgrep, db, web, diagram, aws, worktree, ...</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[all]&#39;</span><span class="w">     </span><span class="c1"># everything</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[util]&#39;</span><span class="w">    </span><span class="c1"># file, convert, excel, brave, ground, mem</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[dev]&#39;</span><span class="w">     </span><span class="c1"># ripgrep, db, web, diagram, aws, worktree, ...</span>
 </span></code></pre></div>
 <hr />
 <h2 id="breaking-changes">Breaking Changes<a class="headerlink" href="#breaking-changes" title="Permanent link">&para;</a></h2>
 <h3 id="config-and-mcp-setup-is-now-explicit">Config and MCP setup is now explicit<a class="headerlink" href="#config-and-mcp-setup-is-now-explicit" title="Permanent link">&para;</a></h3>
 <p>v1 auto-discovered config and required no arguments. v2 uses explicit <code>--config</code> and <code>--secrets</code> flags.</p>
 <p><strong>v1 MCP client config:</strong></p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nt">&quot;onetool&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;onetool&quot;</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="p">{</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="nt">&quot;onetool&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;onetool&quot;</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="p">}</span>
 </span></code></pre></div>
 <p><strong>v2 MCP client config:</strong></p>
-<div class="language-json highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p">{</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">&quot;onetool&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;onetool&quot;</span><span class="p">,</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">        </span><span class="s2">&quot;--config&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/path/to/.onetool/onetool.yaml&quot;</span><span class="p">,</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">        </span><span class="s2">&quot;--secrets&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/path/to/.onetool/secrets.yaml&quot;</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">      </span><span class="p">]</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;mcpServers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">&quot;onetool&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">      </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;onetool&quot;</span><span class="p">,</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">        </span><span class="s2">&quot;--config&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/path/to/.onetool/onetool.yaml&quot;</span><span class="p">,</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">        </span><span class="s2">&quot;--secrets&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;/path/to/.onetool/secrets.yaml&quot;</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">      </span><span class="p">]</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="p">}</span>
 </span></code></pre></div>
 <p>Or via Claude Code CLI:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>onetool<span class="w"> </span>--<span class="w"> </span>onetool<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml<span class="w"> </span>--secrets<span class="w"> </span>~/.onetool/secrets.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>onetool<span class="w"> </span>--<span class="w"> </span>onetool<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml<span class="w"> </span>--secrets<span class="w"> </span>~/.onetool/secrets.yaml
 </span></code></pre></div>
 <p>Omit <code>--secrets</code> if you don't use API keys. Omit <code>--config</code> to start with sensible defaults.</p>
 <h3 id="config-version-field">Config version field<a class="headerlink" href="#config-version-field" title="Permanent link">&para;</a></h3>
 <p>Add <code>version: 2</code> to your <code>onetool.yaml</code>. Configs with <code>version: 1</code> are rejected with a clear error.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># onetool.yaml</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># ... rest of config</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># onetool.yaml</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="c1"># ... rest of config</span>
 </span></code></pre></div>
 <h3 id="config-location-is-flat">Config location is flat<a class="headerlink" href="#config-location-is-flat" title="Permanent link">&para;</a></h3>
 <p>The config directory changed from <code>~/.onetool/config/</code> to <code>~/.onetool/</code> (flat layout). Move your files up one level, or re-run <code>onetool init</code>.</p>
 <h3 id="trigger-prefix-change">Trigger prefix change<a class="headerlink" href="#trigger-prefix-change" title="Permanent link">&para;</a></h3>
 <p>The <code>__ot</code> prefix is deprecated. Use <code>&gt;&gt;&gt;</code> instead:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># v1</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">__ot</span> <span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># v2 (recommended)</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># v1</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="n">__ot</span> <span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># v2 (recommended)</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="o">&gt;&gt;&gt;</span> <span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>__ot</code> still works for backward compatibility but is no longer documented or recommended.</p>
 <h3 id="user-defined-skills-removed">User-defined skills removed<a class="headerlink" href="#user-defined-skills-removed" title="Permanent link">&para;</a></h3>
