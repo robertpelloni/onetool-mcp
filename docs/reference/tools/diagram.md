@@ -4,6 +4,9 @@ Generates and renders diagrams using Kroki as the unified backend, supporting Me
 
 Short alias: `diag`
 
+!!! note "Experimental"
+    This pack is experimental. Behaviour and tool signatures may change between releases.
+
 ## Highlights
 
 - Two-stage pipeline (generate source, then render)

@@ -130,7 +130,7 @@ Single, well-structured [YAML config](learn/configuration.md) with global and pr
 
 ### :material-chart-box: Observability
 
-Meta tools for introspection. [Structured logging](learn/extension-tools.md#logging-with-logspan) with LogSpan. [Runtime statistics](reference/tools/ot.md#otstats) for costs and success rates.
+Meta tools for introspection. [Structured logging](learn/extension-tools.md#logging-with-logspan) with LogSpan. [Runtime statistics](reference/tools/ot_core.md#otstats) for costs and success rates.
 
 </div>
 
@@ -150,7 +150,7 @@ Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright
 
 Delegate to cheaper agents. Fetch a page, summarise with Gemini Flash ($0.50/M), pass back to Opus ($5/M). **10× savings.**
 
-[:octicons-arrow-right-24: Smart Tools](reference/tools/llm.md)
+[:octicons-arrow-right-24: Smart Tools](reference/tools/ot_llm.md)
 
 </div>
 

@@ -8,6 +8,7 @@ Short alias: `wb`
 
 - Call `whiteboard.open()` first, then `whiteboard.draw(...)`.
 - Use `whiteboard.note(...)` and `whiteboard.embed_dsl()` for documentation overlays.
+- Auto-arrange with `whiteboard.layout()` (ELK.js); fine-tune with `whiteboard.align(ids=[...], axis=...)`.
 - Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
 - Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
 
@@ -41,6 +42,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 <!-- BEGIN GENERATED:WB_HELP_SUMMARY -->
 | Function | Summary |
 |---|---|
+| `whiteboard.align(*, ids: list[str], axis: str) -> str` | Align or distribute a set of shapes using Excalidraw's built-in actions. |
 | `whiteboard.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
 | `whiteboard.close() -> str` | Close the excalidraw tab and reset all Python state. |
 | `whiteboard.draw(*, input: str) -> str` | Add or update diagram elements from DSL. Always additive — never clears. |
@@ -49,6 +51,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 | `whiteboard.fit() -> str` | Fit all elements in view. |
 | `whiteboard.hard_reset() -> str` | Reset Python DSL state unconditionally; attempt canvas clear if browser is available. |
 | `whiteboard.help() -> str` | Return the full DSL and style reference. Call this before using whiteboard.draw or whiteboard.style. |
+| `whiteboard.layout(*, direction: str = 'DOWN', gap_layer: int = 80, gap_node: int = 40, algorithm: str = 'layered', node_placement: str = 'NETWORK_SIMPLEX', crossing_min: str = 'LAYER_SWEEP', cycle_breaking: str = 'GREEDY', arrow_type: str | None = None, elk_options: dict[str, str] | None = None) -> str` | Apply ELK.js graph layout to the current whiteboard. |
 | `whiteboard.load(*, file: str) -> str` | Restore diagram from a native ``.excalidraw`` file. |
 | `whiteboard.note(*, input: str, background: str = '#f5f5dc') -> str` | Insert ASCII-rendered text annotations onto the canvas. |
 | `whiteboard.open() -> str` | Open excalidraw.com and start with a clean canvas. |
@@ -57,7 +60,6 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 | `whiteboard.screenshot(*, file: str | None = None) -> Any` | Take a screenshot of the current canvas as PNG. |
 | `whiteboard.scroll(*, dx: int = 0, dy: int = 0) -> str` | Pan the canvas by (dx, dy) pixels. |
 | `whiteboard.share() -> str` | Generate a shareable Excalidraw link for the current canvas. |
-| `whiteboard.align(*, ids: list[str], axis: str) -> str` | Align or distribute a set of shapes using Excalidraw's built-in actions. |
 | `whiteboard.style(*, ids: list[str], style: str) -> str` | Apply visual style properties to existing canvas elements in bulk. |
 | `whiteboard.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
 | `whiteboard.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
@@ -200,6 +202,40 @@ whiteboard.align(ids=["a", "b", "c"], axis="hdistribute") # even horizontal spac
 | `bottom` | Snap bottom edges |
 | `hdistribute` | Even horizontal spacing |
 | `vdistribute` | Even vertical spacing |
+
+### `layout(...)`
+
+Apply ELK.js graph auto-layout to the canvas. Loads ELK.js from CDN (once per session), runs the chosen algorithm in the browser, patches every node position, recomputes subgraph bounding boxes, and calls `wb.fit()`. Works on the full canvas or a selection.
+
+```python
+whiteboard.layout()                                         # layered, top-to-bottom
+whiteboard.layout(direction="RIGHT", gap_layer=120)         # left-to-right pipeline
+whiteboard.layout(algorithm="stress")                       # spring-based, undirected
+whiteboard.layout(algorithm="mrtree", direction="DOWN")     # tree with clear root
+whiteboard.layout(direction="RIGHT", arrow_type="elbow")    # post-layout elbow arrows
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `algorithm` | `"layered"` | `layered`, `stress`, `mrtree`, `radial`, `force` |
+| `direction` | `"DOWN"` | `DOWN`, `RIGHT`, `UP`, `LEFT` (`layered` only) |
+| `gap_layer` | `80` | Pixels between layers (`layered` only) |
+| `gap_node` | `40` | Pixels between nodes in the same layer |
+| `node_placement` | `"NETWORK_SIMPLEX"` | `BRANDES_KOEPF`, `LINEAR_SEGMENTS`, `SIMPLE` (`layered` only) |
+| `crossing_min` | `"LAYER_SWEEP"` | `MEDIAN_LAYER_SWEEP`, `NONE` (`layered` only) |
+| `cycle_breaking` | `"GREEDY"` | `DEPTH_FIRST`, `MODEL_ORDER` (`layered` only) |
+| `arrow_type` | `None` | After layout, patch all arrows to `"curve"`, `"sharp"`, or `"elbow"` |
+| `elk_options` | `None` | `dict[str, str]` of raw ELK key→value pairs; merged last, overrides all named params |
+
+**Algorithms:**
+
+| Algorithm | Best for |
+|-----------|----------|
+| `layered` | DAGs and pipelines — ranks nodes into layers, minimises edge crossings |
+| `stress` | Undirected or exploratory graphs — spring-based, increase `gap_node` for dense graphs |
+| `mrtree` | Trees with a clear single root — minimal-spanning-tree layout |
+| `radial` | Radial tree centred on one node |
+| `force` | Clustered undirected graphs — force-directed |
 
 ### `read_scene(info)`
 

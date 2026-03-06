@@ -108,13 +108,13 @@ You'll also get tired of typing `query="..."`, so I added smart parameter prefix
 
 OneTool includes [100+ tools](../reference/tools/index.md) including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.
 
-It even has "Smart Tools" -  [LLM-powered transformation](../reference/tools/llm.md). Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.
+It even has "Smart Tools" -  [LLM-powered transformation](../reference/tools/ot_llm.md). Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.
 
 Normally, with great power comes great configurability challenges.
 
 However, OneTool keeps it simple and consistent with sensible defaults: a single, well-structured [YAML config](../learn/configuration.md), with global and project scopes, and per-tool-pack configuration (timeouts, limits, models, etc).
 
-You also get a range of meta tools to help with the coding aspects, plus [structured logging](../learn/extension-tools.md#logging-with-logspan) and [runtime statistics](../reference/tools/ot.md#otstats) to track tool calls, success rates, tokens saved, and cost estimates.
+You also get a range of meta tools to help with the coding aspects, plus [structured logging](../learn/extension-tools.md#logging-with-logspan) and [runtime statistics](../reference/tools/ot_core.md#otstats) to track tool calls, success rates, tokens saved, and cost estimates.
 
 ### Security: powerful, with guardrails
 

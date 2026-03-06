@@ -103,7 +103,10 @@ markdown_extensions:
   - pymdownx.tilde
 
 not_in_nav: |
-  _internal/**
+  _wip/**
+
+exclude_docs: |
+  _wip/**
 
 validation:
   omitted_files: warn
@@ -159,6 +162,7 @@ nav:
           - AWS: reference/tools/aws.md
           - Brave: reference/tools/brave.md
           - Chrome DevTools Util: reference/tools/chrome-util.md
+          - Context Store: reference/tools/ot_context.md
           - Context7: reference/tools/context7.md
           - Convert: reference/tools/convert.md
           - DB: reference/tools/db.md
@@ -166,12 +170,13 @@ nav:
           - Excel: reference/tools/excel.md
           - File: reference/tools/file.md
           - Ground: reference/tools/ground.md
-          - LLM: reference/tools/llm.md
+          - LLM: reference/tools/ot_llm.md
           - Mem: reference/tools/mem.md
-          - OT Core: reference/tools/ot.md
-          - OT Forge: reference/tools/forge.md
-          - OT Secrets: reference/tools/secrets.md
-          - OT Timer: reference/tools/timer.md
+          - OT Core: reference/tools/ot_core.md
+          - OT Forge: reference/tools/ot_forge.md
+          - OT Image: reference/tools/ot_image.md
+          - OT Secrets: reference/tools/ot_secrets.md
+          - OT Timer: reference/tools/ot_timer.md
           - Package: reference/tools/package.md
           - Playwright Util: reference/tools/play-util.md
           - Ripgrep: reference/tools/ripgrep.md
@@ -186,8 +191,10 @@ nav:
           - GitHub: reference/servers/github.md
           - Playwright: reference/servers/playwright.md
   - Results:
-      - OneTool vs MCPs: learn/comparison.md
-      - Mem vs File vs Claude: results/mem-vs-file-20260223.md
+      - OT MCP Results: learn/comparison.md
+      - OT Mem & File Results: results/compare-mem-file.md
+      - OT Image Results: results/compare-vision.md
   - About:
       - about/index.md
       - About OneTool: about/about-onetool.md
+      - Telemetry: telemetry.md

@@ -1,4 +1,4 @@
-# OneTool Timer
+# OT Timer
 
 Named stopwatch timers for performance measurement across tool calls.
 

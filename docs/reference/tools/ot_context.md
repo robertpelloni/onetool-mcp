@@ -1,4 +1,4 @@
-# Context Store
+# OT Context
 
 TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-window saturation with targeted retrieval.
 
@@ -6,7 +6,7 @@ TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-windo
 
 - Store content with `ctx.write()` and get a handle in ~1ms.
 - Retrieve with `ctx.read()`, `ctx.search()`, `ctx.grep()`, `ctx.slice()`, and `ctx.toc()`.
-- Transform with `ctx.transform()` (requires ot_llm pack).
+- Ask questions with `ctx.ask()` (requires ot_llm pack).
 - Maintain with `ctx.append()`, `ctx.inspect()`, `ctx.list()`, `ctx.stats()`, `ctx.delete()`, and `ctx.purge()`.
 
 ## Highlights
@@ -32,12 +32,12 @@ TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-windo
 | `ctx.search(handle, queries, limit)` | BM25 section search with three-layer fallback |
 | `ctx.grep(handle, pattern, context, fuzzy)` | Regex or fuzzy line search |
 | `ctx.slice(handle, select)` | Extract by section number, heading, or line range |
-| `ctx.transform(handle, intent, json_mode)` | LLM extraction via ot_llm (optional) |
+| `ctx.ask(handle, q, model)` | Multi-question LLM query over stored content (optional) |
 | `ctx.list(source, status)` | All active handles with summary |
 | `ctx.inspect(handle)` | Detailed metadata for one handle |
 | `ctx.stats()` | Session storage metrics |
 | `ctx.delete(handle)` | Remove one handle |
-| `ctx.purge(all, minutes, source, status)` | Bulk-delete handles and compact DB |
+| `ctx.purge(delete_all, minutes, source, status)` | Bulk-delete handles and compact DB |
 
 ## Key Parameters
 
@@ -49,7 +49,7 @@ TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-windo
 | `source` | str | Optional label (e.g. "brave", "api") for filtering |
 | `intent` | str | Optional intent — calls ot_llm immediately and returns `answer` field |
 
-Returns a dict with `handle`, `size_bytes`, `total_lines`, `preview` (first 5 lines), and `usage` (ready-to-use call strings).
+Returns a dict with `handle`, `size_bytes`, `total_lines`, `status`, and `abstract` (populated asynchronously). Pass `verbose=True` to also include `preview` (first 5 non-empty lines).
 
 ### `ctx.read()`
 
@@ -91,7 +91,7 @@ Returns sections with `title`, `snippet`, `score`, and `matchLayer` (`porter`/`t
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `all` | bool | Bypass the age filter — delete all matching handles regardless of age |
+| `delete_all` | bool | Bypass the age filter — delete all matching handles regardless of age |
 | `minutes` | int | Delete handles older than N minutes (default 15) |
 | `source` | str | Delete handles matching source substring |
 | `status` | str | Delete handles with this status |
@@ -134,15 +134,16 @@ ctx.slice(h["handle"], select="10:25")         # by line range
 # Grep with context
 ctx.grep(h["handle"], pattern=r"ERROR|WARN", context=2)
 
-# LLM extraction (requires ot_llm pack)
-ctx.transform(h["handle"], intent="list all API endpoints as JSON", json_mode=True)
+# LLM questions (requires ot_llm pack)
+ctx.ask(h["handle"], q="What are the API endpoints?")
+ctx.ask(h["handle"], q=["What errors are possible?", "What is the rate limit?"])
 
 # Maintenance
-ctx.list()                           # all active handles
-ctx.stats()                          # storage metrics
-ctx.purge()                          # delete expired handles + compact
-ctx.purge(all=True)                  # wipe everything
-ctx.purge(status="failed")           # remove failed indexing handles
-ctx.purge(minutes=60)                # remove handles older than 1 hour
+ctx.list()                                  # all active handles
+ctx.stats()                                 # storage metrics
+ctx.purge()                                 # delete expired handles + compact
+ctx.purge(delete_all=True)                  # wipe everything
+ctx.purge(status="failed")                  # remove failed indexing handles
+ctx.purge(minutes=60)                       # remove handles older than 1 hour
 ctx.delete(h["handle"])              # remove one handle
 ```

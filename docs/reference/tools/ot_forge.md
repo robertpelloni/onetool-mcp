@@ -1,4 +1,4 @@
-# OneTool Forge
+# OT Forge
 
 Create, validate, and install extension tools and skill stubs.
 
