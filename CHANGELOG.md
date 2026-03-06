@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.1.0] - 2026-03-06
+
+### New Tool Packs
+- **`ot_context`** (`ctx`) — TTL-expiring SQLite+FTS5 store; write, search, grep, and navigate large tool outputs across tool calls without filling the context window
+- **`ot_image`** (`img`) — image analysis via a dedicated vision model in a separate API session; zero host tokens; substantially more accurate than direct attachment for structured extraction
+
+### Whiteboard Improvements
+- **`wb.layout()`** — ELK.js auto-layout with five algorithms (`layered`, `stress`, `mrtree`, `radial`, `force`) and full directional control
+- **`wb.align()`** — align selected shapes (left, right, center, top, bottom, middle)
+- **Auto-size shapes** — shapes resize from label content automatically
+- **Chained edge syntax** — `A --> B --> C --> D` in a single DSL line
+- **`wb.read_scene()`** — read current canvas state back as structured data
+
+### Excel Improvements
+- **Multi-sheet `create`** — create workbooks with multiple named sheets in one call
+- **`datetime` serialization fixed** — dates round-trip correctly
+
+---
+
 ## [2.0.1] - 2026-03-01
 
 ### Documentation
