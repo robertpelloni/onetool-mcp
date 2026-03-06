@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Do sanity testing and find issues.
 
 Test out the following packs:
-Packs: brave, context7, convert, db, devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
+Packs: brave, context7, convert, db, chrome-devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
 
 When testing:
 - convert with files at tests/data/
@@ -267,6 +267,8 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `webfetch.fetch(url="...", max_length=500)`
 - **brave tools**: Use `brave.news()` not `brave.search_news()`. Available: search, news, image, search_batch, video
   - Example: `brave.news(query="AI", count=3)` not `brave.search_news(query="AI")`
+- **tavily.search**: Use `max_results=` not `count=` to limit results
+  - Example: `tavily.search(query="Python", max_results=2)` not `tavily.search(query="Python", count=2)`
 - **ot_image tools**: All tools use `img=` as the image reference parameter (not `path=` or `handle=`)
   - `ot_image.load(img="tests/data/file_example_1.jpg")` — file path, URL, or `"clip"` for clipboard
   - `ot_image.ask(img="#img_handle", q="What is in this image?")` — use `q=` not `questions=`
@@ -288,6 +290,16 @@ OneTool is setup correctly with all dependencies and secrets needed.
   Use `ctx.read(handle)` to page through, `ctx.search(handle, queries=[...])` to search.
 - **ctx parallel write contention**: Avoid calling 5+ large-output tools simultaneously — SQLite may return
   "database is locked". Retry succeeds. Filed: `wip/issues/ctx-db-locked-parallel-writes.md`
+- **`preview` KeyError on large output**: Any tool returning output large enough to trigger ctx auto-deflection
+  currently crashes with `Error calling tool 'run': 'preview'`. Root cause: `runner.py:548` accesses
+  `write_result["preview"]` but `ctx_write` only includes it when `verbose=True`. Affects: `mem.read_batch`,
+  `github.search_repositories`, `chrome_devtools.take_snapshot`, `$wf`, `$g`, `$f_r`, `$mem_r`, `$f_g`, `$tav_x`.
+  Filed: `wip/issues/ctx-write-missing-preview-key.md`
+- **`ot.tools`/`ot.help` do NOT support `info="list"`**: Only `ot.stats` has `info="list"`. Use `"min"`,
+  `"default"`, or `"full"` for `ot.tools` and `ot.help`.
+- **`ot.result()` requires `handle=`**: Not zero-arg. Example: `ot.result(handle="abc123")`
+- **devtools pack name**: Use `chrome_devtools` (underscore), not `devtools`. The pack is named `chrome-devtools`
+  in servers config but the Python namespace uses underscores: `chrome_devtools.list_pages()`
 
 ### Expected behaviors (not bugs)
 

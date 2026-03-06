@@ -38,7 +38,9 @@ prep version:
 # --------------------------------------------------------------------------
 check:
     @echo "=== Step 2: Pre-release checks ==="
-    just check
+    just lint
+    just typecheck
+    just test-all
     just secrets-check
     just docs-sync
     uv run mkdocs build --strict

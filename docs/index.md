@@ -28,6 +28,8 @@ hide:
     - :material-file-cog: **Cleaner config** — flat `~/.onetool/` layout, explicit `--config` and `--secrets` flags, and a versioned schema with clear errors
     - :material-lock: **Encrypted secrets** — age-encrypted `secrets.yaml` backed by your OS keychain
     - :material-package-variant: **Leaner install** — optional `[util]` and `[dev]` extras; install only the dependencies you need
+    - :material-database: **Smart context store** — `ot_context` (`ctx`); SQLite+FTS5 store; search and navigate large tool outputs without filling context
+    - :material-image-search: **Image vision** — `ot_image` (`img`); routes to a cheaper, better vision model; zero host tokens; supports local files, URLs, clipboard, and 8 formats (PNG, JPEG, GIF, WebP, TIFF, HEIC, AVIF, SVG)
 
     [:octicons-arrow-right-24: See everything that's new in v2](learn/whats-new-v2.md)
 
@@ -141,6 +143,39 @@ Meta tools for introspection. [Structured logging](learn/extension-tools.md#logg
 Web Search (Brave, Google), Context7, Version Check, Chrome DevTools, Playwright, Excel, File Ops, Database, AWS, Memory and many more.
 
 [:octicons-arrow-right-24: Browse tools](reference/tools/index.md)
+
+</div>
+
+<div class="card span-2" markdown>
+
+### :material-image-search: Image Vision
+
+Routes image analysis to a cheaper, better vision model. Zero tokens charged to your host session. Load from local files, URLs, or clipboard.
+
+Supports PNG, JPEG, GIF, WebP, TIFF, HEIC, AVIF, SVG.
+
+```python
+>>> img.load(img="invoice.png")
+>>> img.ask(img="#inv_01", q="Extract all line items and prices")
+>>> img.clip_ask(q="What does this screenshot show?")  # clipboard shortcut
+```
+
+[:octicons-arrow-right-24: ot_image reference](reference/tools/ot_image.md)
+
+</div>
+
+<div class="card span-2" markdown>
+
+### :material-database: Smart Context Store
+
+Persistent SQLite+FTS5 store for large tool outputs. Write once, search many times. Agents build up knowledge across tool calls without burning context window.
+
+```python
+>>> ctx.write(content="...", source="research")
+>>> ctx.search("async error handling")
+```
+
+[:octicons-arrow-right-24: ctx reference](reference/tools/ot_context.md)
 
 </div>
 

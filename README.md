@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.</strong>
+  <strong>🧿 One MCP for developers - No tool tax, no context rot.<br>100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Image Vision, Playwright & Chrome DevTools Utils and many more.</strong>
 </p>
 
 <p align="center">
@@ -56,9 +56,6 @@ Requires [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install 'onetool-mcp[all]'   # everything
-uv tool install 'onetool-mcp[util]'  # file, convert, excel, brave, ground, mem, tavily
-uv tool install 'onetool-mcp[dev]'   # aws, context7, db, diagram, ripgrep, whiteboard, ...
-uv tool install onetool-mcp          # core only
 onetool init -c ~/.onetool
 ```
 
@@ -101,6 +98,8 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | **MCP Server Proxy**     | Wrap existing MCP servers without the tool tax                |
 | **Encrypted Secrets**    | age-encrypted `secrets.yaml` backed by your OS keychain       |
 | **Forge Tools**          | Build new tools as part of the conversation                   |
+| **Image Vision**         | Routes to a cheaper, better vision model via `ot_image` (`img`). Zero host tokens. Supports local files, URLs, clipboard; PNG, JPEG, GIF, WebP, TIFF, HEIC, AVIF, SVG. |
+| **Smart Context**        | `ot_context` (`ctx`) — SQLite+FTS5 store. Search and navigate large outputs without filling the context window. |
 | **Smart Tools**          | Delegate to cheaper LLMs (10× savings)                        |
 | **Security Layers**      | AST validation, path boundaries, output sanitisation          |
 
@@ -108,7 +107,7 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 
 ## Tools
 
-25+ packs, 100+ tools ready to use:
+27+ packs, 230+ tools ready to use:
 
 | Pack          | Tools                                          | Extra    | Description                    |
 | ------------- | ---------------------------------------------- | -------- | ------------------------------ |
@@ -124,6 +123,8 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | `ground`      | `search`                                       | `[util]` | Google Grounding search        |
 | `mem`         | `write`, `read`, `search`, `grep`              | `[util]` | Persistent memory              |
 | `ot_forge`    | `create_ext`, `validate_ext`, `install_skills` |          | Scaffold new tool packs        |
+| `ot_context` (`ctx`) | `write`, `read`, `search`, `grep`, `slice`, `toc`                 |          | Smart context store (SQLite+FTS5)   |
+| `ot_image` (`img`)   | `load`, `load_batch`, `ask`, `summary`, `list`, `delete`, `purge` | `[util]` | Image vision via dedicated model    |
 | `ot_llm`      | `transform`, `transform_file`                  |          | LLM-powered transforms         |
 | `ot_secrets`  | `init`, `encrypt`, `audit`, `rotate`           |          | Secrets encryption             |
 | `ot_timer`    | `start`, `elapsed`, `list`                     |          | Named timers                   |
@@ -136,13 +137,13 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | `whiteboard`  | `open`, `draw`, `screenshot`, `save`           | `[dev]`  | Live Excalidraw canvas         |
 | `worktree`    | `add`, `commit`, `diff`, `remove`              | `[dev]`  | Parallel agent git worktrees   |
 
-[📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 100+ tools
+[📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 230+ tools
 
 ---
 
 ## MCP Server Proxy
 
-Wrap any existing MCP server and call it explicitly - without the tool tax:
+Wrap any existing MCP server and call it explicitly - simple yaml config without the tool tax:
 
 ```yaml
 # .onetool/onetool.yaml
