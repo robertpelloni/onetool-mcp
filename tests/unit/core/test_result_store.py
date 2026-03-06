@@ -424,7 +424,7 @@ class TestOutputConfigDefaults:
     def test_max_inline_size_default(self) -> None:
         from ot.config.models import OutputConfig
 
-        assert OutputConfig().max_inline_size == 10000
+        assert OutputConfig().max_inline_size == 5000
 
     def test_preview_max_chars_default(self) -> None:
         from ot.config.models import OutputConfig

@@ -542,7 +542,7 @@ Control large output handling:
 
 ```yaml
 output:
-  max_inline_size: 50000      # Threshold in bytes (0 to disable)
+  max_inline_size: 3000       # Threshold in bytes (0 to disable)
   result_store_dir: tmp       # Directory for stored results
   result_ttl: 3600            # Time-to-live in seconds
   preview_lines: 10           # Lines in summary preview
