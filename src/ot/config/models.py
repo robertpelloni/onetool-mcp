@@ -373,7 +373,7 @@ class TelemetryConfig(BaseModel):
 
     enabled: bool = Field(
         default=True,
-        description="Enable anonymous startup telemetry (Scarf pixel)",
+        description="Enable anonymous startup telemetry (PostHog)",
     )
 
 
