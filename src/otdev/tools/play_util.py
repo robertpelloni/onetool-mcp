@@ -12,6 +12,7 @@ pack = "play_util"
 
 __all__ = [
     "clear_annotations",
+    "enable_auto_inject",
     "guide_user",
     "highlight_element",
     "inject_annotations",
@@ -22,6 +23,9 @@ from typing import Any
 
 from otdev._inject_base import (
     clear_annotations as _clear,
+)
+from otdev._inject_base import (
+    enable_auto_inject as _enable_auto_inject,
 )
 from otdev._inject_base import (
     guide_user as _guide,
@@ -57,6 +61,28 @@ def inject_annotations() -> dict[str, Any]:
         play_util.inject_annotations()
     """
     return _inject(_SERVER, _TOOL, _PACK)
+
+
+def enable_auto_inject() -> dict[str, Any]:
+    """Register inject.js as a Playwright init script for automatic injection.
+
+    Uses ``page.addInitScript()`` to register inject.js once. After this call,
+    ``window.__inspector`` is available on every page for the rest of the
+    browser session — including pages loaded after navigation — without any
+    per-page re-injection.
+
+    This is more efficient than ``inject_annotations()`` when navigating
+    across multiple pages. The two approaches can coexist: calling
+    ``enable_auto_inject()`` does not affect the ``_ensure_injected()``
+    fallback used by other annotation tools.
+
+    Returns:
+        Dict with ``success`` and ``auto_inject`` fields.
+
+    Example:
+        play_util.enable_auto_inject()
+    """
+    return _enable_auto_inject(_SERVER, _PACK)
 
 
 def highlight_element(

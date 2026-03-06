@@ -63,6 +63,22 @@ class TestPlayUtil:
         )
         assert guide["highlighted"] == 1
 
+    def test_enable_auto_inject(self, mock_proxy_manager) -> None:
+        """enable_auto_inject calls browser_run_code and returns success."""
+        from otdev.tools import play_util
+
+        mock_proxy_manager.servers = ["playwright"]
+        mock_proxy_manager.call_tool_sync.return_value = _pw_wrap('{"success": true}')
+
+        result = play_util.enable_auto_inject()
+
+        assert result["success"] is True
+        assert result["auto_inject"] is True
+        call_args = mock_proxy_manager.call_tool_sync.call_args
+        assert call_args[0][0] == "playwright"
+        assert call_args[0][1] == "browser_run_code"
+        assert "addInitScript" in call_args[0][2]["code"]
+
     def test_error_handling(self, mock_proxy_manager) -> None:
         """All operations fail gracefully when playwright server is not connected."""
         from otdev.tools import play_util
@@ -70,6 +86,7 @@ class TestPlayUtil:
         mock_proxy_manager.servers = []
 
         assert play_util.inject_annotations()["success"] is False
+        assert play_util.enable_auto_inject()["success"] is False
         assert play_util.highlight_element(selector=".btn", label="X")["count"] == 0
         assert play_util.scan_annotations() == []
         assert play_util.clear_annotations()["success"] is False

@@ -151,6 +151,54 @@ def _ensure_injected(server: str, tool: str) -> str | None:
         return f"Error: Auto-inject failed: {e}"
 
 
+def enable_auto_inject(server: str, pack_name: str) -> dict[str, Any]:
+    """Register inject.js as a Playwright init script via ``page.addInitScript()``.
+
+    Once called, ``window.__inspector`` is available on every page for the rest
+    of the browser session — no per-page re-injection needed.
+
+    Uses ``browser_run_code`` (not ``browser_evaluate``) to access the raw
+    Playwright ``page`` object. Only works with the Playwright MCP server;
+    ``chrome_util`` has no equivalent capability.
+
+    Args:
+        server: MCP server name (must be ``"playwright"``).
+        pack_name: Calling pack's name (for LogSpan).
+
+    Returns:
+        Dict with ``success`` and ``auto_inject`` fields.
+    """
+    with LogSpan(span=f"{pack_name}.enable_auto_inject") as s:
+        err = _check_server(server)
+        if err:
+            s.add(error=err)
+            return {"success": False, "auto_inject": False, "error": err}
+
+        try:
+            script = get_inject_script()
+            # Escape for safe embedding in a JS template literal
+            escaped = script.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+            code = (
+                f"async (page) => {{ "
+                f"await page.addInitScript(`{escaped}`); "
+                f"return {{success: true}}; "
+                f"}}"
+            )
+            proxy = get_proxy_manager()
+            raw = proxy.call_tool_sync(server, "browser_run_code", {"code": code})
+            result_str = _extract_result(raw)
+            try:
+                result = json.loads(result_str)
+                success = bool(result.get("success"))
+            except (json.JSONDecodeError, TypeError):
+                success = True  # No exception means the call succeeded
+            s.add(success=success)
+            return {"success": success, "auto_inject": success}
+        except Exception as e:
+            s.add(error=str(e))
+            return {"success": False, "auto_inject": False, "error": str(e)}
+
+
 def inject_annotations(
     server: str, tool: str, pack_name: str
 ) -> dict[str, Any]:

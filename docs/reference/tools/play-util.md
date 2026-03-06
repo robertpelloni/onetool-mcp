@@ -15,6 +15,17 @@ play_util.inject_annotations()
 # Returns: {"success": True, "ready": True, "version": "2.0.0"}
 ```
 
+### `enable_auto_inject()`
+
+Registers inject.js as a Playwright init script so `window.__inspector` is available on every page for the rest of the browser session — including pages loaded after navigation — without any per-page re-injection.
+
+```python
+play_util.enable_auto_inject()
+# Returns: {"success": True, "auto_inject": True}
+```
+
+Use this instead of `inject_annotations()` when navigating across multiple pages. The two approaches can coexist.
+
 ### `highlight_element(selector, label, color, element_id)`
 
 Highlights all elements matching a CSS selector with a labelled overlay box.
@@ -80,7 +91,7 @@ annotations = play_util.scan_annotations()
 
 ## Usage Patterns
 
-- Always call `inject_annotations()` first — other functions silently fail if inject.js is not loaded
+- Call `inject_annotations()` before other annotation functions on a single page, or call `enable_auto_inject()` once at the start of a multi-page session to avoid re-injecting after each navigation
 - Use `highlight_element` to show the user what to interact with next
 - Use `guide_user` for multi-step workflows — all steps visible at once
 - Use `scan_annotations` after the user has used Ctrl+I to read their selections
