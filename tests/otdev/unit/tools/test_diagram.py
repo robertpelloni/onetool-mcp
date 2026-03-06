@@ -7,6 +7,29 @@ import pytest
 
 @pytest.mark.unit
 @pytest.mark.tools
+class TestOutputDir:
+    """Test _resolve_output_dir does not create directories eagerly."""
+
+    def test_does_not_create_directory(self, tmp_path):
+        from otdev.tools.diagram import _resolve_output_dir
+
+        target = tmp_path / "new_diagrams"
+        assert not target.exists()
+
+        _resolve_output_dir(str(target))
+
+        assert not target.exists(), "_resolve_output_dir should not mkdir"
+
+    def test_returns_resolved_path(self, tmp_path):
+        from otdev.tools.diagram import _resolve_output_dir
+
+        target = tmp_path / "output"
+        result = _resolve_output_dir(str(target))
+        assert result == target.resolve()
+
+
+@pytest.mark.unit
+@pytest.mark.tools
 class TestDiagramPack:
     """Test diagram pack structure."""
 

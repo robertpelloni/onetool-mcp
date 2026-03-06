@@ -346,9 +346,7 @@ def _resolve_output_dir(output_dir: str | None) -> Path:
     if output_dir is None:
         output_dir = _get_config().output.dir
 
-    path = _resolve_project_path(output_dir)
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return _resolve_project_path(output_dir)
 
 
 # ==================== Encoding Utilities ====================
@@ -758,6 +756,7 @@ def generate_source(
             filename = _generate_filename(name, provider, "", is_source=True)
             file_path = output_path / filename
 
+            output_path.mkdir(parents=True, exist_ok=True)
             file_path.write_text(source)
 
             # Validation warnings
@@ -910,6 +909,7 @@ def render_diagram(
                         rendered = _render_via_kroki(
                             source, provider, output_format, timeout
                         )
+                        output_path.mkdir(parents=True, exist_ok=True)
                         output_file.write_bytes(rendered)
 
                         with _render_tasks_lock:
@@ -934,6 +934,7 @@ def render_diagram(
             rendered = _render_via_kroki(source, provider, output_format, timeout)
 
             # Save output
+            output_path.mkdir(parents=True, exist_ok=True)
             output_file.write_bytes(rendered)
 
             # Optionally save source alongside
@@ -1097,6 +1098,7 @@ def batch_render(
 
         # Get output directory (resolved relative to project directory)
         output_path = _resolve_output_dir(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
 
         timeout = _get_config().backend.timeout
 
@@ -1238,9 +1240,9 @@ def render_directory(
         # Get output directory (defaults to source directory if not specified)
         if output_dir is not None:
             output_path = _resolve_output_dir(output_dir)
-        else:
-            output_path = dir_path
             output_path.mkdir(parents=True, exist_ok=True)
+        else:
+            output_path = dir_path  # already confirmed to exist above
 
         timeout = _get_config().backend.timeout
 

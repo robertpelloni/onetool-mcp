@@ -24,7 +24,7 @@ tools:
         - plantuml
 
     output:
-      dir: ../diagrams  # Relative to .onetool/ directory
+      dir: diagrams  # Relative to project root (OT_CWD)
       naming: "{provider}_{name}_{timestamp}"
       default_format: svg
       save_source: true
