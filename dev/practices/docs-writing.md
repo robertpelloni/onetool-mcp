@@ -22,6 +22,35 @@ When customizing Material for MkDocs, prefer this order (minimal maintenance):
 - **Templates** - Fragile, may break on theme updates
 - **Custom CSS** - Requires understanding Material internals
 
+## Pack Naming Convention
+
+Always use the full pack name as the primary identifier. If you want to show the short alias, append it in parentheses:
+
+```
+`ot_context` (`ctx`)
+`ot_image` (`img`)
+`whiteboard` (`wb`)
+```
+
+**Rules:**
+- Narrative text and tables: full name first — `ot_context (ctx)`, never just `ctx`
+- Examples and code blocks: short alias is fine — `ctx.write(...)`, `img.load(...)`
+- When the full name has no short alias, use it alone: `tavily`, `brave`
+
+**Wrong:**
+```markdown
+The `ctx` pack stores large outputs...
+| `ctx` (`ot_context`) | ...
+```
+
+**Right:**
+```markdown
+The `ot_context` (`ctx`) pack stores large outputs...
+| `ot_context` (`ctx`) | ...
+```
+
+---
+
 ## Typography
 
 ### System Fonts (Recommended)

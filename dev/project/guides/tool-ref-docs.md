@@ -45,6 +45,8 @@ Web, news, image, and video search via Brave Search API.
 
 - Pack name in title case
 - One sentence only — what it does and via what API/service
+- If the pack has a short alias, show it in the subtitle or first paragraph: `ot_context` (`ctx`), `ot_image` (`img`)
+- In body text and tables, always lead with the full pack name — see [Pack Naming Convention](../../practices/docs-writing.md#pack-naming-convention)
 
 ---
 
@@ -176,6 +178,7 @@ When creating or updating a tool reference doc:
 
 - [ ] File at `docs/reference/tools/<pack>.md`
 - [ ] Title = pack name in title case + one-liner description
+- [ ] Short alias shown as `full_name (alias)` — never alias alone in narrative or tables
 - [ ] `## Highlights` — 3–4 bullets
 - [ ] `## Functions` — table covers all public functions in `__all__`
 - [ ] `## Key Parameters` — covers the most useful params

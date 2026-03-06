@@ -29,22 +29,25 @@ NAME_TO_PACK = {
     "AWS": "aws",
     "Brave": "brave",
     "Chrome DevTools Util": "chrome_util",
+    "OT Context": "ot_context",
     "Context7": "context7",
     "Convert": "convert",
     "DB": "db",
     "Diagram": "diagram",
     "Excel": "excel",
     "File": "file",
-    "Forge": "ot_forge",
+    "OT Forge": "ot_forge",
     "Ground": "ground",
-    "LLM": "ot_llm",
+    "OT LLM": "ot_llm",
     "Mem": "mem",
     "OT Core": "ot",
+    "OT Image": "ot_image",
     "OT Secrets": "ot_secrets",
     "Package": "package",
     "Playwright Util": "play_util",
     "Ripgrep": "ripgrep",
-    "Timer": "ot_timer",
+    "Tavily": "tavily",
+    "OT Timer": "ot_timer",
     "WB (Whiteboard)": "whiteboard",
     "Webfetch": "webfetch",
     "Worktree": "worktree",
@@ -118,7 +121,7 @@ def main() -> int:
             )
 
     # Ensure OT Secrets has a page link
-    if not re.search(r"\[\*\*OT Secrets\*\*\]\(secrets\.md\)", text):
+    if not re.search(r"\[\*\*OT Secrets\*\*\]\(ot_secrets\.md\)", text):
         failures.append("OT Secrets row must link to secrets.md")
 
     if failures:

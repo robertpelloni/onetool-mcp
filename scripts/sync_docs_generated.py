@@ -20,17 +20,20 @@ ROOT = Path(__file__).resolve().parents[1]
 PROMPTS = ROOT / "src/ot/config/global_templates/prompts.yaml"
 
 DOC_MAP = {
-    "ot": "ot.md",
-    "ot_forge": "forge.md",
-    "ot_llm": "llm.md",
-    "ot_secrets": "secrets.md",
-    "ot_timer": "timer.md",
+    "ot": "ot_core.md",
+    "ot_context": "ot_context.md",
+    "ot_forge": "ot_forge.md",
+    "ot_image": "ot_image.md",
+    "ot_llm": "ot_llm.md",
+    "ot_secrets": "ot_secrets.md",
+    "ot_timer": "ot_timer.md",
     "brave": "brave.md",
     "convert": "convert.md",
     "excel": "excel.md",
     "file": "file.md",
     "ground": "ground.md",
     "mem": "mem.md",
+    "tavily": "tavily.md",
     "aws": "aws.md",
     "chrome_util": "chrome-util.md",
     "context7": "context7.md",
@@ -46,7 +49,9 @@ DOC_MAP = {
 
 EXTRA_MAP = {
     "ot": "core",
+    "ot_context": "core",
     "ot_forge": "core",
+    "ot_image": "core",
     "ot_llm": "core",
     "ot_secrets": "core",
     "ot_timer": "core",
@@ -56,6 +61,7 @@ EXTRA_MAP = {
     "file": "[util]",
     "ground": "[util]",
     "mem": "[util]",
+    "tavily": "[util]",
     "aws": "[dev]",
     "chrome_util": "[dev]",
     "context7": "[dev]",

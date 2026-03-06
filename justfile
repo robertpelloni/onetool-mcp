@@ -102,9 +102,10 @@ secrets-check:
 docs-serve *args:
     uv run mkdocs serve --dev-addr 127.0.0.1:8000 {{ args }}
 
-# Sync generated docs blocks (pack summaries, whiteboard help table) from source
+# Sync generated docs blocks and validate index counts against runtime registry
 docs-sync:
     uv run python scripts/sync_docs_generated.py
+    uv run python scripts/check_docs_registry.py
 
 # Stop the documentation server
 docs-serve-stop:
@@ -113,10 +114,6 @@ docs-serve-stop:
 # Build documentation site (strict mode)
 docs-build:
     uv run mkdocs build --strict
-
-# Validate docs tool index counts against runtime registry
-docs-registry-check:
-    uv run python scripts/check_docs_registry.py
 
 # Clean and rebuild docs (strict mode)
 docs-clean:

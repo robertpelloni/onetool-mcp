@@ -89,7 +89,7 @@ The project SHALL document all tools at `docs/reference/tools/`.
 
 #### Scenario: ot pack documented
 - **GIVEN** the `ot.*` pack
-- **WHEN** a user reads `reference/tools/ot.md`
+- **WHEN** a user reads `reference/tools/ot_core.md`
 - **THEN** they find docs for ot.tools, ot.notify, ot.config
 
 ### Requirement: How-to Guides
