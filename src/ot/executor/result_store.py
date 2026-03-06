@@ -19,7 +19,6 @@ class StoredResult:
     size_bytes: int
     summary: str
     preview: list[str]
-    usage: dict[str, str]
     status: str = "pending"
 
     def to_dict(self) -> dict[str, Any]:
@@ -30,7 +29,6 @@ class StoredResult:
             "size_bytes": self.size_bytes,
             "summary": self.summary,
             "preview": self.preview,
-            "usage": self.usage,
             "status": self.status,
         }
 
@@ -126,13 +124,6 @@ class ResultStore:
             summary=summary,
             preview=preview,
             status=write_result.get("status", "pending"),
-            usage={
-                "page":   f"ctx.read('{handle}')",
-                "search": f"ctx.search('{handle}', queries=['your query'])",
-                "toc":    f"ctx.toc('{handle}')",
-                "grep":   f"ctx.grep('{handle}', pattern='pattern')",
-                "tail":   f"ctx.read('{handle}', tail=20)",
-            },
         )
 
     def query(

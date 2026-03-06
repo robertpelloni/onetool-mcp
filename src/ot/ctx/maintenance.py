@@ -63,7 +63,7 @@ def ctx_delete(
 
 def ctx_purge(
     *,
-    all: bool = False,
+    delete_all: bool = False,
     minutes: int = 15,
     source: str = "",
     status: str = "",
@@ -72,14 +72,14 @@ def ctx_purge(
     """Delete handles and compact the database.
 
     With no filters: deletes handles older than ``minutes`` (default 15), then compacts.
-    With ``all=True``: ignores the age filter — deletes every handle that matches the
-    ``source``/``status`` filters (or all handles when no filters are given).
+    With ``delete_all=True``: ignores the age filter — deletes every handle that matches
+    the ``source``/``status`` filters (or all handles when no filters are given).
     With ``source``/``status``: bulk-deletes matching handles older than ``minutes``.
 
     Args:
-        all: If True, bypass the age filter. Source/status filters still apply.
+        delete_all: If True, bypass the age filter. Source/status filters still apply.
         minutes: Delete handles older than this many minutes. Must be positive.
-            Ignored when ``all=True``.
+            Ignored when ``delete_all=True``.
         source: Source substring filter (case-insensitive).
         status: Status filter ("pending", "indexing", "ready", "failed").
         db: SQLite connection (uses module default if not provided).
@@ -91,21 +91,21 @@ def ctx_purge(
         ValueError: If ``minutes`` is zero or negative.
 
     Examples:
-        ctx.purge()                          # delete handles older than 15 min + compact
-        ctx.purge(all=True)                  # wipe everything
-        ctx.purge(minutes=60)                # delete handles older than 1 hour
-        ctx.purge(source="brave")            # delete brave handles older than 15 min
-        ctx.purge(all=True, source="brave")  # delete ALL brave handles regardless of age
-        ctx.purge(status="failed")           # delete failed handles older than 15 min
-        ctx.purge(all=True, status="failed") # delete ALL failed handles regardless of age
+        ctx.purge()                                 # delete handles older than 15 min + compact
+        ctx.purge(delete_all=True)                  # wipe everything
+        ctx.purge(minutes=60)                       # delete handles older than 1 hour
+        ctx.purge(source="brave")                   # delete brave handles older than 15 min
+        ctx.purge(delete_all=True, source="brave")  # delete ALL brave handles regardless of age
+        ctx.purge(status="failed")                  # delete failed handles older than 15 min
+        ctx.purge(delete_all=True, status="failed") # delete ALL failed handles regardless of age
     """
-    if not all and minutes <= 0:
+    if not delete_all and minutes <= 0:
         raise ValueError("minutes must be a positive integer")
 
     with log(
         span="ctx.purge",
-        all=all or None,
-        minutes=minutes if not all else None,
+        delete_all=delete_all or None,
+        minutes=minutes if not delete_all else None,
         source=source or None,
         status=status or None,
     ) as s:
@@ -114,7 +114,7 @@ def ctx_purge(
 
         # -- Determine which handles to delete -----------------------------------
 
-        cutoff_ts = None if all else (now_ts() - minutes * 60)
+        cutoff_ts = None if delete_all else (now_ts() - minutes * 60)
 
         rows = db.execute(
             "SELECT handle, source, status, created_at, is_file, size_bytes FROM results"
@@ -146,8 +146,8 @@ def ctx_purge(
         db.commit()
         deleted = len(to_delete)
 
-        # Always compact after deletion
-        db.execute("VACUUM")
+        if deleted > 0:
+            db.execute("VACUUM")
 
         s.add("deleted", deleted)
         s.add("bytes_freed", bytes_freed)

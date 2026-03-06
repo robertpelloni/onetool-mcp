@@ -222,7 +222,7 @@ def get_content(conn: sqlite3.Connection, handle: str) -> str | None:
     if meta and meta["is_file"]:
         try:
             return Path(row["body"]).read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             return None
     return str(row["body"])
 

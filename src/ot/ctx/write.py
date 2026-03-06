@@ -1,6 +1,7 @@
 """Write and append operations for the ctx pack."""
 from __future__ import annotations
 
+import contextlib
 import threading
 import uuid
 from pathlib import Path
@@ -94,17 +95,22 @@ def _indexing_worker(
     db_path: Path,
     embedding_model: str,
 ) -> None:
-    """Background thread: build FTS5 index and vocabulary."""
+    """Background thread: build FTS5 index, vocabulary, and abstract."""
     from .indexing import build_index
 
     conn = _open_connection(db_path)
-    try:
+    with contextlib.suppress(Exception):
         build_index(handle, content, conn, embedding_model=embedding_model)
-    except Exception:
-        pass  # status already set to 'failed' inside build_index
-    finally:
-        conn.close()
-        _set_event(handle)
+    with contextlib.suppress(Exception):
+        # Abstract is best-effort; never fail the thread for this
+        abstract = _generate_abstract(content)
+        conn.execute(
+            "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
+            (abstract, handle),
+        )
+        conn.commit()
+    conn.close()
+    _set_event(handle)
 
 
 # ---------------------------------------------------------------------------
@@ -113,24 +119,28 @@ def _indexing_worker(
 
 
 def ctx_write(
-    content: str,
+    content: str | dict[str, Any],
     *,
     source: str = "",
     intent: str = "",
+    verbose: bool = False,
     db: Any = None,
     config: Config | None = None,
 ) -> dict[str, Any]:
     """Write content to the context store and begin background indexing.
 
-    Returns a handle + preview in ~1ms. Indexing runs asynchronously.
+    Returns a handle in ~1ms. Abstract generation and indexing run asynchronously.
 
     Args:
-        content: Text content to store.
+        content: Text content to store, or a runner auto-offload handle dict
+            (``{"handle": "...", ...}``) — transparently dereferenced.
         source: Optional label for the content origin (e.g. tool name or URL).
         intent: Optional extraction prompt. When non-empty, ``ot_llm`` is called
             immediately to synthesise a focused answer from ``content``. The
             response dict will include an ``"answer"`` key (str) on success, or
             ``"answer_error"`` (str) if ``ot_llm`` is not installed or fails.
+        verbose: When ``True``, include ``preview`` and ``usage`` hints in the
+            response. Default ``False`` returns a compact dict.
         db: SQLite connection (uses module default if not provided).
         config: Pack config (uses module default if not provided).
     """
@@ -140,6 +150,15 @@ def ctx_write(
         if db is None:
             db = _get_connection()
 
+        # Dereference runner auto-offload handle dict transparently
+        if isinstance(content, dict) and "handle" in content:
+            from .read import ctx_read
+            read_result = ctx_read(content["handle"], limit=1_000_000, db=db)
+            if "error" in read_result:
+                return {"error": f"Failed to dereference handle {content['handle']!r}: {read_result['error']}"}
+            content = "\n".join(read_result["lines"])
+
+        assert isinstance(content, str)
         handle = uuid.uuid4().hex[:8]
         size_bytes = len(content.encode("utf-8"))
         lines = content.splitlines()
@@ -172,14 +191,6 @@ def ctx_write(
         )
         db.commit()
 
-        # Generate abstract synchronously (LLM if available, else first 500 chars)
-        abstract = _generate_abstract(content)
-        db.execute(
-            "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
-            (abstract, handle),
-        )
-        db.commit()
-
         # Create event (initially unset)
         _get_event(handle)
 
@@ -192,26 +203,19 @@ def ctx_write(
         )
         thread.start()
 
-        # Preview: first 5 non-empty lines
-        preview = [ln for ln in lines if ln.strip()][:5]
-
         result: dict[str, Any] = {
             "handle": handle,
             "source": source,
             "size_bytes": size_bytes,
             "total_lines": total_lines,
             "content_type": content_type,
-            "abstract": abstract,
-            "preview": preview,
+            "abstract": "",
             "status": "pending",
-            "usage": {
-                "page": f"ctx.read('{handle}')",
-                "search": f"ctx.search('{handle}', queries=['your query'])",
-                "toc": f"ctx.toc('{handle}')",
-                "grep": f"ctx.grep('{handle}', pattern='pattern')",
-                "tail": f"ctx.read('{handle}', tail=20)",
-            },
         }
+
+        if verbose:
+            preview = [ln for ln in lines if ln.strip()][:5]
+            result["preview"] = preview
 
         # Intent fast-path: call ot_llm if intent given
         if intent:
@@ -307,14 +311,6 @@ def ctx_append(
         )
         db.commit()
 
-        # Regenerate abstract synchronously (content changed)
-        abstract = _generate_abstract(combined)
-        db.execute(
-            "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
-            (abstract, handle),
-        )
-        db.commit()
-
         # Reset event (clear old signal)
         with _events_lock:
             ev = _events.get(handle)
@@ -337,7 +333,7 @@ def ctx_append(
         return {
             "handle": handle,
             "status": "pending",
-            "abstract": abstract,
+            "abstract": "",
             "size_bytes": new_size,
             "total_lines": new_lines,
         }

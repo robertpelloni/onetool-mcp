@@ -33,7 +33,7 @@ _STOPWORDS = frozenset({
     "who", "will", "with", "would", "you", "your",
 })
 
-_WORD_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9_]{2,}")
+_WORD_RE = re.compile(r"[\w][\w0-9_]{2,}")
 _CAMEL_RE = re.compile(r"[a-z][A-Z]|[A-Z]{2}[a-z]|_[a-zA-Z]")
 
 # STX/ETX used by FTS5 highlight() for match markers
@@ -104,7 +104,7 @@ def build_index(
     except Exception:
         conn.execute("UPDATE results SET status='failed' WHERE handle=?", (handle,))
         conn.commit()
-        raise
+        # Exception is intentionally not re-raised; status='failed' is the signal.
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +267,6 @@ def _store_embeddings(
         from pydantic import BaseModel, Field
 
         from ot.config import get_secret, get_tool_config
-        from ottools.ot_llm import transform as llm_transform  # noqa: F401
 
         class _LlmConfig(BaseModel):
             base_url: str = Field(default="")

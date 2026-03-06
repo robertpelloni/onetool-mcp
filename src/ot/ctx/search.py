@@ -47,22 +47,23 @@ def ctx_search(
             db = _get_connection()
 
         row = db.execute(
-            "SELECT status FROM results WHERE handle=?", (handle,)
+            "SELECT status, size_bytes FROM results WHERE handle=?", (handle,)
         ).fetchone()
         if row is None:
             return {"error": f"Handle not found: {handle}"}
 
         status = row["status"]
 
-        # Wait for indexing (up to 2s)
+        # Wait for indexing; scale timeout proportionally to content size
         if status in ("pending", "indexing"):
             from .write import _get_event
             ev = _get_event(handle)
-            ready = ev.wait(timeout=2.0)
+            timeout = max(2.0, (row["size_bytes"] or 0) / 50_000)
+            ready = ev.wait(timeout=timeout)
             if not ready:
                 return {
                     "status": "indexing",
-                    "retry_in": "~2s",
+                    "retry_in": f"~{round(timeout)}s",
                     "message": "Indexing not complete. Try again shortly.",
                 }
             # Re-check status after wait
