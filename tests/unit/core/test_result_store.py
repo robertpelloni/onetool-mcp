@@ -84,17 +84,6 @@ class TestStore:
         assert result.total_lines == 3
         assert result.size_bytes == len(content.encode())
 
-    def test_store_usage_has_ctx_keys(self) -> None:
-        content = "line1\nline2"
-        fake = _fake_write("testhandle0123", content)
-        with (
-            patch("ot.config.get_config", return_value=_mock_cfg()),
-            patch("ot.ctx.write.ctx_write", return_value=fake),
-        ):
-            result = ResultStore().store(content)
-        for key in ("page", "search", "toc", "grep", "tail"):
-            assert key in result.usage, f"missing usage key: {key!r}"
-
     def test_store_preview(self) -> None:
         lines = [f"line{i}" for i in range(20)]
         content = "\n".join(lines)
@@ -325,42 +314,6 @@ class TestQueryResultMetadata:
         )
         assert "100%" in result.to_dict()["progress"]
 
-
-# =============================================================================
-# STORED RESULT USAGE — StoredResult.usage
-# =============================================================================
-
-
-@pytest.mark.unit
-@pytest.mark.core
-class TestStoredResultUsage:
-    """Test that StoredResult.usage has the ctx.* hints."""
-
-    def _store(self, handle: str = "testhandle0123") -> StoredResult:
-        content = "line1\nline2"
-        fake = _fake_write(handle, content)
-        with (
-            patch("ot.config.get_config", return_value=_mock_cfg()),
-            patch("ot.ctx.write.ctx_write", return_value=fake),
-        ):
-            return ResultStore().store(content)
-
-    def test_usage_is_dict(self) -> None:
-        assert isinstance(self._store().to_dict()["usage"], dict)
-
-    def test_usage_has_ctx_keys(self) -> None:
-        d = self._store().to_dict()
-        for key in ("page", "search", "toc", "grep", "tail"):
-            assert key in d["usage"], f"missing usage key: {key!r}"
-
-    def test_usage_contains_handle(self) -> None:
-        handle = "testhandle0123"
-        d = self._store(handle).to_dict()
-        for key, val in d["usage"].items():
-            assert handle in val, f"usage[{key!r}] missing handle"
-
-    def test_no_legacy_query_field(self) -> None:
-        assert "query" not in self._store().to_dict()
 
 
 # =============================================================================

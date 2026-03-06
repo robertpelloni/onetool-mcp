@@ -545,7 +545,7 @@ async def execute_command(
                     "total_lines": write_result["total_lines"],
                     "size_bytes": write_result["size_bytes"],
                     "content_type": content_type,
-                    "preview": write_result["preview"],
+                    "preview": write_result.get("preview", []),
                     "status": write_result.get("status", "pending"),
                     "usage": {
                         "page": f"ctx.read('{handle}')",

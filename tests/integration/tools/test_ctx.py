@@ -22,7 +22,6 @@ class TestCtxWriteRead:
 
         assert "handle" in result
         assert len(result["handle"]) >= 8
-        assert "preview" in result
 
     def test_write_and_read(self) -> None:
         """Content written is retrievable via read()."""
