@@ -32,22 +32,24 @@ Source of truth: `src/ot/config/global_templates/prompts.yaml` (`prompts.packs`)
 | `context7` | `[dev]` | Pull up-to-date docs for any library — React, FastAPI, etc. |
 | `convert` | `[util]` | Turn PDF, Word, Excel, and PowerPoint files into clean markdown |
 | `db` | `[dev]` | Explore and query databases — list tables, inspect schema, run SQL |
-| `diagram` | `[dev]` | Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw |
+| `diagram` | `[dev]` | Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw [experimental] |
 | `excel` | `[util]` | Work with Excel files — read, write, search, pivot, and set formulas |
 | `file` | `[util]` | Read, write, edit, copy, move, and delete files; browse directory trees |
 | `ground` | `[util]` | Research any topic with Google AI-grounded search and source citations |
 | `mem` | `[util]` | Persistent topic-based memory — write, search, grep, slice, and organise |
+| `ot_context` | `core` | Smart context store — write, search, grep, and navigate large tool outputs without filling context window |
 | `ot_forge` | `core` | Scaffold and generate code from templates |
+| `ot_image` | `core` | Vision analysis via dedicated model — load images, ask questions, get summaries; zero tokens to host session |
 | `ot_llm` | `core` | Run any text through an LLM — summarise, extract, reformat, translate |
 | `ot_secrets` | `core` | Store and retrieve API keys and secrets for OneTool services |
 | `ot_timer` | `core` | Time tool calls and report performance |
 | `package` | `[dev]` | Look up PyPI and npm packages, audit deps, find the latest AI models |
 | `play_util` | `[dev]` | Annotate and highlight page elements via Playwright |
 | `ripgrep` | `[dev]` | Search code and text at speed — regex, globs, file types, context lines |
-| `tavily` | `-` | Search the web with Tavily AI — clean results, answer summaries, URL extraction |
+| `tavily` | `[util]` | Search the web with Tavily AI — clean results, answer summaries, URL extraction |
 | `webfetch` | `[dev]` | Fetch any URL and extract clean, readable content |
 | `whiteboard` | `[dev]` | Live whiteboard using Excalidraw — you can **draw** diagrams with a powerful DSL, assisted by AI |
-| `worktree` | `[dev]` | Manage git worktrees — create, switch, merge, diff, and clean up |
+| `worktree` | `[dev]` | Manage git worktrees — create, switch, merge, diff, and clean up [experimental] |
 <!-- END GENERATED:PACK_SUMMARY -->
 
 ## Documentation

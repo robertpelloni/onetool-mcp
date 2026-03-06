@@ -1053,6 +1053,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1181,6 +1185,34 @@
     
   
     Chrome DevTools Util
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ot_context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Store
   
 
     
@@ -1397,7 +1429,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../llm/" class="md-nav__link">
+      <a href="../ot_llm/" class="md-nav__link">
         
   
   
@@ -1453,7 +1485,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ot/" class="md-nav__link">
+      <a href="../ot_core/" class="md-nav__link">
         
   
   
@@ -1481,7 +1513,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../forge/" class="md-nav__link">
+      <a href="../ot_forge/" class="md-nav__link">
         
   
   
@@ -1509,7 +1541,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../secrets/" class="md-nav__link">
+      <a href="../ot_image/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Image
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ot_secrets/" class="md-nav__link">
         
   
   
@@ -1537,7 +1597,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../timer/" class="md-nav__link">
+      <a href="../ot_timer/" class="md-nav__link">
         
   
   
@@ -1669,6 +1729,17 @@
     <span class="md-ellipsis">
       
         inject_annotations()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable_auto_inject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        enable_auto_inject()
       
     </span>
   </a>
@@ -2221,6 +2292,8 @@
       
         
       
+        
+      
     
     
     
@@ -2280,7 +2353,7 @@
   <span class="md-ellipsis">
     
   
-    OneTool vs MCPs
+    OT MCP Results
   
 
     
@@ -2301,14 +2374,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../results/mem-vs-file-20260223/" class="md-nav__link">
+      <a href="../../../results/compare-mem-file/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Mem vs File vs Claude
+    OT Mem & File Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../results/compare-vision/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Image Results
   
 
     
@@ -2340,6 +2441,8 @@
       
         
           
+        
+      
         
       
         
@@ -2426,6 +2529,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2476,6 +2607,17 @@
     <span class="md-ellipsis">
       
         inject_annotations()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable_auto_inject" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        enable_auto_inject()
       
     </span>
   </a>
@@ -2748,33 +2890,39 @@
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;ready&quot;: True, &quot;version&quot;: &quot;2.0.0&quot;}</span>
 </span></code></pre></div>
+<h3 id="enable_auto_inject"><code>enable_auto_inject()</code><a class="headerlink" href="#enable_auto_inject" title="Permanent link">&para;</a></h3>
+<p>Registers inject.js as a Playwright init script so <code>window.__inspector</code> is available on every page for the rest of the browser session — including pages loaded after navigation — without any per-page re-injection.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">enable_auto_inject</span><span class="p">()</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;auto_inject&quot;: True}</span>
+</span></code></pre></div>
+<p>Use this instead of <code>inject_annotations()</code> when navigating across multiple pages. The two approaches can coexist.</p>
 <h3 id="highlight_elementselector-label-color-element_id"><code>highlight_element(selector, label, color, element_id)</code><a class="headerlink" href="#highlight_elementselector-label-color-element_id" title="Permanent link">&para;</a></h3>
 <p>Highlights all elements matching a CSS selector with a labelled overlay box.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;button.submit&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Click here&quot;</span><span class="p">)</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Fix this&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;button.submit&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Click here&quot;</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;.error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Fix this&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Available colours: <code>orange</code> (default), <code>red</code>, <code>blue</code>, <code>green</code>.</p>
 <h3 id="scan_annotations"><code>scan_annotations()</code><a class="headerlink" href="#scan_annotations" title="Permanent link">&para;</a></h3>
 <p>Returns all current annotations on the page — both those added programmatically and those added by the user via selection mode.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Returns: [{&quot;id&quot;: &quot;sel-1&quot;, &quot;label&quot;: &quot;My note&quot;, &quot;selector&quot;: &quot;.some-el&quot;,</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">#            &quot;content&quot;: &quot;...&quot;, &quot;tagName&quot;: &quot;span&quot;, &quot;color&quot;: &quot;orange&quot;}, ...]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Returns: [{&quot;id&quot;: &quot;sel-1&quot;, &quot;label&quot;: &quot;My note&quot;, &quot;selector&quot;: &quot;.some-el&quot;,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">#            &quot;content&quot;: &quot;...&quot;, &quot;tagName&quot;: &quot;span&quot;, &quot;color&quot;: &quot;orange&quot;}, ...]</span>
 </span></code></pre></div>
 <h3 id="clear_annotations"><code>clear_annotations()</code><a class="headerlink" href="#clear_annotations" title="Permanent link">&para;</a></h3>
 <p>Removes all annotations and overlays from the page.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;cleared&quot;: 3}</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Returns: {&quot;success&quot;: True, &quot;cleared&quot;: 3}</span>
 </span></code></pre></div>
 <h3 id="guide_usertask-steps"><code>guide_user(task, steps)</code><a class="headerlink" href="#guide_usertask-steps" title="Permanent link">&para;</a></h3>
 <p>Highlights a sequence of elements at once so the user can see a full workflow in one view.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Complete checkout&quot;</span><span class="p">,</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;email&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Enter email&quot;</span><span class="p">},</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;card&#39;]&quot;</span><span class="p">,</span>  <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;2. Card number&quot;</span><span class="p">},</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;button.pay&quot;</span><span class="p">,</span>          <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;3. Pay now&quot;</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">},</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="p">],</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Complete checkout&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;email&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Enter email&quot;</span><span class="p">},</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;card&#39;]&quot;</span><span class="p">,</span>  <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;2. Card number&quot;</span><span class="p">},</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;button.pay&quot;</span><span class="p">,</span>          <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;3. Pay now&quot;</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">},</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="p">],</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="manual-selection-mode-ctrli-cmdi">Manual Selection Mode (Ctrl+I / Cmd+I)<a class="headerlink" href="#manual-selection-mode-ctrli-cmdi" title="Permanent link">&para;</a></h2>
 <p>Users can annotate elements directly in the browser without writing any code:</p>
@@ -2785,14 +2933,14 @@
 <li>Press <span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-i">I</kbd></span> again (or cancel the prompt) to exit selection mode</li>
 </ol>
 <p>Claude reads the result with <code>scan_annotations()</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># ... tell user to press Ctrl+I and click the element they mean ...</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Use annotations[0][&quot;selector&quot;] to interact with what they picked</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1"># ... tell user to press Ctrl+I and click the element they mean ...</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Use annotations[0][&quot;selector&quot;] to interact with what they picked</span>
 </span></code></pre></div>
 <h2 id="usage-patterns">Usage Patterns<a class="headerlink" href="#usage-patterns" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Always call <code>inject_annotations()</code> first — other functions silently fail if inject.js is not loaded</li>
+<li>Call <code>inject_annotations()</code> before other annotation functions on a single page, or call <code>enable_auto_inject()</code> once at the start of a multi-page session to avoid re-injecting after each navigation</li>
 <li>Use <code>highlight_element</code> to show the user what to interact with next</li>
 <li>Use <code>guide_user</code> for multi-step workflows — all steps visible at once</li>
 <li>Use <code>scan_annotations</code> after the user has used Ctrl+I to read their selections</li>
@@ -2812,35 +2960,35 @@
 <li>OneTool uses the built-in defaults for annotation behavior.</li>
 <li>Requires the <code>playwright</code> MCP server. Enable it in <code>servers.yaml</code> (persistent):</li>
 </ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">playwright</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">playwright</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div>
 <p>Or enable for the current session only: <code>ot.server(enable="playwright")</code></p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="guide-a-user-through-a-form">Guide a user through a form<a class="headerlink" href="#guide-a-user-through-a-form" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_navigate</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://myapp.com/settings&quot;</span><span class="p">)</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">play_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Update your profile&quot;</span><span class="p">,</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;display_name&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Edit name&quot;</span><span class="p">},</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;email&#39;]&quot;</span><span class="p">,</span>         <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;2. Confirm email&quot;</span><span class="p">},</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;button[type=&#39;submit&#39;]&quot;</span><span class="p">,</span>        <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;3. Save&quot;</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">},</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="p">],</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">)</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_take_screenshot</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_navigate</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://myapp.com/settings&quot;</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">play_util</span><span class="o">.</span><span class="n">guide_user</span><span class="p">(</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">task</span><span class="o">=</span><span class="s2">&quot;Update your profile&quot;</span><span class="p">,</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">steps</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;display_name&#39;]&quot;</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;1. Edit name&quot;</span><span class="p">},</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;input[name=&#39;email&#39;]&quot;</span><span class="p">,</span>         <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;2. Confirm email&quot;</span><span class="p">},</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="p">{</span><span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="s2">&quot;button[type=&#39;submit&#39;]&quot;</span><span class="p">,</span>        <span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;3. Save&quot;</span><span class="p">,</span> <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="s2">&quot;green&quot;</span><span class="p">},</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="p">],</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="p">)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_take_screenshot</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="let-a-user-point-claude-to-an-element">Let a user point Claude to an element<a class="headerlink" href="#let-a-user-point-claude-to-an-element" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Ask user to press Ctrl+I and click the element they want</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># annotations[0][&quot;selector&quot;] contains the CSS selector of what they clicked</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Ask user to press Ctrl+I and click the element they want</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">annotations</span> <span class="o">=</span> <span class="n">play_util</span><span class="o">.</span><span class="n">scan_annotations</span><span class="p">()</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># annotations[0][&quot;selector&quot;] contains the CSS selector of what they clicked</span>
 </span></code></pre></div>
 <h3 id="highlight-an-error-field">Highlight an error field<a class="headerlink" href="#highlight-an-error-field" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;#email-error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Fix this&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_take_screenshot</span><span class="p">()</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">play_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">play_util</span><span class="o">.</span><span class="n">inject_annotations</span><span class="p">()</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">play_util</span><span class="o">.</span><span class="n">highlight_element</span><span class="p">(</span><span class="n">selector</span><span class="o">=</span><span class="s2">&quot;#email-error&quot;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Fix this&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;red&quot;</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">playwright</span><span class="o">.</span><span class="n">browser_take_screenshot</span><span class="p">()</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">play_util</span><span class="o">.</span><span class="n">clear_annotations</span><span class="p">()</span>
 </span></code></pre></div>
 
 

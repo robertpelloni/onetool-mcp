@@ -16,6 +16,8 @@
         <link rel="prev" href="../">
       
       
+        <link rel="next" href="../../telemetry/">
+      
       
         
       
@@ -1041,6 +1043,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -1166,6 +1172,34 @@
     
   
     Chrome DevTools Util
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/ot_context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Store
   
 
     
@@ -1382,7 +1416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/llm/" class="md-nav__link">
+      <a href="../../reference/tools/ot_llm/" class="md-nav__link">
         
   
   
@@ -1438,7 +1472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/ot/" class="md-nav__link">
+      <a href="../../reference/tools/ot_core/" class="md-nav__link">
         
   
   
@@ -1466,7 +1500,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/forge/" class="md-nav__link">
+      <a href="../../reference/tools/ot_forge/" class="md-nav__link">
         
   
   
@@ -1494,7 +1528,35 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/secrets/" class="md-nav__link">
+      <a href="../../reference/tools/ot_image/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Image
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/tools/ot_secrets/" class="md-nav__link">
         
   
   
@@ -1522,7 +1584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../reference/tools/timer/" class="md-nav__link">
+      <a href="../../reference/tools/ot_timer/" class="md-nav__link">
         
   
   
@@ -1962,6 +2024,8 @@
       
         
       
+        
+      
     
     
     
@@ -2021,7 +2085,7 @@
   <span class="md-ellipsis">
     
   
-    OneTool vs MCPs
+    OT MCP Results
   
 
     
@@ -2042,14 +2106,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../results/mem-vs-file-20260223/" class="md-nav__link">
+      <a href="../../results/compare-mem-file/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Mem vs File vs Claude
+    OT Mem & File Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../results/compare-vision/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Image Results
   
 
     
@@ -2083,6 +2175,8 @@
       
         
           
+        
+      
         
       
         
@@ -2486,6 +2580,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2918,10 +3040,10 @@
 <p>You'll also get tired of typing <code>query="..."</code>, so I added smart parameter prefixes: use <code>q</code> instead of <code>query</code>, <code>p</code> instead of <code>pattern</code>. Any unambiguous prefix works.</p>
 <h3 id="batteries-included-100-tools">Batteries included: 100+ tools<a class="headerlink" href="#batteries-included-100-tools" title="Permanent link">&para;</a></h3>
 <p>OneTool includes <a href="../../reference/tools/">100+ tools</a> including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more.</p>
-<p>It even has "Smart Tools" -  <a href="../../reference/tools/llm/">LLM-powered transformation</a>. Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.</p>
+<p>It even has "Smart Tools" -  <a href="../../reference/tools/ot_llm/">LLM-powered transformation</a>. Delegate work to cheaper LLMs instead of using your expensive AI coding agent. For example: fetch a page, summarise it with Gemini-3-Flash ($0.50/M input tokens), then pass the result back to Claude Opus 4.5 ($5/M input tokens). That's a 10× saving.</p>
 <p>Normally, with great power comes great configurability challenges.</p>
 <p>However, OneTool keeps it simple and consistent with sensible defaults: a single, well-structured <a href="../../learn/configuration/">YAML config</a>, with global and project scopes, and per-tool-pack configuration (timeouts, limits, models, etc).</p>
-<p>You also get a range of meta tools to help with the coding aspects, plus <a href="../../learn/extension-tools/#logging-with-logspan">structured logging</a> and <a href="../../reference/tools/ot/#otstats">runtime statistics</a> to track tool calls, success rates, tokens saved, and cost estimates.</p>
+<p>You also get a range of meta tools to help with the coding aspects, plus <a href="../../learn/extension-tools/#logging-with-logspan">structured logging</a> and <a href="../../reference/tools/ot_core/#otstats">runtime statistics</a> to track tool calls, success rates, tokens saved, and cost estimates.</p>
 <h3 id="security-powerful-with-guardrails">Security: powerful, with guardrails<a class="headerlink" href="#security-powerful-with-guardrails" title="Permanent link">&para;</a></h3>
 <p>OneTool is built for developers. It's very powerful -  so knowledge is your greatest protection. However, OneTool still includes multiple layers of security:</p>
 <ul>
@@ -3086,6 +3208,22 @@
             </div>
           </a>
         
+        
+          
+          <a href="../../telemetry/" class="md-footer__link md-footer__link--next" aria-label="Next: Telemetry">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Telemetry
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
         
       </nav>
     

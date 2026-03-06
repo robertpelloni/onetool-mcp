@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://onetool.beycom.online/reference/tools/package/">
+        <link rel="canonical" href="https://onetool.beycom.online/reference/tools/ot_secrets/">
       
       
-        <link rel="prev" href="../ot_timer/">
+        <link rel="prev" href="../ot_image/">
       
       
-        <link rel="next" href="../play-util/">
+        <link rel="next" href="../ot_timer/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Package - OneTool</title>
+        <title>OT Secrets - OneTool</title>
       
     
     
@@ -95,7 +95,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#package" class="md-skip">
+        <a href="#ot-secrets" class="md-skip">
           Skip to content
         </a>
       
@@ -130,7 +130,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Package
+              OT Secrets
             
           </span>
         </div>
@@ -1566,62 +1566,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../ot_secrets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OT Secrets
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../ot_timer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OT Timer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -1641,7 +1585,7 @@
   <span class="md-ellipsis">
     
   
-    Package
+    OT Secrets
   
 
     
@@ -1659,7 +1603,7 @@
   <span class="md-ellipsis">
     
   
-    Package
+    OT Secrets
   
 
     
@@ -1789,10 +1733,77 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ot_timer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OT Timer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2595,6 +2606,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2681,15 +2703,16 @@
   
 
 
-<h1 id="package">Package<a class="headerlink" href="#package" title="Permanent link">&para;</a></h1>
-<p>Check latest versions for npm, PyPI packages and search OpenRouter AI models.</p>
-<p>Short alias: <code>pkg</code></p>
+<h1 id="ot-secrets">OT Secrets<a class="headerlink" href="#ot-secrets" title="Permanent link">&para;</a></h1>
+<p>Age-encrypted secrets management using an identity stored in your OS keychain.</p>
+<p>Short alias: <code>sec</code></p>
 <h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Unified version checking across npm and PyPI</li>
-<li>Parallel fetching via ThreadPoolExecutor</li>
-<li>Version comparison support (pass dict with current versions)</li>
-<li>OpenRouter model search with glob patterns</li>
+<li>Generate and store an age X25519 identity in keychain (<code>init</code>)</li>
+<li>Encrypt plaintext values in <code>secrets.yaml</code> in place (<code>encrypt</code>)</li>
+<li>Check identity + file encryption status (<code>status</code>)</li>
+<li>Rotate to a new identity and re-encrypt values (<code>rotate</code>)</li>
+<li>Audit files for remaining plaintext secrets (<code>audit</code>)</li>
 </ul>
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <table>
@@ -2701,24 +2724,24 @@
 </thead>
 <tbody>
 <tr>
-<td><code>package.audit(packages, registry)</code></td>
-<td>Security audit for npm or PyPI packages</td>
+<td><code>ot_secrets.init(label, force)</code></td>
+<td>Create/store keypair in OS keychain</td>
 </tr>
 <tr>
-<td><code>package.npm(packages)</code></td>
-<td>Check latest npm package versions</td>
+<td><code>ot_secrets.encrypt(file, backup)</code></td>
+<td>Encrypt plaintext values in a secrets YAML file</td>
 </tr>
 <tr>
-<td><code>package.pypi(packages)</code></td>
-<td>Check latest PyPI package versions</td>
+<td><code>ot_secrets.status(file)</code></td>
+<td>Show identity status and encrypted/plain counts</td>
 </tr>
 <tr>
-<td><code>package.models(query, provider, limit)</code></td>
-<td>Search OpenRouter AI models</td>
+<td><code>ot_secrets.rotate(file, backup)</code></td>
+<td>Generate new keypair and re-encrypt encrypted values</td>
 </tr>
 <tr>
-<td><code>package.version(registry, packages)</code></td>
-<td>Unified version check with parallel fetching</td>
+<td><code>ot_secrets.audit(file)</code></td>
+<td>Report plaintext vs encrypted keys in a secrets file</td>
 </tr>
 </tbody>
 </table>
@@ -2733,77 +2756,67 @@
 </thead>
 <tbody>
 <tr>
-<td><code>packages</code></td>
-<td>list or dict</td>
-<td>Package names, or dict mapping names to current versions</td>
+<td><code>file</code></td>
+<td>str</td>
+<td>Path to secrets YAML file</td>
 </tr>
 <tr>
-<td><code>registry</code></td>
+<td><code>label</code></td>
 <td>str</td>
-<td>"npm", "pypi", or "openrouter"</td>
+<td>Human-readable key label for keychain identity</td>
 </tr>
 <tr>
-<td><code>query</code></td>
-<td>str</td>
-<td>Search query for model name/id (case-insensitive)</td>
+<td><code>backup</code></td>
+<td>bool</td>
+<td>Create <code>.bak</code> backup before modifying file (default: <code>True</code>)</td>
 </tr>
 <tr>
-<td><code>provider</code></td>
-<td>str</td>
-<td>Filter models by provider (e.g., "anthropic", "openai")</td>
+<td><code>force</code></td>
+<td>bool</td>
+<td>Overwrite existing keychain identity when initializing</td>
 </tr>
 </tbody>
 </table>
 <h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
-<p>No API key required.</p>
+<ul>
+<li><code>pyrage</code> and <code>keyring</code> libraries</li>
+<li>OS keychain support (macOS Keychain, Windows Credential Locker, or compatible Linux keyring)</li>
+</ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
 <ul>
-<li>No required <code>tools.package</code> settings.</li>
+<li>No required <code>tools.ot_secrets</code> settings.</li>
 </ul>
 <h3 id="optional">Optional<a class="headerlink" href="#optional" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Key</th>
-<th>Type</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tools.package.timeout</code></td>
-<td>float</td>
-<td><code>30.0</code></td>
-<td>Request timeout in seconds. Range: <code>1.0-120.0</code>.</td>
-</tr>
-</tbody>
-</table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">package</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30.0</span>
-</span></code></pre></div>
+<ul>
+<li>This pack does not define any pack-specific keys under <code>tools.ot_secrets</code>.</li>
+</ul>
 <h3 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">&para;</a></h3>
 <ul>
-<li>If <code>tools.package</code> is omitted, package lookups use the built-in timeout shown above.</li>
+<li>OneTool uses the built-in defaults for OS keychain integration and encrypted value handling.</li>
 </ul>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Check npm package versions</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">package</span><span class="o">.</span><span class="n">npm</span><span class="p">(</span><span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;react&quot;</span><span class="p">,</span> <span class="s2">&quot;typescript&quot;</span><span class="p">])</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Check PyPI package versions</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">package</span><span class="o">.</span><span class="n">pypi</span><span class="p">(</span><span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;requests&quot;</span><span class="p">,</span> <span class="s2">&quot;httpx&quot;</span><span class="p">])</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Compare against current versions</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">package</span><span class="o">.</span><span class="n">npm</span><span class="p">(</span><span class="n">packages</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;react&quot;</span><span class="p">:</span> <span class="s2">&quot;18.2.0&quot;</span><span class="p">,</span> <span class="s2">&quot;typescript&quot;</span><span class="p">:</span> <span class="s2">&quot;5.0.0&quot;</span><span class="p">})</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Search OpenRouter models</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">package</span><span class="o">.</span><span class="n">models</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;claude-sonnet-4.*&quot;</span><span class="p">,</span> <span class="n">provider</span><span class="o">=</span><span class="s2">&quot;anthropic&quot;</span><span class="p">)</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Unified version check</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">package</span><span class="o">.</span><span class="n">version</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="s2">&quot;npm&quot;</span><span class="p">,</span> <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;express&quot;</span><span class="p">,</span> <span class="s2">&quot;fastify&quot;</span><span class="p">])</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># 1) Create key identity (once per machine)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">ot_secrets</span><span class="o">.</span><span class="n">init</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;work-mac&quot;</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># 2) Encrypt a secrets file in place</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">ot_secrets</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;~/.onetool/secrets.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># 3) Check identity and file status</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">ot_secrets</span><span class="o">.</span><span class="n">status</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;~/.onetool/secrets.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># 4) Rotate to a new key and re-encrypt values</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">ot_secrets</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;~/.onetool/secrets.yaml&quot;</span><span class="p">)</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="c1"># 5) Audit a file for plaintext values</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">ot_secrets</span><span class="o">.</span><span class="n">audit</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;~/.onetool/secrets.yaml&quot;</span><span class="p">)</span>
 </span></code></pre></div>
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Values prefixed with <code>age1enc:</code> are treated as encrypted.</li>
+<li>Plain and encrypted values can coexist in the same file.</li>
+<li>Decryption occurs in memory when OneTool loads secrets.</li>
+</ul>
 
 
 
@@ -2893,7 +2906,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../ot_timer/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OT Timer">
+          <a href="../ot_image/" class="md-footer__link md-footer__link--prev" aria-label="Previous: OT Image">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2903,20 +2916,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                OT Timer
+                OT Image
               </div>
             </div>
           </a>
         
         
           
-          <a href="../play-util/" class="md-footer__link md-footer__link--next" aria-label="Next: Playwright Util">
+          <a href="../ot_timer/" class="md-footer__link md-footer__link--next" aria-label="Next: OT Timer">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Playwright Util
+                OT Timer
               </div>
             </div>
             <div class="md-footer__button md-icon">
