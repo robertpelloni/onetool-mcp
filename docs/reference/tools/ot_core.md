@@ -449,7 +449,7 @@ ot.result(handle="abc123", tail=20)
 
 | Field | Description |
 |-------|-------------|
-| `lines` | List of matching lines |
+| `content` | Matching lines as a single newline-separated string |
 | `total_lines` | Total lines in stored result (after search filter) |
 | `returned` | Number of lines returned in this chunk |
 | `offset` | Starting offset used |

@@ -44,7 +44,7 @@ Short alias: `forge`
 |-----------|------|-------------|
 | `install` | str | Skill name to install, or `"all"` for all skills (default: `"all"`) |
 | `exclude` | list[str] | Skill names to skip when `install="all"` |
-| `tool` | str | Target AI tool: `"claude"` (default), `"codex"`, `"opencode"` |
+| `tool` | str | Target AI tool: `"claude"` (default), `"codex"`, `"opencode"`, `"pi"` |
 
 ## Requires
 

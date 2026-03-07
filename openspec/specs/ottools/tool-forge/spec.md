@@ -96,6 +96,10 @@ The ot_forge pack SHALL provide an `install_skills()` function to install skill 
 - **WHEN** `ot_forge.install_skills(install="ot-ref", tool="opencode")` is called
 - **THEN** it SHALL write a stub file to `.opencode/skills/ot-ref/SKILL.md`
 
+#### Scenario: Install stub for Pi
+- **WHEN** `ot_forge.install_skills(install="ot-ref", tool="pi")` is called
+- **THEN** it SHALL write a stub file to `.pi/skills/ot-ref/SKILL.md`
+
 #### Scenario: Install all stubs
 - **WHEN** `ot_forge.install_skills(install="all")` is called
 - **THEN** it SHALL install stubs for all bundled skills

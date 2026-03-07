@@ -12,8 +12,8 @@ The `ctx.write()` function SHALL store content immediately, begin background ind
 
 #### Scenario: Basic write
 - **WHEN** `ctx.write("some content")` is called
-- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, `abstract`, and `status`
-- **AND** `abstract` SHALL be `""` immediately (populated asynchronously in the background thread)
+- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, and `status`
+- **AND** `abstract` SHALL NOT be present in the immediate response (it is populated asynchronously by the background thread and stored in the `meta` column)
 - **AND** `status` SHALL be `"pending"` or `"indexing"` (never `"ready"` — indexing is async)
 - **AND** `handle` SHALL be a short opaque string (e.g. 8 hex chars)
 - **AND** `content_type` SHALL be `"markdown"` if the content contains markdown headings (`# ` lines), otherwise `"text"`
@@ -34,7 +34,7 @@ The `ctx.write()` function SHALL store content immediately, begin background ind
 
 #### Scenario: Verbose mode
 - **WHEN** `ctx.write(content, verbose=True)` is called
-- **THEN** the response SHALL additionally include `preview` (first 5 non-empty lines of content)
+- **THEN** the response SHALL additionally include `preview` (first 5 non-empty lines of content, joined as a single newline-separated string)
 - **WHEN** `ctx.write(content)` is called (default `verbose=False`)
 - **THEN** `preview` SHALL NOT be present in the response
 
@@ -53,7 +53,9 @@ The `ctx.read()` function SHALL return paginated raw content from a stored handl
 - **GIVEN** a stored handle `h`
 - **WHEN** `ctx.read(h)` is called
 - **THEN** it SHALL return lines 1–100 (default offset=1, limit=100)
-- **AND** response SHALL include `lines`, `total_lines`, `returned`, `offset`, `has_more`, `progress`, `total_size_bytes`
+- **AND** response SHALL include `handle`, `content`, `total_lines`, `returned`, `offset`, `has_more`, `progress`, `total_size_bytes`
+- **AND** `handle` SHALL be the first key in the response dict
+- **AND** `content` SHALL be a single string with embedded newlines (not a list of strings)
 
 #### Scenario: Read with offset and limit
 - **GIVEN** a handle with 500 lines
@@ -210,13 +212,13 @@ The `ctx.ask()` function SHALL accept one or more questions about stored content
 #### Scenario: Single question string
 
 - **WHEN** `ctx.ask(h, q="What is the recommended entry point?")` is called
-- **THEN** it SHALL return `{"result": [{"question": "What is the recommended entry point?", "answer": "<answer>"}], "handle": h}`
+- **THEN** it SHALL return `{"handle": h, "result": [{"question": "What is the recommended entry point?", "answer": "<answer>"}]}`
 
 #### Scenario: Batch questions list
 
 - **WHEN** `ctx.ask(h, q=["What is the recommended entry point?", "What are common mistakes?"])` is called
 - **THEN** it SHALL send both questions in a single `ot_llm` call
-- **AND** return `{"result": [{"question": "...", "answer": "..."}, {"question": "...", "answer": "..."}], "handle": h}`
+- **AND** return `{"handle": h, "result": [{"question": "...", "answer": "..."}, {"question": "...", "answer": "..."}]}`
 - **AND** the order of results SHALL match the order of questions provided
 
 #### Scenario: Model override
@@ -228,13 +230,13 @@ The `ctx.ask()` function SHALL accept one or more questions about stored content
 #### Scenario: ot_llm not configured
 
 - **WHEN** `ctx.ask(h, q="...")` is called and `ot_llm` is not configured
-- **THEN** it SHALL return `{"error": "<message explaining ot_llm must be configured>", "handle": h}`
+- **THEN** it SHALL return `{"handle": h, "error": "<message explaining ot_llm must be configured>"}`
 - **AND** it SHALL NOT raise an unhandled exception
 
 #### Scenario: Unknown handle
 
 - **WHEN** `ctx.ask("badhandle", q="...")` is called
-- **THEN** it SHALL return `{"error": "Handle not found: badhandle", "handle": "badhandle"}`
+- **THEN** it SHALL return `{"handle": "badhandle", "error": "Handle not found: badhandle"}`
 
 #### Scenario: Handle still indexing
 
@@ -245,9 +247,9 @@ The `ctx.ask()` function SHALL accept one or more questions about stored content
 
 #### Scenario: Large content truncation
 
-- **GIVEN** a handle whose total content exceeds `max_inline_bytes`
+- **GIVEN** a handle whose total content exceeds `ask_max_bytes`
 - **WHEN** `ctx.ask(h, q="...")` is called
-- **THEN** it SHALL send the first `max_inline_bytes` characters of content to the model
+- **THEN** it SHALL send the first `ask_max_bytes` bytes of content to the model
 - **AND** the response SHALL include a `truncated: true` field
 - **AND** the response MAY include a `hint` suggesting `ctx.search` or `ctx.slice` to narrow scope before re-querying
 
@@ -261,7 +263,7 @@ The `ctx.append()` function SHALL add content to an existing handle and re-trigg
 - **GIVEN** a ready handle `h`
 - **WHEN** `ctx.append(h, "additional content")` is called
 - **THEN** the combined content SHALL be available via `ctx.read`
-- **AND** `status` SHALL transition back to `"indexing"` while the index rebuilds
+- **AND** `status` SHALL transition back to `"pending"` immediately (then to `"indexing"` → `"ready"` as the background thread runs)
 
 #### Scenario: Append to unknown handle
 - **WHEN** `ctx.append("badhandle", "content")` is called
@@ -415,6 +417,7 @@ The `ctx` pack SHALL support optional configuration via `onetool.yaml`.
 - **THEN** TTL SHALL default to 3600 seconds (1 hour)
 - **AND** embeddings SHALL be disabled (no API calls made)
 - **AND** `max_inline_bytes` SHALL default to 1048576 (1MB)
+- **AND** `ask_max_bytes` SHALL default to 204800 (200KB) — content sent to `ctx.ask` is truncated to this limit; set to 0 to disable truncation
 
 #### Scenario: Custom TTL
 - **GIVEN** `tools.ctx.ttl: 7200` in config

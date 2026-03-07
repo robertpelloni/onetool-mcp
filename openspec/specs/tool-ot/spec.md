@@ -160,10 +160,16 @@ The `ot.reload()` function SHALL force reload of all configuration.
 
 The `ot.stats()` function SHALL return aggregated runtime statistics with configurable detail level.
 
+#### Scenario: Info level list
+- **GIVEN** `info="list"` parameter
+- **WHEN** `ot.stats(info="list")` is called
+- **THEN** it SHALL return a minimal compact summary: `{period, total_calls, success_rate, error_count, savings_usd}`
+- **AND** it SHALL NOT include tools breakdown
+
 #### Scenario: Info level min
 - **GIVEN** `info="min"` parameter
 - **WHEN** `ot.stats(info="min")` is called
-- **THEN** it SHALL return summary only: `{period, total_calls, success_rate, error_count, savings_usd}`
+- **THEN** it SHALL return summary with duration and coffees: `{period, total_calls, success_rate, error_count, total_duration_ms, savings_usd, coffees}`
 - **AND** it SHALL NOT include tools breakdown
 
 #### Scenario: Info level default (default)
@@ -690,7 +696,7 @@ The `ot.result()` function SHALL query stored large outputs with pagination, fil
 - **GIVEN** a stored result is queried
 - **WHEN** results are returned
 - **THEN** response SHALL include:
-  - `lines`: List of matching lines
+  - `content`: Matching content as a single newline-joined string
   - `total_lines`: Total lines in stored result (after search filter)
   - `returned`: Number of lines returned in this chunk
   - `offset`: Starting offset used
