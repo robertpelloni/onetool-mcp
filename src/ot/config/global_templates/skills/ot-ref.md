@@ -42,7 +42,7 @@ y = brave.search(query="topic B")
 
 ## Pack Extras
 
-Not all packs are installed by default. Install the appropriate extra if missing:
+Not all packs are installed by default.
 
 | Extra   | Packs                                                 |
 |---------|-------------------------------------------------------|
@@ -55,19 +55,3 @@ Check loaded packs: `ot.packs()`. Install: `pip install onetool-mcp[util]`.
 ## Parameter Traps
 
 Common wrong parameter names. When a call fails, check: `ot.tool_info(name="pack.tool")`
-
-| Pack    | Wrong            | Correct                      |
-|---------|------------------|------------------------------|
-| excel   | `path=`          | `filepath=`                  |
-| excel   | `sheet=`         | `sheet_name=`                |
-| excel   | `query=`         | `pattern=`                   |
-| convert | `path=`          | `pattern=` + `output_dir=`   |
-| ground  | `count=`         | `max_sources=`               |
-| ot_llm  | `input=`         | `data=`                      |
-| ot_llm  | `instruction=`   | `prompt=`                    |
-| db      | `path=`          | `db_url="sqlite:///..."`     |
-| db      | `table=`         | `table_names=["list"]`       |
-| package | `packages="str"` | `packages=["list"]`          |
-| mem     | `key=`           | `topic=`                     |
-| mem     | `tag=`           | `category=`                  |
-| web     | `max_chars=`     | `max_length=`                |
