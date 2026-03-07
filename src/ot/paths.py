@@ -112,6 +112,20 @@ def get_global_templates_dir() -> Path:
     return _resolve_package_dir(GLOBAL_TEMPLATES_PACKAGE, "Global templates")
 
 
+def get_config_dir() -> Path:
+    """Return the OT config directory (.onetool/).
+
+    Single point of access for config._config_dir. Use this instead of
+    get_config()._config_dir at call sites.
+
+    Returns:
+        Path to the .onetool config directory
+    """
+    from ot.config.loader import get_config
+
+    return get_config()._config_dir
+
+
 def get_effective_cwd() -> Path:
     """Get the effective working directory.
 

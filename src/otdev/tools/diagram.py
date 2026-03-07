@@ -314,10 +314,9 @@ def _resolve_config_path(path_str: str) -> Path:
         return p
     # Try config dir (config_path.parent)
     try:
-        from ot.config.loader import get_config
+        from ot.paths import get_config_dir
 
-        config_dir = get_config()._config_dir
-        candidate = (config_dir / p).resolve()
+        candidate = (get_config_dir() / p).resolve()
         if candidate.exists():
             return candidate
         return candidate

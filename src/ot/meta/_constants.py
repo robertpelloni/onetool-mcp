@@ -67,7 +67,6 @@ def resolve_ot_path(path: str) -> Path:
     if p.is_absolute():
         return p.resolve()
 
-    from ot.config.loader import get_config
+    from ot.paths import get_config_dir
 
-    config_dir = get_config()._config_dir
-    return (config_dir / p).resolve()
+    return (get_config_dir() / p).resolve()
