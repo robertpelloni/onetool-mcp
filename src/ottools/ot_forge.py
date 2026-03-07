@@ -9,8 +9,8 @@ import ast
 import re
 from pathlib import Path
 
-from ot.config.loader import get_config
 from ot.logging import LogSpan
+from ot.paths import get_config_dir, get_effective_cwd
 from ot.utils.cache import cache
 
 # Pack for dot notation: ot_forge.create_ext(), ot_forge.validate_ext(), ot_forge.install_skills()
@@ -67,8 +67,7 @@ def create_ext(
             return "Error: Extension template not found"
 
         # Determine output directory (always uses ot dir from loaded config)
-        ot_dir = get_config()._config_dir
-        base_dir = ot_dir / "tools"
+        base_dir = get_config_dir() / "tools"
 
         ext_dir = base_dir / name
         ext_file = ext_dir / f"{name}.py"
@@ -437,6 +436,7 @@ def install_skills(
         ot_forge.install_skills(install="ot-ref")
         ot_forge.install_skills(install="ot-ref", tool="codex")
         ot_forge.install_skills(install="all", tool="opencode")
+        ot_forge.install_skills(install="ot-ref", tool="pi")
     """
     exclude = exclude or []
     with LogSpan(span="ot_forge.install_skills", install=install, tool=tool) as s:
@@ -475,11 +475,7 @@ def install_skills(
 
         from ot.paths import expand_path
 
-        try:
-            cfg = get_config()
-            cwd = Path(cfg._config_dir).parent if cfg._config_dir else Path.cwd()
-        except Exception:
-            cwd = Path.cwd()
+        cwd = get_effective_cwd()
 
         results: list[str] = []
         for skill_name in to_install:

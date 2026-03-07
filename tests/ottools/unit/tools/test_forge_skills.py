@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -60,6 +60,7 @@ def _patch_env(env: dict):
                 "claude": {"stub_path": ".claude/skills/{name}/SKILL.md"},
                 "codex": {"stub_path": ".codex/skills/{name}/SKILL.md"},
                 "opencode": {"stub_path": ".opencode/skills/{name}/SKILL.md"},
+                "pi": {"stub_path": ".pi/skills/{name}/SKILL.md"},
             })
         )
         stack.enter_context(
@@ -75,10 +76,8 @@ def _patch_env(env: dict):
         stack.enter_context(
             patch("ottools.ot_forge._get_skill_body", side_effect=lambda name: f"Full content of {name}")
         )
-        mock_cfg = MagicMock()
-        mock_cfg._config_dir = str(env["project_dir"] / ".onetool")
         stack.enter_context(
-            patch("ottools.ot_forge.get_config", return_value=mock_cfg)
+            patch("ottools.ot_forge.get_effective_cwd", return_value=env["project_dir"])
         )
         return stack
 
@@ -198,6 +197,22 @@ def test_install_skill_unknown(fake_env: dict) -> None:
 
 @pytest.mark.unit
 @pytest.mark.tools
+def test_install_skill_pi(fake_env: dict) -> None:
+    """install_skills(install=..., tool='pi') installs stub for Pi coding agent."""
+    from ottools.ot_forge import install_skills
+
+    with _patch_env(fake_env):
+        result = install_skills(install="my-skill", tool="pi")
+
+    assert "installed" in result or "updated" in result
+    stub_file = fake_env["project_dir"] / ".pi" / "skills" / "my-skill" / "SKILL.md"
+    assert stub_file.exists(), f"Pi stub not created at {stub_file}"
+    content = stub_file.read_text()
+    assert "my-skill" in content
+
+
+@pytest.mark.unit
+@pytest.mark.tools
 def test_install_skill_unsupported_tool(fake_env: dict) -> None:
     """install_skills(install=..., tool='unknown-tool') returns error."""
     from ottools.ot_forge import install_skills
@@ -225,5 +240,7 @@ def test_get_tools_config_loads_yaml() -> None:
     assert "claude" in config
     assert "codex" in config
     assert "opencode" in config
+    assert "pi" in config
     assert "stub_path" in config["claude"]
     assert "{name}" in config["claude"]["stub_path"]
+    assert config["pi"]["stub_path"] == ".pi/skills/{name}/SKILL.md"

@@ -25,3 +25,8 @@ tools:
     # OpenCode also recognises .agents/skills/ and .claude/skills/ as fallbacks
     stub_path: ".opencode/skills/{name}/SKILL.md"
     description: "OpenCode (opencode.ai)"
+
+  pi:
+    # Pi coding agent — project-level discovery path
+    stub_path: ".pi/skills/{name}/SKILL.md"
+    description: "Pi coding agent"

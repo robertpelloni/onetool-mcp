@@ -19,15 +19,10 @@ if TYPE_CHECKING:
 @pytest.fixture
 def mock_ot_dir(tmp_path: Path) -> Generator[Path, None, None]:
     """Mock ot dir (config_path.parent) to tmp_path."""
-    from unittest.mock import MagicMock
-
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    mock_config = MagicMock()
-    mock_config._config_dir = ot_dir
-
-    with patch("ottools.ot_forge.get_config", return_value=mock_config):
+    with patch("ottools.ot_forge.get_config_dir", return_value=ot_dir):
         yield ot_dir
 
 
