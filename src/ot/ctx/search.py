@@ -258,6 +258,8 @@ def _edit_distance(a: str, b: str) -> int:
         return n
     if n == 0:
         return m
+    if abs(m - n) >= 3:
+        return 3  # exceeds threshold; skip DP
     dp = list(range(n + 1))
     for i in range(1, m + 1):
         prev = dp[0]
@@ -299,12 +301,12 @@ def ctx_grep(
             db = _get_connection()
 
         row = db.execute(
-            "SELECT handle FROM results WHERE handle=?", (handle,)
+            "SELECT handle, is_file FROM results WHERE handle=?", (handle,)
         ).fetchone()
         if row is None:
             return {"error": f"Handle not found: {handle}"}
 
-        content = get_content(db, handle)
+        content = get_content(db, handle, is_file=row["is_file"])
         if content is None:
             return {"error": f"Content not found for handle: {handle}"}
 
@@ -313,7 +315,7 @@ def ctx_grep(
         if fuzzy:
             matched_lines = _fuzzy_grep(lines, pattern)
             s.add("returned", len(matched_lines))
-            return {"handle": handle, "lines": matched_lines, "returned": len(matched_lines)}
+            return {"handle": handle, "content": "\n".join(matched_lines), "returned": len(matched_lines)}
 
         if not pattern:
             return {"error": "Pattern must not be empty. Use ctx.read() to retrieve all content."}
@@ -331,7 +333,7 @@ def ctx_grep(
         s.add("returned", len(result_lines))
         return {
             "handle": handle,
-            "lines": result_lines,
+            "content": "\n".join(result_lines),
             "returned": len(result_lines),
         }
 
@@ -400,12 +402,12 @@ def ctx_slice(
             db = _get_connection()
 
         row = db.execute(
-            "SELECT status FROM results WHERE handle=?", (handle,)
+            "SELECT status, is_file FROM results WHERE handle=?", (handle,)
         ).fetchone()
         if row is None:
             return {"error": f"Handle not found: {handle}"}
 
-        content = get_content(db, handle)
+        content = get_content(db, handle, is_file=row["is_file"])
         if content is None:
             return {"error": f"Content not found for handle: {handle}"}
 
@@ -422,7 +424,7 @@ def ctx_slice(
             return {
                 "handle": handle,
                 "select": select,
-                "lines": lines[start - 1: end],
+                "content": "\n".join(lines[start - 1: end]),
                 "start_line": start,
                 "end_line": end,
             }
@@ -445,7 +447,7 @@ def ctx_slice(
                     "handle": handle,
                     "section": select,
                     "title": c["title"],
-                    "lines": lines[c["start_line"] - 1: c["end_line"]],
+                    "content": "\n".join(lines[c["start_line"] - 1: c["end_line"]]),
                     "start_line": c["start_line"],
                     "end_line": c["end_line"],
                 }
@@ -459,7 +461,7 @@ def ctx_slice(
                             "handle": handle,
                             "section": i + 1,
                             "title": c["title"],
-                            "lines": lines[c["start_line"] - 1: c["end_line"]],
+                            "content": "\n".join(lines[c["start_line"] - 1: c["end_line"]]),
                             "start_line": c["start_line"],
                             "end_line": c["end_line"],
                         }
@@ -478,7 +480,7 @@ def ctx_slice(
                     return {
                         "handle": handle,
                         "title": m.group(2).strip(),
-                        "lines": [line],
+                        "content": line,
                         "start_line": i,
                         "end_line": i,
                         "note": "Indexing not complete — only the heading line returned",

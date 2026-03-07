@@ -48,16 +48,17 @@ def ctx_list(
 
         rows = db.execute(
             "SELECT handle, source, size_bytes, total_lines, status, expires_at, meta "
-            "FROM results ORDER BY rowid DESC"
+            "FROM results "
+            "WHERE (expires_at IS NULL OR expires_at > unixepoch()) "
+            "AND (:status = '' OR status = :status) "
+            "AND (:source = '' OR LOWER(source) LIKE '%' || LOWER(:source) || '%') "
+            "ORDER BY rowid DESC",
+            {"status": status, "source": source},
         ).fetchall()
 
         active = []
         for row in rows:
-            if is_expired(row):
-                continue
-            if source and source.lower() not in (row["source"] or "").lower():
-                continue
-            if status and row["status"] != status:
+            if is_expired(row):  # safety net for sub-second races
                 continue
             handle = row["handle"]
             entry: dict[str, Any] = {
@@ -99,17 +100,16 @@ def ctx_inspect(
         if row is None:
             return {"error": f"Handle not found: {handle}"}
 
-        chunk_count = db.execute(
-            "SELECT COUNT(*) FROM chunks WHERE handle=?", (handle,)
-        ).fetchone()[0]
-
-        vocab_size = db.execute(
-            "SELECT COUNT(*) FROM vocabulary WHERE handle=?", (handle,)
-        ).fetchone()[0]
-
-        emb_count = db.execute(
-            "SELECT COUNT(*) FROM chunk_embeddings WHERE handle=?", (handle,)
-        ).fetchone()[0]
+        counts = db.execute(
+            "SELECT"
+            " (SELECT COUNT(*) FROM chunks WHERE handle=?) as chunk_count,"
+            " (SELECT COUNT(*) FROM vocabulary WHERE handle=?) as vocab_size,"
+            " (SELECT COUNT(*) FROM chunk_embeddings WHERE handle=?) as emb_count",
+            (handle, handle, handle),
+        ).fetchone()
+        chunk_count = counts["chunk_count"]
+        vocab_size = counts["vocab_size"]
+        emb_count = counts["emb_count"]
 
         return {
             "handle": row["handle"],

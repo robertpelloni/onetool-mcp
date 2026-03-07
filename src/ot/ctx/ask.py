@@ -53,8 +53,8 @@ def ctx_ask(
         model: LLM model override; falls back to ``ot_llm`` configured default.
 
     Returns:
-        ``{"result": [{"question": str, "answer": str}], "handle": str}`` on
-        success. ``{"error": str, "handle": str}`` on failure (handle not
+        ``{"handle": str, "result": [{"question": str, "answer": str}]}`` on
+        success. ``{"handle": str, "error": str}`` on failure (handle not
         found, ``ot_llm`` not configured).
 
     Example:
@@ -68,26 +68,27 @@ def ctx_ask(
             db = _get_connection()
 
         row = db.execute(
-            "SELECT handle, status FROM results WHERE handle=?", (handle,)
+            "SELECT handle, status, is_file FROM results WHERE handle=?", (handle,)
         ).fetchone()
         if row is None:
             err = f"Handle not found: {handle}"
             s.add(error=err)
-            return {"error": err, "handle": handle}
+            return {"handle": handle, "error": err}
 
         status = row["status"]
 
-        content = get_content(db, handle)
+        content = get_content(db, handle, is_file=row["is_file"])
         if content is None:
-            err = f"Handle not found: {handle}"
+            err = f"Content not found for handle: {handle}"
             s.add(error=err)
-            return {"error": err, "handle": handle}
+            return {"handle": handle, "error": err}
 
         # Truncate large content
         config = _get_config()
         truncated = False
-        if len(content.encode()) > config.max_inline_bytes:
-            content = content.encode()[: config.max_inline_bytes].decode(errors="replace")
+        ask_max = config.ask_max_bytes
+        if ask_max > 0 and len(content.encode()) > ask_max:
+            content = content.encode()[:ask_max].decode(errors="replace")
             truncated = True
 
         # Build prompt
@@ -110,7 +111,7 @@ def ctx_ask(
                 "Install the ot_llm pack and configure base_url and model to use ctx.ask."
             )
             s.add(error=err)
-            return {"error": err, "handle": handle}
+            return {"handle": handle, "error": err}
 
         try:
             raw = llm_transform(data=content, prompt=prompt, model=model)
@@ -125,7 +126,7 @@ def ctx_ask(
             else:
                 err = f"ot_llm call failed: {e}"
             s.add(error=err)
-            return {"error": err, "handle": handle}
+            return {"handle": handle, "error": err}
 
         if raw.startswith("Error:"):
             s.add(error=raw)
@@ -137,12 +138,12 @@ def ctx_ask(
             answers = _parse_numbered_answers(raw, len(questions))
 
         pairs = [{"question": qs, "answer": a} for qs, a in zip(questions, answers, strict=False)]
-        result: dict[str, Any] = {"result": pairs, "handle": handle}
+        result: dict[str, Any] = {"handle": handle, "result": pairs}
 
         if truncated:
             result["truncated"] = True
             result["hint"] = (
-                "Content was truncated to max_inline_bytes. "
+                "Content was truncated to ask_max_bytes. "
                 "Use ctx.search() or ctx.slice() to narrow scope before re-querying."
             )
         if status in ("indexing", "pending"):

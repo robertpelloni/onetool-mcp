@@ -23,6 +23,11 @@ class Config(BaseModel):
         ge=0,
         description="Content > this size is stored as a file pointer (bytes)",
     )
+    ask_max_bytes: int = Field(
+        default=204800,
+        ge=0,
+        description="Content is truncated to this size before sending to ctx.ask (bytes, 0 = no limit)",
+    )
 
 
 def _get_config() -> Config:

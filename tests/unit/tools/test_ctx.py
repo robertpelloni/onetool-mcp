@@ -386,7 +386,8 @@ class TestWrite:
             from ot.ctx.config import Config
             content = "\n".join(f"line {i}" for i in range(20))
             result = ctx_write(content, verbose=True, db=conn, config=Config())
-        assert len(result["preview"]) <= 5
+        assert isinstance(result["preview"], str)
+        assert len(result["preview"].splitlines()) <= 5
 
     def test_write_verbose_false_omits_preview_and_usage(self) -> None:
         conn = _make_conn()
@@ -462,15 +463,15 @@ class TestWrite:
         assert short == "Hello world"
 
     def test_generate_abstract_fallback_truncates_at_500(self) -> None:
+        import sys
         from ot.ctx.write import _generate_abstract
         long_content = "word " * 200  # 1000 chars
-        with patch.dict({"ottools.ot_llm": None}, {}):
-            with patch("ot.ctx.write._generate_abstract", wraps=lambda c: c[:500].strip() + "…"):
-                result = _generate_abstract(long_content)
+        with patch.dict(sys.modules, {"ottools.ot_llm": None}):
+            result = _generate_abstract(long_content)
         # Should end with ellipsis and be under 502 chars
         assert len(result) <= 502
 
-    def test_write_abstract_is_empty_immediately(self) -> None:
+    def test_write_abstract_not_in_immediate_response(self) -> None:
         conn = _make_conn()
         with patch("ot.ctx.write.get_db_path") as mock_path, \
              patch("ot.ctx.write.threading.Thread") as mock_thread:
@@ -478,7 +479,7 @@ class TestWrite:
             mock_thread.return_value = MagicMock()
             from ot.ctx.config import Config
             result = ctx_write("some content", db=conn, config=Config())
-        assert result["abstract"] == ""
+        assert "abstract" not in result
 
     def test_append_rebuilds_index(self) -> None:
         conn = _make_conn()
@@ -492,7 +493,7 @@ class TestWrite:
             handle = result["handle"]
             append_result = ctx_append(handle, " extra", db=conn, config=Config())
         assert append_result["status"] == "pending"
-        assert append_result["abstract"] == ""
+        assert "abstract" not in append_result
         # 1 indexing thread per write + 1 per append = 2 total
         assert mock_t.start.call_count == 2
 
@@ -558,7 +559,7 @@ class TestRead:
         _insert_handle(conn, "h1", content)
         result = ctx_read("h1", tail=20, db=conn)
         assert result["returned"] == 20
-        assert result["lines"][-1] == "99"
+        assert result["content"].splitlines()[-1] == "99"
 
     def test_tail_larger_than_total(self) -> None:
         conn = _make_conn()
@@ -629,6 +630,13 @@ class TestRead:
         result = ctx_read("unknown", db=conn)
         assert "error" in result
 
+    def test_raw_result_includes_handle_as_first_key(self) -> None:
+        conn = _make_conn()
+        _insert_handle(conn, "h1", "line one\nline two")
+        result = ctx_read("h1", db=conn)
+        assert result["handle"] == "h1"
+        assert list(result.keys())[0] == "handle"
+
     def test_toc_from_chunks(self) -> None:
         conn = _make_conn()
         content = "# Section A\n\nsome text\n\n# Section B\n\nmore text\n"
@@ -695,8 +703,9 @@ class TestSearch:
         content = "\n".join(["before", "before2", "TARGET", "after", "after2"])
         _insert_handle(conn, "h1", content)
         result = ctx_grep("h1", pattern="TARGET", context=1, db=conn)
-        assert "---" not in result["lines"] or len(result["lines"]) > 1
-        assert any("TARGET" in ln for ln in result["lines"])
+        result_lines = result["content"].splitlines()
+        assert "---" not in result_lines or len(result_lines) > 1
+        assert any("TARGET" in ln for ln in result_lines)
 
     def test_grep_fuzzy(self) -> None:
         conn = _make_conn()
@@ -723,8 +732,8 @@ class TestSearch:
         content = "\n".join(f"line {i}" for i in range(1, 21))
         _insert_handle(conn, "h1", content)
         result = ctx_slice("h1", select="5:10", db=conn)
-        assert "lines" in result
-        assert len(result["lines"]) == 6
+        assert "content" in result
+        assert len(result["content"].splitlines()) == 6
 
     def test_slice_by_section_number(self) -> None:
         conn = _make_conn()
@@ -732,7 +741,7 @@ class TestSearch:
         _insert_handle(conn, "h1", content, status="pending")
         build_index("h1", content, conn)
         result = ctx_slice("h1", select=1, db=conn)
-        assert "lines" in result
+        assert "content" in result
 
     def test_slice_by_heading(self) -> None:
         conn = _make_conn()
@@ -740,7 +749,7 @@ class TestSearch:
         _insert_handle(conn, "h1", content, status="pending")
         build_index("h1", content, conn)
         result = ctx_slice("h1", select="Installation", db=conn)
-        assert "lines" in result
+        assert "content" in result
         assert "error" not in result
 
     def test_slice_section_not_found(self) -> None:
@@ -834,7 +843,7 @@ class TestAsk:
 
     def test_large_content_sets_truncated(self) -> None:
         conn = _make_conn()
-        big_content = "x" * (1024 * 1024 + 1)  # just over 1MB default
+        big_content = "x" * (204800 + 1)  # just over 200KB ask_max_bytes default
         _insert_handle(conn, "h1", big_content)
         mock_llm = MagicMock()
         mock_llm.transform = MagicMock(return_value="answer")

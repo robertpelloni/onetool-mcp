@@ -537,7 +537,7 @@ async def execute_command(
                     if raw_result is not None and isinstance(raw_result, (dict, list))
                     else text_result
                 )
-                write_result = ctx_write(ctx_content, source=stripped[:50])
+                write_result = ctx_write(ctx_content, source=stripped[:50], verbose=True)
                 handle = write_result["handle"]
                 content_type = write_result.get("content_type", "text")
                 summary_dict = {
@@ -545,15 +545,8 @@ async def execute_command(
                     "total_lines": write_result["total_lines"],
                     "size_bytes": write_result["size_bytes"],
                     "content_type": content_type,
-                    "preview": write_result.get("preview", []),
+                    "preview": write_result.get("preview", ""),
                     "status": write_result.get("status", "pending"),
-                    "usage": {
-                        "page": f"ctx.read('{handle}')",
-                        "search": f"ctx.search('{handle}', queries=['your query'])",
-                        "toc": f"ctx.toc('{handle}')",
-                        "grep": f"ctx.grep('{handle}', pattern='pattern')",
-                        "tail": f"ctx.read('{handle}', tail=20)",
-                    },
                 }
                 text_result = serialize_result(summary_dict, "json")
                 raw_result = summary_dict

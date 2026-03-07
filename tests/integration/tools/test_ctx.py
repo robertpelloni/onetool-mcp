@@ -31,8 +31,8 @@ class TestCtxWriteRead:
         handle = result["handle"]
         try:
             read_result = read(handle)
-            assert "lines" in read_result
-            assert any("alpha" in ln for ln in read_result["lines"])
+            assert "content" in read_result
+            assert "alpha" in read_result["content"]
         finally:
             delete(handle)
 

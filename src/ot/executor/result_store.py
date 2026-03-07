@@ -6,7 +6,7 @@ The ResultStore class interface is preserved so existing call sites continue to 
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -18,7 +18,7 @@ class StoredResult:
     total_lines: int
     size_bytes: int
     summary: str
-    preview: list[str]
+    preview: str
     status: str = "pending"
 
     def to_dict(self) -> dict[str, Any]:
@@ -37,7 +37,7 @@ class StoredResult:
 class QueryResult:
     """Result from querying stored output."""
 
-    lines: list[str]
+    content: str
     total_lines: int
     returned: int
     offset: int
@@ -51,7 +51,7 @@ class QueryResult:
         end = self.offset + self.returned - 1
         pct = int((end / self.total_lines) * 100) if self.total_lines > 0 else 100
         result: dict[str, Any] = {
-            "lines": self.lines,
+            "content": self.content,
             "total_lines": self.total_lines,
             "returned": self.returned,
             "offset": self.offset,
@@ -70,8 +70,6 @@ class QueryResult:
 @dataclass
 class ResultStore:
     """Manages storage and retrieval of large tool outputs via the ctx backend."""
-
-    _store_count: int = field(default=0, repr=False)
 
     def store(
         self,
@@ -108,12 +106,13 @@ class ResultStore:
         raw_preview = lines[:preview_lines]
         preview_max_chars = config_obj.output.preview_max_chars
         if preview_max_chars > 0:
-            preview = [
+            preview_lines_truncated = [
                 line[:preview_max_chars] + "…" if len(line) > preview_max_chars else line
                 for line in raw_preview
             ]
         else:
-            preview = raw_preview
+            preview_lines_truncated = raw_preview
+        preview = "\n".join(preview_lines_truncated)
 
         summary = f"{total_lines} lines from {tool}" if tool else f"{total_lines} lines stored"
 
@@ -122,7 +121,7 @@ class ResultStore:
             total_lines=total_lines,
             size_bytes=size_bytes,
             summary=summary,
-            preview=preview,
+            preview=preview,  # str
             status=write_result.get("status", "pending"),
         )
 
@@ -159,16 +158,16 @@ class ResultStore:
             result = ctx_grep(handle, search, context=context, fuzzy=fuzzy)
             if "error" in result:
                 raise ValueError(result["error"])
-            lines = result["lines"]
-            total = len(lines)
+            all_lines = result["content"].splitlines() if result["content"] else []
+            total = len(all_lines)
             if tail > 0:
                 offset = max(1, total - tail + 1)
                 limit = tail
             start = offset - 1
             end = start + limit
-            chunk = lines[start:end]
+            chunk = all_lines[start:end]
             return QueryResult(
-                lines=chunk,
+                content="\n".join(chunk),
                 total_lines=total,
                 returned=len(chunk),
                 offset=offset,
@@ -184,7 +183,7 @@ class ResultStore:
             raise ValueError(result["error"])
 
         return QueryResult(
-            lines=result["lines"],
+            content=result["content"],
             total_lines=result["total_lines"],
             returned=result["returned"],
             offset=result["offset"],

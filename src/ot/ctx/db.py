@@ -207,19 +207,30 @@ def delete_fts_for_handle(conn: sqlite3.Connection, handle: str) -> None:
     conn.execute("DELETE FROM chunks_trigram WHERE handle = ?", (handle,))
 
 
-def get_content(conn: sqlite3.Connection, handle: str) -> str | None:
-    """Return raw content for a handle, reading from file if is_file=1."""
+def get_content(conn: sqlite3.Connection, handle: str, *, is_file: int | None = None) -> str | None:
+    """Return raw content for a handle, reading from file if is_file=1.
+
+    Args:
+        conn: SQLite connection.
+        handle: Context store handle.
+        is_file: Pass the ``is_file`` value from an already-fetched ``results``
+            row to skip the second query. When ``None`` (default), the value is
+            fetched from the database.
+    """
     row = conn.execute(
         "SELECT body FROM content WHERE handle = ?", (handle,)
     ).fetchone()
     if row is None:
         return None
 
-    # Check if this is a file pointer
-    meta = conn.execute(
-        "SELECT is_file FROM results WHERE handle = ?", (handle,)
-    ).fetchone()
-    if meta and meta["is_file"]:
+    # Resolve is_file if not provided by caller
+    if is_file is None:
+        meta = conn.execute(
+            "SELECT is_file FROM results WHERE handle = ?", (handle,)
+        ).fetchone()
+        is_file = meta["is_file"] if meta else 0
+
+    if is_file:
         try:
             return Path(row["body"]).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):

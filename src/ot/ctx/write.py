@@ -15,6 +15,7 @@ from .db import (
     _get_connection,
     _open_connection,
     expires_at,
+    get_content,
     get_db_path,
     now_ts,
 )
@@ -139,8 +140,8 @@ def ctx_write(
             immediately to synthesise a focused answer from ``content``. The
             response dict will include an ``"answer"`` key (str) on success, or
             ``"answer_error"`` (str) if ``ot_llm`` is not installed or fails.
-        verbose: When ``True``, include ``preview`` and ``usage`` hints in the
-            response. Default ``False`` returns a compact dict.
+        verbose: When ``True``, include ``preview`` in the response.
+            Default ``False`` returns a compact dict.
         db: SQLite connection (uses module default if not provided).
         config: Pack config (uses module default if not provided).
     """
@@ -152,11 +153,10 @@ def ctx_write(
 
         # Dereference runner auto-offload handle dict transparently
         if isinstance(content, dict) and "handle" in content:
-            from .read import ctx_read
-            read_result = ctx_read(content["handle"], limit=1_000_000, db=db)
-            if "error" in read_result:
-                return {"error": f"Failed to dereference handle {content['handle']!r}: {read_result['error']}"}
-            content = "\n".join(read_result["lines"])
+            raw = get_content(db, content["handle"])
+            if raw is None:
+                return {"error": f"Failed to dereference handle {content['handle']!r}: handle not found"}
+            content = raw
 
         assert isinstance(content, str)
         handle = uuid.uuid4().hex[:8]
@@ -209,13 +209,12 @@ def ctx_write(
             "size_bytes": size_bytes,
             "total_lines": total_lines,
             "content_type": content_type,
-            "abstract": "",
             "status": "pending",
         }
 
         if verbose:
-            preview = [ln for ln in lines if ln.strip()][:5]
-            result["preview"] = preview
+            preview_lines = [ln for ln in lines if ln.strip()][:5]
+            result["preview"] = "\n".join(preview_lines)
 
         # Intent fast-path: call ot_llm if intent given
         if intent:
@@ -333,7 +332,6 @@ def ctx_append(
         return {
             "handle": handle,
             "status": "pending",
-            "abstract": "",
             "size_bytes": new_size,
             "total_lines": new_lines,
         }

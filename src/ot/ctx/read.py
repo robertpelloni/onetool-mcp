@@ -6,7 +6,7 @@ from typing import Any
 
 from ot.logging import LogSpan
 
-from .db import _get_connection, get_content, is_expired
+from .db import _get_connection, get_content, is_expired, ttl_remaining
 
 log = LogSpan
 
@@ -63,7 +63,6 @@ def ctx_read(
 
         # mode=meta
         if mode == "meta":
-            from .db import ttl_remaining
             return {
                 "handle": row["handle"],
                 "source": row["source"],
@@ -84,7 +83,7 @@ def ctx_read(
             return {"error": f"Invalid mode {mode!r}. Valid modes: 'toc', 'meta'"}
 
         # Raw content
-        content = get_content(db, handle)
+        content = get_content(db, handle, is_file=row["is_file"])
         if content is None:
             return {"error": f"Content not found for handle: {handle}"}
 
@@ -113,7 +112,8 @@ def ctx_read(
             progress = f"lines {offset}-{end_line} of {total_lines} ({pct}%)"
 
         result: dict[str, Any] = {
-            "lines": result_lines,
+            "handle": handle,
+            "content": "\n".join(result_lines),
             "total_lines": total_lines,
             "returned": returned,
             "offset": offset,

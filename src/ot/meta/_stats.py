@@ -226,20 +226,20 @@ def result(
                 grep_result = ctx_grep(handle, search, context=context, fuzzy=fuzzy)
                 if "error" in grep_result:
                     raise ValueError(grep_result["error"])
-                lines = grep_result["lines"]
-                total = len(lines)
+                all_lines = grep_result["content"].splitlines() if grep_result["content"] else []
+                total = len(all_lines)
                 if tail > 0:
                     offset = max(1, total - tail + 1)
                     limit = tail
                 start = offset - 1
                 end = start + limit
-                chunk = lines[start:end]
+                chunk = all_lines[start:end]
                 returned = len(chunk)
                 has_more = end < total
                 end_line = offset + returned - 1
                 pct = int((end_line / total) * 100) if total > 0 else 100
                 result: dict[str, Any] = {
-                    "lines": chunk,
+                    "content": "\n".join(chunk),
                     "total_lines": total,
                     "returned": returned,
                     "offset": offset,
