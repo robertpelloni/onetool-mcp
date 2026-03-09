@@ -46,7 +46,7 @@ def _fake_read(
     returned = len(chunk)
     has_more = (start + limit) < total
     return {
-        "lines": chunk,
+        "content": "\n".join(chunk),
         "total_lines": total,
         "returned": returned,
         "offset": offset,
@@ -93,9 +93,10 @@ class TestStore:
             patch("ot.ctx.write.ctx_write", return_value=fake),
         ):
             result = ResultStore().store(content, preview_lines=5)
-        assert len(result.preview) == 5
-        assert result.preview[0] == "line0"
-        assert result.preview[4] == "line4"
+        preview_lines = result.preview.splitlines()
+        assert len(preview_lines) == 5
+        assert preview_lines[0] == "line0"
+        assert preview_lines[4] == "line4"
 
     def test_store_summary_with_tool(self) -> None:
         content = "line1\nline2\nline3"
@@ -148,7 +149,7 @@ class TestQuery:
             result = store.query(handle)
         assert result.total_lines == 50
         assert result.offset == 1
-        assert result.lines[0] == "line0"
+        assert result.content.splitlines()[0] == "line0"
 
     def test_query_offset_limit(self) -> None:
         lines = [f"line{i}" for i in range(100)]
@@ -161,8 +162,8 @@ class TestQuery:
             result = store.query(handle, offset=11, limit=10)
         assert result.offset == 11
         assert result.returned == 10
-        assert result.lines[0] == "line10"
-        assert result.lines[9] == "line19"
+        assert result.content.splitlines()[0] == "line10"
+        assert result.content.splitlines()[9] == "line19"
         assert result.has_more is True
 
     def test_query_1_indexed(self) -> None:
@@ -173,7 +174,7 @@ class TestQuery:
             return_value=_fake_read(lines, offset=1),
         ):
             result = store.query(handle, offset=1)
-        assert result.lines[0] == "first"
+        assert result.content.splitlines()[0] == "first"
 
     def test_query_has_more_true(self) -> None:
         lines = [f"line{i}" for i in range(20)]
@@ -201,11 +202,11 @@ class TestQuery:
         error_lines = [ln for ln in lines if "error" in ln]
         with patch(
             "ot.ctx.search.ctx_grep",
-            return_value={"lines": error_lines},
+            return_value={"content": "\n".join(error_lines)},
         ):
             result = store.query(handle, search="error")
         assert result.total_lines == 2
-        assert all("error" in ln for ln in result.lines)
+        assert all("error" in ln for ln in result.content.splitlines())
 
     def test_query_invalid_handle(self) -> None:
         fake_read = {"error": "Handle not found: nonexistent123"}
@@ -253,7 +254,7 @@ class TestQueryResultMetadata:
 
     def test_has_progress(self) -> None:
         result = QueryResult(
-            lines=[f"line{i}" for i in range(50)],
+            content="\n".join(f"line{i}" for i in range(50)),
             total_lines=100,
             returned=50,
             offset=1,
@@ -268,7 +269,7 @@ class TestQueryResultMetadata:
 
     def test_has_total_size_bytes(self) -> None:
         result = QueryResult(
-            lines=["line1", "line2"],
+            content="line1\nline2",
             total_lines=2,
             returned=2,
             offset=1,
@@ -279,7 +280,7 @@ class TestQueryResultMetadata:
 
     def test_next_query_when_has_more(self) -> None:
         result = QueryResult(
-            lines=[f"line{i}" for i in range(50)],
+            content="\n".join(f"line{i}" for i in range(50)),
             total_lines=100,
             returned=50,
             offset=1,
@@ -294,7 +295,7 @@ class TestQueryResultMetadata:
 
     def test_no_next_query_on_final_page(self) -> None:
         result = QueryResult(
-            lines=[f"line{i}" for i in range(20)],
+            content="\n".join(f"line{i}" for i in range(20)),
             total_lines=20,
             returned=20,
             offset=1,
@@ -305,7 +306,7 @@ class TestQueryResultMetadata:
 
     def test_progress_percentage_at_end(self) -> None:
         result = QueryResult(
-            lines=[f"line{i}" for i in range(50)],
+            content="\n".join(f"line{i}" for i in range(50)),
             total_lines=100,
             returned=50,
             offset=51,
@@ -344,8 +345,8 @@ class TestTail:
         with patch("ot.ctx.read.ctx_read", return_value=fake):
             result = store.query(handle, tail=5)
         assert result.returned == 5
-        assert result.lines[0] == "line15"
-        assert result.lines[-1] == "line19"
+        assert result.content.splitlines()[0] == "line15"
+        assert result.content.splitlines()[-1] == "line19"
 
     def test_tail_larger_than_total(self) -> None:
         lines = ["a", "b", "c"]
@@ -354,7 +355,7 @@ class TestTail:
         with patch("ot.ctx.read.ctx_read", return_value=fake):
             result = store.query(handle, tail=10)
         assert result.returned == 3
-        assert result.lines == ["a", "b", "c"]
+        assert result.content.splitlines() == ["a", "b", "c"]
 
     def test_tail_with_search(self) -> None:
         lines = ["error: one", "info: ok", "error: two", "error: three"]
@@ -362,12 +363,12 @@ class TestTail:
         error_lines = ["error: one", "error: two", "error: three"]
         with patch(
             "ot.ctx.search.ctx_grep",
-            return_value={"lines": error_lines},
+            return_value={"content": "\n".join(error_lines)},
         ):
             result = store.query(handle, search="error", tail=2)
         assert result.returned == 2
-        assert "error: two" in result.lines
-        assert "error: three" in result.lines
+        assert "error: two" in result.content.splitlines()
+        assert "error: three" in result.content.splitlines()
 
 
 # =============================================================================
@@ -396,12 +397,12 @@ class TestContext:
         store, handle = self._make_store("\n".join(lines))
         with patch(
             "ot.ctx.search.ctx_grep",
-            return_value={"lines": ["b", "TARGET", "d"]},
+            return_value={"content": "b\nTARGET\nd"},
         ):
             result = store.query(handle, search="TARGET", context=1)
-        assert "b" in result.lines
-        assert "TARGET" in result.lines
-        assert "d" in result.lines
+        assert "b" in result.content.splitlines()
+        assert "TARGET" in result.content.splitlines()
+        assert "d" in result.content.splitlines()
 
     def test_context_no_effect_without_search(self) -> None:
         lines = [f"line{i}" for i in range(10)]
@@ -453,24 +454,26 @@ class TestPreviewTruncation:
 
     def test_long_line_truncated(self) -> None:
         result = self._store("x" * 1000, preview_max_chars=500)
-        assert len(result.preview) == 1
-        assert result.preview[0] == "x" * 500 + "\u2026"
+        lines = result.preview.splitlines()
+        assert len(lines) == 1
+        assert lines[0] == "x" * 500 + "\u2026"
 
     def test_short_line_not_truncated(self) -> None:
         result = self._store("hello world", preview_max_chars=500)
-        assert result.preview[0] == "hello world"
+        assert result.preview.splitlines()[0] == "hello world"
 
     def test_preview_max_chars_zero_disables_truncation(self) -> None:
         long_line = "y" * 2000
         result = self._store(long_line, preview_max_chars=0)
-        assert result.preview[0] == long_line
+        assert result.preview.splitlines()[0] == long_line
 
     def test_large_single_line_preview_bounded(self) -> None:
         large_line = '{"data": "' + "a" * 40_000 + '"}'
         result = self._store(large_line, preview_max_chars=500)
-        assert len(result.preview) == 1
-        assert len(result.preview[0]) <= 501
-        assert result.preview[0].endswith("\u2026")
+        lines = result.preview.splitlines()
+        assert len(lines) == 1
+        assert len(lines[0]) <= 501
+        assert lines[0].endswith("\u2026")
 
 
 # =============================================================================
@@ -491,7 +494,7 @@ class TestOtResult:
             r = result(handle="somehandle0123")
         assert r["total_lines"] == 50
         assert r["offset"] == 1
-        assert len(r["lines"]) <= 100
+        assert len(r["content"].splitlines()) <= 100
 
     def test_result_with_offset_limit(self) -> None:
         lines = [f"line{i}" for i in range(100)]
@@ -504,19 +507,19 @@ class TestOtResult:
             r = result(handle="somehandle0123", offset=11, limit=10)
         assert r["offset"] == 11
         assert r["returned"] == 10
-        assert r["lines"][0] == "line10"
+        assert r["content"].splitlines()[0] == "line10"
 
     def test_result_with_search(self) -> None:
         error_lines = ["error: failed", "error: another"]
         with patch(
             "ot.ctx.search.ctx_grep",
-            return_value={"lines": error_lines},
+            return_value={"content": "\n".join(error_lines)},
         ):
             from ot.meta import result
 
             r = result(handle="somehandle0123", search="error")
         assert r["total_lines"] == 2
-        assert all("error" in ln for ln in r["lines"])
+        assert all("error" in ln for ln in r["content"].splitlines())
 
     def test_result_invalid_handle(self) -> None:
         with patch(
@@ -603,6 +606,6 @@ class TestDoubleWrapPrevention:
         assert cmd_result.success, f"Command failed: {cmd_result.result}"
         raw = cmd_result.raw
         assert raw is not None
-        assert "lines" in raw, f"Expected QueryResult dict, got keys: {list(raw.keys())}"
+        assert "content" in raw, f"Expected QueryResult dict, got keys: {list(raw.keys())}"
         assert "total_lines" in raw
         assert "handle" not in raw, "ot.result() output was re-wrapped into a StoredResult"

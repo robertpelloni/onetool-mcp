@@ -17,6 +17,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+try:
+    import cairosvg  # noqa: F401
+    _CAIROSVG_AVAILABLE = True
+except (ImportError, OSError):
+    _CAIROSVG_AVAILABLE = False
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -411,6 +417,7 @@ class TestPrepareForModel:
             if original is not None:
                 sys.modules["pillow_heif"] = original
 
+    @pytest.mark.skipif(not _CAIROSVG_AVAILABLE, reason="cairosvg/libcairo not available")
     def test_svg_rasterized_to_png(self) -> None:
         from ottools._image.resize import prepare_for_model
 
@@ -419,12 +426,12 @@ class TestPrepareForModel:
         assert result.model_bytes[:4] == b"\x89PNG"
         assert result.original_dims == (100, 100)
 
-    def test_svg_missing_cairosvg_raises(self) -> None:
+    def test_svg_missing_resvg_py_raises(self) -> None:
         from ottools._image.resize import prepare_for_model
 
         svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg'><rect/></svg>"
-        with patch.dict("sys.modules", {"cairosvg": None}):
-            with pytest.raises(ImportError, match="cairosvg"):
+        with patch.dict("sys.modules", {"resvg_py": None}):
+            with pytest.raises(ImportError, match="resvg-py"):
                 prepare_for_model(svg_bytes, max_edge=1568)
 
 
