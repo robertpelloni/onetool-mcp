@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1] - 2026-03-10
+
+### Changed
+- **`ctx` returns a content string** — responses now return a single `content` string instead of a `lines` list, making results directly usable in prompts and tool chains without joining; large queries are capped via `ask_max_bytes`; SQL filters run faster
+
+---
+
 ## [2.1.0] - 2026-03-06
 
 ### New Tool Packs

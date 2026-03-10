@@ -45,11 +45,11 @@ just release::publish 1.0.0b2 --force  # Actually publish
 
 Prompts before each step:
 1. Build package (`uv build`)
-2. Publish to PyPI (`uv publish`)
-3. Commit, tag, push to GitHub
+2. Commit, tag, push to GitHub
+3. Create GitHub release
 4. Publish to MCP Registry
-5. Create GitHub release
-6. Deploy docs to GitHub Pages
+5. Deploy docs to GitHub Pages
+6. Publish to PyPI (`uv publish`) — last; version cannot be re-used once published
 
 ---
 

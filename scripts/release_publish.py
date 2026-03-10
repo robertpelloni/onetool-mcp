@@ -106,18 +106,10 @@ def main():
     run("uv build")
     print()
 
-    # Step 2: PyPI
-    if confirm("Publish to PyPI?"):
-        print("─" * 40)
-        print("Step 2: Publish to PyPI")
-        print("─" * 40)
-        run("uv publish")
-        print()
-
-    # Step 3: Git
+    # Step 2: Git
     if confirm(f"Commit, tag v{version}, and push to GitHub?"):
         print("─" * 40)
-        print("Step 3: Git commit, tag, push")
+        print("Step 2: Git commit, tag, push")
         print("─" * 40)
         run("git add -A")
         run(f'git commit -m "Release {version}"', check=False)
@@ -126,19 +118,10 @@ def main():
         run(f'git push origin "v{version}"')
         print()
 
-    # Step 4: MCP Registry
-    if confirm("Publish to MCP Registry?"):
-        print("─" * 40)
-        print("Step 4: Publish to MCP Registry")
-        print("─" * 40)
-        run("mcp-publisher login github")
-        run("mcp-publisher publish")
-        print()
-
-    # Step 5: GitHub Release
+    # Step 3: GitHub Release
     if confirm("Create GitHub release?"):
         print("─" * 40)
-        print("Step 5: Create GitHub release")
+        print("Step 3: Create GitHub release")
         print("─" * 40)
         notes = extract_release_notes(version)
         if notes:
@@ -157,12 +140,29 @@ def main():
             run(f'gh release create "v{version}" --title "v{version}" --generate-notes')
         print()
 
-    # Step 6: Docs
+    # Step 4: MCP Registry
+    if confirm("Publish to MCP Registry?"):
+        print("─" * 40)
+        print("Step 4: Publish to MCP Registry")
+        print("─" * 40)
+        run("mcp-publisher login github")
+        run("mcp-publisher publish")
+        print()
+
+    # Step 5: Docs
     if confirm("Deploy docs to GitHub Pages?"):
         print("─" * 40)
-        print("Step 6: Deploy docs")
+        print("Step 5: Deploy docs")
         print("─" * 40)
         run("uv run mkdocs gh-deploy --force")
+        print()
+
+    # Step 6: PyPI (last — version cannot be re-used once published)
+    if confirm("Publish to PyPI?"):
+        print("─" * 40)
+        print("Step 6: Publish to PyPI")
+        print("─" * 40)
+        run("uv publish")
         print()
 
     print("=" * 60)

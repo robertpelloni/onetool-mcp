@@ -1,8 +1,19 @@
 # Gitleaks fingerprints to ignore (false positives)
 
-# Test case with fake API key string in error message
+# Old test paths (pre-restructure)
 0f43608bd7bf5b7e4fd00d4add310a18e0832054:tests/unit/tools/test_transform.py:generic-api-key:488
-
-# Test fixtures for _redact() function - tests API key redaction
 ab593b620d117075e8a17754a3ea7b474c6ee5ef:tests/unit/tools/test_mem.py:generic-api-key:98
 ab593b620d117075e8a17754a3ea7b474c6ee5ef:tests/unit/tools/test_mem.py:generic-api-key:119
+
+# Test case with fake API key string in error message (test_llm.py)
+623ee4cac6cef5e1ed28f4869d6ec5f5cfa617ff:tests/ottools/unit/tools/test_llm.py:generic-api-key:508
+9877e6bc96ed3cf6f3d443b587d2e16dfacae477:tests/ottools/unit/tools/test_llm.py:generic-api-key:508
+2a6a478c3df3b321b68e6079a8dca5534d93baea:tests/ottools/unit/tools/test_llm.py:generic-api-key:508
+
+# Test fixtures for _redact() function - tests API key redaction (test_mem.py)
+623ee4cac6cef5e1ed28f4869d6ec5f5cfa617ff:tests/otutil/unit/tools/test_mem.py:generic-api-key:103
+623ee4cac6cef5e1ed28f4869d6ec5f5cfa617ff:tests/otutil/unit/tools/test_mem.py:generic-api-key:124
+9877e6bc96ed3cf6f3d443b587d2e16dfacae477:tests/otutil/unit/tools/test_mem.py:generic-api-key:103
+9877e6bc96ed3cf6f3d443b587d2e16dfacae477:tests/otutil/unit/tools/test_mem.py:generic-api-key:124
+2a6a478c3df3b321b68e6079a8dca5534d93baea:tests/otutil/unit/tools/test_mem.py:generic-api-key:103
+2a6a478c3df3b321b68e6079a8dca5534d93baea:tests/otutil/unit/tools/test_mem.py:generic-api-key:124
