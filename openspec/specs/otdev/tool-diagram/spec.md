@@ -224,18 +224,15 @@ The `diagram.get_template()` function SHALL return diagram starter templates.
 - **AND** it SHALL list available templates
 
 #### Scenario: Template file resolution
-- **GIVEN** template config with `file: config/diagram-templates/api-flow.mmd`
+- **GIVEN** template config with `file: diagram-templates/api-flow.mmd`
 - **WHEN** `diagram.get_template(name="api-flow")` is called
-- **THEN** it SHALL resolve path relative to `.onetool/` directory
-- **AND** template files SHALL be installed to `~/.onetool/config/diagram-templates/` during `onetool init`
+- **THEN** it SHALL first resolve path relative to `.onetool/` config directory
+- **AND** if not found locally, it SHALL fall back to the bundled `global_templates/` directory
 
 #### Scenario: Built-in templates
-- **GIVEN** `onetool init` has been run
 - **WHEN** templates are queried
-- **THEN** the following built-in templates SHALL be available:
+- **THEN** the following built-in templates SHALL be available (bundled in package):
   - `api-flow` (mermaid/sequence)
-  - `microservices` (d2/architecture)
-  - `c4-context` (plantuml/c4)
   - `state-machine` (mermaid/state)
   - `class-diagram` (mermaid/class)
   - `project-gantt` (mermaid/gantt)
@@ -337,12 +334,13 @@ The diagram tool SHALL resolve output paths relative to the project working dire
 
 ### Requirement: Config-Relative Template Path Resolution
 
-The diagram tool SHALL resolve template file paths relative to the config directory.
+The diagram tool SHALL resolve template file paths with a two-step fallback.
 
 #### Scenario: Relative template file
 - **GIVEN** template config `templates.flow.file` is `"templates/flow.mmd"`
 - **WHEN** `diagram.get_template(name="flow")` is called
-- **THEN** it SHALL load from `{config_dir}/templates/flow.mmd`
+- **THEN** it SHALL first check `{config_dir}/templates/flow.mmd`
+- **AND** if not found, it SHALL fall back to `{global_templates_dir}/templates/flow.mmd`
 
 #### Scenario: Absolute template file
 - **GIVEN** template config `templates.flow.file` is `/etc/templates/flow.mmd`

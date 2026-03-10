@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 
 
@@ -53,3 +56,93 @@ class TestDiagramPack:
         for name in diagram.__all__:
             func = getattr(diagram, name)
             assert callable(func), f"{name} should be callable"
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestGetTemplate:
+    """Test get_template falls back to bundled global templates."""
+
+    def _make_template_config(self, file_path: str) -> object:
+        from otdev.tools.diagram import TemplateRef
+
+        return TemplateRef(
+            provider="mermaid",
+            diagram_type="sequence",
+            description="Test template",
+            file=file_path,
+        )
+
+    def test_loads_from_global_templates_when_not_in_config_dir(self, tmp_path):
+        """File missing from config dir → falls back to global templates bundle."""
+        from ot.paths import get_global_templates_dir
+        from otdev.tools.diagram import get_template
+
+        bundled = get_global_templates_dir() / "diagram-templates" / "api-flow.mmd"
+        assert bundled.exists(), "bundled api-flow.mmd must exist in global_templates"
+
+        fake_config_dir = tmp_path / "onetool"
+        fake_config_dir.mkdir()
+
+        template_cfg = self._make_template_config("diagram-templates/api-flow.mmd")
+        mock_templates = {"api-flow": template_cfg}
+
+        with (
+            patch("otdev.tools.diagram._get_config") as mock_cfg,
+            patch("ot.paths.get_config_dir", return_value=fake_config_dir),
+        ):
+            mock_cfg.return_value.templates = mock_templates
+            result = get_template(name="api-flow")
+
+        assert "Template: api-flow" in result
+        assert "Provider: mermaid" in result
+        assert "--- Source ---" in result
+
+    def test_config_dir_takes_precedence_over_global(self, tmp_path):
+        """Local config dir file is used when it exists."""
+        from otdev.tools.diagram import get_template
+
+        local_dir = tmp_path / "onetool" / "diagram-templates"
+        local_dir.mkdir(parents=True)
+        local_file = local_dir / "api-flow.mmd"
+        local_file.write_text("sequenceDiagram\n  A->>B: local override")
+
+        template_cfg = self._make_template_config("diagram-templates/api-flow.mmd")
+        mock_templates = {"api-flow": template_cfg}
+
+        with (
+            patch("otdev.tools.diagram._get_config") as mock_cfg,
+            patch("ot.paths.get_config_dir", return_value=tmp_path / "onetool"),
+        ):
+            mock_cfg.return_value.templates = mock_templates
+            result = get_template(name="api-flow")
+
+        assert "local override" in result
+
+    def test_unknown_template_returns_error(self):
+        """Unknown template name returns helpful error."""
+        from otdev.tools.diagram import get_template
+
+        with patch("otdev.tools.diagram._get_config") as mock_cfg:
+            mock_cfg.return_value.templates = {}
+            result = get_template(name="nonexistent")
+
+        assert "not found" in result.lower()
+
+    def test_bundled_templates_all_resolvable(self):
+        """All templates in the default config have files in global_templates."""
+        from ot.paths import get_global_templates_dir
+
+        global_dir = get_global_templates_dir()
+        template_names = ["api-flow", "state-machine", "class-diagram", "project-gantt", "feature-mindmap"]
+        for name in template_names:
+            # map name to expected file path from diagram.yaml
+            file_map = {
+                "api-flow": "diagram-templates/api-flow.mmd",
+                "state-machine": "diagram-templates/state-machine.mmd",
+                "class-diagram": "diagram-templates/class-diagram.mmd",
+                "project-gantt": "diagram-templates/project-gantt.mmd",
+                "feature-mindmap": "diagram-templates/feature-mindmap.mmd",
+            }
+            path = global_dir / file_map[name]
+            assert path.exists(), f"Bundled template file missing: {file_map[name]}"

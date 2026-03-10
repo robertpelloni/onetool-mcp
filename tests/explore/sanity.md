@@ -238,7 +238,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Clean up: `mem.delete(topic="tmp/", confirm=True)` after testing
 - **diagram tools**: Use `provider=` (not `diagram_type=`) and `source=` for rendering
   - Example: `diagram.list_providers()` - see available providers
-  - Example: `diagram.get_template(name="api-flow")` - get a template (valid names: api-flow, microservices, c4-context, state-machine, class-diagram, project-gantt, feature-mindmap)
+  - Example: `diagram.get_template(name="api-flow")` - get a template (valid names: api-flow, state-machine, class-diagram, project-gantt, feature-mindmap)
   - Example: `diagram.generate_source(provider="mermaid", source="graph TD; A-->B", name="test", output_dir="output/")`
   - Example: `diagram.render_diagram(provider="mermaid", source="graph TD; A-->B", name="test")`
 - **ot_forge tools**: Use `name=` for creating extensions
