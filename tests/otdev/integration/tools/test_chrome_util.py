@@ -4,7 +4,7 @@ Verifies inject.js works end-to-end — injection, highlighting, scanning,
 clearing, and guided workflow. Uses a data: URI page to avoid network deps.
 
 Prerequisites:
-  chrome-devtools MCP server configured in tests/.onetool/onetool.yaml.
+  chrome_devtools MCP server configured in tests/.onetool/onetool.yaml.
 
 Run:
   uv run pytest tests/otdev/integration/tools/test_chrome_util.py -m integration -v
@@ -35,15 +35,15 @@ _TEST_PAGE = (
 @pytest.fixture(scope="module", autouse=True)
 def _browser_session():
     """Navigate to the test page once for the whole module; close page at end."""
-    require_server("chrome-devtools")
+    require_server("chrome_devtools")
 
     from ot.proxy.manager import get_proxy_manager
 
     proxy = get_proxy_manager()
-    proxy.call_tool_sync("chrome-devtools", "navigate_page", {"url": _TEST_PAGE})
+    proxy.call_tool_sync("chrome_devtools", "navigate_page", {"url": _TEST_PAGE})
     yield
     with contextlib.suppress(Exception):
-        proxy.call_tool_sync("chrome-devtools", "close_page", {})
+        proxy.call_tool_sync("chrome_devtools", "close_page", {})
 
 
 @pytest.fixture(autouse=True)

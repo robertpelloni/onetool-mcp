@@ -64,11 +64,11 @@ class TestBuildExecutionNamespaceAliases:
         assert "aws-billing" in ns
 
     def test_non_aws_hyphenated_server_gets_underscore_alias(self) -> None:
-        """Non-aws hyphenated server (e.g. chrome-devtools) should get underscore alias."""
-        ns = self._build_namespace(["chrome-devtools"])
+        """Non-aws hyphenated server (e.g. my-server) should get underscore alias."""
+        ns = self._build_namespace(["my-server"])
 
-        assert "chrome_devtools" in ns
-        assert "chrome-devtools" in ns
+        assert "my_server" in ns
+        assert "my-server" in ns
 
     def test_non_hyphenated_server_no_alias_added(self) -> None:
         """Server without hyphens should not get an extra alias."""

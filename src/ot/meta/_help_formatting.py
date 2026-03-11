@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from ot.meta._constants import DOC_BASE_URL, DOC_SLUGS, InfoLevel
+from ot.meta._constants import (
+    DOC_BASE_URL,
+    DOC_SLUGS,
+    SERVER_DOC_BASE_URL,
+    InfoLevel,
+)
+from ot.meta._constants import (
+    safe_server_name as _safe_server_name,
+)
 
 
 def _get_doc_url(pack: str) -> str:
@@ -240,6 +248,60 @@ def _format_alias_help(alias_name: str, target: str) -> str:
     return "\n".join(lines)
 
 
+def _format_server_help(
+    server_name: str,
+    server_cfg: Any,
+    status: str,
+    tools: list[Any],
+    native_instructions: str = "",
+) -> str:
+    """Format detailed help for an MCP proxy server.
+
+    Args:
+        server_name: Config key for the server (e.g. 'chrome_devtools').
+        server_cfg: McpServerConfig for this server.
+        status: 'connected' or 'disconnected'.
+        tools: List of ProxyToolInfo objects (from proxy.list_tools).
+        native_instructions: Instructions from the server's InitializeResult.
+
+    Returns:
+        Formatted server help markdown.
+    """
+    safe_name = _safe_server_name(server_name)
+    tool_count = len(tools)
+    lines = [f"# {server_name} server", ""]
+
+    if safe_name != server_name:
+        lines.append(f"**Call as:** `{safe_name}`")
+    lines.append(
+        f"**Status:** {status}" + (f" ({tool_count} tools)" if tool_count else "")
+    )
+    source = getattr(server_cfg, "source", None)
+    if source:
+        lines.append(f"**Source:** {source}")
+    lines.append(f"**Guide:** {SERVER_DOC_BASE_URL}{server_name}/")
+    lines.append("")
+
+    # Layer instructions: native MCP first, then servers.yaml additions
+    yaml_instructions = (getattr(server_cfg, "instructions", None) or "").strip()
+    combined = "\n\n".join(filter(None, [native_instructions.strip(), yaml_instructions]))
+    if combined:
+        lines.append("## Instructions")
+        lines.append("")
+        lines.append(combined)
+        lines.append("")
+
+    if tools:
+        lines.append(f"## Tools ({tool_count})")
+        lines.append("")
+        for tool in sorted(tools, key=lambda t: t.name):
+            desc = tool.description or "(no description)"
+            first_line = desc.split("\n")[0].strip()
+            lines.append(f"- **{safe_name}.{tool.name}**: {first_line}")
+
+    return "\n".join(lines)
+
+
 def _item_matches(item: dict[str, Any] | str, matched_names: list[str], key: str = "name") -> bool:
     """Check if item name is in matched_names list.
 
@@ -280,6 +342,7 @@ def _format_search_results(
     snippets_results: list[dict[str, Any] | str],
     aliases_results: list[dict[str, Any] | str],
     info: InfoLevel,
+    servers_results: list[str] | None = None,
 ) -> str:
     """Format search results grouped by type.
 
@@ -290,6 +353,7 @@ def _format_search_results(
         snippets_results: Matching snippets
         aliases_results: Matching aliases
         info: Output verbosity level
+        servers_results: Matching server names (optional)
 
     Returns:
         Formatted search results text
@@ -345,7 +409,13 @@ def _format_search_results(
                 lines.append(f"- {alias['name']} -> {alias['target']}")
         lines.append("")
 
-    if not any([tools_results, packs_results, snippets_results, aliases_results]):
+    if servers_results:
+        lines.append("## Servers")
+        for server in servers_results:
+            lines.append(f"- {server}")
+        lines.append("")
+
+    if not any([tools_results, packs_results, snippets_results, aliases_results, servers_results]):
         lines.append("No matches found.")
         lines.append("")
         lines.append("Try browsing with:")

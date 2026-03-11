@@ -235,7 +235,7 @@ def mock_proxy_manager():
 
     Usage:
         def test_mcp_call(mock_proxy_manager):
-            mock_proxy_manager.servers = ["chrome-devtools"]
+            mock_proxy_manager.servers = ["chrome_devtools"]
             mock_proxy_manager.call_tool_sync.return_value = '{"success": true}'
             # Run test that calls MCP tools
     """

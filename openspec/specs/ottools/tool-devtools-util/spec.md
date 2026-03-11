@@ -84,16 +84,16 @@ The `chrome_util` pack SHALL provide a `guide_user()` function for sequential el
 
 ### Requirement: Server Independence
 
-The `chrome_util` pack SHALL only work with the `chrome-devtools` MCP server.
+The `chrome_util` pack SHALL only work with the `chrome_devtools` MCP server.
 
-#### Scenario: chrome-devtools server required
-- **GIVEN** the `chrome-devtools` MCP server is not connected
+#### Scenario: chrome_devtools server required
+- **GIVEN** the `chrome_devtools` MCP server is not connected
 - **WHEN** any chrome_util function is called
-- **THEN** it returns an error indicating the chrome-devtools server is unavailable
+- **THEN** it returns an error indicating the chrome_devtools server is unavailable
 - **AND** it lists available servers in the error message
 
 #### Scenario: No fallback to Playwright
-- **GIVEN** the `chrome-devtools` MCP server is unavailable but Playwright is connected
+- **GIVEN** the `chrome_devtools` MCP server is unavailable but Playwright is connected
 - **WHEN** any chrome_util function is called
 - **THEN** it does NOT fall back to Playwright automatically
 - **AND** users must use `play_util` pack for Playwright servers

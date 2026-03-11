@@ -505,6 +505,14 @@ class McpServerConfig(BaseModel):
         default=None,
         description="Authentication configuration for HTTP servers",
     )
+    description: str | None = Field(
+        default=None,
+        description="Brief description of this server's purpose",
+    )
+    source: str | None = Field(
+        default=None,
+        description="Authoritative source URL for this server (e.g. GitHub repo)",
+    )
     instructions: str | None = Field(
         default=None,
         description="Agent instructions for using this server's tools (surfaced in MCP instructions)",

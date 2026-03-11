@@ -10,7 +10,7 @@ Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it h
 Do sanity testing and find issues.
 
 Test out the following packs:
-Packs: brave, context7, convert, db, chrome-devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
+Packs: brave, context7, convert, db, chrome_devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
 
 When testing:
 - convert with files at tests/data/
@@ -298,8 +298,8 @@ OneTool is setup correctly with all dependencies and secrets needed.
 - **`ot.tools`/`ot.help` do NOT support `info="list"`**: Only `ot.stats` has `info="list"`. Use `"min"`,
   `"default"`, or `"full"` for `ot.tools` and `ot.help`.
 - **`ot.result()` requires `handle=`**: Not zero-arg. Example: `ot.result(handle="abc123")`
-- **devtools pack name**: Use `chrome_devtools` (underscore), not `devtools`. The pack is named `chrome-devtools`
-  in servers config but the Python namespace uses underscores: `chrome_devtools.list_pages()`
+- **devtools pack name**: Use `chrome_devtools` (underscore). The server config key is `chrome_devtools`
+  and the Python namespace name matches exactly: `chrome_devtools.list_pages()`
 
 ### Expected behaviors (not bugs)
 

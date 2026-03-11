@@ -9,20 +9,20 @@ Browser automation, debugging, and element annotation via Chrome DevTools Protoc
 The server is included in `servers.yaml` with `enabled: false`. To activate it permanently:
 
 ```yaml
-chrome-devtools:
+chrome_devtools:
   enabled: true
 ```
 
 Or enable for the current session only:
 
 ```python
-ot.server(enable="chrome-devtools")
+ot.server(enable="chrome_devtools")
 ```
 
 ## Server Config
 
 ```yaml
-chrome-devtools:
+chrome_devtools:
   type: stdio
   command: npx
   args:
@@ -76,7 +76,7 @@ See [chrome_util reference](../tools/chrome-util.md) for the full API.
 Use these checks after enabling the server:
 
 ```python
-ot.servers(pattern="chrome-devtools", info="full")
+ot.servers(pattern="chrome_devtools", info="full")
 ot.packs(pattern="chrome")
 ot.tool_info(pattern="chrome_devtools.")
 ```

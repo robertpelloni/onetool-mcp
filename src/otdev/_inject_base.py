@@ -80,7 +80,7 @@ def _eval_js(server: str, tool: str, expression: str) -> str:
     Wraps the expression in an arrow function: ``() => { return <expr>; }``.
 
     Args:
-        server: MCP server name (e.g. ``"chrome-devtools"``, ``"playwright"``).
+        server: MCP server name (e.g. ``"chrome_devtools"``, ``"playwright"``).
         tool: Eval tool name on that server (e.g. ``"evaluate_script"``).
         expression: JavaScript expression to evaluate.
 
@@ -99,7 +99,7 @@ def _exec_js(server: str, tool: str, script: str) -> str:
     Wraps the script in an arrow function: ``() => { <script> }``.
 
     Args:
-        server: MCP server name (e.g. ``"chrome-devtools"``, ``"playwright"``).
+        server: MCP server name (e.g. ``"chrome_devtools"``, ``"playwright"``).
         tool: Eval tool name on that server.
         script: JavaScript code to execute.
 

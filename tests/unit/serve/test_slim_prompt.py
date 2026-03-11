@@ -44,8 +44,8 @@ def test_prompts_config_no_slim_fields() -> None:
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_servers_yaml_has_no_instructions_field() -> None:
-    """servers.yaml template has no 'instructions:' fields (moved to skills)."""
+def test_servers_yaml_has_source_field() -> None:
+    """servers.yaml template entries have 'source:' fields pointing to upstream repos."""
     from ot.paths import get_global_templates_dir
 
     servers_yaml = get_global_templates_dir() / "servers.yaml"
@@ -58,6 +58,6 @@ def test_servers_yaml_has_no_instructions_field() -> None:
 
     for name, cfg in servers.items():
         if isinstance(cfg, dict):
-            assert "instructions" not in cfg, (
-                f"Server '{name}' still has instructions: field in servers.yaml"
+            assert "source" in cfg, (
+                f"Server '{name}' is missing source: field in servers.yaml"
             )

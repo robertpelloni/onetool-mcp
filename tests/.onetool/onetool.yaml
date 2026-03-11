@@ -21,7 +21,7 @@ servers:
     timeout: 120
     enabled: true
 
-  chrome-devtools:
+  chrome_devtools:
     type: stdio
     command: npx
     args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720", "--no-usage-statistics"]

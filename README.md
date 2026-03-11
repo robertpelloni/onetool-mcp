@@ -148,7 +148,7 @@ Wrap any existing MCP server and call it explicitly - simple yaml config without
 ```yaml
 # .onetool/onetool.yaml
 servers:
-  chrome-devtools:
+  chrome_devtools:
     type: stdio
     command: npx
     args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]

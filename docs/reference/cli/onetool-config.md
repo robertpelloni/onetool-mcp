@@ -384,7 +384,7 @@ servers:
     args: ["-y", "@anthropic-ai/github-mcp-server@latest"]
     timeout: 30
 
-  chrome-devtools:
+  chrome_devtools:
     type: stdio
     command: npx
     args: ["-y", "@anthropic-ai/chrome-devtools-mcp@latest"]

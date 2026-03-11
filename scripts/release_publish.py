@@ -140,29 +140,29 @@ def main():
             run(f'gh release create "v{version}" --title "v{version}" --generate-notes')
         print()
 
-    # Step 4: MCP Registry
+    # Step 4: PyPI (before MCP Registry — registry validates package exists on PyPI)
+    if confirm("Publish to PyPI?"):
+        print("─" * 40)
+        print("Step 4: Publish to PyPI")
+        print("─" * 40)
+        run("uv publish")
+        print()
+
+    # Step 5: MCP Registry (requires PyPI package to exist)
     if confirm("Publish to MCP Registry?"):
         print("─" * 40)
-        print("Step 4: Publish to MCP Registry")
+        print("Step 5: Publish to MCP Registry")
         print("─" * 40)
         run("mcp-publisher login github")
         run("mcp-publisher publish")
         print()
 
-    # Step 5: Docs
+    # Step 6: Docs
     if confirm("Deploy docs to GitHub Pages?"):
         print("─" * 40)
-        print("Step 5: Deploy docs")
+        print("Step 6: Deploy docs")
         print("─" * 40)
         run("uv run mkdocs gh-deploy --force")
-        print()
-
-    # Step 6: PyPI (last — version cannot be re-used once published)
-    if confirm("Publish to PyPI?"):
-        print("─" * 40)
-        print("Step 6: Publish to PyPI")
-        print("─" * 40)
-        run("uv publish")
         print()
 
     print("=" * 60)

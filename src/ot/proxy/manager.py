@@ -76,6 +76,7 @@ class ProxyManager:
         self._tools_by_server: dict[str, list[types.Tool]] = {}
         self._errors: dict[str, str] = {}  # server name -> last error message
         self._server_timeouts: dict[str, float] = {}  # server name -> configured timeout
+        self._server_instructions: dict[str, str] = {}  # server name -> native instructions
         self._initialized = False
         self._loop: asyncio.AbstractEventLoop | None = None
         self._connect_task: asyncio.Task[None] | None = None
@@ -110,6 +111,10 @@ class ProxyManager:
     def get_error(self, server: str) -> str | None:
         """Get the last connection error for a server."""
         return self._errors.get(server)
+
+    def get_server_instructions(self, server: str) -> str:
+        """Return native instructions from the server's InitializeResult, or ''."""
+        return self._server_instructions.get(server, "")
 
     def list_tools(self, server: str | None = None) -> list[ProxyToolInfo]:
         """List available tools from proxied servers.
@@ -457,6 +462,12 @@ class ProxyManager:
                 self._tools_by_server[name] = tools
                 self._server_timeouts[name] = float(config.timeout)
 
+                # Capture native instructions from InitializeResult (MCP standard)
+                init_result = getattr(client, "initialize_result", None)
+                self._server_instructions[name] = (
+                    (init_result.instructions or "") if init_result else ""
+                )
+
                 span.add("toolCount", len(tools))
                 logger.info(
                     f"Connected to {config.type} MCP server '{name}' with {len(tools)} tools"
@@ -566,6 +577,7 @@ class ProxyManager:
         self._tools_by_server.clear()
         self._errors.clear()
         self._server_timeouts.clear()
+        self._server_instructions.clear()
         self._initialized = False
         self._connect_task = None
 
@@ -599,6 +611,7 @@ class ProxyManager:
             self._tools_by_server.clear()
             self._errors.clear()
             self._server_timeouts.clear()
+            self._server_instructions.clear()
             self._initialized = False
 
     async def reconnect(self, configs: dict[str, McpServerConfig]) -> None:
@@ -670,6 +683,7 @@ class ProxyManager:
         client = self._clients.pop(name)
         self._tools_by_server.pop(name, None)
         self._errors.pop(name, None)
+        self._server_instructions.pop(name, None)
         try:
             await client.__aexit__(None, None, None)  # type: ignore[no-untyped-call]
             logger.debug(f"Disconnected from MCP server '{name}'")

@@ -50,8 +50,8 @@ scenarios:
         evaluate: any_response
         prompt: Say "ok".
 
-      - name: "cost:chrome-devtools"
-        server: chrome-devtools
+      - name: "cost:chrome_devtools"
+        server: chrome_devtools
         tags: [token-cost]
         evaluate: any_response
         prompt: Say "ok".
@@ -157,7 +157,7 @@ servers:
     command: npx
     args: ["-y", "playwriter"]
 
-  chrome-devtools:
+  chrome_devtools:
     type: stdio
     command: npx
     args: ["-y", "chrome-devtools-mcp"]

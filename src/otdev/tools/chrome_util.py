@@ -1,7 +1,7 @@
 """Chrome DevTools annotation utilities for the inject.js system.
 
 Provides high-level functions to interact with the inject.js v2.0 annotation
-system via the Chrome DevTools MCP server (``chrome-devtools.evaluate_script``).
+system via the Chrome DevTools MCP server (``chrome_devtools.evaluate_script``).
 
 For Playwright, use the ``play_util`` pack instead.
 """
@@ -36,7 +36,7 @@ from otdev._inject_base import (
     scan_annotations as _scan,
 )
 
-_SERVER = "chrome-devtools"
+_SERVER = "chrome_devtools"
 _TOOL = "evaluate_script"
 _PACK = "chrome_util"
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 # Info level type for discovery functions
-InfoLevel = Literal["list", "min", "default", "full"]
+InfoLevel = Literal["min", "default", "full"]
 ServerInfoLevel = Literal["min", "default", "full", "resources", "prompts"]
 
 # Pack name for dot notation: ot.tools(), ot.packs(), etc.
@@ -48,6 +48,17 @@ DOC_SLUGS: dict[str, str] = {
 }
 
 DOC_BASE_URL = "https://onetool.beycom.online/reference/tools/"
+SERVER_DOC_BASE_URL = "https://onetool.beycom.online/reference/servers/"
+
+
+def safe_server_name(server_name: str) -> str:
+    """Return the Python-safe identifier for an MCP server name.
+
+    aws-iam → iam, aws-cost-explorer → cost_explorer, my-server → my_server.
+    """
+    if server_name.startswith("aws-"):
+        return server_name[4:].replace("-", "_")
+    return server_name.replace("-", "_")
 
 
 def resolve_ot_path(path: str) -> Path:

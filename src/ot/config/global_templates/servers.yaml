@@ -11,11 +11,10 @@ servers:
   # =============================================================================
   # CHROME DEVTOOLS MCP
   # =============================================================================
-  # Browser automation, debugging, and inspection via Chrome DevTools Protocol.
+  # Browser automation and debugging via Chrome DevTools Protocol.
   # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
-  # Guide:  https://onetool.beycom.online/reference/servers/chrome-devtools/
   #
-  chrome-devtools:
+  chrome_devtools:
     type: stdio
     command: npx
     args:
@@ -24,8 +23,14 @@ servers:
       - "--isolated"            # Temporary profile, auto-cleaned
       - "--viewport=1280x720"   # Consistent window size
       - "--no-usage-statistics" # Disable data collection
-    timeout: 120  
+    timeout: 120
     enabled: false
+    description: Browser automation and debugging via Chrome DevTools Protocol
+    source: https://github.com/ChromeDevTools/chrome-devtools-mcp
+    instructions: |
+      Workflow: navigate_page → take_screenshot → interact (click/fill) → take_screenshot
+      Use wait_for before interacting with elements to ensure page load.
+      evaluate_script requires function= param (a JS function string), not expression=.
 
   # =============================================================================
   # MULTI-INSTANCE EXAMPLE
@@ -33,19 +38,19 @@ servers:
   # You can run multiple named instances of the same server binary.
   # Useful for having one browser session per task, or mixing connection modes.
   #
-  # chrome-devtools-isolated:
+  # chrome_devtools_isolated:
   #   type: stdio
   #   command: npx
   #   args: ["-y", "chrome-devtools-mcp@latest", "--isolated", "--viewport=1280x720"]
   #   timeout: 120
-  #   enabled: false  # Enable with: ot.server(enable="chrome-devtools-isolated")
+  #   enabled: false  # Enable with: ot.server(enable="chrome_devtools_isolated")
   #
-  # chrome-devtools-auto:
+  # chrome_devtools_auto:
   #   type: stdio
   #   command: npx
   #   args: ["-y", "chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"]
   #   timeout: 120
-  #   enabled: false  # Enable with: ot.server(enable="chrome-devtools-auto")
+  #   enabled: false  # Enable with: ot.server(enable="chrome_devtools_auto")
 
 
   # =============================================================================
@@ -53,7 +58,6 @@ servers:
   # =============================================================================
   # Browser automation via Playwright accessibility tree (no vision needed).
   # Source: https://github.com/microsoft/playwright-mcp
-  # Guide:  https://onetool.beycom.online/reference/servers/playwright/
   #
   playwright:
     type: stdio
@@ -62,13 +66,18 @@ servers:
       - "@playwright/mcp@latest"
     timeout: 120
     enabled: false
+    description: Browser automation via accessibility tree (no vision needed)
+    source: https://github.com/microsoft/playwright-mcp
+    instructions: |
+      Workflow: browser_navigate → browser_snapshot → interact → browser_snapshot
+      Prefer browser_snapshot over browser_screenshot (faster, no vision needed).
+      Use browser_evaluate for custom JavaScript execution.
 
   # =============================================================================
   # GITHUB MCP (HTTP)
   # =============================================================================
   # GitHub's official MCP server for repos, issues, PRs, Actions, and more.
   # Source: https://github.com/github/github-mcp-server
-  # Guide:  https://onetool.beycom.online/reference/servers/github/
   #
   # SETUP:
   #   Add GITHUB_TOKEN to ~/.onetool/secrets.yaml before enabling.
@@ -81,13 +90,18 @@ servers:
       Accept: "application/json, text/event-stream"
     timeout: 120
     enabled: false
+    description: Official GitHub API — repos, issues, PRs, Actions
+    source: https://github.com/github/github-mcp-server
+    instructions: |
+      Requires GITHUB_TOKEN in secrets.yaml. Always specify owner and repo.
+      Use list/search tools before individual gets. Search before creating issues or PRs.
+      PR workflow: branch → push_files → create_pull_request.
 
   # =============================================================================
   # CHUNKHOUND MCP
   # =============================================================================
   # Regex and semantic code search for large codebases.
   # Source: https://github.com/casualjim/chunkhound
-  # Guide:  https://onetool.beycom.online/reference/servers/chunkhound/
   #
   # SETUP:
   #   pip install chunkhound && chunkhound index   (run from project root)
@@ -100,4 +114,8 @@ servers:
     timeout: 30
     inherit_env: true  # Required: passes CHUNKHOUND_EMBEDDING__API_KEY set during indexing
     enabled: false
+    description: Regex and semantic code search for large codebases
+    source: https://github.com/casualjim/chunkhound
+    instructions: |
+      Must index before use: pip install chunkhound && chunkhound index (run from project root).
 

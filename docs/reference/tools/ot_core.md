@@ -87,7 +87,7 @@ ot.help(query="brave.search")
 ot.help(query="brave")
 
 # Exact server lookup (MCP proxy servers)
-ot.help(query="chrome-devtools")
+ot.help(query="chrome_devtools")
 ot.help(query="github")
 
 # Snippet lookup (prefix with $)
@@ -104,7 +104,7 @@ ot.help(query="search", info="min")
 **Behaviour:**
 
 - No query: Returns general help overview with discovery commands and examples
-- Exact server match: Returns server help with type, status, instructions, and tool list
+- Exact server match: Returns server help with status, source, instructions, and tool list
 - Exact tool match (contains `.`): Returns detailed tool help with signature, args, returns, example
 - Exact pack match: Returns pack help with instructions and tool list
 - Snippet match (starts with `$`): Returns snippet definition with params and body
@@ -169,7 +169,7 @@ ot.packs(pattern="brave", info="full")
 ot.pack_info(name="brave")
 
 # MCP server packs show source="mcp:..."
-ot.packs(pattern="chrome-devtools")
+ot.packs(pattern="chrome_devtools")
 ```
 
 MCP proxy servers appear as packs with `source: "mcp:{server_name}"`.
@@ -179,7 +179,7 @@ MCP proxy servers appear as packs with `source: "mcp:{server_name}"`.
 List configured MCP proxy servers with connection status.
 
 ```python
-# List all servers (default: info="default" → {name, type, enabled, status})
+# List all servers (default: info="default" → {name, status, enabled, [call_as], [tool_count]})
 ot.servers()
 
 # Filter by pattern
@@ -188,22 +188,21 @@ ot.servers(pattern="git")
 # Names only
 ot.servers(info="min")
 
-# Full details (type, status, instructions, tools)
-ot.servers(pattern="chrome-devtools", info="full")
+# Full structured dicts (status, source, tool_count, tools list)
+ot.servers(pattern="chrome_devtools", info="full")
 ```
 
-Returns server configuration including:
+Returns server information (operational view):
 
 - `name` - Server name from config
-- `type` - Connection type (stdio or http)
-- `enabled` - Whether server is enabled
 - `status` - Connection status (connected/disconnected)
+- `enabled` - Whether server is enabled
+- `call_as` - Python-safe identifier (only when name has hyphens, e.g. `aws-iam` → `iam`)
+- `tool_count` - Number of available tools (only when connected)
+- `error` - Connection error (only when disconnected with error)
 
-With `info="full"`, also shows:
-
-- Server instructions (if configured)
-- List of available tools (if connected)
-- URL or command details
+With `info="full"`, returns structured dicts also including `source` and `tools` list.
+For guidance, instructions, and examples, use `ot.help(query="<server_name>")` instead.
 
 ## ot.server()
 

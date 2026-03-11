@@ -99,14 +99,14 @@ annotations = chrome_util.scan_annotations()
 ### Defaults
 
 - OneTool uses the built-in defaults for annotation behavior.
-- Requires the `chrome-devtools` MCP server. Enable it in `servers.yaml` (persistent):
+- Requires the `chrome_devtools` MCP server. Enable it in `servers.yaml` (persistent):
 
 ```yaml
-chrome-devtools:
+chrome_devtools:
   enabled: true
 ```
 
-Or enable for the current session only: `ot.server(enable="chrome-devtools")`
+Or enable for the current session only: `ot.server(enable="chrome_devtools")`
 
 ## Examples
 

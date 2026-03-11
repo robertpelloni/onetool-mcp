@@ -47,9 +47,9 @@ Prompts before each step:
 1. Build package (`uv build`)
 2. Commit, tag, push to GitHub
 3. Create GitHub release
-4. Publish to MCP Registry
-5. Deploy docs to GitHub Pages
-6. Publish to PyPI (`uv publish`) — last; version cannot be re-used once published
+4. Publish to PyPI (`uv publish`) — MCP Registry validates PyPI package exists
+5. Publish to MCP Registry
+6. Deploy docs to GitHub Pages
 
 ---
 

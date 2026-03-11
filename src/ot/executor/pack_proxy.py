@@ -11,6 +11,7 @@ Used by the runner to build the execution namespace.
 from __future__ import annotations
 
 import inspect
+import warnings
 from collections import OrderedDict
 from functools import wraps
 from typing import TYPE_CHECKING, Any
@@ -303,21 +304,28 @@ def build_execution_namespace(
         server_cfg = (config.servers or {}).get(server_name)
         tool_prefix = server_cfg.tool_prefix if server_cfg else None
 
-        if server_name not in namespace:
-            namespace[server_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
-
-        # Add Python-accessible aliases for servers with hyphens in their names.
-        # aws-* servers get short-name aliases (strip prefix, normalize hyphens to underscores)
-        # so that e.g. aws-cost-explorer → cost_explorer, aws-iam → iam.
-        # Other hyphenated servers get underscore-normalized aliases (chrome-devtools → chrome_devtools).
+        # Compute the Python-safe identifier for this server.
+        # aws-* servers: strip prefix and normalise hyphens (aws-iam → iam).
+        # Other hyphenated servers: replace hyphens with underscores (my-server → my_server).
         if server_name.startswith("aws-"):
-            short_name = server_name[4:].replace("-", "_")
-            if short_name not in namespace:
-                namespace[short_name] = namespace[server_name]
+            safe_name = server_name[4:].replace("-", "_")
         elif "-" in server_name:
             safe_name = server_name.replace("-", "_")
-            if safe_name not in namespace:
-                namespace[safe_name] = namespace[server_name]
+            warnings.warn(
+                f"Server '{server_name}' uses hyphens — rename to '{safe_name}' in servers.yaml. "
+                "Hyphen names are not valid Python identifiers.",
+                UserWarning,
+                stacklevel=2,
+            )
+        else:
+            safe_name = server_name
+
+        # Register under safe name (primary) so agents can call it directly.
+        # Keep the original hyphen name as an alias for backward compatibility.
+        if safe_name not in namespace:
+            namespace[safe_name] = _create_mcp_proxy_pack(server_name, tool_prefix)
+        if safe_name != server_name and server_name not in namespace:
+            namespace[server_name] = namespace[safe_name]
 
     # Add proxy introspection pack (always available)
     if "proxy" not in namespace:

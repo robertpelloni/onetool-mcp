@@ -283,7 +283,7 @@ The `ot.packs()` function SHALL list packs with optional filtering. The `ot.pack
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.packs(pattern="brave", info="full")` is called
-- **THEN** each entry SHALL include: `{name, source, description, instructions, tool_names}`
+- **THEN** each entry SHALL include: `{name, source, description, tool_names}`
 - **AND** source SHALL be "local" or "mcp:{server}"
 
 ---
@@ -322,23 +322,20 @@ The `ot.pack_info()` function SHALL return detailed info for one pack.
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
 - **WHEN** `ot.pack_info(name="brave", info="full")` is called
-- **THEN** it SHALL return markdown-formatted pack detail including:
-  - Pack header with name
-  - Type indicator ("Local" or "MCP Proxy Server")
-  - Configured instructions (if present in prompts.yaml or server config)
-  - List of tools in the pack with descriptions
+- **THEN** it SHALL return the same dict as `info="default"`: `{name, source, description, instructions, tool_names}`
+- **NOTE** Markdown formatting is `ot.help()`'s responsibility, not `pack_info()`
 
 #### Scenario: Pack with configured instructions
 - **GIVEN** prompts.yaml contains instructions for pack "excel"
-- **WHEN** `ot.pack_info(name="excel", info="full")` is called
-- **THEN** it SHALL include the configured instructions text
+- **WHEN** `ot.pack_info(name="excel")` is called
+- **THEN** the `instructions` field SHALL contain the configured instructions text
 
 #### Scenario: MCP server pack
 - **GIVEN** a proxy server "github" is configured
-- **WHEN** `ot.pack_info(name="github", info="full")` is called
-- **THEN** it SHALL list tools from the proxy server
-- **AND** show type as "MCP Proxy Server"
-- **AND** include server instructions if configured in servers.yaml
+- **WHEN** `ot.pack_info(name="github")` is called
+- **THEN** `source` SHALL be "mcp"
+- **AND** `tool_names` SHALL list tools from the proxy server
+- **AND** `instructions` SHALL include server instructions if configured in servers.yaml
 
 ---
 
@@ -365,23 +362,32 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
 #### Scenario: Info level default
 - **GIVEN** `info="default"` parameter (or no info parameter)
 - **WHEN** `ot.servers()` or `ot.servers(info="default")` is called
-- **THEN** each entry SHALL include: `{name, type, enabled, status}`
-- **AND** type SHALL be "stdio" or "http"
+- **THEN** each entry SHALL include: `{name, status, enabled}`
+- **AND** `call_as` SHALL be included only when the server name contains hyphens (e.g. `aws-iam` → `call_as: "iam"`)
+- **AND** `tool_count` SHALL be included only when the server is connected
+- **AND** `error` SHALL be included only when the server is disconnected and has an error
+- **AND** `type` SHALL NOT be included (not useful to agents)
 - **AND** status SHALL be "connected" or "disconnected"
 
 #### Scenario: Info level full
 - **GIVEN** `info="full"` parameter
-- **WHEN** `ot.servers(pattern="chrome-devtools", info="full")` is called
-- **THEN** it SHALL return detailed server info including:
-  - Server name as heading
-  - Type (MCP Proxy Server with stdio/http)
-  - Connection status
-  - Enabled state
-  - URL or command (depending on type)
-  - Resource count (if connected)
-  - Prompt count (if connected)
-  - Instructions (if configured)
-  - List of tools (if connected)
+- **WHEN** `ot.servers(pattern="chrome_devtools", info="full")` is called
+- **THEN** it SHALL return a list of structured dicts (not markdown strings) including:
+  - `name` — server config key
+  - `status` — "connected" or "disconnected"
+  - `enabled` — boolean
+  - `source` — upstream repo URL or None
+  - `tool_count` — number of tools (0 if disconnected)
+  - `tools` — sorted list of `call_as.tool_name` strings
+  - `call_as` — Python-safe name (only when different from `name`)
+  - `error` — error message (only when disconnected with error)
+- **AND** instructions SHALL NOT be in the dict (guidance lives in `ot.help()`)
+
+#### Scenario: Server with instructions
+- **GIVEN** a server has `instructions` configured in servers.yaml
+- **WHEN** `ot.help(query="chrome_devtools")` is called
+- **THEN** the instructions SHALL appear in the `## Instructions` section
+- **AND** native MCP instructions (from InitializeResult) SHALL appear before YAML instructions
 
 #### Scenario: Info level resources
 - **GIVEN** `info="resources"` parameter
@@ -399,16 +405,16 @@ The `ot.servers()` function SHALL list configured MCP proxy servers with optiona
 - **AND** prompts SHALL be a list of `{name, description}` dicts if connected
 - **AND** prompts SHALL be an empty list if disconnected
 
-#### Scenario: Server with instructions
+#### Scenario: Server instructions via ot.help()
 - **GIVEN** a server has `instructions` configured in servers.yaml
-- **WHEN** `ot.servers(pattern="chrome-devtools", info="full")` is called
-- **THEN** it SHALL include the configured instructions text
+- **WHEN** `ot.help(query="chrome_devtools")` is called
+- **THEN** the instructions SHALL appear in the `## Instructions` section
+- **NOTE** `ot.servers(info="full")` returns structured dicts without instructions — guidance lives in `ot.help()`
 
 #### Scenario: Disconnected server
 - **GIVEN** a server is configured but not connected
 - **WHEN** `ot.servers(info="full")` is called
-- **THEN** it SHALL show status as "disconnected"
-- **AND** tools section SHALL show "(not connected)"
+- **THEN** the entry SHALL have `"status": "disconnected"`, `"tool_count": 0`, `"tools": []`
 
 ---
 
@@ -556,8 +562,8 @@ The `ot.help()` function SHALL provide unified help across tools, packs, snippet
   - Documentation URL
 
 #### Scenario: Exact server lookup
-- **GIVEN** a query matching an MCP server name exactly (e.g., `chrome-devtools`)
-- **WHEN** `ot.help(query="chrome-devtools")` is called
+- **GIVEN** a query matching an MCP server name exactly (e.g., `chrome_devtools`)
+- **WHEN** `ot.help(query="chrome_devtools")` is called
 - **THEN** it SHALL return server help including:
   - Server name as heading
   - Type (MCP Proxy Server)

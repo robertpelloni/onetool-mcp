@@ -124,11 +124,13 @@ Server names with hyphens cannot be used as Python variable names (e.g., `aws-ia
 - **THEN** the short name with hyphens replaced by underscores SHALL be accessible as a variable (e.g., `cost_explorer`)
 - **AND** `aws-iam` → `iam`, `aws-cost-explorer` → `cost_explorer`, `aws-well-architected` → `well_architected`
 
-#### Scenario: Non-aws hyphenated server gets underscore alias
+#### Scenario: Non-aws hyphenated server gets underscore primary + warning
 
-- **GIVEN** a non-aws MCP server whose name contains hyphens (e.g., `chrome-devtools`)
+- **GIVEN** a non-aws MCP server whose name contains hyphens (e.g., `my-server`)
 - **WHEN** the execution namespace is built
-- **THEN** the server name with hyphens replaced by underscores SHALL be accessible (e.g., `chrome_devtools`)
+- **THEN** the underscore form SHALL be the primary namespace key (e.g., `my_server`)
+- **AND** the original hyphen name SHALL also be accessible as an alias
+- **AND** a `UserWarning` SHALL be emitted advising to rename the config key to underscore form
 
 #### Scenario: Alias does not overwrite existing local pack
 

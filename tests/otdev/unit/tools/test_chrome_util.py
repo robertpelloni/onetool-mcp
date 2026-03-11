@@ -1,7 +1,7 @@
 """Unit tests for chrome_util tool pack.
 
 Covers the full annotation lifecycle and error handling via a mocked
-chrome-devtools proxy. Implementation details (_extract_result, _exec_js,
+chrome_devtools proxy. Implementation details (_extract_result, _exec_js,
 _check_server) are not tested directly — behaviour is verified through the
 public API.
 """
@@ -22,7 +22,7 @@ class TestChromeUtil:
         """Full lifecycle: inject → highlight → scan → clear → guide_user succeed."""
         from otdev.tools import chrome_util
 
-        mock_proxy_manager.servers = ["chrome-devtools"]
+        mock_proxy_manager.servers = ["chrome_devtools"]
 
         # inject — already ready (1 call)
         mock_proxy_manager.call_tool_sync.return_value = _READY

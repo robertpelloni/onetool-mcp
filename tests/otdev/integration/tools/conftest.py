@@ -53,7 +53,7 @@ def require_server(name: str) -> None:
     """Fail the test if the named MCP server is not connected.
 
     Args:
-        name: Server name (e.g., "playwright", "chrome-devtools")
+        name: Server name (e.g., "playwright", "chrome_devtools")
     """
     proxy = get_proxy_manager()
     if name not in proxy.servers:

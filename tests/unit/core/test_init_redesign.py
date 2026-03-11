@@ -108,20 +108,20 @@ def test_copy_file_unknown(tmp_path: Path) -> None:
 @pytest.mark.unit
 @pytest.mark.core
 def test_copy_servers_yaml_subset(tmp_path: Path) -> None:
-    """--servers chrome-devtools,playwright creates servers.yaml with only those blocks."""
+    """--servers chrome_devtools,playwright creates servers.yaml with only those blocks."""
     from onetool.cli import _copy_servers_yaml
 
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _copy_servers_yaml(ot_dir, ["chrome-devtools", "playwright"])
+    _copy_servers_yaml(ot_dir, ["chrome_devtools", "playwright"])
 
     servers_yaml = ot_dir / "servers.yaml"
     assert servers_yaml.exists()
 
     data = yaml.safe_load(servers_yaml.read_text())
     servers = data.get("servers", {})
-    assert "chrome-devtools" in servers
+    assert "chrome_devtools" in servers
     assert "playwright" in servers
     assert "github" not in servers
 
@@ -135,7 +135,7 @@ def test_copy_servers_yaml_all(tmp_path: Path) -> None:
     ot_dir = tmp_path / ".onetool"
     ot_dir.mkdir()
 
-    _copy_servers_yaml(ot_dir, ["chrome-devtools", "playwright", "github"])
+    _copy_servers_yaml(ot_dir, ["chrome_devtools", "playwright", "github"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
@@ -152,11 +152,11 @@ def test_copy_servers_yaml_unknown_skipped(tmp_path: Path) -> None:
     ot_dir.mkdir()
 
     # Should not raise
-    _copy_servers_yaml(ot_dir, ["chrome-devtools", "unknown-server"])
+    _copy_servers_yaml(ot_dir, ["chrome_devtools", "unknown-server"])
 
     data = yaml.safe_load((ot_dir / "servers.yaml").read_text())
     servers = data.get("servers", {})
-    assert "chrome-devtools" in servers
+    assert "chrome_devtools" in servers
     assert "unknown-server" not in servers
 
 

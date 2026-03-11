@@ -19,17 +19,17 @@ Check which browser MCP servers are connected:
 ot.servers()
 ```
 
-Expected: At least one of `devtools` or `playwright` should be connected.
+Expected: At least one of `chrome_devtools` or `playwright` should be connected.
 
 ## Setup: Chrome DevTools
 
 ```python
 # 1. Create a new browser page
-devtools.new_page(url="https://en.wikipedia.org/wiki/Anthropic")
+chrome_devtools.new_page(url="https://en.wikipedia.org/wiki/Anthropic")
 
 # 2. Dismiss any existing dialogs (cleanup from previous tests)
 try:
-    devtools.handle_dialog(action="dismiss")
+    chrome_devtools.handle_dialog(action="dismiss")
 except:
     pass  # No dialog present, continue
 ```
@@ -89,7 +89,7 @@ r7 = chrome_util.scan_annotations()
 # Expect: empty list []
 
 # 8. Take screenshot for verification
-devtools.take_screenshot()
+chrome_devtools.take_screenshot()
 
 # Print summary
 {
@@ -172,22 +172,22 @@ Each pack should produce identical results (same structure, same field names). D
 ### Screenshot verification:
 After tests complete, take a screenshot to verify clean state:
 ```python
-devtools.take_screenshot()
+chrome_devtools.take_screenshot()
 ```
 
 ## Troubleshooting
 
 **Prompt dialog appears during testing:**
 - **Cause:** User manually pressed CMD-I/Ctrl+I during test
-- **Solution:** Run `devtools.handle_dialog(action="dismiss")` or `playwright.handle_dialog(action="dismiss")`
+- **Solution:** Run `chrome_devtools.handle_dialog(action="dismiss")` or `playwright.handle_dialog(action="dismiss")`
 - **Prevention:** Do not interact with browser during automated tests
 
 **"No page selected" error (DevTools):**
-- **Solution:** Create a new page with `devtools.new_page(url="https://example.com")`
-- Or list and select existing page: `devtools.list_pages()` → `devtools.select_page(page_id=N)`
+- **Solution:** Create a new page with `chrome_devtools.new_page(url="https://example.com")`
+- Or list and select existing page: `chrome_devtools.list_pages()` → `chrome_devtools.select_page(page_id=N)`
 
 **"The selected page has been closed" error:**
-- **Solution:** The browser page was closed - create a new one with `devtools.new_page(url="...")`
+- **Solution:** The browser page was closed - create a new one with `chrome_devtools.new_page(url="...")`
 
 **"Server not connected" error:**
 - **Solution:** Check server status with `ot.servers()`
@@ -217,7 +217,7 @@ After tests complete, clean up the browser state:
 # DevTools cleanup
 try:
     chrome_util.clear_annotations()
-    devtools.handle_dialog(action="dismiss")
+    chrome_devtools.handle_dialog(action="dismiss")
 except:
     pass
 

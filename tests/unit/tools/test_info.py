@@ -1002,13 +1002,13 @@ def test_servers_list_info(mock_proxy_manager: MagicMock) -> None:
 
     # Mock config with servers
     mock_cfg = MM()
-    mock_cfg.servers = {"chrome-devtools": MM(), "github": MM()}
+    mock_cfg.servers = {"chrome_devtools": MM(), "github": MM()}
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             result = servers(info="min")
 
-    assert result == ["chrome-devtools", "github"]
+    assert result == ["chrome_devtools", "github"]
 
 
 @pytest.mark.unit
@@ -1026,7 +1026,7 @@ def test_servers_default_info(mock_proxy_manager: MagicMock) -> None:
     mock_devtools.enabled = True
 
     mock_cfg = MM()
-    mock_cfg.servers = {"chrome-devtools": mock_devtools}
+    mock_cfg.servers = {"chrome_devtools": mock_devtools}
 
     mock_proxy_manager.get_connection.return_value = None  # Not connected
     mock_proxy_manager.list_tools.return_value = []
@@ -1036,45 +1036,49 @@ def test_servers_default_info(mock_proxy_manager: MagicMock) -> None:
             result = servers(info="default")
 
     assert len(result) == 1
-    assert result[0]["name"] == "chrome-devtools"
-    assert result[0]["type"] == "stdio"
+    assert result[0]["name"] == "chrome_devtools"
+    assert "type" not in result[0]  # type field dropped
     assert result[0]["enabled"] is True
     assert result[0]["status"] == "disconnected"
-    assert "tool_count" not in result[0]
+    assert "tool_count" not in result[0]  # tool_count only present when connected
+    assert "call_as" not in result[0]  # call_as only present when name has hyphens
 
 
 @pytest.mark.unit
 @pytest.mark.serve
-def test_servers_full_with_instructions(mock_proxy_manager: MagicMock) -> None:
-    """Verify ot.servers(info='full') includes instructions."""
+def test_servers_full_returns_dict(mock_proxy_manager: MagicMock) -> None:
+    """Verify ot.servers(info='full') returns structured dicts, not markdown strings."""
     from unittest.mock import MagicMock as MM
     from unittest.mock import patch
 
     from ot.meta import servers
 
-    # Mock config with server that has instructions
     mock_devtools = MM()
     mock_devtools.type = "stdio"
     mock_devtools.enabled = True
-    mock_devtools.command = "npx"
-    mock_devtools.args = ["-y", "chrome-devtools-mcp@latest"]
-    mock_devtools.instructions = "Use take_screenshot after actions."
+    mock_devtools.source = "https://github.com/ChromeDevTools/chrome-devtools-mcp"
 
     mock_cfg = MM()
-    mock_cfg.servers = {"chrome-devtools": mock_devtools}
+    mock_cfg.servers = {"chrome_devtools": mock_devtools}
 
     mock_proxy_manager.get_connection.return_value = None  # Not connected
+    mock_proxy_manager.get_error.return_value = None
+    mock_proxy_manager.list_tools.return_value = []
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
-            result = servers(pattern="chrome-devtools", info="full")
+            result = servers(pattern="chrome_devtools", info="full")
 
     assert len(result) == 1
-    output = result[0]
-    assert "# chrome-devtools server" in output
-    assert "MCP Proxy Server (stdio)" in output
-    assert "## Instructions" in output
-    assert "Use take_screenshot after actions." in output
+    entry = result[0]
+    assert isinstance(entry, dict)
+    assert entry["name"] == "chrome_devtools"
+    assert entry["status"] == "disconnected"
+    assert entry["enabled"] is True
+    assert entry["tool_count"] == 0
+    assert entry["tools"] == []
+    assert "call_as" not in entry  # no hyphens → no call_as
+    assert "instructions" not in entry  # instructions live in ot.help(), not servers()
 
 
 @pytest.mark.unit
@@ -1087,7 +1091,7 @@ def test_servers_pattern_filter(mock_proxy_manager: MagicMock) -> None:
     from ot.meta import servers
 
     mock_cfg = MM()
-    mock_cfg.servers = {"chrome-devtools": MM(), "github": MM(), "gitlab": MM()}
+    mock_cfg.servers = {"chrome_devtools": MM(), "github": MM(), "gitlab": MM()}
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
@@ -1114,19 +1118,22 @@ def test_help_server_lookup(mock_proxy_manager: MagicMock) -> None:
     mock_devtools.instructions = "Browser automation tools."
 
     mock_cfg = MM()
-    mock_cfg.servers = {"chrome-devtools": mock_devtools}
+    mock_cfg.servers = {"chrome_devtools": mock_devtools}
     mock_cfg.alias = {}
 
     mock_proxy_manager.get_connection.return_value = None
     mock_proxy_manager.servers = []
     mock_proxy_manager.list_tools.return_value = []
+    mock_proxy_manager.get_server_instructions.return_value = ""
 
     with patch("ot.meta._discovery.get_proxy_manager", return_value=mock_proxy_manager):
         with patch("ot.meta._discovery.get_config", return_value=mock_cfg):
             with patch("ot.meta._help.get_config", return_value=mock_cfg):
-                result = help(query="chrome-devtools")
+                with patch("ot.proxy.get_proxy_manager", return_value=mock_proxy_manager):
+                    result = help(query="chrome_devtools")
 
-    assert "# chrome-devtools server" in result
+    assert "# chrome_devtools server" in result
+    assert "## Instructions" in result
     assert "Browser automation tools." in result
 
 

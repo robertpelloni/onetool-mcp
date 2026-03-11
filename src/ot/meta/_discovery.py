@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from ot.config import get_config
 from ot.logging import LogSpan
+from ot.meta._constants import safe_server_name as _safe_server_name
 from ot.meta._tool_discovery import _build_proxy_tool_info, _build_tool_info
 from ot.proxy import get_proxy_manager
 
@@ -78,7 +79,8 @@ def tools(
 
         # Proxied tools
         for proxy_tool in proxy.list_tools():
-            tool_name = f"{proxy_tool.server}.{proxy_tool.name}"
+            safe_server = _safe_server_name(proxy_tool.server)
+            tool_name = f"{safe_server}.{proxy_tool.name}"
 
             if pattern and pattern.lower() not in tool_name.lower():
                 continue
@@ -159,7 +161,8 @@ def tool_info(
 
         # Proxied tools
         for proxy_tool in proxy.list_tools():
-            tool_name = f"{proxy_tool.server}.{proxy_tool.name}"
+            safe_server = _safe_server_name(proxy_tool.server)
+            tool_name = f"{safe_server}.{proxy_tool.name}"
 
             if filter_pattern and filter_pattern.lower() not in tool_name.lower():
                 continue
@@ -413,8 +416,8 @@ def servers(
         pattern: Filter servers by name pattern (case-insensitive substring)
         info: Output verbosity level:
             - "min": names only
-            - "default": name + type + enabled + status (default)
-            - "full": detailed info with instructions and tools
+            - "default": name + status + enabled + [call_as] + [tool_count] (default)
+            - "full": structured dicts with source and tools list
             - "resources": list resources per server
             - "prompts": list prompts per server
 
@@ -426,7 +429,7 @@ def servers(
         ot.servers(pattern="github")
         ot.servers(info="full")
         ot.servers(info="resources")
-        ot.servers(pattern="chrome-devtools", info="prompts")
+        ot.servers(pattern="chrome_devtools", info="prompts")
     """
     if info not in _VALID_SERVER_INFO_LEVELS:
         raise ValueError(
@@ -451,7 +454,7 @@ def servers(
             s.add("count", len(all_server_names))
             return all_server_names  # type: ignore[return-value]
 
-        # info="full" - detailed info for each server
+        # info="full" - structured dicts (guidance lives in ot.help())
         if info == "full":
             results: list[dict[str, Any] | str] = []
 
@@ -459,56 +462,30 @@ def servers(
                 server_cfg = cfg.servers[server_name]
                 conn = proxy.get_connection(server_name)
                 status = "connected" if conn else "disconnected"
+                safe_name = _safe_server_name(server_name)
                 proxy_tools = proxy.list_tools(server=server_name) if conn else []
-                tool_count = len(proxy_tools)
 
-                lines = [f"# {server_name} server", ""]
-                lines.append(f"**Type:** MCP Proxy Server ({server_cfg.type})")
-                lines.append(f"**Status:** {status}")
-                lines.append(f"**Enabled:** {server_cfg.enabled}")
-                if server_cfg.type == "http" and server_cfg.url:
-                    lines.append(f"**URL:** {server_cfg.url}")
-                elif server_cfg.type == "stdio" and server_cfg.command:
-                    cmd = f"{server_cfg.command} {' '.join(server_cfg.args)}"
-                    lines.append(f"**Command:** {cmd}")
-
-                # Add resource and prompt counts if connected
+                entry: dict[str, Any] = {
+                    "name": server_name,
+                    "status": status,
+                    "enabled": server_cfg.enabled,
+                    "source": getattr(server_cfg, "source", None),
+                }
+                if safe_name != server_name:
+                    entry["call_as"] = safe_name
                 if conn:
-                    try:
-                        resource_count = len(proxy.list_resources_sync(server_name))
-                        prompt_count = len(proxy.list_prompts_sync(server_name))
-                        lines.append(f"**Resources:** {resource_count}")
-                        lines.append(f"**Prompts:** {prompt_count}")
-                    except Exception:
-                        pass
-
-                lines.append("")
-
-                # Show instructions if configured
-                if server_cfg.instructions:
-                    lines.append("## Instructions")
-                    lines.append("")
-                    lines.append(server_cfg.instructions.strip())
-                    lines.append("")
-
-                # List tools if connected
-                if conn:
-                    lines.append(f"## Tools ({tool_count})")
-                    lines.append("")
-                    for tool in sorted(proxy_tools, key=lambda t: t.name):
-                        desc = tool.description or "(no description)"
-                        first_line = desc.split("\n")[0].strip()
-                        lines.append(f"- **{server_name}.{tool.name}**: {first_line}")
-                elif server_cfg.enabled:
-                    lines.append("## Tools")
-                    lines.append("")
-                    lines.append("(not connected)")
+                    entry["tool_count"] = len(proxy_tools)
+                    entry["tools"] = sorted(
+                        f"{safe_name}.{t.name}" for t in proxy_tools
+                    )
+                else:
+                    entry["tool_count"] = 0
+                    entry["tools"] = []
                     error = proxy.get_error(server_name)
                     if error:
-                        lines.append("")
-                        lines.append(f"**Error:** {error}")
+                        entry["error"] = error
 
-                results.append("\n".join(lines))
+                results.append(entry)
 
             s.add("count", len(results))
             return results
@@ -581,22 +558,27 @@ def servers(
             s.add("count", len(results_prompts))
             return results_prompts
 
-        # info="default" - summary for each server
+        # info="default" - operational dashboard
         servers_list: list[dict[str, Any] | str] = []
 
         for server_name in all_server_names:
             server_cfg = cfg.servers[server_name]
             conn = proxy.get_connection(server_name)
             status = "connected" if conn else "disconnected"
+            safe_name = _safe_server_name(server_name)
 
             server_info: dict[str, Any] = {
                 "name": server_name,
-                "type": server_cfg.type,
-                "enabled": server_cfg.enabled,
                 "status": status,
+                "enabled": server_cfg.enabled,
             }
-            # Include error if disconnected
-            if not conn:
+            # call_as only when the Python identifier differs from the config key
+            if safe_name != server_name:
+                server_info["call_as"] = safe_name
+            # tool_count only when connected
+            if conn:
+                server_info["tool_count"] = len(proxy.list_tools(server=server_name))
+            else:
                 error = proxy.get_error(server_name)
                 if error:
                     server_info["error"] = error
