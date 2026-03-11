@@ -12,8 +12,6 @@ servers:
   # CHROME DEVTOOLS MCP
   # =============================================================================
   # Browser automation and debugging via Chrome DevTools Protocol.
-  # Source: https://github.com/ChromeDevTools/chrome-devtools-mcp
-  #
   chrome_devtools:
     type: stdio
     command: npx
@@ -57,8 +55,6 @@ servers:
   # PLAYWRIGHT MCP
   # =============================================================================
   # Browser automation via Playwright accessibility tree (no vision needed).
-  # Source: https://github.com/microsoft/playwright-mcp
-  #
   playwright:
     type: stdio
     command: npx
@@ -77,7 +73,6 @@ servers:
   # GITHUB MCP (HTTP)
   # =============================================================================
   # GitHub's official MCP server for repos, issues, PRs, Actions, and more.
-  # Source: https://github.com/github/github-mcp-server
   #
   # SETUP:
   #   Add GITHUB_TOKEN to ~/.onetool/secrets.yaml before enabling.
@@ -101,7 +96,6 @@ servers:
   # CHUNKHOUND MCP
   # =============================================================================
   # Regex and semantic code search for large codebases.
-  # Source: https://github.com/casualjim/chunkhound
   #
   # SETUP:
   #   pip install chunkhound && chunkhound index   (run from project root)
@@ -111,11 +105,11 @@ servers:
     command: chunkhound
     args:
       - "mcp"
-    timeout: 30
+    timeout: 300
     inherit_env: true  # Required: passes CHUNKHOUND_EMBEDDING__API_KEY set during indexing
     enabled: false
     description: Regex and semantic code search for large codebases
-    source: https://github.com/casualjim/chunkhound
+    source: https://github.com/chunkhound/chunkhound
     instructions: |
       Must index before use: pip install chunkhound && chunkhound index (run from project root).
 
