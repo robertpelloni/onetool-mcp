@@ -72,7 +72,9 @@ class SqlitePool:
         """Get or create the shared connection.
 
         Health-checked with ``SELECT 1``; reconnects automatically if the
-        connection is stale or was closed.
+        connection is stale or was closed.  If the connection has an open
+        (stuck) transaction from a prior failed write, it is rolled back so
+        the next write can start a clean transaction.
 
         Returns:
             The shared ``sqlite3.Connection``.
@@ -81,6 +83,8 @@ class SqlitePool:
             if self._conn is not None:
                 try:
                     self._conn.execute("SELECT 1").fetchone()
+                    if self._conn.in_transaction:
+                        self._conn.rollback()
                     return self._conn
                 except Exception:
                     self._conn = None

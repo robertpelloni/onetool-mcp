@@ -102,15 +102,21 @@ def _indexing_worker(
     conn = _open_connection(db_path)
     with contextlib.suppress(Exception):
         build_index(handle, content, conn, embedding_model=embedding_model)
+    # Close before the slow abstract-generation LLM call so the connection does
+    # not hold a SQLite lock while waiting for a network round-trip.
+    conn.close()
+
     with contextlib.suppress(Exception):
         # Abstract is best-effort; never fail the thread for this
         abstract = _generate_abstract(content)
-        conn.execute(
+        conn2 = _open_connection(db_path)
+        conn2.execute(
             "UPDATE results SET meta=json_set(COALESCE(meta, '{}'), '$.abstract', ?) WHERE handle=?",
             (abstract, handle),
         )
-        conn.commit()
-    conn.close()
+        conn2.commit()
+        conn2.close()
+
     _set_event(handle)
 
 
