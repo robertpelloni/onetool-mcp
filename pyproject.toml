@@ -192,6 +192,9 @@ markers = [
     "api: Requires API keys",
     "docker: Requires Docker daemon",
     "playwright: Requires Playwright MCP server",
+
+    # Live environment tags
+    "explore: Requires a live external service (Figma plugin, browser, etc.)",
 ]
 
 [tool.deptry]
