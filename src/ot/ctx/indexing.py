@@ -41,6 +41,7 @@ _STX = "\x02"
 _ETX = "\x03"
 
 _SNIPPET_WINDOW = 300  # chars on each side of match position
+_COMMIT_BATCH = 50    # commit every N chunks to release the write lock
 
 
 # ---------------------------------------------------------------------------
@@ -73,8 +74,9 @@ def build_index(
         # Clear any previous FTS5 data for this handle
         delete_fts_for_handle(conn, handle)
 
-        # Insert chunks into both FTS5 tables
-        for chunk in chunks:
+        # Insert chunks into both FTS5 tables, committing every _COMMIT_BATCH chunks
+        # to release the write lock and allow concurrent writers to proceed.
+        for i, chunk in enumerate(chunks):
             conn.execute(
                 "INSERT INTO chunks(handle, chunk_idx, start_line, end_line, title, body)"
                 " VALUES (?, ?, ?, ?, ?, ?)",
@@ -85,6 +87,8 @@ def build_index(
                 " VALUES (?, ?, ?, ?, ?, ?)",
                 (handle, chunk.chunk_idx, chunk.start_line, chunk.end_line, chunk.title, chunk.body),
             )
+            if (i + 1) % _COMMIT_BATCH == 0:
+                conn.commit()
 
         # Extract and store vocabulary
         vocab = _extract_vocabulary(content)

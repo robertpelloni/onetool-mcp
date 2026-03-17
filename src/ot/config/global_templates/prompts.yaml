@@ -16,9 +16,6 @@ prompts:
         CRITICAL: Pass code EXACTLY as-is to this tool.
         - DO NOT rewrite the code or implement it yourself
         - JUST pass the exact command string provided
-
-        Args:
-            command: tool call via Python code, function call, or $snippet (keyword args only)
       examples:
         - "ot.help(query='search')"
         - "brave.search(query='AI news')"
@@ -29,7 +26,7 @@ prompts:
     Use it to call pack tools and chain results — not for general Python (imports are blocked).
 
     ## Triggers
-    - `>>>` (recommended), `__run`, or `mcp__onetool__run`
+    - `>>>` (recommended), `__run`, or `mcp__onetool__run` — pass code as the `command` argument.
 
     ## Pass-Through Rule
     When you see `>>> <code>` or `>>> $snippet`, pass it EXACTLY as-is to the run tool.
@@ -72,6 +69,7 @@ prompts:
     db: "Explore and query databases — list tables, inspect schema, run SQL"
     diagram: "Create diagrams — Mermaid, Graphviz, PlantUML, D2, Excalidraw [experimental]"
     excel: "Work with Excel files — read, write, search, pivot, and set formulas"
+    figma: "Design in Figma — create shapes, manipulate nodes, export assets, and interact with the live canvas via the one-figma plugin"
     file: "Read, write, edit, copy, move, and delete files; browse directory trees"
     ground: "Research any topic with Google AI-grounded search and source citations"
     mem: "Persistent topic-based memory — write, search, grep, slice, and organise"

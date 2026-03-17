@@ -312,6 +312,58 @@ class TestIndexing:
         row = conn.execute("SELECT status FROM results WHERE handle='h1'").fetchone()
         assert row["status"] == "ready"
 
+    def test_build_index_releases_lock_between_batches(self) -> None:
+        """A second connection can write mid-index because commits happen every _COMMIT_BATCH chunks.
+
+        Generates enough content to span multiple batches, then verifies that a
+        second connection opened mid-index can successfully insert a row.  Before
+        the batch-commit fix this would either deadlock or time out.
+        """
+        import threading
+        from ot.ctx.indexing import _COMMIT_BATCH
+        from ot.ctx.db import _open_connection
+
+        # Build content large enough to produce > _COMMIT_BATCH chunks
+        lines = [f"line {i}: some content about topic_{i}" for i in range(_COMMIT_BATCH * 3 * 20)]
+        content = "\n".join(lines)
+
+        # Use a file-based DB so a second connection can open the same file
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            db_path = Path(f.name)
+
+        try:
+            conn = _open_connection(db_path)
+            _insert_handle(conn, "big", content, status="pending")
+
+            second_write_done = threading.Event()
+            second_write_error: list[Exception] = []
+
+            def _second_writer() -> None:
+                try:
+                    conn2 = _open_connection(db_path)
+                    conn2.execute(
+                        "INSERT INTO results(handle, source, size_bytes, total_lines, status, created_at, is_file)"
+                        " VALUES ('concurrent', '', 0, 0, 'pending', 0.0, 0)"
+                    )
+                    conn2.commit()
+                    conn2.close()
+                except Exception as exc:
+                    second_write_error.append(exc)
+                finally:
+                    second_write_done.set()
+
+            t = threading.Thread(target=_second_writer, daemon=True)
+            t.start()
+            build_index("big", content, conn)
+            second_write_done.wait(timeout=10)
+            conn.close()
+        finally:
+            db_path.unlink(missing_ok=True)
+            for wal in [db_path.with_suffix(".db-wal"), db_path.with_suffix(".db-shm")]:
+                wal.unlink(missing_ok=True)
+
+        assert not second_write_error, f"Concurrent write failed: {second_write_error[0]}"
+
 
 # ===========================================================================
 # 4. Write and Append
@@ -321,13 +373,18 @@ class TestIndexing:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestWrite:
-    def test_write_returns_quickly(self) -> None:
+    @pytest.fixture
+    def w(self):
+        """Provide a fresh DB conn with get_db_path and threading.Thread mocked."""
         conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread, \
-             patch("ot.ctx.write._generate_abstract", return_value="fast abstract"):
-            mock_path.return_value = Path("/tmp/results.db")
+        with patch("ot.ctx.write.get_db_path", return_value=Path("/tmp/results.db")), \
+             patch("ot.ctx.write.threading.Thread") as mock_thread:
             mock_thread.return_value = MagicMock()
+            yield conn, mock_thread
+
+    def test_write_returns_quickly(self, w) -> None:
+        conn, _mock_thread = w
+        with patch("ot.ctx.write._generate_abstract", return_value="fast abstract"):
             from ot.ctx.config import Config
             start = time.time()
             result = ctx_write("some content", db=conn, config=Config())
@@ -335,29 +392,22 @@ class TestWrite:
         assert elapsed < 0.1
         assert "handle" in result
 
-    def test_write_status_is_pending(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            result = ctx_write("hello", db=conn, config=Config())
+    def test_write_status_is_pending(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        result = ctx_write("hello", db=conn, config=Config())
         assert result["status"] == "pending"
         row = conn.execute(
             "SELECT status FROM results WHERE handle=?", (result["handle"],)
         ).fetchone()
         assert row["status"] == "pending"
 
-    def test_write_spawns_indexing_thread(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            spawned = MagicMock()
-            mock_thread.return_value = spawned
-            from ot.ctx.config import Config
-            ctx_write("hello", db=conn, config=Config())
+    def test_write_spawns_indexing_thread(self, w) -> None:
+        conn, mock_thread = w
+        spawned = MagicMock()
+        mock_thread.return_value = spawned
+        from ot.ctx.config import Config
+        ctx_write("hello", db=conn, config=Config())
         mock_thread.assert_called_once()
         spawned.start.assert_called_once()
 
@@ -365,10 +415,8 @@ class TestWrite:
         conn = _make_conn()
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "results.db"
-            with patch("ot.ctx.write.get_db_path") as mock_path, \
-                 patch("ot.ctx.write.threading.Thread") as mock_thread:
-                mock_path.return_value = db_path
-                mock_thread.return_value = MagicMock()
+            with patch("ot.ctx.write.get_db_path", return_value=db_path), \
+                 patch("ot.ctx.write.threading.Thread", return_value=MagicMock()):
                 from ot.ctx.config import Config
                 cfg = Config(max_inline_bytes=10)
                 result = ctx_write("a" * 100, db=conn, config=cfg)
@@ -377,69 +425,45 @@ class TestWrite:
         meta = conn.execute("SELECT is_file FROM results WHERE handle=?", (handle,)).fetchone()
         assert meta["is_file"] == 1
 
-    def test_write_preview_lines(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            content = "\n".join(f"line {i}" for i in range(20))
-            result = ctx_write(content, verbose=True, db=conn, config=Config())
+    def test_write_preview_lines(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        content = "\n".join(f"line {i}" for i in range(20))
+        result = ctx_write(content, verbose=True, db=conn, config=Config())
         assert isinstance(result["preview"], str)
         assert len(result["preview"].splitlines()) <= 5
 
-    def test_write_verbose_false_omits_preview_and_usage(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            result = ctx_write("some content", db=conn, config=Config())
+    def test_write_verbose_false_omits_preview_and_usage(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        result = ctx_write("some content", db=conn, config=Config())
         assert "preview" not in result
         assert "usage" not in result
 
-    def test_write_verbose_true_includes_preview(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            result = ctx_write("line one\nline two", verbose=True, db=conn, config=Config())
+    def test_write_verbose_true_includes_preview(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        result = ctx_write("line one\nline two", verbose=True, db=conn, config=Config())
         assert "preview" in result
         assert "usage" not in result
 
-    def test_write_content_type_markdown(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            content = "# Heading\n\nSome text under heading.\n\n## Sub\n\nMore."
-            result = ctx_write(content, db=conn, config=Config())
+    def test_write_content_type_markdown(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        content = "# Heading\n\nSome text under heading.\n\n## Sub\n\nMore."
+        result = ctx_write(content, db=conn, config=Config())
         assert result["content_type"] == "markdown"
 
-    def test_write_content_type_text(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
-            from ot.ctx.config import Config
-            content = "line 1\nline 2\nline 3\nno headings here"
-            result = ctx_write(content, db=conn, config=Config())
+    def test_write_content_type_text(self, w) -> None:
+        conn, _mock_thread = w
+        from ot.ctx.config import Config
+        content = "line 1\nline 2\nline 3\nno headings here"
+        result = ctx_write(content, db=conn, config=Config())
         assert result["content_type"] == "text"
 
-    def test_write_with_intent_ot_llm_not_installed(self) -> None:
-        conn = _make_conn()
-        with patch("ot.ctx.write.get_db_path") as mock_path, \
-             patch("ot.ctx.write.threading.Thread") as mock_thread, \
-             patch("ot.ctx.write._run_intent") as mock_intent:
-            mock_path.return_value = Path("/tmp/results.db")
-            mock_thread.return_value = MagicMock()
+    def test_write_with_intent_ot_llm_not_installed(self, w) -> None:
+        conn, _mock_thread = w
+        with patch("ot.ctx.write._run_intent") as mock_intent:
             mock_intent.return_value = {"answer_error": "ot_llm not installed"}
             from ot.ctx.config import Config
             result = ctx_write("content", intent="summarize", db=conn, config=Config())
