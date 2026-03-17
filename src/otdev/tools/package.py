@@ -20,11 +20,10 @@ from datetime import UTC
 from pathlib import Path
 from typing import Any
 
+from otpack import LogSpan, get_tool_config
 from pydantic import BaseModel, Field
 
-from ot.config import get_tool_config
 from ot.http_client import http_get
-from ot.logging import LogSpan
 
 
 class Config(BaseModel):

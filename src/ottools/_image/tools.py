@@ -11,7 +11,7 @@ import threading
 from datetime import UTC, datetime
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .config import get_image_config
 from .resize import prepare_for_model

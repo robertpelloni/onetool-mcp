@@ -5,7 +5,7 @@ import builtins
 import uuid
 from pathlib import Path
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import (
     _check_staleness,

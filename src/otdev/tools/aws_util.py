@@ -60,10 +60,8 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
+from otpack import LogSpan, get_tool_config
 from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
 
 # ---------------------------------------------------------------------------
 # Default server list — curated awslabs/mcp servers

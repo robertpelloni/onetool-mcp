@@ -43,10 +43,8 @@ from pathlib import Path
 from typing import Any
 
 from filelock import FileLock
+from otpack import LogSpan, get_tool_config
 from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 

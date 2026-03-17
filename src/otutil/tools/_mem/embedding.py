@@ -7,8 +7,7 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any
 
-from ot.config.secrets import get_secret
-from ot.logging import LogSpan
+from otpack import LogSpan, get_secret
 
 from .config import _get_config
 from .db import _serialize_embedding, _use_connection

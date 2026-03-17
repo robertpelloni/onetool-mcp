@@ -17,17 +17,16 @@ import json
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.utils import (
+from otpack import (
+    LogSpan,
     batch_execute,
     cache,
     format_batch_results,
+    get_tool_config,
     normalize_items,
     truncate,
 )
+from pydantic import BaseModel, Field
 
 
 def _require_trafilatura() -> None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .config import _validate_file_path
 from .content import (

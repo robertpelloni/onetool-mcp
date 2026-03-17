@@ -5,7 +5,8 @@ import builtins
 import re
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
+
 from otutil.tools._content_util import grep_lines
 
 from .config import _get_config

@@ -212,6 +212,7 @@ class ProxyManager:
         tool: str,
         arguments: dict[str, Any] | None = None,
         timeout: float = 30.0,
+        fire_and_forget: bool = False,
     ) -> str | dict[str, Any] | list[Any]:
         """Synchronously call a tool on a proxied MCP server.
 
@@ -223,14 +224,29 @@ class ProxyManager:
             tool: Name of the tool to call.
             arguments: Arguments to pass to the tool.
             timeout: Timeout for the call in seconds.
+            fire_and_forget: If True, schedule the call and return "started"
+                immediately without waiting for the result. Useful for slow
+                operations (e.g. browser navigation) where you don't need
+                the return value.
 
         Returns:
-            Text result from the tool.
+            Text result from the tool, or "started" if fire_and_forget=True.
         """
         if self._loop is None:
             raise RuntimeError(
                 "Proxy manager not initialized - no event loop available"
             )
+
+        if fire_and_forget:
+            fut = asyncio.run_coroutine_threadsafe(
+                self.call_tool(server, tool, arguments, timeout),
+                self._loop,
+            )
+            fut.add_done_callback(
+                lambda f: logger.warning("fire_and_forget {}/{} failed: {}", server, tool, f.exception())
+                if f.exception() else None
+            )
+            return "started"
 
         future = asyncio.run_coroutine_threadsafe(
             self.call_tool(server, tool, arguments, timeout),
@@ -545,7 +561,7 @@ class ProxyManager:
             from ot.config import get_config
             root_config = get_config()
             root_env = root_config.env
-        except (ImportError, AttributeError):
+        except (ImportError, AttributeError, RuntimeError):
             root_env = {}
 
         # Merge: root env first, then server-specific env (overrides parent/root)
@@ -707,6 +723,12 @@ class ProxyManager:
                 self._clients.pop(name)
                 self._tools_by_server.pop(name, None)
                 self._errors.pop(name, None)
+                self._server_instructions.pop(name, None)
+                self._server_timeouts.pop(name, None)
+                logger.warning(
+                    f"Removed server '{name}' without async cleanup — "
+                    "no running event loop; underlying transport may not be closed."
+                )
                 return "disconnected"
             return "not connected"
         future = asyncio.run_coroutine_threadsafe(

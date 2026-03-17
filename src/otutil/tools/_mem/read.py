@@ -4,7 +4,7 @@ from __future__ import annotations
 import builtins
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import _build_toc, _decode_sections, _tags_filter_sql, _topic_filter
 from .db import _deserialize_meta, _deserialize_tags, _get_connection

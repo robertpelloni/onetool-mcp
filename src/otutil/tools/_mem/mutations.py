@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import (
     _content_hash,

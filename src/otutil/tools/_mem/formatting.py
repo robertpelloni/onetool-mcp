@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import _check_staleness, _topic_filter
 from .db import _deserialize_meta, _deserialize_tags, _use_connection

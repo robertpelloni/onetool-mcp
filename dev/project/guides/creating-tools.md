@@ -322,12 +322,25 @@ def _make_request(url: str, **kwargs) -> tuple[bool, dict | str]:
 
 ### Caching
 
-```python
-from ot.utils.cache import CacheNamespace
+For **function memoization**, use `@cache.memoize()` on the shared singleton:
 
-_cache = CacheNamespace("mytool", ttl=300.0)
+```python
+from ot.utils.cache import cache
+
+@cache.memoize(ttl=3600)
+def _resolve_something(key: str) -> str:
+    ...
+```
+
+For **manual key/value stores** (e.g. raw HTTP responses, session data), use a
+per-module `Cache()` instance:
+
+```python
+from ot.utils.cache import Cache
+
+_cache = Cache()
 _cache.set("key", value)
-val = _cache.get("key")  # None if expired
+val = _cache.get("key")  # None if missing or expired
 ```
 
 ### Result truncation

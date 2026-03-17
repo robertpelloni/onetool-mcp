@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "onetool-mcp",
+    "onetool-pack",
+]
+
 [[package]]
 name = "aiofiles"
 version = "25.1.0"
@@ -1522,6 +1528,7 @@ dependencies = [
     { name = "keyring" },
     { name = "loguru" },
     { name = "mcp" },
+    { name = "onetool-pack" },
     { name = "openai" },
     { name = "pillow" },
     { name = "posthog" },
@@ -1603,6 +1610,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mcp", specifier = ">=1.26.0" },
     { name = "onetool-mcp", extras = ["util", "dev"], marker = "extra == 'all'" },
+    { name = "onetool-pack", editable = "packages/onetool-pack" },
     { name = "openai", specifier = ">=2.26.0" },
     { name = "openpyxl", marker = "extra == 'util'", specifier = ">=3.1.5" },
     { name = "pathspec", marker = "extra == 'util'", specifier = ">=1.0.4" },
@@ -1644,6 +1652,25 @@ docs = [
     { name = "mkdocs-material", specifier = ">=9.7.4" },
     { name = "mkdocs-redirects", specifier = ">=1.2.2" },
     { name = "mkdocs-section-index", specifier = ">=0.3.10" },
+]
+
+[[package]]
+name = "onetool-pack"
+version = "0.1.0"
+source = { editable = "packages/onetool-pack" }
+dependencies = [
+    { name = "httpx" },
+    { name = "loguru" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
 [[package]]

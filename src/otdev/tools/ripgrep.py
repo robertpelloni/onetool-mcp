@@ -29,10 +29,7 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from pathlib import Path
 
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.paths import resolve_cwd_path
-from ot.utils import get_install_hint
+from otpack import LogSpan, get_install_hint, get_tool_config, resolve_cwd_path
 
 
 class Config(BaseModel):

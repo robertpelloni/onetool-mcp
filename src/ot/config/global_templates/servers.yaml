@@ -92,6 +92,7 @@ servers:
       Use list/search tools before individual gets. Search before creating issues or PRs.
       PR workflow: branch → push_files → create_pull_request.
 
+
   # =============================================================================
   # CHUNKHOUND MCP
   # =============================================================================

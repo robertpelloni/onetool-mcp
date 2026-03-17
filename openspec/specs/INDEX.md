@@ -133,9 +133,9 @@ CLI for testing and benchmarking MCP servers.
 | Built-in Tools (core) | 1 |
 | Built-in Tools (ottools) | 7 |
 | Domain Tools [util] | 5 |
-| Domain Tools [dev] | 7 |
+| Domain Tools [dev] | 9 |
 | bench | 8 |
-| **Total** | **43** |
+| **Total** | **45** |
 
 ---
 

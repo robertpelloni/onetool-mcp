@@ -52,12 +52,15 @@ from pathlib import Path
 from typing import Any
 
 import pathspec
+from otpack import (
+    LogSpan,
+    get_tool_config,
+    is_path_excluded,
+    resolve_cwd_path,
+    validate_path,
+)
 from pydantic import BaseModel, Field
 
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.paths import resolve_cwd_path
-from ot.utils import is_path_excluded, validate_path
 from otutil.tools._content_util import (
     build_toc,
     grep_lines,

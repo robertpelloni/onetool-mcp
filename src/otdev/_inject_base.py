@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from otpack import LogSpan
+
 from ot.assets import get_inject_script
-from ot.logging import LogSpan
 from ot.proxy import get_proxy_manager
 
 

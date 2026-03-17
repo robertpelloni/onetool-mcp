@@ -23,19 +23,18 @@ import re
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.utils import (
+from otpack import (
+    LogSpan,
+    _format_http_error,
     batch_execute,
     format_batch_results,
+    get_tool_config,
     lazy_client,
     normalize_items,
     require_api_key,
     truncate,
 )
-from ot.utils.http import _format_http_error
+from pydantic import BaseModel, Field
 
 
 class Config(BaseModel):

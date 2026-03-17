@@ -364,11 +364,11 @@ class TestGroundedSearch:
 
         assert "Error" in result
 
-    @patch("otutil.tools.ground._get_api_key")
-    def test_build_client_without_key(self, mock_key):
+    @patch("otutil.tools.ground.require_api_key")
+    def test_build_client_without_key(self, mock_require):
         from otutil.tools.ground import _build_client
 
-        mock_key.return_value = ""
+        mock_require.return_value = ("", "Error: GEMINI_API_KEY secret not configured")
 
         with pytest.raises(ValueError, match="GEMINI_API_KEY"):
             _build_client()
@@ -708,7 +708,7 @@ class TestClientCaching:
 
     def test_cached_client_reuses_instance(self):
         """lazy_client should create the factory exactly once across repeated calls."""
-        from ot.utils import lazy_client
+        from otpack import lazy_client
 
         mock_client = MagicMock()
         call_count = 0

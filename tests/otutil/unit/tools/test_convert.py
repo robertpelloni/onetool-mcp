@@ -22,7 +22,9 @@ if TYPE_CHECKING:
 @pytest.fixture(autouse=True)
 def mock_convert_config(tmp_path: Path) -> Generator[None, None, None]:
     """Mock convert tool config - patches effective CWD for internal tools."""
-    with patch("ot.paths.get_effective_cwd", return_value=tmp_path):
+    with (
+        patch("otpack.paths.get_effective_cwd", return_value=tmp_path),
+    ):
         yield
 
 

@@ -17,11 +17,16 @@ from typing import Any, Literal
 # Type alias for output format
 OutputFormat = Literal["full", "text_only", "sources_only"]
 
+from otpack import (
+    LogSpan,
+    batch_execute,
+    format_batch_results,
+    get_tool_config,
+    lazy_client,
+    normalize_items,
+    require_api_key,
+)
 from pydantic import BaseModel, Field
-
-from ot.config import get_secret, get_tool_config
-from ot.logging import LogSpan
-from ot.utils import batch_execute, format_batch_results, lazy_client, normalize_items
 
 # Dependency declarations for CLI validation
 __ot_requires__ = {
@@ -49,18 +54,13 @@ def _require_google_genai() -> None:
         ) from exc
 
 
-def _get_api_key() -> str:
-    """Get Gemini API key from secrets."""
-    return get_secret("GEMINI_API_KEY") or ""
-
-
 def _build_client() -> Any:
     """Build a Gemini client with API key."""
     from google import genai
 
-    api_key = _get_api_key()
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY not set in secrets.yaml")
+    api_key, err = require_api_key("GEMINI_API_KEY")
+    if err:
+        raise ValueError(err)
     return genai.Client(api_key=api_key)
 
 

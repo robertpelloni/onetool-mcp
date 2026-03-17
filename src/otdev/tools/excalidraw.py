@@ -51,8 +51,8 @@ import textwrap
 from importlib import resources
 from typing import Any
 
-from ot.logging import LogSpan
-from ot.paths import resolve_cwd_path
+from otpack import LogSpan, resolve_cwd_path
+
 from ot.proxy import get_proxy_manager
 
 # ---------------------------------------------------------------------------

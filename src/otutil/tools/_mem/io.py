@@ -5,7 +5,7 @@ import json
 import uuid
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .config import _validate_file_path
 from .content import _content_hash, _topic_filter

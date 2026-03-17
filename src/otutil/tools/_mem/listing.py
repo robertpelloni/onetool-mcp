@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import _topic_filter
 from .db import _deserialize_tags, _get_connection

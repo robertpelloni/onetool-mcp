@@ -15,7 +15,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pathlib import Path
 
-from ot.utils.cache import Cache
+from otpack import Cache
+
 from ot.utils.fs import unlink_tracking_bytes
 from ot.utils.session import get_session_dir
 

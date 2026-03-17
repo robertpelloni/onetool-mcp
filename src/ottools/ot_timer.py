@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from time import perf_counter
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 pack = "ot_timer"
 

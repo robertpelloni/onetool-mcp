@@ -30,18 +30,17 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Literal
 
 import httpx
-from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.utils import (
+from otpack import (
+    LogSpan,
+    _format_http_error,
     batch_execute,
     format_batch_results,
+    get_tool_config,
     lazy_client,
     normalize_items,
     require_api_key,
 )
-from ot.utils.http import _format_http_error
+from pydantic import BaseModel, Field
 
 # Type alias matching ground.py convention
 OutputFormat = Literal["full", "text_only", "sources_only"]

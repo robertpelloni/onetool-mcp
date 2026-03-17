@@ -34,11 +34,8 @@ from collections import OrderedDict
 from datetime import date, datetime
 from typing import Any
 
+from otpack import LogSpan, get_tool_config, resolve_cwd_path
 from pydantic import BaseModel, Field
-
-from ot.config import get_tool_config
-from ot.logging import LogSpan
-from ot.paths import resolve_cwd_path
 
 
 class Config(BaseModel):

@@ -31,7 +31,7 @@ from otutil.tools._mem.db import _deserialize_meta, _serialize_meta
 @pytest.fixture()
 def _mock_cwd(tmp_path: Path):
     """Mock CWD for path validation to use tmp_path."""
-    with patch("ot.utils.pathsec.resolve_cwd_path") as mock_resolve:
+    with patch("otpack.pathsec.resolve_cwd_path") as mock_resolve_pack:
 
         def _resolve(path: str) -> Path:
             p = Path(path).expanduser()
@@ -39,7 +39,7 @@ def _mock_cwd(tmp_path: Path):
                 return p.resolve()
             return (tmp_path / p).resolve()
 
-        mock_resolve.side_effect = _resolve
+        mock_resolve_pack.side_effect = _resolve
         yield
 
 

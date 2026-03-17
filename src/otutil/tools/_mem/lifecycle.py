@@ -5,7 +5,7 @@ import math
 from datetime import UTC, datetime
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .config import _get_config
 from .content import _topic_filter

@@ -9,9 +9,9 @@ import ast
 import re
 from pathlib import Path
 
-from ot.logging import LogSpan
-from ot.paths import get_config_dir, get_effective_cwd
-from ot.utils.cache import cache
+from otpack import LogSpan, cache, get_effective_cwd
+
+from ot.paths import get_config_dir
 
 # Pack for dot notation: ot_forge.create_ext(), ot_forge.validate_ext(), ot_forge.install_skills()
 pack = "ot_forge"

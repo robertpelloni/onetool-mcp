@@ -4,7 +4,8 @@ from __future__ import annotations
 import builtins
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
+
 from otutil.tools._content_util import LINE_RANGE_RE as _LINE_RANGE_RE
 from otutil.tools._content_util import resolve_line_range as _resolve_line_range
 from otutil.tools._content_util import resolve_slice as _resolve_slice

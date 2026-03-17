@@ -40,9 +40,7 @@ from pydantic import BaseModel, Field
 # connection pool on every transform() call.
 _client_cache: dict[tuple[str, str, int], OpenAI] = {}
 
-from ot.config import get_secret, get_tool_config
-from ot.logging import LogSpan
-from ot.paths import resolve_cwd_path
+from otpack import LogSpan, get_secret, get_tool_config, resolve_cwd_path
 
 
 class Config(BaseModel):

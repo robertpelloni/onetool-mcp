@@ -29,6 +29,7 @@ src/
   bench/        Benchmark harness CLI
   otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
   otutil/       [util] extra: brave, convert, excel, file, ground, tavily
+  otdesign/     [design] extra: figma
 
 tests/          All tests (smoke, unit, integration)
 dev/            Developer documentation (THIS folder)
@@ -64,7 +65,7 @@ openspec/       Specifications and proposals
 - ✅ Two markers required: speed (`smoke`|`unit`|`integration`|`slow`) + component (`core`|`bench`|`serve`|`tools`)
 - ✅ Run with: `uv run pytest` (never bare `pytest`)
 - ✅ Fixtures: Use shared fixtures from `conftest.py`
-- ✅ Test location mirrors source package: `src/otdev/` → `tests/otdev/`, `src/ottools/` → `tests/ottools/`, `src/otutil/` → `tests/otutil/`, core → `tests/`
+- ✅ Test location mirrors source package: `src/otdev/` → `tests/otdev/`, `src/ottools/` → `tests/ottools/`, `src/otutil/` → `tests/otutil/`, `src/otdesign/` → `tests/otdesign/`, core → `tests/`
 
 ### Paths
 - ✅ `.onetool/` paths: Use `resolve_ot_path()` from `ot.meta`
@@ -113,7 +114,7 @@ openspec/       Specifications and proposals
 ### Common Tasks
 
 **Create a new tool:**
-1. Add file: `src/ottools/mypack.py` (or `src/otdev/tools/`, `src/otutil/tools/`)
+1. Add file: `src/ottools/mypack.py` (or `src/otdev/tools/`, `src/otutil/tools/`, `src/otdesign/tools/`)
 2. Declare: `pack = "mypack"` and `__all__ = ["func1", "func2"]`
 3. Functions: Keyword-only args, type hints, docstrings, LogSpan
 4. Test: mirror source under `tests/` — e.g. `src/otdev/tools/foo.py` → `tests/otdev/unit/tools/test_foo.py`

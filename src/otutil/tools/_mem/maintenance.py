@@ -5,7 +5,7 @@ import builtins
 import uuid
 from typing import Any
 
-from ot.logging import LogSpan
+from otpack import LogSpan
 
 from .content import (
     _content_hash,

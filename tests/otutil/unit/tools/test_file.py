@@ -34,7 +34,7 @@ def mock_file_config(tmp_path: Path) -> Generator[None, None, None]:
 
     # Mock effective CWD to tmp_path for path resolution
     with (
-        patch("ot.paths.get_effective_cwd", return_value=tmp_path),
+        patch("otpack.paths.get_effective_cwd", return_value=tmp_path),
         patch("otutil.tools.file.get_tool_config", return_value=test_config),
     ):
         yield
@@ -1145,7 +1145,7 @@ def tiny_size_config(tmp_path: Path) -> Generator[None, None, None]:
         relative_paths=True,
     )
     with (
-        patch("ot.paths.get_effective_cwd", return_value=tmp_path),
+        patch("otpack.paths.get_effective_cwd", return_value=tmp_path),
         patch("otutil.tools.file.get_tool_config", return_value=small_config),
     ):
         yield
