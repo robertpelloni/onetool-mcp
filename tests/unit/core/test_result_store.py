@@ -201,7 +201,7 @@ class TestQuery:
         store, handle = self._make_store_with_handle("\n".join(lines))
         error_lines = [ln for ln in lines if "error" in ln]
         with patch(
-            "ot.ctx.search.ctx_grep",
+            "ot.ctx.grep.ctx_grep",
             return_value={"content": "\n".join(error_lines)},
         ):
             result = store.query(handle, search="error")
@@ -362,7 +362,7 @@ class TestTail:
         store, handle = self._make_store("\n".join(lines))
         error_lines = ["error: one", "error: two", "error: three"]
         with patch(
-            "ot.ctx.search.ctx_grep",
+            "ot.ctx.grep.ctx_grep",
             return_value={"content": "\n".join(error_lines)},
         ):
             result = store.query(handle, search="error", tail=2)
@@ -396,7 +396,7 @@ class TestContext:
         lines = ["a", "b", "TARGET", "d", "e"]
         store, handle = self._make_store("\n".join(lines))
         with patch(
-            "ot.ctx.search.ctx_grep",
+            "ot.ctx.grep.ctx_grep",
             return_value={"content": "b\nTARGET\nd"},
         ):
             result = store.query(handle, search="TARGET", context=1)
@@ -512,7 +512,7 @@ class TestOtResult:
     def test_result_with_search(self) -> None:
         error_lines = ["error: failed", "error: another"]
         with patch(
-            "ot.ctx.search.ctx_grep",
+            "ot.ctx.grep.ctx_grep",
             return_value={"content": "\n".join(error_lines)},
         ):
             from ot.meta import result

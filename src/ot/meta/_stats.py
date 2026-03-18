@@ -176,7 +176,7 @@ def result(
         offset: Starting line number (1-indexed, like Claude's Read tool)
         limit: Maximum lines to return (default 100)
         search: Regex pattern to filter lines — avoids full pagination
-        fuzzy: Use fuzzy matching instead of regex (optional)
+        fuzzy: Deprecated — raises ValueError if True. Use ctx.ask() for natural-language queries.
         tail: Return last N lines — useful for logs/output without knowing total
         context: Lines of context before/after each search match (like grep -C)
 
@@ -199,11 +199,10 @@ def result(
         ot.result(handle="abc123", offset=101, limit=50)    # next page
         ot.result(handle="abc123", search="error")          # only error lines
         ot.result(handle="abc123", search="fail", context=3)# matches + 3 lines around each
-        ot.result(handle="abc123", search="config", fuzzy=True)
         ot.result(handle="abc123", tail=20)                 # last 20 lines
     """
+    from ot.ctx.grep import ctx_grep
     from ot.ctx.read import ctx_read
-    from ot.ctx.search import ctx_grep
 
     # Validate offset and limit (1-indexed)
     if offset < 1:
@@ -222,8 +221,13 @@ def result(
     ) as s:
         try:
             if search:
-                # Delegate to ctx_grep for search/fuzzy/context
-                grep_result = ctx_grep(handle, search, context=context, fuzzy=fuzzy)
+                if fuzzy:
+                    raise ValueError(
+                        "fuzzy=True is no longer supported; "
+                        "use ctx.ask() for natural-language queries or ctx.grep() for regex."
+                    )
+                # Delegate to ctx_grep for search/context
+                grep_result = ctx_grep(handle, search, context=context)
                 if "error" in grep_result:
                     raise ValueError(grep_result["error"])
                 all_lines = grep_result["content"].splitlines() if grep_result["content"] else []

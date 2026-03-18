@@ -26,6 +26,7 @@ dependencies = [
     "mcp>=1.26.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
+    "jmespath>=1.0.1",
     "pyyaml>=6.0.3",
     "rich>=14.3.3",
     "typer>=0.24.1",
@@ -95,6 +96,7 @@ dev = [
     "pytest-sugar>=1.1.1",
     "ruff>=0.15.5",
     "types-aiofiles>=25.1.0.20251011",
+    "types-jmespath>=1.0.2",
     "types-pyyaml>=6.0.12.20250915",
 ]
 

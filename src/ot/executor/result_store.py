@@ -1,7 +1,6 @@
 """Large output result store for OneTool — thin wrapper over the ctx pack.
 
-The file-based implementation has been replaced with the SQLite+FTS5 ctx backend.
-The ResultStore class interface is preserved so existing call sites continue to work.
+The ResultStore class provides a stable interface over the ctx flat-file backend.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ class StoredResult:
     size_bytes: int
     summary: str
     preview: str
-    status: str = "pending"
+    status: str = "ready"
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to summary dictionary for MCP response."""
@@ -154,8 +153,13 @@ class ResultStore:
             ValueError: If handle not found or expired
         """
         if search:
-            from ot.ctx.search import ctx_grep
-            result = ctx_grep(handle, search, context=context, fuzzy=fuzzy)
+            if fuzzy:
+                raise ValueError(
+                    "fuzzy=True is no longer supported; "
+                    "use ctx.ask() for natural-language queries or ctx.grep() for regex."
+                )
+            from ot.ctx.grep import ctx_grep
+            result = ctx_grep(handle, search, context=context)
             if "error" in result:
                 raise ValueError(result["error"])
             all_lines = result["content"].splitlines() if result["content"] else []

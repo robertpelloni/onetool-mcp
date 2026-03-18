@@ -1,64 +1,40 @@
 """Maintenance tools for the ctx pack: delete and purge."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from ot.logging import LogSpan
-from ot.utils.fs import unlink_tracking_bytes
 
-from .db import _get_connection, delete_fts_for_handle, now_ts
+from .store import HandleStore, _get_store, _resolve_handle, now_ts
 
 log = LogSpan
-
-
-# ---------------------------------------------------------------------------
-# ctx_delete
-# ---------------------------------------------------------------------------
 
 
 def ctx_delete(
     handle: str,
     *,
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> dict[str, Any]:
-    """Delete a single handle and all associated data.
+    """Delete a single handle and both associated files.
 
-    Also unlinks the backing file if is_file=1.
+    Args:
+        handle: Context store handle to delete.
+        store: HandleStore instance (uses session default if not provided).
     """
     with log(span="ctx.delete", handle=handle):
-        if db is None:
-            db = _get_connection()
+        if store is None:
+            store = _get_store()
 
-        row = db.execute(
-            "SELECT is_file FROM results WHERE handle=?", (handle,)
-        ).fetchone()
-        if row is None:
+        try:
+            handle = _resolve_handle(handle)
+        except TypeError as e:
+            return {"error": str(e)}
+
+        if not store.exists(handle):
             return {"error": f"Handle not found: {handle}"}
 
-        # File pointer cleanup
-        if row["is_file"]:
-            body_row = db.execute("SELECT body FROM content WHERE handle=?", (handle,)).fetchone()
-            if body_row:
-                unlink_tracking_bytes(Path(body_row["body"]))
-
-        # FTS5 manual cleanup (no FK support)
-        delete_fts_for_handle(db, handle)
-
-        # CASCADE deletes content, vocabulary, chunk_embeddings
-        db.execute("DELETE FROM results WHERE handle=?", (handle,))
-        db.commit()
-
-        # Remove threading.Event
-        from .write import _remove_event
-        _remove_event(handle)
-
+        store.delete(handle)
         return {"deleted": handle}
-
-
-# ---------------------------------------------------------------------------
-# ctx_purge
-# ---------------------------------------------------------------------------
 
 
 def ctx_purge(
@@ -67,22 +43,24 @@ def ctx_purge(
     minutes: int = 15,
     source: str = "",
     status: str = "",
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> dict[str, Any]:
-    """Delete handles and compact the database.
+    """Delete handles matching the given filters.
 
-    With no filters: deletes handles older than ``minutes`` (default 15), then compacts.
-    With ``delete_all=True``: ignores the age filter — deletes every handle that matches
-    the ``source``/``status`` filters (or all handles when no filters are given).
-    With ``source``/``status``: bulk-deletes matching handles older than ``minutes``.
+    With no filters: deletes handles older than ``minutes`` (default 15).
+    With ``delete_all=True``: ignores the age filter — deletes every handle
+    that matches the ``source``/``status`` filters (or all handles when no
+    filters are given).
+    With ``source``/``status``: bulk-deletes matching handles older than
+    ``minutes``.
 
     Args:
         delete_all: If True, bypass the age filter. Source/status filters still apply.
         minutes: Delete handles older than this many minutes. Must be positive.
             Ignored when ``delete_all=True``.
         source: Source substring filter (case-insensitive).
-        status: Status filter ("pending", "indexing", "ready", "failed").
-        db: SQLite connection (uses module default if not provided).
+        status: Status filter ("ready", "failed").
+        store: HandleStore instance (uses session default if not provided).
 
     Returns:
         Dict with "deleted" (handle count) and "bytes_freed" (content bytes removed).
@@ -91,7 +69,7 @@ def ctx_purge(
         ValueError: If ``minutes`` is zero or negative.
 
     Examples:
-        ctx.purge()                                 # delete handles older than 15 min + compact
+        ctx.purge()                                 # delete handles older than 15 min
         ctx.purge(delete_all=True)                  # wipe everything
         ctx.purge(minutes=60)                       # delete handles older than 1 hour
         ctx.purge(source="brave")                   # delete brave handles older than 15 min
@@ -109,52 +87,33 @@ def ctx_purge(
         source=source or None,
         status=status or None,
     ) as s:
-        if db is None:
-            db = _get_connection()
-
-        # -- Determine which handles to delete -----------------------------------
+        if store is None:
+            store = _get_store()
 
         cutoff_ts = None if delete_all else (now_ts() - minutes * 60)
+        all_meta = store.list_handles()
 
-        rows = db.execute(
-            "SELECT handle, source, status, created_at, is_file, size_bytes FROM results"
-        ).fetchall()
-
-        to_delete = []
-        for row in rows:
-            if cutoff_ts is not None and row["created_at"] > cutoff_ts:
+        to_delete: list[dict[str, Any]] = []
+        for meta in all_meta:
+            if cutoff_ts is not None and meta.get("created_at", 0) > cutoff_ts:
                 continue
-            if source and source.lower() not in (row["source"] or "").lower():
+            if source and source.lower() not in (meta.get("source") or "").lower():
                 continue
-            if status and row["status"] != status:
+            if status and meta.get("status") != status:
                 continue
-            to_delete.append(row)
+            to_delete.append(meta)
 
-        bytes_freed = sum(row["size_bytes"] or 0 for row in to_delete)
+        bytes_freed = sum(m.get("size_bytes", 0) for m in to_delete)
+        deleted = 0
 
-        from .write import _remove_event
-        for row in to_delete:
-            handle = row["handle"]
-            if row["is_file"]:
-                body_row = db.execute("SELECT body FROM content WHERE handle=?", (handle,)).fetchone()
-                if body_row:
-                    unlink_tracking_bytes(Path(body_row["body"]))
-            delete_fts_for_handle(db, handle)
-            db.execute("DELETE FROM results WHERE handle=?", (handle,))
-            _remove_event(handle)
-
-        db.commit()
-        deleted = len(to_delete)
-
-        if deleted > 0:
-            db.execute("VACUUM")
+        for meta in to_delete:
+            handle = meta["handle"]
+            store.delete(handle)
+            deleted += 1
 
         s.add("deleted", deleted)
         s.add("bytes_freed", bytes_freed)
         return {"deleted": deleted, "bytes_freed": bytes_freed}
 
 
-__all__ = [
-    "ctx_delete",
-    "ctx_purge",
-]
+__all__ = ["ctx_delete", "ctx_purge"]

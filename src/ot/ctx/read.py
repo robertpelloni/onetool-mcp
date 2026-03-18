@@ -1,16 +1,23 @@
-"""Read and TOC operations for the ctx pack."""
+"""Read operation for the ctx pack."""
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from ot.logging import LogSpan
 
-from .db import _get_connection, get_content, is_expired, ttl_remaining
+from .config import Config, _get_config
+from .store import HandleStore, _get_store, _resolve_handle, is_expired
+from .toc import ctx_toc
 
 log = LogSpan
 
-_HEADING_RE = re.compile(r"^(#{1,4})\s+(.*)")
+
+def _truncate_line(line: str, max_chars: int) -> str:
+    """Truncate a line to max_chars with a [+N chars] suffix if needed."""
+    if len(line) <= max_chars:
+        return line
+    omitted = len(line) - max_chars
+    return line[:max_chars] + f"  [+{omitted} chars]"
 
 
 def ctx_read(
@@ -20,7 +27,8 @@ def ctx_read(
     limit: int = 100,
     tail: int = 0,
     mode: str = "",
-    db: Any = None,
+    store: HandleStore | None = None,
+    config: Config | None = None,
 ) -> dict[str, Any]:
     """Return paginated raw content from a stored handle.
 
@@ -30,11 +38,19 @@ def ctx_read(
         limit: Max lines to return (default 100)
         tail: Return last N lines, overrides offset/limit
         mode: "toc" → return table of contents; "meta" → return metadata
-        db: SQLite connection (uses shared connection if None)
+        store: HandleStore instance (uses session default if not provided)
+        config: Pack config (uses module default if not provided)
     """
     with log(span="ctx.read", handle=handle, mode=mode or None) as s:
-        if db is None:
-            db = _get_connection()
+        if config is None:
+            config = _get_config()
+        if store is None:
+            store = _get_store()
+
+        try:
+            handle = _resolve_handle(handle)
+        except TypeError as e:
+            return {"error": str(e)}
 
         # Validate args
         if offset < 1:
@@ -42,56 +58,55 @@ def ctx_read(
         if limit < 1:
             return {"error": f"limit must be >= 1, got {limit}"}
 
-        row = db.execute(
-            "SELECT handle, source, size_bytes, total_lines, status, created_at, "
-            "expires_at, access_count, is_file FROM results WHERE handle=?",
-            (handle,),
-        ).fetchone()
-
-        if row is None:
+        if not store.exists(handle):
             return {"error": f"Handle not found: {handle}"}
 
-        if is_expired(row):
+        try:
+            meta = store.read_meta(handle)
+        except (OSError, ValueError):
+            return {"error": f"Handle not found: {handle}"}
+
+        if is_expired(meta):
             return {"error": f"Handle has expired: {handle}"}
 
-        # Increment access_count
-        db.execute(
-            "UPDATE results SET access_count = access_count + 1 WHERE handle=?",
-            (handle,),
-        )
-        db.commit()
+        # Unknown mode
+        if mode and mode not in ("toc", "meta"):
+            return {"error": f"Invalid mode {mode!r}. Valid modes: 'toc', 'meta'"}
 
-        # mode=meta
+        # mode=meta — return metadata fields without reading content
         if mode == "meta":
+            # Increment access_count
+            meta["access_count"] = meta.get("access_count", 0) + 1
+            store.update_meta(handle, meta)
             return {
-                "handle": row["handle"],
-                "source": row["source"],
-                "size_bytes": row["size_bytes"],
-                "total_lines": row["total_lines"],
-                "status": row["status"],
-                "created_at": row["created_at"],
-                "access_count": row["access_count"] + 1,
-                "ttl_remaining": int(ttl_remaining(row)),
+                "handle": meta["handle"],
+                "source": meta.get("source", ""),
+                "format": meta.get("format", "text"),
+                "size_bytes": meta.get("size_bytes", 0),
+                "total_lines": meta.get("total_lines", 0),
+                "status": meta.get("status", "ready"),
+                "created_at": meta.get("created_at"),
+                "access_count": meta["access_count"],
             }
 
         # mode=toc
         if mode == "toc":
-            return ctx_toc(handle, db=db)
+            # Increment access_count
+            meta["access_count"] = meta.get("access_count", 0) + 1
+            store.update_meta(handle, meta)
+            return ctx_toc(handle, store=store)
 
-        # Unknown mode
-        if mode:
-            return {"error": f"Invalid mode {mode!r}. Valid modes: 'toc', 'meta'"}
-
-        # Raw content
-        content = get_content(db, handle, is_file=row["is_file"])
-        if content is None:
+        # Raw content read
+        try:
+            content = store.read_content(handle)
+        except OSError:
             return {"error": f"Content not found for handle: {handle}"}
 
         lines = content.splitlines()
         total_lines = len(lines)
+        max_chars = config.max_line_chars
 
         if tail > 0:
-            # tail overrides offset/limit
             actual_limit = min(tail, total_lines)
             start_idx = max(0, total_lines - actual_limit)
             end_idx = total_lines
@@ -101,15 +116,20 @@ def ctx_read(
             start_idx = offset - 1
             end_idx = start_idx + limit
 
-        result_lines = lines[start_idx:end_idx]
+        result_lines = [_truncate_line(ln, max_chars) for ln in lines[start_idx:end_idx]]
         returned = len(result_lines)
         has_more = end_idx < total_lines
         end_line = offset + returned - 1
+
         if total_lines == 0:
             progress = "empty (0 lines)"
         else:
             pct = int((end_line / total_lines) * 100)
             progress = f"lines {offset}-{end_line} of {total_lines} ({pct}%)"
+
+        # Increment access_count
+        meta["access_count"] = meta.get("access_count", 0) + 1
+        store.update_meta(handle, meta)
 
         result: dict[str, Any] = {
             "handle": handle,
@@ -119,7 +139,7 @@ def ctx_read(
             "offset": offset,
             "has_more": has_more,
             "progress": progress,
-            "total_size_bytes": row["size_bytes"],
+            "total_size_bytes": meta.get("size_bytes", 0),
         }
         if has_more:
             next_offset = offset + returned
@@ -130,86 +150,4 @@ def ctx_read(
         return result
 
 
-def ctx_toc(
-    handle: str,
-    *,
-    db: Any = None,
-) -> dict[str, Any]:
-    """Return a numbered section index for a handle.
-
-    If the handle is ready, returns section list from the chunks table.
-    If still pending/indexing, fast-paths on raw content headings.
-    """
-    with log(span="ctx.toc", handle=handle) as s:
-        if db is None:
-            db = _get_connection()
-
-        row = db.execute(
-            "SELECT status, source, size_bytes, total_lines FROM results WHERE handle=?",
-            (handle,),
-        ).fetchone()
-        if row is None:
-            return {"error": f"Handle not found: {handle}"}
-
-        status = row["status"]
-
-        if status == "ready":
-            # Build TOC from chunks table
-            chunks = db.execute(
-                "SELECT chunk_idx, title, start_line, end_line FROM chunks WHERE handle=? ORDER BY chunk_idx",
-                (handle,),
-            ).fetchall()
-
-            sections = [
-                {
-                    "section": i + 1,
-                    "title": c["title"] or f"Section {i + 1}",
-                    "start_line": c["start_line"],
-                    "end_line": c["end_line"],
-                }
-                for i, c in enumerate(chunks)
-            ]
-
-            # Vocabulary hints
-            vocab_rows = db.execute(
-                "SELECT term FROM vocabulary WHERE handle=? ORDER BY score DESC LIMIT 10",
-                (handle,),
-            ).fetchall()
-            vocab = [r["term"] for r in vocab_rows]
-
-            s.add("sections", len(sections))
-            return {
-                "handle": handle,
-                "sections": sections,
-                "total_sections": len(sections),
-                "vocabulary": vocab,
-            }
-        else:
-            # Fast-path: parse headings from raw content
-            content = get_content(db, handle)
-            if content is None:
-                return {"error": f"Content not found for handle: {handle}"}
-
-            sections = []
-            for i, line in enumerate(content.splitlines(), start=1):
-                m = _HEADING_RE.match(line)
-                if m:
-                    sections.append({
-                        "section": len(sections) + 1,
-                        "title": m.group(2).strip(),
-                        "start_line": i,
-                        "end_line": i,  # approximate
-                    })
-
-            s.add("sections", len(sections))
-            s.add("status", status)
-            return {
-                "handle": handle,
-                "sections": sections,
-                "total_sections": len(sections),
-                "status": status,
-                "note": "Indexing not complete — section boundaries are approximate",
-            }
-
-
-__all__ = ["ctx_read", "ctx_toc"]
+__all__ = ["ctx_read"]

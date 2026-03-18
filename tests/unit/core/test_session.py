@@ -152,16 +152,16 @@ class TestPurgeOldSessions:
 
 @pytest.mark.unit
 @pytest.mark.core
-class TestCtxDbPath:
-    def test_get_db_path_resolves_to_session_dir(self, tmp_path: Path) -> None:
-        from ot.ctx.db import get_db_path
+class TestCtxStorePath:
+    def test_get_store_resolves_to_session_dir(self, tmp_path: Path) -> None:
+        from ot.ctx.store import _get_store
 
         session_dir = tmp_path / "2026-03-04-aabbccdd"
         session_dir.mkdir()
         with patch("ot.utils.session.get_session_dir", return_value=session_dir):
-            db_path = get_db_path()
+            store = _get_store()
 
-        assert db_path == session_dir / "ctx.db"
+        assert store._dir == session_dir / "ctx"
 
 
 @pytest.mark.unit

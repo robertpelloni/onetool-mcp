@@ -14,14 +14,10 @@ class Config(BaseModel):
         ge=0,
         description="Handle TTL in seconds (0 = no expiry)",
     )
-    embedding_model: str = Field(
-        default="",
-        description="Embedding model name; empty = embeddings disabled",
-    )
-    max_inline_bytes: int = Field(
-        default=1048576,
-        ge=0,
-        description="Content > this size is stored as a file pointer (bytes)",
+    max_line_chars: int = Field(
+        default=500,
+        ge=1,
+        description="Lines longer than this are truncated with a [+N chars] suffix",
     )
     ask_max_bytes: int = Field(
         default=204800,

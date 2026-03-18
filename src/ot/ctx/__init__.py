@@ -1,12 +1,16 @@
 """Smart context store for OneTool tool outputs."""
 from __future__ import annotations
 
+from .append import ctx_append
 from .ask import ctx_ask
+from .grep import ctx_grep
 from .maintenance import ctx_delete, ctx_purge
 from .management import ctx_inspect, ctx_list, ctx_stats
-from .read import ctx_read, ctx_toc
-from .search import ctx_grep, ctx_search, ctx_slice
-from .write import ctx_append, ctx_write
+from .query import ctx_query
+from .read import ctx_read
+from .slice import ctx_slice
+from .toc import ctx_toc
+from .write import ctx_write
 
 __all__ = [
     "ctx_append",
@@ -16,8 +20,8 @@ __all__ = [
     "ctx_inspect",
     "ctx_list",
     "ctx_purge",
+    "ctx_query",
     "ctx_read",
-    "ctx_search",
     "ctx_slice",
     "ctx_stats",
     "ctx_toc",

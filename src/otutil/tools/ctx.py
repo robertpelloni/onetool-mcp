@@ -1,34 +1,34 @@
 """Smart context store for OneTool tool outputs.
 
-TTL-expiring, BM25-indexed storage for large tool outputs.
+Flat-file TTL-expiring storage for large tool outputs.
 Replace context-window saturation with targeted retrieval.
 
 Tools:
-    write    - Store content, get handle + preview (~1ms)
+    write    - Store content, get handle + format info (~1ms, synchronous)
     read     - Paginated raw content, TOC, or metadata
-    search   - BM25 section search with three-layer fallback
-    grep     - Regex / fuzzy line search with context
+    grep     - Regex line search with context and truncation
     slice    - Extract by section number, heading, or line range
-    toc      - Numbered section index with vocabulary hints
+    toc      - Format-aware table of contents (markdown headings / json keys)
+    query    - jmespath query on json or yaml handles
     ask      - Multi-question LLM query over stored content (optional)
-    append   - Add content and rebuild index
+    append   - Add content and update format/TOC
     list     - All active handles
     inspect  - Detailed metadata for one handle
     stats    - Session storage metrics
     delete   - Remove one handle
-    purge    - Delete handles (expired, all, or by filter) + compact DB
+    purge    - Delete handles (expired, all, or by filter)
 """
 from __future__ import annotations
 
 # Pack for dot notation: ot_context.write() or ctx.write() (short alias)
 pack = "ot_context"
 
-# No external dependencies — uses stdlib sqlite3 only
+# No external dependencies beyond stdlib + jmespath (already a core dep)
 __ot_requires__: dict[str, str] = {}
 
 __all__ = [
-    "append", "ask", "delete", "grep", "inspect", "list", "purge", "read",
-    "search", "slice", "stats", "toc", "write",
+    "append", "ask", "delete", "grep", "inspect", "list", "purge", "query",
+    "read", "slice", "stats", "toc", "write",
 ]
 
 from ot.ctx import (
@@ -53,10 +53,10 @@ from ot.ctx import (
     ctx_purge as purge,
 )
 from ot.ctx import (
-    ctx_read as read,
+    ctx_query as query,
 )
 from ot.ctx import (
-    ctx_search as search,
+    ctx_read as read,
 )
 from ot.ctx import (
     ctx_slice as slice,

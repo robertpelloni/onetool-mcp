@@ -1,41 +1,29 @@
 """Management tools for the ctx pack: list, inspect, stats."""
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ot.logging import LogSpan
 
-from .db import _get_connection, get_db_path, is_expired, ttl_remaining
-
-
-def _meta_get(row: Any, key: str) -> Any:
-    """Extract a key from the JSON meta column, returning None if missing."""
-    raw = row.get("meta", None) if hasattr(row, "get") else row["meta"]
-    if not raw:
-        return None
-    try:
-        return json.loads(raw).get(key)
-    except (json.JSONDecodeError, AttributeError):
-        return None
+from .store import HandleStore, _get_store, _resolve_handle, is_expired, ttl_remaining
 
 log = LogSpan
 
-_VALID_STATUSES = {"pending", "indexing", "ready", "failed"}
+_VALID_STATUSES = {"ready", "failed"}
 
 
 def ctx_list(
     *,
     source: str = "",
     status: str = "",
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> list[dict[str, Any]]:
     """Return all active (non-expired) handles with summary information.
 
     Args:
         source: Filter by source substring (case-insensitive)
-        status: Filter by status ("pending", "indexing", "ready", "failed")
-        db: SQLite connection
+        status: Filter by status ("ready", "failed")
+        store: HandleStore instance (uses session default if not provided)
     """
     if status and status not in _VALID_STATUSES:
         raise ValueError(
@@ -43,35 +31,31 @@ def ctx_list(
         )
 
     with log(span="ctx.list", source=source or None, status=status or None) as s:
-        if db is None:
-            db = _get_connection()
+        if store is None:
+            store = _get_store()
 
-        rows = db.execute(
-            "SELECT handle, source, size_bytes, total_lines, status, expires_at, meta "
-            "FROM results "
-            "WHERE (expires_at IS NULL OR expires_at > unixepoch()) "
-            "AND (:status = '' OR status = :status) "
-            "AND (:source = '' OR LOWER(source) LIKE '%' || LOWER(:source) || '%') "
-            "ORDER BY rowid DESC",
-            {"status": status, "source": source},
-        ).fetchall()
+        all_meta = store.list_handles()
+        active: list[dict[str, Any]] = []
 
-        active = []
-        for row in rows:
-            if is_expired(row):  # safety net for sub-second races
+        for meta in all_meta:
+            if is_expired(meta):
                 continue
-            handle = row["handle"]
-            entry: dict[str, Any] = {
+            if source and source.lower() not in (meta.get("source") or "").lower():
+                continue
+            if status and meta.get("status") != status:
+                continue
+
+            handle = meta["handle"]
+            active.append({
                 "handle": handle,
-                "source": row["source"] or "",
-                "size_bytes": row["size_bytes"],
-                "total_lines": row["total_lines"],
-                "status": row["status"],
-                "abstract": _meta_get(row, "abstract"),
+                "source": meta.get("source") or "",
+                "format": meta.get("format", "text"),
+                "size_bytes": meta.get("size_bytes", 0),
+                "total_lines": meta.get("total_lines", 0),
+                "status": meta.get("status", "ready"),
                 "command": f"ctx.read('{handle}')",
-                "ttl_remaining": int(ttl_remaining(row)),
-            }
-            active.append(entry)
+                "ttl_remaining": int(ttl_remaining(meta)),
+            })
 
         s.add("count", len(active))
         return active
@@ -80,85 +64,74 @@ def ctx_list(
 def ctx_inspect(
     handle: str,
     *,
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> dict[str, Any]:
     """Return detailed metadata for a single handle.
 
     Args:
         handle: Context store handle
-        db: SQLite connection
+        store: HandleStore instance (uses session default if not provided)
     """
     with log(span="ctx.inspect", handle=handle):
-        if db is None:
-            db = _get_connection()
+        if store is None:
+            store = _get_store()
 
-        row = db.execute(
-            "SELECT handle, source, size_bytes, total_lines, status, created_at, "
-            "expires_at, access_count, is_file, meta FROM results WHERE handle=?",
-            (handle,),
-        ).fetchone()
-        if row is None:
+        try:
+            handle = _resolve_handle(handle)
+        except TypeError as e:
+            return {"error": str(e)}
+
+        if not store.exists(handle):
             return {"error": f"Handle not found: {handle}"}
 
-        counts = db.execute(
-            "SELECT"
-            " (SELECT COUNT(*) FROM chunks WHERE handle=?) as chunk_count,"
-            " (SELECT COUNT(*) FROM vocabulary WHERE handle=?) as vocab_size,"
-            " (SELECT COUNT(*) FROM chunk_embeddings WHERE handle=?) as emb_count",
-            (handle, handle, handle),
-        ).fetchone()
-        chunk_count = counts["chunk_count"]
-        vocab_size = counts["vocab_size"]
-        emb_count = counts["emb_count"]
+        try:
+            meta = store.read_meta(handle)
+        except (OSError, ValueError):
+            return {"error": f"Handle not found: {handle}"}
+
+        toc: list[dict[str, Any]] = meta.get("toc", [])
 
         return {
-            "handle": row["handle"],
-            "source": row["source"] or "",
-            "size_bytes": row["size_bytes"],
-            "total_lines": row["total_lines"],
-            "status": row["status"],
-            "abstract": _meta_get(row, "abstract"),
-            "created_at": row["created_at"],
-            "access_count": row["access_count"],
-            "is_file_pointer": bool(row["is_file"]),
-            "chunk_count": chunk_count,
-            "vocab_size": vocab_size,
-            "has_embeddings": emb_count > 0,
-            "ttl_remaining": int(ttl_remaining(row)),
+            "handle": meta["handle"],
+            "source": meta.get("source") or "",
+            "format": meta.get("format", "text"),
+            "size_bytes": meta.get("size_bytes", 0),
+            "total_lines": meta.get("total_lines", 0),
+            "status": meta.get("status", "ready"),
+            "created_at": meta.get("created_at"),
+            "access_count": meta.get("access_count", 0),
+            "toc_entries": len(toc),
+            "ttl_remaining": int(ttl_remaining(meta)),
         }
 
 
 def ctx_stats(
     *,
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> dict[str, Any]:
-    """Return session-level storage and savings metrics.
+    """Return session-level storage metrics.
 
-    Returns total_handles, handles_by_status, total_bytes_stored,
-    estimated_tokens_saved, db_size_bytes.
+    Returns total_handles, handles_by_status (dict), total_bytes_stored,
+    estimated_tokens_saved.
     """
     with log(span="ctx.stats") as s:
-        if db is None:
-            db = _get_connection()
+        if store is None:
+            store = _get_store()
 
-        rows = db.execute(
-            "SELECT status, COUNT(*) as cnt, SUM(size_bytes) as total_bytes FROM results GROUP BY status"
-        ).fetchall()
-
+        all_meta = store.list_handles()
         handles_by_status: dict[str, int] = {}
         total_bytes = 0
         total_handles = 0
 
-        for row in rows:
-            handles_by_status[row["status"]] = row["cnt"]
-            total_bytes += row["total_bytes"] or 0
-            total_handles += row["cnt"]
+        for meta in all_meta:
+            if is_expired(meta):
+                continue
+            st = meta.get("status", "ready")
+            handles_by_status[st] = handles_by_status.get(st, 0) + 1
+            total_bytes += meta.get("size_bytes", 0)
+            total_handles += 1
 
         estimated_tokens_saved = total_bytes // 4
-
-        # DB file size
-        db_path = get_db_path()
-        db_size = db_path.stat().st_size if db_path.exists() else 0
 
         s.add("total_handles", total_handles)
         s.add("total_bytes", total_bytes)
@@ -167,7 +140,6 @@ def ctx_stats(
             "handles_by_status": handles_by_status,
             "total_bytes_stored": total_bytes,
             "estimated_tokens_saved": estimated_tokens_saved,
-            "db_size_bytes": db_size,
         }
 
 

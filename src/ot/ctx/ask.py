@@ -7,14 +7,11 @@ from typing import Any
 from ot.logging import LogSpan
 
 from .config import _get_config
-from .db import _get_connection, get_content
+from .store import HandleStore, _get_store, is_expired
 
 
 def _parse_numbered_answers(result: str, n: int) -> list[str]:
-    """Parse numbered answers from model response.
-
-    Mirrors the parser used by img.ask (vision.py ``ask_questions``).
-    """
+    """Parse numbered answers from model response."""
     answers: list[str] = []
     current_lines: list[str] = []
     _num_pat = re.compile(r"^\s*(?:[#*]+\s*)?(\d+)[.)]\s*(?:[#*]*\s*)?")
@@ -29,7 +26,6 @@ def _parse_numbered_answers(result: str, n: int) -> list[str]:
     if current_lines:
         answers.append("\n".join(current_lines).strip())
 
-    # Pad with empty strings if the model under-answered
     while len(answers) < n:
         answers.append("")
     return answers[:n]
@@ -40,22 +36,22 @@ def ctx_ask(
     q: str | list[str],
     *,
     model: str | None = None,
-    db: Any = None,
+    store: HandleStore | None = None,
 ) -> dict[str, Any]:
     """Send one or more questions about stored content to an LLM.
 
     Multiple questions are batched into a single model call and answers
-    are returned in the same order. Mirrors the ``img.ask`` interface.
+    are returned in the same order.
 
     Args:
         handle: Context store handle (e.g. ``"3539ec02"``).
         q: Question string or list of question strings.
         model: LLM model override; falls back to ``ot_llm`` configured default.
+        store: HandleStore instance (uses session default if not provided).
 
     Returns:
         ``{"handle": str, "result": [{"question": str, "answer": str}]}`` on
-        success. ``{"handle": str, "error": str}`` on failure (handle not
-        found, ``ot_llm`` not configured).
+        success. ``{"handle": str, "error": str}`` on failure.
 
     Example:
         ctx.ask("3539ec02", q="What is the recommended entry point?")
@@ -64,21 +60,29 @@ def ctx_ask(
     questions = [q] if isinstance(q, str) else list(q)
 
     with LogSpan(span="ctx.ask", handle=handle, questionCount=len(questions)) as s:
-        if db is None:
-            db = _get_connection()
+        if store is None:
+            store = _get_store()
 
-        row = db.execute(
-            "SELECT handle, status, is_file FROM results WHERE handle=?", (handle,)
-        ).fetchone()
-        if row is None:
+        if not store.exists(handle):
             err = f"Handle not found: {handle}"
             s.add(error=err)
             return {"handle": handle, "error": err}
 
-        status = row["status"]
+        try:
+            meta = store.read_meta(handle)
+        except (OSError, ValueError):
+            err = f"Handle not found: {handle}"
+            s.add(error=err)
+            return {"handle": handle, "error": err}
 
-        content = get_content(db, handle, is_file=row["is_file"])
-        if content is None:
+        if is_expired(meta):
+            err = f"Handle has expired: {handle}"
+            s.add(error=err)
+            return {"handle": handle, "error": err}
+
+        try:
+            content = store.read_content(handle)
+        except OSError:
             err = f"Content not found for handle: {handle}"
             s.add(error=err)
             return {"handle": handle, "error": err}
@@ -144,10 +148,8 @@ def ctx_ask(
             result["truncated"] = True
             result["hint"] = (
                 "Content was truncated to ask_max_bytes. "
-                "Use ctx.search() or ctx.slice() to narrow scope before re-querying."
+                "Use ctx.slice() to narrow scope before re-querying."
             )
-        if status in ("indexing", "pending"):
-            result["warning"] = f"Handle is still {status}; answers may be incomplete."
 
         s.add(questionCount=len(questions), truncated=truncated or None)
         return result
