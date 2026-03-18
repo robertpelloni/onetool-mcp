@@ -424,25 +424,30 @@ class ProxyManager:
             self._initialized = True
             return
 
-        with LogSpan(span="proxy.init", serverCount=len(enabled_configs)) as span:
-            connected = 0
-            failed = 0
+        try:
+            with LogSpan(span="proxy.init", serverCount=len(enabled_configs)) as span:
+                connected = 0
+                failed = 0
 
-            for name, config in enabled_configs.items():
-                try:
-                    await self._connect_server(name, config)
-                    connected += 1
-                    self._errors.pop(name, None)  # Clear any previous error
-                except Exception as e:
-                    failed += 1
-                    self._errors[name] = str(e)
-                    logger.warning(f"Failed to connect to MCP server '{name}': {e}")
+                for name, config in enabled_configs.items():
+                    try:
+                        await self._connect_server(name, config)
+                        connected += 1
+                        self._errors.pop(name, None)  # Clear any previous error
+                    except asyncio.CancelledError:
+                        failed += 1
+                        self._errors[name] = "cancelled"
+                        raise
+                    except Exception as e:
+                        failed += 1
+                        self._errors[name] = str(e)
+                        logger.warning(f"Failed to connect to MCP server '{name}': {e}")
 
-            span.add("connected", connected)
-            span.add("failed", failed)
-            span.add("toolCount", self.tool_count)
-
-        self._initialized = True
+                span.add("connected", connected)
+                span.add("failed", failed)
+                span.add("toolCount", self.tool_count)
+        finally:
+            self._initialized = True
 
     def connect_background(self, configs: dict[str, McpServerConfig]) -> asyncio.Task[None]:
         """Start connecting to proxy servers in the background.
@@ -489,8 +494,8 @@ class ProxyManager:
                     f"Connected to {config.type} MCP server '{name}' with {len(tools)} tools"
                 )
 
-            except Exception:
-                # Clean up on failure
+            except BaseException:
+                # Clean up on failure — catches CancelledError too
                 await client.__aexit__(None, None, None)  # type: ignore[no-untyped-call]
                 raise
 

@@ -557,6 +557,80 @@ class TestProxyManagerPrompts:
 
 @pytest.mark.unit
 @pytest.mark.core
+class TestProxyManagerCancelledError:
+    """Tests for CancelledError handling in connect() and _connect_server()."""
+
+    @pytest.mark.asyncio
+    async def test_connect_sets_initialized_on_cancellation(self) -> None:
+        """_initialized must be True even when CancelledError aborts the loop."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="node", args=["s.js"])
+
+        async def raise_cancelled(name: str, cfg: McpServerConfig) -> None:
+            raise asyncio.CancelledError
+
+        with patch.object(manager, "_connect_server", side_effect=raise_cancelled):
+            with contextlib.suppress(asyncio.CancelledError):
+                await manager.connect({"srv": config})
+
+        assert manager._initialized is True
+
+    @pytest.mark.asyncio
+    async def test_connect_records_error_on_cancellation(self) -> None:
+        """connect() should record a 'cancelled' error entry before re-raising."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="node", args=["s.js"])
+
+        async def raise_cancelled(name: str, cfg: McpServerConfig) -> None:
+            raise asyncio.CancelledError
+
+        with patch.object(manager, "_connect_server", side_effect=raise_cancelled):
+            with contextlib.suppress(asyncio.CancelledError):
+                await manager.connect({"srv": config})
+
+        assert manager._errors.get("srv") == "cancelled"
+
+    @pytest.mark.asyncio
+    async def test_connect_reraises_cancellederror(self) -> None:
+        """connect() must re-raise CancelledError so the task stays cancelled."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="node", args=["s.js"])
+
+        async def raise_cancelled(name: str, cfg: McpServerConfig) -> None:
+            raise asyncio.CancelledError
+
+        with patch.object(manager, "_connect_server", side_effect=raise_cancelled):
+            with pytest.raises(asyncio.CancelledError):
+                await manager.connect({"srv": config})
+
+    @pytest.mark.asyncio
+    async def test_connect_server_calls_aexit_on_cancellation(self) -> None:
+        """_connect_server() must call client.__aexit__ even on CancelledError."""
+        from ot.config.models import McpServerConfig
+
+        manager = ProxyManager()
+        config = McpServerConfig(type="stdio", command="node", args=["s.js"])
+
+        mock_client = MagicMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.list_tools = AsyncMock(side_effect=asyncio.CancelledError)
+
+        with patch.object(manager, "_create_client", return_value=mock_client):
+            with pytest.raises(asyncio.CancelledError):
+                await manager._connect_server("srv", config)
+
+        mock_client.__aexit__.assert_awaited_once_with(None, None, None)
+
+
+@pytest.mark.unit
+@pytest.mark.core
 class TestProxyManagerBackgroundConnect:
     """Tests for background proxy connection (connect_background / is_connecting)."""
 
