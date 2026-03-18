@@ -670,12 +670,6 @@ The `ot.result()` function SHALL query stored large outputs with pagination, fil
 - **THEN** it SHALL return only lines matching the regex pattern "error"
 - **AND** offset/limit SHALL apply to filtered results
 
-#### Scenario: Query with fuzzy matching
-- **GIVEN** a stored result containing "configuration"
-- **WHEN** `ot.result(handle="abc123", search="config", fuzzy=True)` is called
-- **THEN** it SHALL use fuzzy matching to find similar content
-- **AND** results SHALL be sorted by match score
-
 #### Scenario: Query with tail
 - **GIVEN** a stored result with N lines
 - **WHEN** `ot.result(handle="abc123", tail=20)` is called
@@ -738,12 +732,12 @@ When large output is stored, the returned summary SHALL include navigation hints
 - **WHEN** the `StoredResult` summary is returned
 - **THEN** it SHALL include a `usage` dict with keys:
   - `page`: fetch first page via `ctx.read`
-  - `search`: BM25 section search via `ctx.search`
-  - `toc`: view section index via `ctx.toc`
+  - `toc`: view structure via `ctx.toc` (headings for markdown, keys for json/yaml)
   - `grep`: regex line search via `ctx.grep`
+  - `query`: jmespath query via `ctx.query` (json/yaml handles)
+  - `page`: fetch first page via `ctx.read`
   - `tail`: fetch last N lines via `ctx.read`
 - **AND** each value SHALL be a ready-to-run `ctx.*` call containing the handle
-- **AND** response SHALL include `status` indicating whether indexing is complete
 
 ---
 

@@ -2,60 +2,91 @@
 
 ## Purpose
 
-Defines the `ctx` pack providing a smart-context store backed by SQLite+FTS5. The pack enables agents to store, index, search, and navigate large content blobs without filling the context window. Content is stored with a TTL, indexed asynchronously via BM25/FTS5, and accessible through a set of focused read/search/navigation tools.
+Defines the `ctx` pack providing a smart-context store backed by flat files. The pack enables agents to store, navigate, and query large content blobs without filling the context window. Content is stored with a TTL, format-detected on write, and accessible through a set of focused read/search/navigation/query tools.
 
 ## Requirements
 
 ### Requirement: Write Content to Context Store
 
-The `ctx.write()` function SHALL store content immediately, begin background indexing and abstract generation, and return a compact handle dict.
+The `ctx.write()` function SHALL store content synchronously, detect its format,
+normalise it, generate a TOC, and return a compact handle dict immediately.
 
-#### Scenario: Basic write
+#### Scenario: Basic write returns immediately
 - **WHEN** `ctx.write("some content")` is called
-- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`, `total_lines`, `content_type`, and `status`
-- **AND** `abstract` SHALL NOT be present in the immediate response (it is populated asynchronously by the background thread and stored in the `meta` column)
-- **AND** `status` SHALL be `"pending"` or `"indexing"` (never `"ready"` — indexing is async)
-- **AND** `handle` SHALL be a short opaque string (e.g. 8 hex chars)
-- **AND** `content_type` SHALL be `"markdown"` if the content contains markdown headings (`# ` lines), otherwise `"text"`
+- **THEN** it SHALL return a dict containing `handle`, `source`, `size_bytes`,
+  `total_lines`, `format`, and `status`
+- **AND** `status` SHALL be `"ready"` immediately (write is synchronous)
+- **AND** `handle` SHALL be a short opaque string (8 hex chars)
+- **AND** `format` SHALL be one of `"json"`, `"yaml"`, `"markdown"`, `"text"`
+
+#### Scenario: Write detects JSON and pretty-prints
+- **WHEN** `ctx.write(content)` is called where `content` is a single-line JSON blob
+- **THEN** the stored content SHALL be pretty-printed (`indent=2`)
+- **AND** `total_lines` in the response SHALL reflect the pretty-printed line count
+- **AND** `format` SHALL be `"json"`
+
+#### Scenario: Write detects YAML
+- **WHEN** `ctx.write(content)` is called where content parses as a YAML mapping or
+  sequence
+- **THEN** `format` SHALL be `"yaml"`
+- **AND** content SHALL be stored as-is (no transformation)
+
+#### Scenario: Write detects Markdown
+- **WHEN** `ctx.write(content)` is called where content contains `#` heading lines
+  in the first 50 lines
+- **THEN** `format` SHALL be `"markdown"`
+- **AND** content SHALL be stored as-is
+
+#### Scenario: Write defaults to text
+- **WHEN** content does not match JSON, YAML, or Markdown patterns
+- **THEN** `format` SHALL be `"text"`
 
 #### Scenario: Write with source label
 - **WHEN** `ctx.write(content, source="webfetch:docs.example.com")` is called
-- **THEN** `source` SHALL appear in the returned dict and be stored for `ctx.list`
-
-#### Scenario: Write with intent
-- **WHEN** `ctx.write(content, intent="how to authenticate")` is called
-- **THEN** in addition to the standard response, it SHALL also include an `answer` field with an LLM-extracted focused answer
-- **AND** if `ot_llm` is not configured it SHALL include an `answer_error` field instead of raising
-
-#### Scenario: Write returns quickly
-- **WHEN** `ctx.write(large_content)` is called with content >50KB
-- **THEN** it SHALL return in under 100ms
-- **AND** FTS5 indexing SHALL complete asynchronously in the background
+- **THEN** `source` SHALL appear in the returned dict and be retrievable via `ctx.list`
 
 #### Scenario: Verbose mode
 - **WHEN** `ctx.write(content, verbose=True)` is called
-- **THEN** the response SHALL additionally include `preview` (first 5 non-empty lines of content, joined as a single newline-separated string)
+- **THEN** the response SHALL additionally include `preview` (first 5 non-empty lines)
 - **WHEN** `ctx.write(content)` is called (default `verbose=False`)
 - **THEN** `preview` SHALL NOT be present in the response
 
-#### Scenario: Handle-dict dereference
-- **WHEN** `ctx.write(content)` is called where `content` is a dict containing a `"handle"` key (runner auto-offload format)
-- **THEN** `ctx.write` SHALL transparently dereference the handle, read its content, and store it under a new handle
+#### Scenario: Handle-dict dereference (write)
+- **WHEN** `ctx.write(content)` is called where `content` is a dict containing a
+  `"handle"` key
+- **THEN** `ctx.write` SHALL transparently dereference the handle, read its content,
+  and store it under a new handle
 - **AND** if the referenced handle is not found it SHALL return `{"error": ...}`
+
+#### Scenario: Handle-dict passed as `handle` argument (read-side tools)
+- **WHEN** any read-side tool (`ctx.read`, `ctx.toc`, `ctx.grep`, `ctx.slice`,
+  `ctx.query`, `ctx.append`, `ctx.inspect`, `ctx.delete`) is called with a handle
+  dict (e.g. `{"handle": "b2d18a1b", ...}`) in place of a string handle
+- **THEN** the tool SHALL transparently extract the `"handle"` key and proceed
+  as if the string ID was passed directly
+- **WHEN** a non-string, non-handle-dict value is passed as `handle`
+- **THEN** the tool SHALL return `{"error": "handle must be a string ... use h['handle']"}`
+  without raising an exception or leaking an OS error
 
 ---
 
 ### Requirement: Read Raw Content
 
-The `ctx.read()` function SHALL return paginated raw content from a stored handle.
+The `ctx.read()` function SHALL return paginated raw content with long lines truncated.
 
 #### Scenario: Basic read with defaults
 - **GIVEN** a stored handle `h`
 - **WHEN** `ctx.read(h)` is called
 - **THEN** it SHALL return lines 1–100 (default offset=1, limit=100)
-- **AND** response SHALL include `handle`, `content`, `total_lines`, `returned`, `offset`, `has_more`, `progress`, `total_size_bytes`
-- **AND** `handle` SHALL be the first key in the response dict
-- **AND** `content` SHALL be a single string with embedded newlines (not a list of strings)
+- **AND** response SHALL include `handle`, `content`, `total_lines`, `returned`,
+  `offset`, `has_more`, `progress`, `total_size_bytes`
+- **AND** `content` SHALL be a single string with embedded newlines (not a list)
+
+#### Scenario: Long lines are truncated
+- **GIVEN** a handle whose content contains a line exceeding 500 characters
+- **WHEN** `ctx.read(h)` is called
+- **THEN** that line SHALL be truncated to 500 chars with a `[+N chars]` suffix
+  where N is the number of omitted characters
 
 #### Scenario: Read with offset and limit
 - **GIVEN** a handle with 500 lines
@@ -65,18 +96,17 @@ The `ctx.read()` function SHALL return paginated raw content from a stored handl
 #### Scenario: Read with tail
 - **WHEN** `ctx.read(h, tail=20)` is called
 - **THEN** it SHALL return the last 20 lines
-- **AND** if tail > total_lines, all lines SHALL be returned
 
 #### Scenario: Read mode toc
 - **WHEN** `ctx.read(h, mode="toc")` is called
-- **THEN** it SHALL return a numbered section index equivalent to `ctx.toc(h)`
+- **THEN** it SHALL return output equivalent to `ctx.toc(h)`
 
 #### Scenario: Read mode meta
 - **WHEN** `ctx.read(h, mode="meta")` is called
-- **THEN** it SHALL return handle metadata: source, size_bytes, total_lines, status, created_at, access_count
+- **THEN** it SHALL return handle metadata: source, format, size_bytes, total_lines,
+  status, created_at, access_count
 
 #### Scenario: Unknown handle
-- **GIVEN** handle `"badhandle"` does not exist
 - **WHEN** `ctx.read("badhandle")` is called
 - **THEN** it SHALL return an error message indicating handle not found
 
@@ -87,100 +117,55 @@ The `ctx.read()` function SHALL return paginated raw content from a stored handl
 
 ---
 
-### Requirement: BM25 Section Search
-
-The `ctx.search()` function SHALL return BM25-ranked sections matching one or more queries with smart snippets and three-layer fallback.
-
-#### Scenario: Basic search
-- **GIVEN** a ready handle containing indexed content
-- **WHEN** `ctx.search(h, queries=["authentication"])` is called
-- **THEN** it SHALL return a list of sections ranked by BM25 relevance
-- **AND** each section SHALL include `title`, `snippet`, `matchLayer`, and `score`
-
-#### Scenario: Multi-query search
-- **WHEN** `ctx.search(h, queries=["auth", "rate limits"])` is called
-- **THEN** it SHALL return results for each query grouped by query
-
-#### Scenario: Smart snippet extraction
-- **WHEN** a section matches a query
-- **THEN** `snippet` SHALL be a ±300-character window around the matched term positions
-- **AND** SHALL NOT be an arbitrary prefix of the section
-
-#### Scenario: Porter stemming layer
-- **GIVEN** content containing "authentication"
-- **WHEN** `ctx.search(h, queries=["authenticate"])` is called
-- **THEN** it SHALL match via Porter stemming
-- **AND** `matchLayer` SHALL be `"porter"`
-
-#### Scenario: Trigram fallback
-- **GIVEN** Porter stemming yields no results
-- **WHEN** the query is a partial identifier like `"useEff"`
-- **THEN** it SHALL match via trigram substring search
-- **AND** `matchLayer` SHALL be `"trigram"`
-
-#### Scenario: Fuzzy fallback
-- **GIVEN** Porter and trigram both yield no results
-- **WHEN** the query contains a typo like `"autentication"`
-- **THEN** it SHALL apply Levenshtein correction and retry
-- **AND** `matchLayer` SHALL be `"fuzzy"`
-
-#### Scenario: No results — vocabulary hints
-- **GIVEN** a query yields no results after all three layers
-- **WHEN** `ctx.search(h, queries=["zxqvbfoo"])` is called
-- **THEN** response SHALL include a `vocabulary` list of distinctive terms from the handle
-- **AND** `sections` SHALL be an empty list
-
-#### Scenario: Search while indexing
-- **GIVEN** a handle with `status="indexing"`
-- **WHEN** `ctx.search(h, queries=["foo"])` is called
-- **THEN** it SHALL wait up to 2 seconds for indexing to complete
-- **AND** if indexing completes within 2s, it SHALL return normal search results
-- **AND** if still indexing after 2s, it SHALL return `{status: "indexing", retry_in: "~Xs"}`
-
-#### Scenario: Search on failed handle
-- **GIVEN** a handle with `status="failed"`
-- **WHEN** `ctx.search(h, queries=["foo"])` is called
-- **THEN** it SHALL return an error dict with a `hint` field suggesting `ctx.purge(status='failed')` to clean up and `ctx.write()` to retry
-
----
-
 ### Requirement: Regex Line Search
 
-The `ctx.grep()` function SHALL perform regex line search with optional context lines.
+The `ctx.grep()` function SHALL perform regex line search with optional context lines
+and long-line truncation.
 
 #### Scenario: Basic grep
 - **GIVEN** a handle with lines containing "error" and lines without
 - **WHEN** `ctx.grep(h, pattern="error")` is called
 - **THEN** it SHALL return only lines matching the regex pattern
 
+#### Scenario: Long lines are truncated
+- **GIVEN** a handle whose content contains a matching line exceeding 500 characters
+- **WHEN** `ctx.grep(h, pattern="...")` is called and that line matches
+- **THEN** the matched line in the result SHALL be truncated to 500 chars with a
+  `[+N chars]` suffix
+
 #### Scenario: Grep with context lines
 - **WHEN** `ctx.grep(h, pattern="TARGET", context=2)` is called
 - **THEN** it SHALL return matching lines plus 2 lines before and after each match
 - **AND** non-contiguous groups SHALL be separated by `---`
 
-#### Scenario: Grep with fuzzy
-- **WHEN** `ctx.grep(h, pattern="config", fuzzy=True)` is called
-- **THEN** it SHALL use fuzzy matching to find similar content
-- **AND** results SHALL be sorted by match score
-
 ---
 
 ### Requirement: Section Slicing
 
-The `ctx.slice()` function SHALL extract content by section number, heading path, or line range.
+The `ctx.slice()` function SHALL extract content by section number, heading name,
+or line range, with format-aware dispatch.
 
-#### Scenario: Slice by section number
-- **GIVEN** a handle with a section index
-- **WHEN** `ctx.slice(h, select=2)` is called
-- **THEN** it SHALL return the content of section 2
-
-#### Scenario: Slice by heading path
-- **WHEN** `ctx.slice(h, select="Authentication")` is called
-- **THEN** it SHALL return the section whose title contains "Authentication"
-
-#### Scenario: Slice by line range
+#### Scenario: Slice by line range (any format)
 - **WHEN** `ctx.slice(h, select="50:100")` is called
-- **THEN** it SHALL return lines 50–100 inclusive
+- **THEN** it SHALL return lines 50–100 inclusive (1-indexed)
+
+#### Scenario: Slice by section number (markdown)
+- **GIVEN** a markdown handle with a TOC
+- **WHEN** `ctx.slice(h, select="#3")` is called
+- **THEN** it SHALL return the content of the third section (from TOC line to next
+  same-or-higher-level heading)
+
+#### Scenario: Slice by heading name (markdown)
+- **GIVEN** a markdown handle
+- **WHEN** `ctx.slice(h, select="Prerequisites")` is called
+- **THEN** it SHALL return the section whose heading contains "Prerequisites"
+  (case-insensitive substring match)
+
+#### Scenario: jmespath-like select on json/yaml redirects to query
+- **WHEN** `ctx.slice(h, select=".spec.containers")` is called on a `json` or `yaml`
+  handle
+- **THEN** it SHALL return a clear error directing the caller to use `ctx.query()`
+  instead
 
 #### Scenario: Section not found
 - **WHEN** `ctx.slice(h, select="NonExistentSection")` is called
@@ -190,18 +175,84 @@ The `ctx.slice()` function SHALL extract content by section number, heading path
 
 ### Requirement: Table of Contents
 
-The `ctx.toc()` function SHALL return a numbered section index with line ranges and vocabulary hints.
+The `ctx.toc()` function SHALL return a format-aware table of contents read from
+stored metadata — no content re-parse needed.
 
-#### Scenario: Table of contents for markdown content
-- **GIVEN** a ready handle containing markdown content with headings
+#### Scenario: TOC for markdown content
+- **GIVEN** a markdown handle
 - **WHEN** `ctx.toc(h)` is called
-- **THEN** it SHALL return a numbered list of sections with titles and line ranges
-- **AND** SHALL include vocabulary hints (top distinctive terms)
+- **THEN** it SHALL return a numbered list of sections with heading level, title, and
+  line number
+- **AND** the data SHALL be read from the stored metadata (no content file parse)
 
-#### Scenario: Table of contents while indexing
-- **GIVEN** a handle with `status="indexing"` or `"pending"`
+#### Scenario: TOC for JSON content
+- **GIVEN** a json handle whose top level is a dict
 - **WHEN** `ctx.toc(h)` is called
-- **THEN** it SHALL return a preview based on raw content headings without waiting
+- **THEN** it SHALL return a list of top-level keys with type and size hints
+  (e.g. `dependencies (dict, 45 keys)`, `name (str)`)
+
+#### Scenario: TOC for JSON array
+- **GIVEN** a json handle whose top level is a list
+- **WHEN** `ctx.toc(h)` is called
+- **THEN** it SHALL return a single summary entry: `[array] (list, N items)`
+
+#### Scenario: TOC for YAML content
+- **GIVEN** a yaml handle
+- **WHEN** `ctx.toc(h)` is called
+- **THEN** it SHALL return top-level keys with type and size hints, same as JSON
+
+#### Scenario: TOC for text content
+- **GIVEN** a text handle
+- **WHEN** `ctx.toc(h)` is called
+- **THEN** it SHALL return an empty list with a note that text format has no structure
+
+---
+
+### Requirement: Structured Data Query
+
+The `ctx.query()` function SHALL evaluate a jmespath expression against the parsed
+content of a `json` or `yaml` handle and return the matched value.
+
+#### Scenario: Query a JSON handle
+- **GIVEN** a json handle containing `{"name": "myapp", "version": "1.0.0"}`
+- **WHEN** `ctx.query(h, expr="name")` is called
+- **THEN** it SHALL return `{"handle": h, "expr": "name", "result": "myapp"}`
+
+#### Scenario: Query nested path
+- **GIVEN** a json handle with nested structure
+- **WHEN** `ctx.query(h, expr="spec.containers[0].image")` is called
+- **THEN** it SHALL return the matched value as the `result` field
+
+#### Scenario: Query with filter expression
+- **GIVEN** a json handle containing a list of objects with a `status` field
+- **WHEN** `ctx.query(h, expr="items[?status == 'active'].name")` is called
+- **THEN** it SHALL return the list of matching names as `result`
+
+#### Scenario: dict or list result is pretty-printed
+- **WHEN** the jmespath result is a dict or list
+- **THEN** `result` SHALL be a JSON-formatted string (`indent=2`)
+
+#### Scenario: No match returns error with hint
+- **WHEN** `ctx.query(h, expr="nonexistent.path")` is called and no match is found
+- **THEN** it SHALL return `{"error": "No match", "expr": "...", "hint": "Use ctx.toc('<handle>') to see available keys"}`
+
+#### Scenario: Query on wrong format returns clear error
+- **WHEN** `ctx.query(h, expr="...")` is called on a `markdown` or `text` handle
+- **THEN** it SHALL return an error explaining that `ctx.query()` requires `json` or
+  `yaml` format and directing the caller to `ctx.slice()` or `ctx.grep()`
+
+#### Scenario: Query on unknown handle
+- **WHEN** `ctx.query("badhandle", expr="...")` is called
+- **THEN** it SHALL return an error message indicating handle not found
+
+#### Scenario: Invalid jmespath expression
+- **WHEN** `ctx.query(h, expr="[invalid syntax")` is called
+- **THEN** it SHALL return an error message describing the jmespath parse failure
+
+#### Scenario: Query YAML handle
+- **GIVEN** a yaml handle
+- **WHEN** `ctx.query(h, expr="metadata.name")` is called
+- **THEN** it SHALL parse the YAML and evaluate the expression identically to a JSON handle
 
 ---
 
@@ -238,32 +289,28 @@ The `ctx.ask()` function SHALL accept one or more questions about stored content
 - **WHEN** `ctx.ask("badhandle", q="...")` is called
 - **THEN** it SHALL return `{"handle": "badhandle", "error": "Handle not found: badhandle"}`
 
-#### Scenario: Handle still indexing
-
-- **GIVEN** a handle with `status="indexing"`
-- **WHEN** `ctx.ask(h, q="...")` is called
-- **THEN** it SHALL proceed using whatever content is available (same as `ctx.read` without waiting)
-- **AND** the response MAY include a `warning` field noting that indexing is still in progress
-
 #### Scenario: Large content truncation
 
 - **GIVEN** a handle whose total content exceeds `ask_max_bytes`
 - **WHEN** `ctx.ask(h, q="...")` is called
 - **THEN** it SHALL send the first `ask_max_bytes` bytes of content to the model
 - **AND** the response SHALL include a `truncated: true` field
-- **AND** the response MAY include a `hint` suggesting `ctx.search` or `ctx.slice` to narrow scope before re-querying
+- **AND** the response MAY include a `hint` suggesting `ctx.slice` to narrow scope before re-querying
 
 ---
 
 ### Requirement: Append Content
 
-The `ctx.append()` function SHALL add content to an existing handle and re-trigger background indexing.
+The `ctx.append()` function SHALL add content to an existing handle, re-detect
+format on the combined content, regenerate the TOC, and update metadata.
 
 #### Scenario: Basic append
 - **GIVEN** a ready handle `h`
 - **WHEN** `ctx.append(h, "additional content")` is called
 - **THEN** the combined content SHALL be available via `ctx.read`
-- **AND** `status` SHALL transition back to `"pending"` immediately (then to `"indexing"` → `"ready"` as the background thread runs)
+- **AND** format SHALL be re-detected on the combined content
+- **AND** TOC SHALL be regenerated from the combined content
+- **AND** `status` SHALL remain `"ready"` on success
 
 #### Scenario: Append to unknown handle
 - **WHEN** `ctx.append("badhandle", "content")` is called
@@ -306,7 +353,8 @@ The `ctx.inspect()` function SHALL return detailed metadata for a single handle.
 #### Scenario: Inspect ready handle
 - **GIVEN** a ready handle
 - **WHEN** `ctx.inspect(h)` is called
-- **THEN** it SHALL return: handle, source, size_bytes, total_lines, status, chunk_count, vocab_size, has_embeddings, ttl_remaining, access_count, is_file_pointer
+- **THEN** it SHALL return: handle, source, format, size_bytes, total_lines, status,
+  toc_entries, ttl_remaining, access_count
 
 #### Scenario: Inspect unknown handle
 - **WHEN** `ctx.inspect("badhandle")` is called
@@ -316,11 +364,13 @@ The `ctx.inspect()` function SHALL return detailed metadata for a single handle.
 
 ### Requirement: Session Statistics
 
-The `ctx.stats()` function SHALL return session-level storage and savings metrics.
+The `ctx.stats()` function SHALL return session-level storage metrics.
 
 #### Scenario: Stats output
 - **WHEN** `ctx.stats()` is called
-- **THEN** it SHALL return: total_handles, handles_by_status (dict), total_bytes_stored, estimated_tokens_saved, db_size_bytes
+- **THEN** it SHALL return: total_handles, handles_by_status (dict),
+  total_bytes_stored, estimated_tokens_saved
+- **AND** it SHALL NOT include `db_size_bytes` (no database)
 
 ---
 
@@ -331,8 +381,7 @@ The `ctx.delete()` function SHALL remove a single handle and all associated data
 #### Scenario: Delete a handle
 - **GIVEN** a stored handle `h`
 - **WHEN** `ctx.delete(h)` is called
-- **THEN** it SHALL remove the handle, content, chunks, vocabulary, and embeddings
-- **AND** if `is_file=1`, the backing file SHALL also be unlinked
+- **THEN** it SHALL remove the handle and its backing content file
 - **AND** subsequent `ctx.read(h)` SHALL return handle not found
 - **AND** it SHALL return `{"deleted": h}`
 
@@ -389,24 +438,6 @@ The `ctx.purge()` function SHALL bulk-delete handles matching age, source, or st
 
 ---
 
-### Requirement: Handle Status State Machine
-
-Handles SHALL follow a defined status lifecycle.
-
-#### Scenario: Status transitions
-- **WHEN** `ctx.write` is called
-- **THEN** handle status SHALL start as `"pending"`
-- **AND** SHALL transition to `"indexing"` when the background thread starts
-- **AND** SHALL transition to `"ready"` when FTS5 + vocabulary + optional embeddings complete
-- **AND** SHALL transition to `"failed"` if any step in the pipeline raises an exception
-
-#### Scenario: Stale indexing on restart
-- **GIVEN** a handle with `status="indexing"` when the process exits
-- **WHEN** the process restarts and `ctx.search` is called on that handle
-- **THEN** it SHALL be treated as `"failed"` and return the error dict with cleanup hint
-
----
-
 ### Requirement: Configuration
 
 The `ctx` pack SHALL support optional configuration via `onetool.yaml`.
@@ -415,16 +446,15 @@ The `ctx` pack SHALL support optional configuration via `onetool.yaml`.
 - **GIVEN** no `tools.ctx` block in `onetool.yaml`
 - **WHEN** the ctx pack is used
 - **THEN** TTL SHALL default to 3600 seconds (1 hour)
-- **AND** embeddings SHALL be disabled (no API calls made)
-- **AND** `max_inline_bytes` SHALL default to 1048576 (1MB)
-- **AND** `ask_max_bytes` SHALL default to 204800 (200KB) — content sent to `ctx.ask` is truncated to this limit; set to 0 to disable truncation
+- **AND** `max_line_chars` SHALL default to 500
+- **AND** `ask_max_bytes` SHALL default to 204800 (200KB)
 
 #### Scenario: Custom TTL
 - **GIVEN** `tools.ctx.ttl: 7200` in config
 - **WHEN** a handle is written
 - **THEN** its TTL SHALL be 7200 seconds
 
-#### Scenario: Embedding model configured
-- **GIVEN** `tools.ctx.embedding_model: "text-embedding-3-small"` in config
-- **WHEN** a handle finishes indexing
-- **THEN** the background pipeline SHALL also generate and store chunk embeddings
+#### Scenario: Custom max_line_chars
+- **GIVEN** `tools.ctx.max_line_chars: 200` in config
+- **WHEN** `ctx.read()` or `ctx.grep()` returns a long line
+- **THEN** lines SHALL be truncated at 200 characters
