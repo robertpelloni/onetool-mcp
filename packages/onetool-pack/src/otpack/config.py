@@ -22,7 +22,7 @@ import threading
 from pathlib import Path
 from typing import Any, TypeVar, overload
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 __all__ = [
     "configure_standalone",
@@ -39,7 +39,7 @@ _standalone_secrets: dict[str, str] | None = None
 _standalone_lock = threading.Lock()
 
 
-def configure_standalone(config_path: str | Path) -> None:
+def configure_standalone(config_path: str | Path, secrets_path: str | Path | None = None) -> None:
     """Load configuration from a YAML file for standalone operation.
 
     The YAML file uses the same tools: section structure as onetool.yaml.
@@ -47,6 +47,9 @@ def configure_standalone(config_path: str | Path) -> None:
 
     Args:
         config_path: Path to YAML config file
+        secrets_path: Optional explicit path to secrets YAML file. When provided,
+            overrides auto-discovery of adjacent secrets.yaml. Raises
+            FileNotFoundError if the explicit path does not exist.
     """
     global _standalone_config, _standalone_secrets
     import yaml
@@ -60,10 +63,18 @@ def configure_standalone(config_path: str | Path) -> None:
 
     with _standalone_lock:
         _standalone_config = data
-        # Load secrets from same file or adjacent secrets.yaml
-        secrets_path = path.parent / "secrets.yaml"
-        if secrets_path.exists():
-            with secrets_path.open() as f:
+        # Determine secrets file path
+        if secrets_path is not None:
+            resolved_secrets = Path(secrets_path).expanduser().resolve()
+            if not resolved_secrets.exists():
+                raise FileNotFoundError(f"Secrets file not found: {resolved_secrets}")
+        else:
+            resolved_secrets = path.parent / "secrets.yaml"
+            if not resolved_secrets.exists():
+                resolved_secrets = None  # type: ignore[assignment]
+
+        if resolved_secrets is not None:
+            with resolved_secrets.open() as f:
                 secrets_data = yaml.safe_load(f) or {}
             encrypted = [k for k, v in secrets_data.items() if isinstance(v, str) and v.startswith("age1enc:")]
             if encrypted:
@@ -139,7 +150,7 @@ def get_tool_config(pack: str, schema: type[T] | None = None) -> T | dict[str, A
 
     try:
         return schema.model_validate(raw_config)
-    except Exception:
+    except ValidationError:
         return schema()
 
 

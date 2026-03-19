@@ -1,13 +1,12 @@
 """Test otpack config in standalone mode (no ot.* available).
 
 Tests the standalone fallback paths directly by calling the internal
-standalone functions and the public API with patched ot.config.
+standalone functions and the public API.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 import yaml
@@ -77,17 +76,11 @@ def test_get_tool_config_reads_from_yaml_standalone(standalone_config: Path) -> 
     assert raw.get("timeout") == 42.0
     assert raw.get("debug") is True
 
-    # Test public API with ot.config patched out
+    # Validate config via schema
     class TestConfig(BaseModel):
         timeout: float = 10.0
         debug: bool = False
 
-    # Patch out ot.config delegation to force standalone path
-    with patch("otpack.config.get_tool_config.__wrapped__", create=True):
-        with patch("builtins.__import__", side_effect=ImportError("ot not available")):
-            pass  # Can't easily patch builtins.__import__ cleanly
-
-    # Use internal standalone function directly
     config = TestConfig.model_validate(raw)
     assert config.timeout == 42.0
     assert config.debug is True
@@ -130,10 +123,7 @@ def test_is_log_verbose_defaults_false() -> None:
     try:
         from otpack.config import is_log_verbose
 
-        # Patch out ot.config to get standalone behavior
-        with patch("otpack.config.is_log_verbose") as mock:
-            mock.return_value = False
-            assert is_log_verbose() is False
+        assert is_log_verbose() is False
     finally:
         if env_val is not None:
             os.environ["OT_LOG_VERBOSE"] = env_val
@@ -147,6 +137,54 @@ def test_configure_standalone_raises_on_missing_file(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError):
         configure_standalone(tmp_path / "nonexistent.yaml")
+
+
+@pytest.mark.unit
+@pytest.mark.pkg
+def test_configure_standalone_explicit_secrets_path(tmp_path: Path) -> None:
+    """configure_standalone() loads secrets from explicit secrets_path."""
+    from otpack import configure_standalone
+    from otpack.config import _get_standalone_secret
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("tools: {}")
+    secrets_path = tmp_path / "custom-secrets.yaml"
+    secrets_path.write_text("MY_KEY: secret_value\n")
+
+    configure_standalone(config_path, secrets_path=secrets_path)
+    assert _get_standalone_secret("MY_KEY") == "secret_value"
+
+
+@pytest.mark.unit
+@pytest.mark.pkg
+def test_configure_standalone_explicit_secrets_path_missing(tmp_path: Path) -> None:
+    """configure_standalone() raises FileNotFoundError for missing explicit secrets_path."""
+    from otpack import configure_standalone
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("tools: {}")
+
+    with pytest.raises(FileNotFoundError, match="Secrets file not found"):
+        configure_standalone(config_path, secrets_path=tmp_path / "nonexistent.yaml")
+
+
+@pytest.mark.unit
+@pytest.mark.pkg
+def test_configure_standalone_explicit_secrets_path_overrides_adjacent(tmp_path: Path) -> None:
+    """Explicit secrets_path takes precedence over adjacent secrets.yaml."""
+    from otpack import configure_standalone
+    from otpack.config import _get_standalone_secret
+
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("tools: {}")
+    # Adjacent secrets.yaml with different value
+    (tmp_path / "secrets.yaml").write_text("MY_KEY: adjacent_value\n")
+    # Explicit secrets file
+    explicit = tmp_path / "explicit.yaml"
+    explicit.write_text("MY_KEY: explicit_value\n")
+
+    configure_standalone(config_path, secrets_path=explicit)
+    assert _get_standalone_secret("MY_KEY") == "explicit_value"
 
 
 @pytest.mark.unit

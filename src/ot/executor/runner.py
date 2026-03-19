@@ -66,7 +66,6 @@ def _force_single_quotes(code: str) -> str:
     Triple-quoted strings and f-strings are left unchanged.
     Falls back to original code on tokenize error.
     """
-    import io
     import tokenize as _tok
 
     result = []
@@ -351,9 +350,9 @@ def execute_python_code(
         error_msg, line_num = _map_error_line(e, line_offset)
         if line_num is not None:
             raise ValueError(
-                f"Python execution error at line {line_num}: {error_msg}"
+                f"❗️Execution error at line {line_num}: {error_msg}"
             ) from e
-        raise ValueError(f"Python execution error: {error_msg}") from e
+        raise ValueError(f"❗️Execution error: {error_msg}") from e
 
 
 @dataclass
