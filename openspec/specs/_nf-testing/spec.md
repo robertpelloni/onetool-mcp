@@ -83,6 +83,11 @@ Tests requiring external dependencies SHALL declare them.
 - **WHEN** the test is defined
 - **THEN** it SHALL have the `docker` marker
 
+#### Scenario: Playwright dependency
+- **GIVEN** a test requires Playwright browser automation
+- **WHEN** the test is defined
+- **THEN** it SHALL have the `playwright` marker
+
 ---
 
 ### Requirement: Test Organization

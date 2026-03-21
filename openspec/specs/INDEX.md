@@ -55,7 +55,11 @@ The MCP server that exposes tools for LLM code execution.
 | [serve-prompts](serve-prompts/spec.md) | System prompts and trigger documentation |
 | [serve-mcp-discoverability](serve-mcp-discoverability/spec.md) | MCP resources and prompts |
 | [serve-mcp-proxy](serve-mcp-proxy/spec.md) | External MCP server proxying |
+| [serve-output-sanitization](serve-output-sanitization/spec.md) | Sanitize tool outputs to protect against indirect prompt injection |
+| [serve-server-management](serve-server-management/spec.md) | `ot.server()` API: list, enable, disable, restart proxy servers at runtime |
+| [serve-skills](serve-skills/spec.md) | `ot.skills()` API: list and retrieve bundled skill content at runtime |
 | [serve-stats](serve-stats/spec.md) | Statistics and metrics tracking |
+| [serve-telemetry](serve-telemetry/spec.md) | Anonymous usage telemetry via PostHog (opt-out, server-start events) |
 
 ### Tool Infrastructure
 
@@ -67,6 +71,7 @@ The MCP server that exposes tools for LLM code execution.
 
 | Spec | Purpose |
 |------|---------|
+| [ctx](ctx/spec.md) | Smart-context store backed by flat files (`ot_context` / `ctx` pack) |
 | [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, notify, version) |
 
 ### Built-in Tools (`ottools`)
@@ -76,6 +81,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-devtools-annotation](ottools/tool-devtools-annotation/spec.md) | Chrome DevTools inject.js annotation system |
 | [tool-devtools-util](ottools/tool-devtools-util/spec.md) | Chrome DevTools automation utilities |
 | [tool-forge](ottools/tool-forge/spec.md) | Extension scaffolding and skill installation |
+| [tool-image](ottools/tool-image/spec.md) | Image loading, querying, and lifecycle management (`ot_image` pack) |
 | [tool-llm](ottools/tool-llm/spec.md) | LLM-powered data transformation |
 | [tool-mem](ottools/tool-mem/spec.md) | Persistent agent memory with semantic search |
 | [tool-secrets](ottools/tool-secrets/spec.md) | Age-encrypted secrets management |
@@ -90,11 +96,13 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-excel](otutil/tool-excel/spec.md) | Excel workbook operations |
 | [tool-file](otutil/tool-file/spec.md) | File operations |
 | [tool-ground](otutil/tool-ground/spec.md) | Google grounding via Gemini API |
+| [tool-tavily](otutil/tool-tavily/spec.md) | AI-powered web search and deep research via Tavily API |
 
 ### Domain Tools (`[dev]` extra)
 
 | Spec | Purpose |
 |------|---------|
+| [aws-pack](aws-pack/spec.md) | AWS tool pack: credential management, identity queries, ARN utilities, AWS MCP sub-servers |
 | [tool-context7](otdev/tool-context7/spec.md) | Context7 library documentation API |
 | [tool-db](otdev/tool-db/spec.md) | SQL database queries via SQLAlchemy |
 | [tool-diagram](otdev/tool-diagram/spec.md) | Diagram generation |
@@ -102,6 +110,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
 | [tool-webfetch](otdev/tool-webfetch/spec.md) | Web content extraction via trafilatura |
+| [tool-worktree](otdev/tool-worktree/spec.md) | Git worktree management for parallel agent workflows |
 
 ---
 
@@ -128,14 +137,14 @@ CLI for testing and benchmarking MCP servers.
 |----------|-------|
 | Non-Functional | 5 |
 | onetool CLI | 1 |
-| onetool Core | 8 |
+| onetool Core | 12 |
 | Tool Infrastructure | 1 |
-| Built-in Tools (core) | 1 |
-| Built-in Tools (ottools) | 7 |
-| Domain Tools [util] | 5 |
+| Built-in Tools (core) | 2 |
+| Built-in Tools (ottools) | 8 |
+| Domain Tools [util] | 6 |
 | Domain Tools [dev] | 9 |
 | bench | 8 |
-| **Total** | **45** |
+| **Total** | **52** |
 
 ---
 
