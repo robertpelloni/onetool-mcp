@@ -33,6 +33,8 @@ dependencies = [
     "jinja2>=3.1.6",              # Snippets template engine
     "docstring-parser>=0.17.0",   # ot.help() and ot.tools() docstring parsing
     "aiofiles>=25.1.0",           # Message tool async file I/O
+    "aiohttp>=3.9.0",             # Panel pack companion server
+    "pydoll-python>=2.21.3",      # Panel pack CDP browser automation
     # === LLM & Search ===
     "openai>=2.26.0",             # mem embeddings, LLM tools
     "tiktoken>=0.12.0",           # Token counting for embedding truncation
@@ -41,7 +43,6 @@ dependencies = [
     "pyrage>=1.3.0",
     "keyring>=25.7.0",
     "resvg-py>=0.2.6",
-    "posthog>=7.9.8",             # Anonymous startup telemetry
     "onetool-pack",               # Shared pack utilities (logging, config, http, cache, etc.)
 ]
 
@@ -81,6 +82,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ot", "src/ottools", "src/onetool", "src/bench", "src/otdev", "src/otutil"]
+artifacts = ["src/ottools/_panel/dist/**"]
 
 [dependency-groups]
 docs = [
@@ -201,6 +203,8 @@ markers = [
     "network: Requires network access",
     "api: Requires API keys",
     "docker: Requires Docker daemon",
+    "pydoll: Requires pydoll Chrome CDP automation",
+    "playwright: Requires Playwright browser automation",
 
     # Live environment tags
     "explore: Requires a live external service (Figma plugin, browser, etc.)",

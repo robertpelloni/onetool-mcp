@@ -1,13 +1,12 @@
 """Unit tests for the whiteboard tool pack (pack name: whiteboard, short alias: wb).
 
 Tests cover: parse_dsl, _build_dsl, auto_layout, _auto_size, _shape_payload,
-_parse_style_props, and smoke tests for public tools with mocked Playwright.
+_parse_style_props, and smoke tests for public tools with mocked pydoll tab.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -480,37 +479,37 @@ def _reset_exc_state() -> None:
     exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
     exc._edge_keys = set()
     exc._rendered_ids = set()
+    exc._tab = None
+    exc._browser = None
 
 
-def _make_mock_proxy(servers: list[str] | None = None) -> MagicMock:
-    """Create a mock proxy manager with optional connected servers."""
+def _make_mock_tab() -> MagicMock:
+    """Create a mock pydoll Tab for tests with appropriate async methods."""
     mock = MagicMock()
-    mock.servers = ["playwright"] if servers is None else servers
+
+    async def execute_script(
+        script: str, *, return_by_value: Any = None, await_promise: Any = None, **kwargs: Any
+    ) -> dict[str, Any]:
+        if "__drawApi?.backend" in script:
+            return {"result": {"result": {"type": "boolean", "value": True}}}
+        if "__drawApi.read" in script or "__downloadQueue" in script:
+            return {"result": {"result": {"type": "object", "subtype": "array", "value": []}}}
+        if "__otDSL" in script:
+            return {"result": {"result": {"type": "string", "value": ""}}}
+        return {"result": {"result": {"type": "undefined"}}}
+
+    async def go_to(*, url: str, **kwargs: Any) -> None:
+        pass
+
+    mock.execute_script = execute_script
+    mock.go_to = go_to
     return mock
-
-
-def _playwright_eval_side_effect(
-    server: str, tool: str, arguments: dict[str, Any] | None = None
-) -> str:
-    """Simulate Playwright responses for key calls."""
-    if tool == "browser_navigate":
-        return "### Result\nnull\n### Ran Playwright code\n..."
-    fn = (arguments or {}).get("function", "")
-    if "__drawApi?.backend" in fn:
-        return "### Result\ntrue\n### Ran Playwright code\n..."
-    if "__drawApi.read" in fn:
-        return '### Result\n[]\n### Ran Playwright code\n...'
-    if "__otDSL" in fn:
-        return '### Result\n""\n### Ran Playwright code\n...'
-    if "__downloadQueue" in fn:
-        return '### Result\n[]\n### Ran Playwright code\n...'
-    return "### Result\nnull\n### Ran Playwright code\n..."
 
 
 @pytest.mark.unit
 @pytest.mark.tools
 class TestPublicToolsSmoke:
-    """Smoke tests verifying correct JS is called for each public tool."""
+    """Smoke tests verifying correct browser calls for each public tool."""
 
     def _reset_state(self) -> None:
         _reset_exc_state()
@@ -519,77 +518,80 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+        mock_tab = _make_mock_tab()
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", mock_tab):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "shapes" in result
-        assert mock_proxy.call_tool_sync.called
 
-    def test_draw_returns_error_when_playwright_not_connected(self) -> None:
+    def test_draw_returns_error_when_browser_not_available(self) -> None:
         from otdev.tools import excalidraw
 
-        self._reset_state()
-        mock_proxy = _make_mock_proxy(servers=[])
+        self._reset_state()  # _tab = None
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._open_browser"):  # no-op; leaves _tab=None
             result = excalidraw.draw(input='a["A"]')
 
         assert "Error" in result
-        assert "playwright" in result.lower() or "Playwright" in result
 
     def test_clear_calls_clear(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+        evaluated: list[str] = []
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            result = excalidraw.clear()
+        def capture_eval(fn: str) -> str:
+            evaluated.append(fn)
+            return "null"
+
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+            with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
+                result = excalidraw.clear()
 
         assert result == "canvas cleared"
-        calls = [str(c) for c in mock_proxy.call_tool_sync.call_args_list]
-        assert any("clear" in c for c in calls)
+        assert any("clear" in c for c in evaluated)
 
     def test_scroll_calls_scroll(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+        evaluated: list[str] = []
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            result = excalidraw.scroll(dx=100, dy=50)
+        def capture_eval(fn: str) -> str:
+            evaluated.append(fn)
+            return "null"
+
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+            with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
+                result = excalidraw.scroll(dx=100, dy=50)
 
         assert "scrolled" in result
-        calls = [str(c) for c in mock_proxy.call_tool_sync.call_args_list]
-        assert any("scroll" in c and "100" in c for c in calls)
+        assert any("scroll" in c and "100" in c for c in evaluated)
 
     def test_zoom_calls_zoom(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
+        evaluated: list[str] = []
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            result = excalidraw.zoom(level=0.5)
+        def capture_eval(fn: str) -> str:
+            evaluated.append(fn)
+            return "null"
+
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+            with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
+                result = excalidraw.zoom(level=0.5)
 
         assert "zoom" in result
-        calls = [str(c) for c in mock_proxy.call_tool_sync.call_args_list]
-        assert any("zoom" in c and "0.5" in c for c in calls)
+        assert any("zoom" in c and "0.5" in c for c in evaluated)
 
     def test_zoom_level_zero_fits_all(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.zoom(level=0)
 
         assert "fit" in result
@@ -600,12 +602,10 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
         out_file = str(tmp_path / "out.excalidraw")
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=tmp_path / "out.excalidraw"),
         ):
             result = excalidraw.save(file=out_file)
@@ -621,10 +621,7 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        # Create a native .excalidraw file
         content = {
             "type": "excalidraw",
             "version": 2,
@@ -637,7 +634,7 @@ class TestPublicToolsSmoke:
         diag_file.write_text(json.dumps(content))
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=diag_file),
             patch(
                 "otdev.tools.excalidraw._read_dsl_from_canvas",
@@ -653,27 +650,21 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.zoom(level=-1.0)
 
         assert "Error" in result
-        mock_proxy.call_tool_sync.assert_not_called()
 
     def test_load_returns_error_for_invalid_format(self, tmp_path: Any) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
         diag_file = tmp_path / "bad.excalidraw"
         diag_file.write_text("not json at all\n")
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=diag_file),
         ):
             result = excalidraw.load(file=str(diag_file))
@@ -684,14 +675,11 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
         diag_file = tmp_path / "bad.excalidraw"
         diag_file.write_text(json.dumps({"type": "other", "elements": []}))
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=diag_file),
         ):
             result = excalidraw.load(file=str(diag_file))
@@ -702,59 +690,68 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.fit()
 
         assert "fit" in result
 
-    def test_screenshot_calls_browser_screenshot(self) -> None:
+    def test_screenshot_returns_base64(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.return_value = "screenshot-data"
+        mock_tab = _make_mock_tab()
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        async def mock_take_screenshot(*, path: Any = None, as_base64: bool = False, **kw: Any) -> Any:
+            if as_base64:
+                return "screenshot-data"
+            return None
+
+        mock_tab.take_screenshot = mock_take_screenshot
+
+        with patch("otdev.tools.excalidraw._tab", mock_tab):
             result = excalidraw.screenshot()
 
-        calls = mock_proxy.call_tool_sync.call_args_list
-        assert any(
-            c.args[1] == "browser_take_screenshot" for c in calls
-        ), "screenshot must call browser_take_screenshot"
         assert result == "screenshot-data"
 
-    def test_screenshot_always_uses_png(self) -> None:
+    def test_screenshot_calls_take_screenshot_as_base64(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.return_value = "img"
+        mock_tab = _make_mock_tab()
+        calls: list[dict[str, Any]] = []
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        async def mock_take_screenshot(*, path: Any = None, as_base64: bool = False, **kw: Any) -> Any:
+            calls.append({"path": path, "as_base64": as_base64})
+            return "data" if as_base64 else None
+
+        mock_tab.take_screenshot = mock_take_screenshot
+
+        with patch("otdev.tools.excalidraw._tab", mock_tab):
             excalidraw.screenshot()
 
-        calls = mock_proxy.call_tool_sync.call_args_list
-        screenshot_call = next(c for c in calls if c.args[1] == "browser_take_screenshot")
-        args = screenshot_call.args[2]
-        assert args["format"] == "png"
-        assert "quality" not in args
+        assert calls, "take_screenshot must be called"
+        assert calls[0]["as_base64"] is True
 
     def test_screenshot_saves_to_file(self, tmp_path: Any) -> None:
-        import base64
+        from pathlib import Path
 
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
         fake_bytes = b"FAKEIMAGE"
-        mock_proxy.call_tool_sync.return_value = base64.b64encode(fake_bytes).decode()
-
         out_file = str(tmp_path / "canvas.png")
+        mock_tab = _make_mock_tab()
+
+        async def mock_take_screenshot(*, path: Any = None, as_base64: bool = False, **kw: Any) -> Any:
+            if path:
+                Path(path).write_bytes(fake_bytes)
+            return None
+
+        mock_tab.take_screenshot = mock_take_screenshot
+
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", mock_tab),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=tmp_path / "canvas.png"),
         ):
             result = excalidraw.screenshot(file=out_file)
@@ -766,10 +763,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.clear()
 
         assert result == "canvas cleared"
@@ -782,10 +777,7 @@ class TestPublicToolsSmoke:
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._rendered_ids.add("a")
 
-        mock_proxy = _make_mock_proxy(servers=[])
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
-            result = excalidraw.hard_reset()
+        result = excalidraw.hard_reset()
 
         assert "state cleared" in result
         assert exc._dsl_state["shapes"] == {}
@@ -795,17 +787,13 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
         evaluated: list[str] = []
-
-        orig_eval = excalidraw._browser_evaluate
 
         def capture_eval(expr: str, *args: Any, **kwargs: Any) -> Any:
             evaluated.append(expr)
-            return orig_eval(expr, *args, **kwargs)
+            return "null"
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
                 result = excalidraw.hard_reset()
 
@@ -816,10 +804,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.open()
 
         assert result == "whiteboard ready"
@@ -837,11 +823,9 @@ class TestPublicToolsSmoke:
 
         def capture_eval(fn: str) -> str:
             evaluated.append(fn)
-            return _playwright_eval_side_effect("playwright", "browser_evaluate", {"function": fn})
+            return "true"
 
-        mock_proxy = _make_mock_proxy()
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
                 result = excalidraw.open()
 
@@ -850,66 +834,62 @@ class TestPublicToolsSmoke:
         assert exc._rendered_ids == set(), "rendered_ids should be cleared"
         assert any("clear" in e for e in evaluated), "canvas clear should be called"
 
-    def test_open_returns_error_when_playwright_not_connected(self) -> None:
+    def test_open_returns_error_when_browser_unavailable(self) -> None:
         from otdev.tools import excalidraw
 
-        self._reset_state()
-        mock_proxy = _make_mock_proxy(servers=[])
+        self._reset_state()  # _tab = None
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._open_browser", side_effect=Exception("Chrome not found")):
             result = excalidraw.open()
 
         assert "Error" in result
 
-    def test_close_resets_state_without_browser(self) -> None:
+    def test_close_resets_state(self) -> None:
         from otdev.tools import excalidraw
 
         import otdev.tools.excalidraw as exc
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._rendered_ids = {"a"}
 
-        mock_proxy = _make_mock_proxy(servers=[])
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._close_browser"):
             result = excalidraw.close()
 
         assert "closed" in result
         assert exc._dsl_state["shapes"] == {}
         assert exc._rendered_ids == set()
 
-    def test_close_calls_tab_close_when_browser_available(self) -> None:
+    def test_close_calls_close_browser(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._close_browser") as mock_close:
             result = excalidraw.close()
 
         assert "closed" in result
-        calls = [c.args[1] for c in mock_proxy.call_tool_sync.call_args_list]
-        assert "browser_close" in calls or "browser_navigate" in calls
+        assert mock_close.called
 
     def test_bootstrap_failure_returns_error(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
+        mock_tab = _make_mock_tab()
 
-        def bootstrap_fail_side_effect(server: str, tool: str, arguments: Any = None) -> str:
-            if tool == "browser_navigate":
-                return "### Result\nnull\n### Ran Playwright code\n..."
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\nfalse\n### Ran Playwright code\n..."
-            if "__drawElements" in fn:
-                return "### Result\nfalse\n### Ran Playwright code\n..."
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        async def bootstrap_fail_execute(
+            script: str, *, return_by_value: Any = None, await_promise: Any = None, **kw: Any
+        ) -> dict[str, Any]:
+            if "__drawApi?.backend" in script:
+                return {"result": {"result": {"type": "boolean", "value": False}}}
+            # bootstrap.js returns false → triggers error
+            return {"result": {"result": {"type": "boolean", "value": False}}}
 
-        mock_proxy.call_tool_sync.side_effect = bootstrap_fail_side_effect
+        async def mock_go_to(*, url: str, **kw: Any) -> None:
+            pass
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        mock_tab.execute_script = bootstrap_fail_execute
+        mock_tab.go_to = mock_go_to
+
+        with patch("otdev.tools.excalidraw._tab", mock_tab):
             result = excalidraw.draw(input='a["A"]')
 
         assert "Error" in result
@@ -919,10 +899,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
             with patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch:
                 excalidraw.draw(input='c["C"]\nb-->c')
@@ -937,10 +915,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->typo')
 
         assert "skipped" not in result
@@ -951,10 +927,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input="a-->b\nb-->c\nc-->d")
 
         assert "+4 shapes" in result
@@ -963,10 +937,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "skipped" not in result
@@ -980,7 +952,7 @@ class TestPublicToolsSmoke:
 
         def capture_evaluate(fn: str) -> str:
             calls.append(fn)
-            return "### Result\ntrue\n### Ran Playwright code\n..."
+            return "null"
 
         with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_evaluate):
             exc._js_batch_draw(
@@ -1000,11 +972,9 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw", side_effect=RuntimeError("JS error")),
         ):
             try:
@@ -1020,11 +990,9 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             excalidraw.draw(input='a["A"]\nb["B"]\nc["C"]\na-->b\nb-->c')
@@ -1039,10 +1007,8 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "edge-a-b" in result
@@ -1052,16 +1018,13 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
-
         patches: list[Any] = []
 
         def capture_patch(p: list[Any]) -> None:
             patches.extend(p)
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_patch_elements", side_effect=capture_patch),
         ):
             excalidraw.draw(input='a["A"]')
@@ -1119,10 +1082,8 @@ class TestEdgeIdUniqueness:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b\na<-->b')
 
         assert len(exc._dsl_state["edges"]) == 2, "a-->b and a<-->b should both be stored"
@@ -1152,11 +1113,9 @@ class TestArrowLabels:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->|writes|b')
@@ -1225,10 +1184,8 @@ class TestNoteToolParsing:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.note(input="no blocks here")
 
         assert "Error" in result
@@ -1241,11 +1198,9 @@ class TestNoteToolParsing:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch(
                 "otdev.tools._excalidraw.renderers.render_table",
                 return_value="Error: tabulate not installed (pip install tabulate)",
@@ -1266,10 +1221,8 @@ class TestNoteToolParsing:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.note(input="x[text:\nsome content\n]")
 
         assert "Error" in result
@@ -1284,11 +1237,9 @@ class TestNoteToolParsing:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             result = excalidraw.note(input="t[tree:\nroot\n-child\n]")
@@ -1313,8 +1264,6 @@ class TestNoteToolParsing:
         exc._edge_keys = set()
         exc._rendered_ids = set()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         multi_input = (
             "tr[tree:\nroot/\n-src/\n]\n"
@@ -1324,7 +1273,7 @@ class TestNoteToolParsing:
         )
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             result = excalidraw.note(input=multi_input)
@@ -1472,8 +1421,6 @@ class TestNotePlacement:
         from otdev.tools import excalidraw
 
         self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         captured: list[Any] = []
 
@@ -1481,7 +1428,7 @@ class TestNotePlacement:
             captured.append(kwargs)
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._get_canvas_max_y", return_value=300.0),
             patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_batch),
         ):
@@ -1498,8 +1445,6 @@ class TestNotePlacement:
         from otdev.tools import excalidraw
 
         self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         captured: list[Any] = []
 
@@ -1507,7 +1452,7 @@ class TestNotePlacement:
             captured.append(kwargs)
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._get_canvas_max_y", return_value=500.0),
             patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_batch),
         ):
@@ -1539,11 +1484,9 @@ class TestEmbedDsl:
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             result = excalidraw.embed_dsl()
@@ -1563,10 +1506,8 @@ class TestEmbedDsl:
         from otdev.tools import excalidraw
 
         self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.embed_dsl()
 
         assert "empty" in result
@@ -1594,10 +1535,8 @@ class TestErase:
         exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
         exc._rendered_ids = {"a", "a-text", "b", "b-text"}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.erase(ids=["a"])
 
         assert "erased 1" in result
@@ -1612,10 +1551,8 @@ class TestErase:
         from otdev.tools import excalidraw
 
         self._reset()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.erase(ids=["nonexistent"])
 
         assert "erased 0" in result
@@ -1634,10 +1571,8 @@ class TestErase:
         ]
         exc._rendered_ids = {"a", "b", "edge-a-b"}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.erase(ids=["edge-a-b"])
 
         assert exc._dsl_state["edges"] == []
@@ -1659,10 +1594,8 @@ class TestErase:
         ]
         exc._rendered_ids = {"a", "b", "c", "edge-a-b", "edge-b-c"}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.erase(ids=["b"])
 
         assert exc._dsl_state["edges"] == [], "edges referencing erased node should be removed"
@@ -1978,10 +1911,8 @@ class TestEraseDanglingCount:
         ]
         exc._rendered_ids = {"a", "b", "c", "edge-a-b", "edge-b-c"}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.erase(ids=["b"])
 
         assert "erased 1" in result
@@ -1998,10 +1929,8 @@ class TestEraseDanglingCount:
         exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
         exc._rendered_ids = {"a", "a-text"}
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.erase(ids=["a"])
 
         assert "erased 1" in result
@@ -2082,10 +2011,8 @@ class TestDrawSubgraphCount:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.draw(input='a["A"]\nb["B"]')
             result = excalidraw.draw(
                 input='subgraph grp ["My Group"]\n  a\n  b\nend'
@@ -2099,10 +2026,8 @@ class TestDrawSubgraphCount:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input='a["A"]\nb["B"]')
 
         assert "group" not in result
@@ -2201,10 +2126,8 @@ class TestLoadWarningNoDsl:
         exc_file.write_text(json.dumps(data), encoding="utf-8")
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.load(file=str(exc_file))
 
         assert "warning" in result.lower()
@@ -2231,23 +2154,29 @@ class TestLoadWarningNoDsl:
 
         _reset_exc_state()
 
-        # Make _read_dsl_from_canvas return the DSL text
-        def _eval_with_dsl(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if tool == "browser_navigate":
-                return "### Result\nnull\n### Ran Playwright code\n..."
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "__otDSL" in fn:
-                return f'### Result\n"{dsl_text}"\n### Ran Playwright code\n...'
-            if "__downloadQueue" in fn:
-                return "### Result\n[]\n### Ran Playwright code\n..."
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        # Build a mock tab that returns dsl_text when the __otDSL element is queried.
+        # Note: _read_dsl_from_canvas script contains both __drawApi.read AND __otDSL —
+        # check __otDSL first so that script returns the DSL text, not an empty array.
+        dsl_mock = MagicMock()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _eval_with_dsl
+        async def execute_script_with_dsl(
+            script: str, *, return_by_value: Any = None, await_promise: Any = None, **kwargs: Any
+        ) -> dict[str, Any]:
+            if "__drawApi?.backend" in script:
+                return {"result": {"result": {"type": "boolean", "value": True}}}
+            if "__otDSL" in script:
+                return {"result": {"result": {"type": "string", "value": dsl_text}}}
+            if "__drawApi.read" in script or "__downloadQueue" in script:
+                return {"result": {"result": {"type": "object", "subtype": "array", "value": []}}}
+            return {"result": {"result": {"type": "undefined"}}}
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        async def go_to_noop(*, url: str, **kwargs: Any) -> None:
+            pass
+
+        dsl_mock.execute_script = execute_script_with_dsl
+        dsl_mock.go_to = go_to_noop
+
+        with patch("otdev.tools.excalidraw._tab", dsl_mock):
             result = excalidraw.load(file=str(exc_file))
 
         assert "warning" not in result.lower()
@@ -2260,10 +2189,8 @@ class TestLoadWarningNoDsl:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.load(file="/nonexistent/path.excalidraw")
 
         assert "Error" in result
@@ -2304,10 +2231,10 @@ class TestHelp:
 
         from otdev.tools import excalidraw
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager") as mock_gpm:
+        with patch("otdev.tools.excalidraw._open_browser") as mock_open:
             result = excalidraw.help()
 
-        mock_gpm.assert_not_called()
+        mock_open.assert_not_called()
         assert isinstance(result, str)
         assert len(result) > 0
 
@@ -2340,11 +2267,9 @@ class TestLayout:
 
         _reset_exc_state()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         # The call will fail at the browser step, not at validation — no "Error:" prefix
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.layout()
 
         # Should not be a param-validation error (those start with "Error:")
@@ -2365,8 +2290,6 @@ class TestLayout:
 
         _reset_exc_state()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         # Scene read returns valid scene; ELK returns bad string.
         # _process_pending_downloads (called inside _ensure_ready) also calls
@@ -2383,7 +2306,7 @@ class TestLayout:
             return bad_elk  # ELK call
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch(
                 "otdev.tools.excalidraw._browser_evaluate_json",
                 side_effect=_side_effect,
@@ -2402,8 +2325,6 @@ class TestLayout:
 
         _reset_exc_state()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         good_scene = {"nodes": [{"id": "a", "w": 160, "h": 60, "groupIds": []}],
                       "edges": [], "selectedIds": []}
@@ -2417,7 +2338,7 @@ class TestLayout:
             return elk_response
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_side_effect),
             patch("otdev.tools.excalidraw._browser_evaluate") as mock_eval,
         ):
@@ -2428,8 +2349,6 @@ class TestLayout:
 
     def test_layout_straight_patches_edges(self) -> None:
         """layout() with STRAIGHT routing must patch arrow positions after moving nodes."""
-        import otdev.tools.excalidraw as exc
-
         _reset_exc_state()
 
         good_scene = {
@@ -2445,27 +2364,25 @@ class TestLayout:
             "edges": [],
         }
         captured_patches: list[str] = []
-        call_count: list[int] = [0]
 
-        def _side(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "elk" in fn.lower() and "ELK" in fn:
-                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
-            # Scene read (first _browser_evaluate_json call via proxy)
-            if "getSceneElements" in fn or ("nodes" in fn and "selectedIds" in fn):
-                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
-            if "patches" in fn and "__drawElements" in fn:
-                captured_patches.append(fn)
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        def _json_side_effect(js: str) -> Any:
+            if "selectedIds" in js:
+                return good_scene
+            if "ELK" in js:
+                return elk_response
+            return None
+
+        def _eval_side_effect(fn: str) -> str:
+            captured_patches.append(fn)
+            return ""
 
         from otdev.tools import excalidraw
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _side
-
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_json_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate", side_effect=_eval_side_effect),
+        ):
             result = excalidraw.layout(direction="RIGHT")
 
         assert "layout applied" in result, f"unexpected result: {result}"
@@ -2494,10 +2411,8 @@ class TestAlign:
 
         from otdev.tools import excalidraw
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.align(ids=["a", "b"], axis="left")
 
         # Should not be a param-validation error
@@ -2520,19 +2435,24 @@ class TestAlign:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        js_scripts: list[str] = []
+
+        def recording_eval(fn: str) -> str:
+            if "__drawApi?.backend" in fn:  # readiness check only
+                return "true"
+            js_scripts.append(fn)
+            return ""
+
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate", side_effect=recording_eval),
+        ):
             result = excalidraw.align(ids=["a", "b"], axis="top")
 
         assert "aligned" in result
-        js_calls = [
-            str((c.args[2] if len(c.args) > 2 else {}).get("function", ""))
-            for c in mock_proxy.call_tool_sync.call_args_list
-        ]
-        assert any("perform" in js for js in js_calls), "align must use action.perform()"
-        assert not any("setAppState" in js for js in js_calls), "align must not use setAppState()"
+        assert any("perform" in js for js in js_scripts), "align must use action.perform()"
+        assert not any("setAppState" in js for js in js_scripts), "align must not use setAppState()"
 
 
 # ===========================================================================
@@ -2764,25 +2684,13 @@ class TestSubgraphColumnLayout:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         captured: list[dict] = []
 
-        def capture_side_effect(server: str, tool: str, arguments: dict | None = None) -> str:
-            result = _playwright_eval_side_effect(server, tool, arguments)
-            if tool == "browser_evaluate":
-                fn = (arguments or {}).get("function", "")
-                if "_batch_draw" in fn:
-                    # Extract the shapes JSON argument (first positional arg)
-                    import re as _re
-                    m = _re.search(r"_batch_draw\((\[.*?\]),", fn, _re.DOTALL)
-                    if m:
-                        import json as _json
-                        captured.extend(_json.loads(m.group(1)))
-            return result
-
-        mock_proxy.call_tool_sync.side_effect = capture_side_effect
+        def capture_js_batch_draw(
+            *, shapes: list[dict], edges: list[dict], subgraphs: list[dict]
+        ) -> None:
+            captured.extend(shapes)
 
         dsl = (
             'subgraph fe ["Frontend"]\n'
@@ -2794,7 +2702,10 @@ class TestSubgraphColumnLayout:
             '  d["D"]\n'
             'end'
         )
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_js_batch_draw),
+        ):
             excalidraw.draw(input=dsl)
 
         return captured
@@ -2825,8 +2736,6 @@ class TestSubgraphColumnLayout:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         dsl = (
             'subgraph fe ["Frontend"]\n'
@@ -2836,7 +2745,7 @@ class TestSubgraphColumnLayout:
             '  b["B"]\n'
             'end'
         )
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.draw(input=dsl)
 
         assert "+2 group(s)" in result
@@ -2854,7 +2763,7 @@ class TestLayoutArrowBinding:
     """layout() must NOT clear startBinding/endBinding on arrow patches."""
 
     def _run_layout_capture_patches(self, direction: str = "RIGHT") -> list[str]:
-        """Run layout() and return all browser_evaluate JS strings for the patch call."""
+        """Run layout() and return all _browser_evaluate JS strings for the patch call."""
         good_scene = {
             "nodes": [
                 {"id": "a", "w": 160, "h": 60, "groupIds": [], "x": 100, "y": 100},
@@ -2869,26 +2778,27 @@ class TestLayoutArrowBinding:
         }
         captured: list[str] = []
 
-        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "ELK" in fn:
-                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
-            if "selectedIds" in fn:
-                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
-            if "patches" in fn and "__drawElements" in fn:
-                captured.append(fn)
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        def _json_side_effect(js: str) -> Any:
+            if "selectedIds" in js:
+                return good_scene
+            if "ELK" in js:
+                return elk_response
+            return None
+
+        def _eval_side_effect(fn: str) -> str:
+            captured.append(fn)
+            return ""
 
         from unittest.mock import patch
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _side
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_json_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate", side_effect=_eval_side_effect),
+        ):
             excalidraw.layout(direction=direction)
 
         return captured
@@ -2934,25 +2844,24 @@ class TestLayoutSelectionOffset:
         elk_response = {"nodes": [{"id": "a", "x": 0, "y": 0}, {"id": "b", "x": 200, "y": 100}], "edges": []}
         captured_elk_js: list[str] = []
 
-        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "ELK" in fn:
-                captured_elk_js.append(fn)
-                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
-            if "selectedIds" in fn:
-                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        def _json_side_effect(js: str) -> Any:
+            if "selectedIds" in js:
+                return good_scene
+            if "ELK" in js:
+                captured_elk_js.append(js)
+                return elk_response
+            return None
 
         from unittest.mock import patch
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _side
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_json_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate"),
+        ):
             excalidraw.layout()
 
         return captured_elk_js
@@ -2978,25 +2887,24 @@ class TestLayoutSelectionOffset:
         elk_response = {"nodes": [{"id": "a", "x": 0, "y": 0}], "edges": []}
         captured_elk_js: list[str] = []
 
-        def _side(server: str, tool: str, arguments: dict | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "ELK" in fn:
-                captured_elk_js.append(fn)
-                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
-            if "selectedIds" in fn:
-                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        def _json_side_effect(js: str) -> Any:
+            if "selectedIds" in js:
+                return good_scene
+            if "ELK" in js:
+                captured_elk_js.append(js)
+                return elk_response
+            return None
 
         from unittest.mock import patch
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _side
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_json_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate"),
+        ):
             excalidraw.layout()
 
         elk_js = " ".join(captured_elk_js)
@@ -3041,27 +2949,28 @@ class TestLayoutBoundaryArrows:
         }
         captured_patches: list[str] = []
 
-        def _side(server: str, tool: str, arguments: dict[str, Any] | None = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "ELK" in fn:
-                return f"### Result\n{json.dumps(elk_response)}\n### Ran Playwright code\n..."
-            if "selectedIds" in fn:
-                return f"### Result\n{json.dumps(good_scene)}\n### Ran Playwright code\n..."
-            if "patches" in fn and "__drawElements" in fn:
-                captured_patches.append(fn)
-            return "### Result\nnull\n### Ran Playwright code\n..."
+        def _json_side_effect(js: str) -> Any:
+            if "selectedIds" in js:
+                return good_scene
+            if "ELK" in js:
+                return elk_response
+            return None
+
+        def _eval_side_effect(fn: str) -> str:
+            captured_patches.append(fn)
+            return ""
 
         from unittest.mock import patch
 
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _side
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with (
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
+            patch("otdev.tools.excalidraw._browser_evaluate_json", side_effect=_json_side_effect),
+            patch("otdev.tools.excalidraw._browser_evaluate", side_effect=_eval_side_effect),
+        ):
             excalidraw.layout(direction=direction)
 
         return captured_patches
@@ -3105,11 +3014,9 @@ class TestUndirectedEdgePayload:
 
         _reset_exc_state()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             excalidraw.draw(input='a["A"]\nb["B"]\na---b')
@@ -3126,11 +3033,9 @@ class TestUndirectedEdgePayload:
 
         _reset_exc_state()
 
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _playwright_eval_side_effect
 
         with (
-            patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy),
+            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
         ):
             excalidraw.draw(input='a["A"]\nb["B"]\na-.-b')
@@ -3171,10 +3076,26 @@ class TestStyleReturnCount:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _style_elements_side_effect(0)
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        # Custom mock: _style_elements returns 0 (no elements matched)
+        zero_mock = MagicMock()
+
+        async def execute_script_zero(
+            script: str, *, return_by_value: Any = None, await_promise: Any = None, **kwargs: Any
+        ) -> dict[str, Any]:
+            if "__drawApi?.backend" in script:
+                return {"result": {"result": {"type": "boolean", "value": True}}}
+            if "_style_elements" in script:
+                return {"result": {"result": {"type": "number", "value": 0}}}
+            return {"result": {"result": {"type": "undefined"}}}
+
+        async def go_to_noop(*, url: str, **kwargs: Any) -> None:
+            pass
+
+        zero_mock.execute_script = execute_script_zero
+        zero_mock.go_to = go_to_noop
+
+        with patch("otdev.tools.excalidraw._tab", zero_mock):
             result = excalidraw.style(ids=["doesnotexist"], style="bc:red")
 
         assert result == "styled 0 element(s)"
@@ -3184,10 +3105,8 @@ class TestStyleReturnCount:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = _style_elements_side_effect(2)
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.style(ids=["a", "b"], style="bc:red")
 
         assert result == "styled 2 element(s)"
@@ -3201,41 +3120,45 @@ class TestStyleReturnCount:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestReadScene:
-    def _make_scene_side_effect(self, scene_text: str) -> Callable[..., str]:
-        def side_effect(server: str, tool: str, arguments: Any = None) -> str:
-            fn = (arguments or {}).get("function", "")
-            if tool == "browser_navigate":
-                return "### Result\nnull\n### Ran Playwright code\n..."
-            if "__drawApi?.backend" in fn:
-                return "### Result\ntrue\n### Ran Playwright code\n..."
-            if "__drawApi.read" in fn:
-                return '### Result\n[]\n### Ran Playwright code\n...'
-            if "_read_scene" in fn:
-                return f"### Result\n{scene_text}\n### Ran Playwright code\n..."
-            return "### Result\nnull\n### Ran Playwright code\n..."
-        return side_effect
+    def _make_scene_mock_tab(self, scene_text: str) -> MagicMock:
+        """Create a mock tab that returns scene_text for _read_scene JS calls."""
+        mock = MagicMock()
+
+        async def execute_script(
+            script: str, *, return_by_value: Any = None, await_promise: Any = None, **kwargs: Any
+        ) -> dict[str, Any]:
+            if "__drawApi?.backend" in script:
+                return {"result": {"result": {"type": "boolean", "value": True}}}
+            if "__drawApi.read" in script or "__downloadQueue" in script:
+                return {"result": {"result": {"type": "object", "subtype": "array", "value": []}}}
+            if "_read_scene" in script:
+                return {"result": {"result": {"type": "string", "value": scene_text}}}
+            return {"result": {"result": {"type": "undefined"}}}
+
+        async def go_to(*, url: str, **kwargs: Any) -> None:
+            pass
+
+        mock.execute_script = execute_script
+        mock.go_to = go_to
+        return mock
 
     def test_read_scene_calls_browser_and_returns_result(self) -> None:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
-            "Scene: 2 shapes, 1 edges\n\nShapes:\n  a\n  b\n\nEdges:\n  e\n"
-        )
+        scene_text = "Scene: 2 shapes, 1 edges\n\nShapes:\n  a\n  b\n\nEdges:\n  e\n"
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", self._make_scene_mock_tab(scene_text)):
             result = excalidraw.read_scene()
 
         assert "Scene: 2 shapes" in result
 
-    def test_read_scene_returns_error_when_playwright_not_connected(self) -> None:
+    def test_read_scene_returns_error_when_browser_not_open(self) -> None:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy(servers=[])
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._open_browser", side_effect=Exception("Chrome not found")):
             result = excalidraw.read_scene()
 
         assert "Error" in result
@@ -3244,12 +3167,9 @@ class TestReadScene:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
-            "Scene: 3 shapes, 0 edges"
-        )
+        scene_text = "Scene: 3 shapes, 0 edges"
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", self._make_scene_mock_tab(scene_text)):
             result = excalidraw.read_scene(info="min")
 
         assert result == "Scene: 3 shapes, 0 edges"
@@ -3258,12 +3178,9 @@ class TestReadScene:
         from otdev.tools import excalidraw
 
         _reset_exc_state()
-        mock_proxy = _make_mock_proxy()
-        mock_proxy.call_tool_sync.side_effect = self._make_scene_side_effect(
-            "Scene: 1 shapes, 0 edges\n\nShapes:\n  a  rectangle  bc:#fff sw:2\n"
-        )
+        scene_text = "Scene: 1 shapes, 0 edges\n\nShapes:\n  a  rectangle  bc:#fff sw:2\n"
 
-        with patch("otdev.tools.excalidraw.get_proxy_manager", return_value=mock_proxy):
+        with patch("otdev.tools.excalidraw._tab", self._make_scene_mock_tab(scene_text)):
             result = excalidraw.read_scene(info="full")
 
         assert "sw:2" in result

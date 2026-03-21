@@ -1,6 +1,6 @@
 # Whiteboard
 
-Playwright-driven live diagram manipulation on [excalidraw.com](https://excalidraw.com). Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.
+Live diagram manipulation on [excalidraw.com](https://excalidraw.com) via pydoll (Chrome CDP). Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.
 
 Short alias: `wb`
 
@@ -12,18 +12,7 @@ Short alias: `wb`
 - Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
 - Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
 
-Requires the Playwright MCP server. Enable it in `servers.yaml` (persistent):
-
-```yaml
-playwright:
-  enabled: true
-```
-
-Or enable for the current session only:
-
-```python
-ot.server(enable="playwright")
-```
+Requires Chrome/Chromium to be installed on the host.
 
 ## Quick Start
 
@@ -44,7 +33,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 |---|---|
 | `whiteboard.align(*, ids: list[str], axis: str) -> str` | Align or distribute a set of shapes using Excalidraw's built-in actions. |
 | `whiteboard.clear() -> str` | Clear all elements from canvas and reset Python DSL state. |
-| `whiteboard.close() -> str` | Close the excalidraw tab and reset all Python state. |
+| `whiteboard.close() -> str` | Close the excalidraw browser and reset all Python state. |
 | `whiteboard.draw(*, input: str) -> str` | Add or update diagram elements from DSL. Always additive — never clears. |
 | `whiteboard.embed_dsl() -> str` | Embed the current DSL as a note element on the canvas. |
 | `whiteboard.erase(*, ids: list[str]) -> str` | Remove individual elements from the canvas and Python state. |
@@ -78,7 +67,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 ### Defaults
 
 - OneTool uses the built-in defaults for whiteboard layout, DSL state, and save/load behavior.
-- Runtime access still depends on the `playwright` MCP server being enabled.
+- Requires Chrome/Chromium installed on the host. No external MCP server needed.
 
 ## Tools
 
@@ -346,7 +335,7 @@ whiteboard.fit()
 
 ### `close()`
 
-Close the excalidraw tab and reset all Python state.
+Close the excalidraw browser and reset all Python state. An atexit handler also closes the browser automatically on interpreter exit.
 
 ```python
 whiteboard.close()
@@ -354,7 +343,7 @@ whiteboard.close()
 
 ### `hard_reset()`
 
-Reset Python state unconditionally; attempt canvas clear if browser is available. Use to recover from broken Playwright state.
+Reset Python state unconditionally; attempt canvas clear if browser is available. Use to recover from broken state.
 
 ```python
 whiteboard.hard_reset()

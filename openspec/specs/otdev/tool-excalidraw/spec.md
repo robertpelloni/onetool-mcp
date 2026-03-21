@@ -2,9 +2,10 @@
 
 ## Purpose
 
-Playwright-driven live diagram manipulation on excalidraw.com. Exposes a `whiteboard`
-pack with tools to draw, annotate, save, load, clear, scroll, and zoom
-diagrams using a Mermaid-compatible DSL. Requires the Playwright MCP server.
+Live diagram manipulation on excalidraw.com via pydoll (Chrome CDP). Exposes
+a `whiteboard` pack with tools to draw, annotate, save, load, clear, scroll,
+and zoom diagrams using a Mermaid-compatible DSL. Requires Chrome/Chromium to
+be installed on the host.
 
 Pack name: `whiteboard` (used as `whiteboard.draw(...)`, `whiteboard.note(...)`, etc.)
 Short alias: `wb` — `wb.draw(...)` is equivalent to `whiteboard.draw(...)`.
@@ -240,21 +241,24 @@ Returns `"whiteboard ready"` on success.
 ### Requirement: Close whiteboard
 
 `whiteboard.close()` SHALL reset all Python state unconditionally, then close the
-browser tab (or navigate to `about:blank` as fallback). If Playwright is
-unavailable, only Python state is reset.
+browser process. If the browser is not running, only Python state is reset.
+
+An `atexit` handler SHALL be registered when the browser is first opened, so that
+the Chrome process is closed automatically on interpreter exit even if
+`whiteboard.close()` is not called explicitly. The handler SHALL tolerate
+already-closed state (no-op if browser was already shut down).
 
 ### Requirement: Hard reset
 
 `whiteboard.hard_reset()` SHALL reset Python state unconditionally and attempt canvas
-clear if Playwright is available. Returns `"hard reset: state cleared, canvas
+clear if the browser is available. Returns `"hard reset: state cleared, canvas
 cleared"` or `"hard reset: state cleared (browser unavailable)"`.
 
 ### Requirement: Screenshot
 
-`whiteboard.screenshot(file=)` SHALL call `browser_take_screenshot` with `format="png"`
-and `raw=False`. Without `file`, returns the raw result for inline display.
-With `file`, saves the image to disk (supports both temp-file path extraction
-and base64 fallback).
+`whiteboard.screenshot(file=)` SHALL capture the current canvas as a PNG image.
+Without `file`, returns the raw image content for inline display.
+With `file`, saves the image to the given path on disk.
 
 ### Requirement: Scroll and zoom
 
@@ -271,7 +275,7 @@ are correctly included in the viewport.
 ### Requirement: Automatic browser lifecycle management
 
 Every public tool SHALL call `_ensure_ready()` before executing (except
-`screenshot` and `hard_reset` which call `_check_playwright()` instead).
+`screenshot` and `hard_reset` which call `_check_browser()` instead).
 If excalidraw.com is not open or the API is missing, the tool SHALL
 transparently navigate, bootstrap, and re-render from the current Python state.
 
@@ -288,9 +292,9 @@ transparently navigate, bootstrap, and re-render from the current Python state.
 - **WHEN** `bootstrap.js` returns `false` (React API not found)
 - **THEN** the tool SHALL return `"Error: excalidraw bootstrap failed — React API not found on page"`
 
-#### Scenario: Playwright not running
-- **WHEN** the Playwright MCP server is not active and any excalidraw tool is called
-- **THEN** the tool SHALL return an error instructing the user to enable the Playwright server
+#### Scenario: Browser not available
+- **WHEN** the browser cannot be launched and any excalidraw tool is called
+- **THEN** the tool SHALL return an error indicating the browser is not available
 
 #### Scenario: Untracked canvas content warning
 - **WHEN** the canvas is ready but `_rendered_ids` is empty and the canvas has untracked elements
@@ -363,7 +367,7 @@ The return string reflects scope: `"layout applied to N nodes"` (all) or
 `"layout applied to N nodes (selection)"` (selection-scoped).
 
 The browser JS SHALL return the `{nodes, edges}` object directly (not as a
-`JSON.stringify`-encoded string) so Playwright does not double-encode the result.
+`JSON.stringify`-encoded string) so the CDP bridge does not double-encode the result.
 
 Parameters:
 

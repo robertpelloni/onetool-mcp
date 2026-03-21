@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.network, pytest.mark.tools, pytest.mark.playwright]
+pytestmark = [pytest.mark.integration, pytest.mark.network, pytest.mark.tools, pytest.mark.pydoll]
 
 
 @pytest.fixture(autouse=True)

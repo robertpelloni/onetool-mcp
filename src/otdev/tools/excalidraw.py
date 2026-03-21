@@ -1,7 +1,7 @@
-"""Excalidraw tool pack — Playwright-driven live diagram manipulation.
+"""Excalidraw tool pack — live diagram manipulation via pydoll.
 
-Opens excalidraw.com via Playwright and exposes tools to draw, save, load,
-clear, scroll, and zoom diagrams using a Mermaid-compatible DSL.
+Opens excalidraw.com via pydoll (Chrome CDP) and exposes tools to draw, save,
+load, clear, scroll, and zoom diagrams using a Mermaid-compatible DSL.
 
 Supports two usage modes:
 
@@ -10,8 +10,7 @@ Supports two usage modes:
 - **Headless**: agent-controlled only — user cannot see the canvas, but all
   programmatic tools (draw, save, load, screenshot, layout, etc.) work fully.
 
-Requires the Playwright MCP server to be enabled:
-    ot.server(enable='playwright')
+Requires Chrome/Chromium to be installed on the host.
 """
 
 from __future__ import annotations
@@ -43,17 +42,17 @@ __all__ = [
     "zoom",
 ]
 
-import base64
+import asyncio
+import atexit
 import contextlib
 import json
 import re
 import textwrap
+import threading
 from importlib import resources
 from typing import Any
 
 from otpack import LogSpan, resolve_cwd_path
-
-from ot.proxy import get_proxy_manager
 
 # ---------------------------------------------------------------------------
 # Module-level DSL state
@@ -86,58 +85,128 @@ def _load_js(filename: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Playwright helpers
+# Pydoll browser driver
 # ---------------------------------------------------------------------------
 
-_PLAYWRIGHT_SERVER = "playwright"
+_browser: Any = None   # pydoll Chrome instance
+_tab: Any = None       # pydoll Tab instance
+_loop: asyncio.AbstractEventLoop | None = None
+_loop_thread: threading.Thread | None = None
+
+atexit.register(lambda: _close_browser())
 
 
-def _check_playwright() -> str | None:
-    """Return error string if Playwright server not connected, else None."""
-    proxy = get_proxy_manager()
-    if _PLAYWRIGHT_SERVER not in proxy.servers:
-        return (
-            "Error: Playwright server not connected. "
-            "Enable with `ot.server(enable='playwright')`"
-        )
+def _run(coro: Any) -> Any:
+    """Run an async coroutine synchronously via a dedicated daemon event loop."""
+    global _loop, _loop_thread
+    if _loop is None or _loop.is_closed():
+        _loop = asyncio.new_event_loop()
+        _loop_thread = threading.Thread(target=_loop.run_forever, daemon=True)
+        _loop_thread.start()
+    future = asyncio.run_coroutine_threadsafe(coro, _loop)
+    return future.result(timeout=60)
+
+
+def _open_browser() -> None:
+    """Launch pydoll browser, open tab, navigate to excalidraw.com."""
+    global _browser, _tab
+    from pydoll.browser import Chrome
+    from pydoll.exceptions import NoValidTabFound
+
+    async def _start() -> tuple[Any, Any]:
+        # Chrome's initial page target may not be registered immediately after the
+        # CDP endpoint comes up. Retry up to 3 times with a 1-second gap so the
+        # race window doesn't permanently block the first cold start.
+        last_exc: Exception = RuntimeError("browser start failed")
+        for attempt in range(3):
+            if attempt > 0:
+                await asyncio.sleep(1)
+            b = Chrome()
+            try:
+                t = await b.start()
+                return b, t
+            except NoValidTabFound as exc:
+                last_exc = exc
+                with contextlib.suppress(Exception):
+                    await b.stop()
+        raise last_exc
+
+    b, t = _run(_start())
+    _browser = b
+    _tab = t
+    _browser_navigate("https://excalidraw.com")
+
+
+def _close_browser() -> None:
+    """Close browser process. Tolerates already-closed state.
+
+    Registered as an atexit handler on first browser open. During interpreter
+    shutdown the daemon event loop thread may already be dead, so we fall back
+    to killing the Chrome subprocess directly by PID.
+    """
+    global _browser, _tab
+    b, _browser, _tab = _browser, None, None
+    if b is None:
+        return
+    # Try graceful async shutdown first.
+    try:
+        _run(b.__aexit__(None, None, None))
+    except Exception:
+        # Event loop unavailable (e.g. atexit after daemon thread exit).
+        # Kill the Chrome subprocess directly if pydoll exposes a PID.
+        with contextlib.suppress(Exception):
+            proc = getattr(b, "_process_manager", None)
+            proc = getattr(proc, "_process", None) if proc else None
+            if proc is not None:
+                proc.kill()
+
+
+def _check_browser() -> str | None:
+    """Return error string if browser not open, else None."""
+    if _tab is None:
+        return "Error: whiteboard browser not open. Call whiteboard.open() first."
     return None
 
 
-def _extract_playwright_result(raw: str | Any) -> str:
-    """Extract value from a Playwright browser_evaluate response."""
-    raw_str = str(raw)
-    marker = "### Result\n"
-    if raw_str.startswith(marker):
-        value = raw_str[len(marker):]
-        end = value.find("\n### ")
-        if end != -1:
-            value = value[:end]
-        return value.strip()
-    return raw_str.strip()
-
-
 def _browser_navigate(url: str) -> None:
-    """Navigate the Playwright browser to the given URL."""
-    proxy = get_proxy_manager()
-    proxy.call_tool_sync(_PLAYWRIGHT_SERVER, "browser_navigate", {"url": url})
+    """Navigate the browser to the given URL."""
+    _run(_tab.go_to(url=url))
+
+
+def _extract_js_value(response: Any) -> Any:
+    """Extract the Python value from an execute_script EvaluateResponse dict."""
+    return response.get("result", {}).get("result", {}).get("value")
 
 
 def _browser_evaluate(fn: str) -> str:
-    """Evaluate a JS function string in the browser and return the raw result."""
-    proxy = get_proxy_manager()
-    raw = proxy.call_tool_sync(
-        _PLAYWRIGHT_SERVER, "browser_evaluate", {"function": fn}
-    )
-    return _extract_playwright_result(raw)
+    """Evaluate a JS function string in the browser and return result as string."""
+    response = _run(_tab.execute_script(
+        f"({fn})()",
+        return_by_value=True,
+        await_promise=True,
+    ))
+    value = _extract_js_value(response)
+    if value is None:
+        return "null"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    return str(value)
 
 
 def _browser_evaluate_json(fn: str) -> Any:
-    """Evaluate a JS function and JSON-parse the result."""
-    raw = _browser_evaluate(fn)
-    try:
-        return json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return raw
+    """Evaluate a JS function and return a Python-native result."""
+    response = _run(_tab.execute_script(
+        f"({fn})()",
+        return_by_value=True,
+        await_promise=True,
+    ))
+    value = _extract_js_value(response)
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return value
+    return value
 
 
 # ---------------------------------------------------------------------------
@@ -232,12 +301,16 @@ def _shape_payload(
 def _ensure_ready() -> str | None:
     """Ensure excalidraw.com is open and bootstrapped.
 
-    Returns error string if Playwright not available, else None.
-    Handles: first call, closed tab, navigated-away page, page reload.
+    Opens the browser if not already open. Handles: first call, closed tab,
+    navigated-away page, page reload.
     """
-    err = _check_playwright()
-    if err:
-        return err
+    if _tab is None:
+        try:
+            _open_browser()
+        except Exception as exc:
+            return f"Error: failed to open browser — {exc}"
+        if _tab is None:
+            return "Error: failed to open browser"
 
     try:
         result = _browser_evaluate(
@@ -2377,58 +2450,26 @@ def screenshot(*, file: str | None = None) -> Any:
         excalidraw.screenshot(file="diagrams/canvas.png")
     """
     with LogSpan(span="excalidraw.screenshot") as s:
-        err = _check_playwright()
+        err = _check_browser()
         if err:
             s.add("error", err)
             return err
 
-        proxy = get_proxy_manager()
-        result = proxy.call_tool_sync(
-            _PLAYWRIGHT_SERVER,
-            "browser_take_screenshot",
-            {"raw": False, "format": "png"},
-        )
-
         if file is None:
-            return result
+            return _run(_tab.take_screenshot(as_base64=True))
 
-        import shutil
-
-        result_str = str(result)
         out_path = resolve_cwd_path(file)
         out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Playwright writes the image to a temp file — extract that path and copy it
-        path_match = re.search(r"\[.*?\]\(([^)]+)\)", result_str)
-        if path_match:
-            src_path = path_match.group(1)
-            try:
-                shutil.copy(src_path, str(out_path))
-                return f"screenshot saved to {file}"
-            except Exception as exc:
-                return f"Error: could not save screenshot from {src_path} — {exc}"
-
-        # Fallback: base64-encoded content
-        img_bytes: bytes | None = None
-        if "base64," in result_str:
-            with contextlib.suppress(Exception):
-                img_bytes = base64.b64decode(result_str.split("base64,", 1)[1].strip())
-        if img_bytes is None:
-            with contextlib.suppress(Exception):
-                img_bytes = base64.b64decode(result_str.strip())
-        if img_bytes:
-            out_path.write_bytes(img_bytes)
-            return f"screenshot saved to {file}"
-
-        return f"Error: could not save screenshot to {file} — unexpected result format"
+        _run(_tab.take_screenshot(path=str(out_path)))
+        return f"screenshot saved to {file}"
 
 
 def hard_reset() -> str:
     """Reset Python DSL state unconditionally; attempt canvas clear if browser is available.
 
-    Use this to recover from a broken Playwright/Chrome state where normal
+    Use this to recover from a broken Chrome state where normal
     tools fail. Python state is always reset. Browser clear is attempted
-    opportunistically — if Playwright is down it is silently skipped.
+    opportunistically — if the browser is down it is silently skipped.
 
     Returns:
         "hard reset: state cleared, canvas cleared" or
@@ -2440,7 +2481,7 @@ def hard_reset() -> str:
     _reset_state()
 
     browser_ok = False
-    if _check_playwright() is None:
+    if _check_browser() is None:
         try:
             _browser_evaluate("() => window.__drawApi.clear()")
             browser_ok = True
@@ -2484,13 +2525,11 @@ def open() -> str:
 
 
 def close() -> str:
-    """Close the excalidraw tab and reset all Python state.
+    """Close the excalidraw browser and reset all Python state.
 
-    Resets DSL state unconditionally, then closes the browser tab so it is
-    not left open. On the next whiteboard tool call a fresh excalidraw.com tab will
-    be opened automatically.
-
-    If Playwright is unavailable, only the Python state is reset.
+    Resets DSL state unconditionally, then terminates the browser process.
+    On the next whiteboard tool call a fresh excalidraw.com tab will be
+    opened automatically.
 
     Returns:
         Confirmation message.
@@ -2499,18 +2538,5 @@ def close() -> str:
         excalidraw.close()
     """
     _reset_state()
-
-    if _check_playwright() is not None:
-        return "whiteboard closed (browser unavailable)"
-
-    proxy = get_proxy_manager()
-    try:
-        proxy.call_tool_sync(_PLAYWRIGHT_SERVER, "browser_close", {})
-    except Exception:
-        # Fall back to navigating away if browser_close is unsupported
-        with contextlib.suppress(Exception):
-            proxy.call_tool_sync(
-                _PLAYWRIGHT_SERVER, "browser_navigate", {"url": "about:blank"}
-            )
-
+    _close_browser()
     return "whiteboard closed"
