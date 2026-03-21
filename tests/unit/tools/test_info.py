@@ -75,6 +75,7 @@ def mock_proxy_manager() -> MagicMock:
 
 @pytest.mark.unit
 @pytest.mark.serve
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 def test_tools_returns_correct_signatures_for_same_named_functions() -> None:
     """Verify ot.tools() returns correct info for functions with same name."""
     from ot.meta import tools

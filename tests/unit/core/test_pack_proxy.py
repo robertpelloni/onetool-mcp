@@ -63,6 +63,7 @@ class TestBuildExecutionNamespaceAliases:
         assert "billing" in ns
         assert "aws-billing" in ns
 
+    @pytest.mark.filterwarnings("ignore:Server.*uses hyphens:UserWarning")
     def test_non_aws_hyphenated_server_gets_underscore_alias(self) -> None:
         """Non-aws hyphenated server (e.g. my-server) should get underscore alias."""
         ns = self._build_namespace(["my-server"])

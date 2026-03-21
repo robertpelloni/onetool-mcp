@@ -27,8 +27,10 @@ def _resolve_handle(handle: Any) -> str:
     """
     if isinstance(handle, str):
         return handle
-    if isinstance(handle, dict) and isinstance(handle.get("handle"), str):
-        return handle["handle"]
+    if isinstance(handle, dict):
+        val = handle.get("handle")
+        if isinstance(val, str):
+            return val
     type_name = type(handle).__name__
     raise TypeError(
         f"handle must be a string (e.g. 'b2d18a1b'), got {type_name}. "
