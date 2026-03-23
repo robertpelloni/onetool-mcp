@@ -44,7 +44,7 @@ prompts:
     Use `ot.packs()` for details. Not all packs are installed by default.
 
     ## Discovery
-    - Find tools: `ot.help(query='search')` or `ot.tool_info(pattern='brave')`
+    - Find tools: `ot.help(query='search')` or `ot.tool_info(pattern='brave')` — short aliases work (e.g. `ctx` for ot_context, `img` for ot_image)
     - Full reference: `ot.skills(name="ot-ref")`
 
     ## External Content Boundaries

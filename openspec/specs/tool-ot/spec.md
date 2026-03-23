@@ -22,6 +22,11 @@ The `ot.tools()` function SHALL list all available tools with optional filtering
 - **THEN** it SHALL return only tools with names containing the pattern (case-insensitive substring)
 - **AND** pattern SHALL always perform partial matching
 
+#### Scenario: Short alias resolves to full pack name
+- **GIVEN** a short alias from `PACK_SHORT_NAMES` (e.g. `"ctx"` for `"ot_context"`)
+- **WHEN** `ot.tools(pattern="ctx")` is called
+- **THEN** it SHALL resolve the alias and return the same results as `ot.tools(pattern="ot_context")`
+
 #### Scenario: Info level min
 - **GIVEN** `info="min"` parameter
 - **WHEN** `ot.tools(info="min")` is called
@@ -54,6 +59,11 @@ The `ot.tool_info()` function SHALL return detailed info (signature + args) for 
 - **GIVEN** `pattern="brave"` parameter
 - **WHEN** `ot.tool_info(pattern="brave")` is called
 - **THEN** it SHALL return a list of dicts for all matching tools
+
+#### Scenario: Short alias resolves in pattern and name
+- **GIVEN** a short alias from `PACK_SHORT_NAMES` (e.g. `"ctx"` for `"ot_context"`)
+- **WHEN** `ot.tool_info(pattern="ctx")` or `ot.tool_info(name="ctx.ask")` is called
+- **THEN** it SHALL resolve the alias and match against the full pack name
 
 #### Scenario: Info level min
 - **GIVEN** `info="min"` parameter

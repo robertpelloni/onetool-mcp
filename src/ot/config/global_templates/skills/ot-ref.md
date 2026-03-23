@@ -10,7 +10,7 @@ tags: [reference, cheatsheet]
 
 When a call fails, introspect before guessing:
 - Unknown tool? → `ot.tools(pattern="name")` or `ot.packs(pattern="name")`
-- Wrong args? → `ot.tool_info(name="pack.tool")` for signature + args
+- Wrong args? → `ot.tool_info(name="pack.tool")` for signature + args — short aliases work (e.g. `ctx.ask` resolves to `ot_context.ask`)
 - General confusion? → `ot.help(query="topic")`
 - If introspection fails → report the error, don't guess or compute results yourself
 
@@ -86,3 +86,9 @@ ctx.ask(handle=h['handle'], q='What is X?')           # LLM question
 ## Parameter Traps
 
 Common wrong parameter names. When a call fails, check: `ot.tool_info(name="pack.tool")`
+
+| Call | Correct | Common mistake |
+|------|---------|----------------|
+| `ctx.ask(handle=h, q='...')` | `q=` | `question=` |
+| `ctx.query(handle=h, expr='...')` | `expr=` | `query=` |
+| `ot_image.load(img='...')` | `img=` | `path=` |

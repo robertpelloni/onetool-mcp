@@ -7,9 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 from ot.config import get_config
 from ot.logging import LogSpan
+from ot.meta._constants import PACK_SHORT_NAMES
 from ot.meta._constants import safe_server_name as _safe_server_name
 from ot.meta._tool_discovery import _build_proxy_tool_info, _build_tool_info
 from ot.proxy import get_proxy_manager
+
+# Reverse mapping: short alias → full pack name (e.g. "ctx" → "ot_context")
+_SHORT_TO_FULL: dict[str, str] = {alias: full for full, alias in PACK_SHORT_NAMES.items()}
 
 if TYPE_CHECKING:
     from ot.meta._constants import InfoLevel, ServerInfoLevel
@@ -52,6 +56,9 @@ def tools(
 
     from ot.executor.tool_loader import load_tool_registry
 
+    # Resolve short alias to full pack name for filtering
+    resolved_pattern = _SHORT_TO_FULL.get(pattern, pattern) if pattern else pattern
+
     with log(span="ot.tools", pattern=pattern or None, info=info) as s:
         runner_registry = load_tool_registry()
         proxy = get_proxy_manager()
@@ -72,7 +79,7 @@ def tools(
             for func_name, func in func_items:
                 full_name = f"{pack_name}.{func_name}"
 
-                if pattern and pattern.lower() not in full_name.lower():
+                if resolved_pattern and resolved_pattern.lower() not in full_name.lower():
                     continue
 
                 tools_list.append(_build_tool_info(full_name, func, "local", info))
@@ -82,7 +89,7 @@ def tools(
             safe_server = _safe_server_name(proxy_tool.server)
             tool_name = f"{safe_server}.{proxy_tool.name}"
 
-            if pattern and pattern.lower() not in tool_name.lower():
+            if resolved_pattern and resolved_pattern.lower() not in tool_name.lower():
                 continue
 
             tools_list.append(
@@ -132,6 +139,14 @@ def tool_info(
         raise ValueError(f"info={info!r} is not valid. Use 'min', 'default', or 'full'.")
 
     filter_pattern = name or pattern
+    # Resolve short alias: "ctx" → "ot_context", "ctx.ask" → "ot_context.ask"
+    if filter_pattern:
+        if "." in filter_pattern:
+            prefix, _, suffix = filter_pattern.partition(".")
+            resolved = _SHORT_TO_FULL.get(prefix, prefix)
+            filter_pattern = f"{resolved}.{suffix}"
+        else:
+            filter_pattern = _SHORT_TO_FULL.get(filter_pattern, filter_pattern)
 
     with log(span="ot.tool_info", name=name or None, pattern=pattern or None, info=info) as s:
         runner_registry = load_tool_registry()
@@ -184,7 +199,7 @@ def tool_info(
         # Exact name match returns single dict
         if name:
             for result in results:
-                if result["name"] == name:
+                if result["name"] == filter_pattern:
                     return result
             return {}
 
@@ -231,9 +246,10 @@ def packs(
         proxy_packs = set(proxy.servers)
         all_pack_names = sorted(local_packs | proxy_packs)
 
-        # Filter by pattern
-        if pattern:
-            all_pack_names = [p for p in all_pack_names if pattern.lower() in p.lower()]
+        # Filter by pattern (resolve short alias)
+        resolved_pat = _SHORT_TO_FULL.get(pattern, pattern) if pattern else pattern
+        if resolved_pat:
+            all_pack_names = [p for p in all_pack_names if resolved_pat.lower() in p.lower()]
 
         # info="min" - just names
         if info == "min":
@@ -311,6 +327,9 @@ def pack_info(
 
     from ot.executor.tool_loader import load_tool_registry
     from ot.prompts import PromptsError, get_pack_instructions, get_prompts
+
+    # Resolve short alias
+    name = _SHORT_TO_FULL.get(name, name) if name else name
 
     with log(span="ot.pack_info", name=name or None, info=info) as s:
         runner_registry = load_tool_registry()

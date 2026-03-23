@@ -285,6 +285,78 @@ def test_packs_pattern_no_match_returns_empty() -> None:
 
 
 # ============================================================================
+# Short Alias Resolution Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_tool_info_resolves_short_alias_pattern() -> None:
+    """Verify ot.tool_info(pattern='ctx') resolves to ot_context tools."""
+    from ot.meta import tool_info
+
+    result = tool_info(pattern="ctx")
+
+    assert isinstance(result, list)
+    assert len(result) >= 1
+    # All results should be ot_context tools
+    for entry in result:
+        assert entry["name"].startswith("ot_context.")
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_tool_info_resolves_short_alias_dotted_name() -> None:
+    """Verify ot.tool_info(name='ctx.ask') resolves to ot_context.ask."""
+    from ot.meta import tool_info
+
+    result = tool_info(name="ctx.ask")
+
+    assert isinstance(result, dict)
+    assert result.get("name") == "ot_context.ask"
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_tools_resolves_short_alias_pattern() -> None:
+    """Verify ot.tools(pattern='ctx') resolves to ot_context tools."""
+    from ot.meta import tools
+
+    result = tools(pattern="ctx")
+
+    assert isinstance(result, list)
+    assert len(result) >= 1
+    tool_names = [t["name"] for t in result]
+    assert all(n.startswith("ot_context.") for n in tool_names)
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_packs_resolves_short_alias_pattern() -> None:
+    """Verify ot.packs(pattern='ctx') resolves to ot_context."""
+    from ot.meta import packs
+
+    result = packs(pattern="ctx")
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0]["name"] == "ot_context"
+
+
+@pytest.mark.unit
+@pytest.mark.serve
+def test_pack_info_resolves_short_alias() -> None:
+    """Verify ot.pack_info(name='ctx') resolves to ot_context."""
+    from ot.meta import pack_info
+
+    result = pack_info(name="ctx")
+
+    assert isinstance(result, dict)
+    assert result.get("name") == "ot_context"
+    assert "error" not in result
+
+
+# ============================================================================
 # Reload Tests
 # ============================================================================
 
