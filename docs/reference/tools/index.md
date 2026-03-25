@@ -1,6 +1,6 @@
 # Tool Reference
 
-**25 Packs. 231 Tools.**
+**24 Packs. 216 Tools.**
 
 Complete reference of all built-in tool packs and functions.
 
@@ -12,7 +12,7 @@ Tools are split into optional install extras. Install only what you need:
 |-------|---------------|
 | *(core, always included)* | `ctx`, `ot`, `ot_forge`, `ot_llm`, `ot_secrets`, `ot_timer` |
 | `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem`, `ot_image`, `tavily` |
-| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `whiteboard`, `webfetch`, `worktree` |
+| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `whiteboard`, `webfetch` |
 | `[all]` | All of the above |
 
 ```bash
@@ -36,7 +36,7 @@ uv tool install 'onetool-mcp[util,dev]'  # most tools
 | [**Ground**](ground.md) | `[util]` | Grounded search with sources. | 5 | [Google Gemini](https://ai.google.dev/) (MIT) | `dev`, `docs`, `reddit`, `search`, `search_batch` |
 | [**Mem**](mem.md) | `[util]` | Persistent AI agent memory with semantic search. | 26 | MIT | `append`, `context`, `count`, `decay`, `delete`, `embed`, `export`, `flush`, `grep`, `list`, `load`, `read`, `read_batch`, `refresh`, `restore`, `search`, `slice`, `slice_batch`, `snap`, `stale`, `stats`, `toc`, `update`, `update_batch`, `write`, `write_batch` |
 | [**OT Context**](ot_context.md) | core | TTL-expiring, BM25-indexed storage for large tool outputs. | 13 | MIT | `append`, `ask`, `delete`, `grep`, `inspect`, `list`, `purge`, `read`, `search`, `slice`, `stats`, `toc`, `write` |
-| [**OT Core**](ot_core.md) | core | Introspection and management tools. | 20 | MIT | `aliases`, `config`, `debug`, `health`, `help`, `notify`, `pack_info`, `packs`, `reload`, `result`, `security`, `server`, `servers`, `skills`, `snippet_info`, `snippets`, `stats`, `tool_info`, `tools`, `version` |
+| [**OT Core**](ot_core.md) | core | Introspection and management tools. | 19 | MIT | `aliases`, `config`, `debug`, `health`, `help`, `pack_info`, `packs`, `reload`, `result`, `security`, `server`, `servers`, `skills`, `snippet_info`, `snippets`, `stats`, `tool_info`, `tools`, `version` |
 | [**OT Forge**](ot_forge.md) | core | Create, validate, and install extension tools and skill stubs. | 3 | MIT | `create_ext`, `install_skills`, `validate_ext` |
 | [**OT Image**](ot_image.md) | `[util]` | Load images and ask vision questions via OpenAI-compatible API. | 9 | MIT | `ask`, `clip_ask`, `clip_view`, `delete`, `list`, `load`, `load_batch`, `purge`, `summary` |
 | [**OT LLM**](ot_llm.md) | core | AI-powered data transformation. | 2 | MIT | `transform`, `transform_file` |
@@ -48,4 +48,3 @@ uv tool install 'onetool-mcp[util,dev]'  # most tools
 | [**OT Timer**](ot_timer.md) | core | Named stopwatch timers for performance measurement. | 4 | MIT | `clear`, `elapsed`, `list`, `start` |
 | [**WB (Whiteboard)**](whiteboard.md) | `[dev]` | Live diagram drawing on excalidraw.com via Playwright. | 21 | MIT | `align`, `clear`, `close`, `draw`, `embed_dsl`, `erase`, `fit`, `hard_reset`, `help`, `layout`, `load`, `note`, `open`, `read_scene`, `save`, `screenshot`, `scroll`, `share`, `style`, `sync`, `zoom` |
 | [**Webfetch**](webfetch.md) | `[dev]` | Fetch and extract web content. | 2 | [trafilatura](https://github.com/adbar/trafilatura) (Apache 2.0) | `fetch`, `fetch_batch` |
-| [**Worktree**](worktree.md) | `[dev]` | Git worktree management for parallel agent tasks. | 14 | MIT | `add`, `checkout`, `clean`, `commit`, `diff`, `info`, `init`, `list`, `log`, `mark`, `message`, `prepare`, `remove`, `status` |

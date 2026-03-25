@@ -72,7 +72,7 @@ The MCP server that exposes tools for LLM code execution.
 | Spec | Purpose |
 |------|---------|
 | [ctx](ctx/spec.md) | Smart-context store backed by flat files (`ot_context` / `ctx` pack) |
-| [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, notify, version) |
+| [tool-ot](tool-ot/spec.md) | Internal `ot.*` pack (tools, config, health, version) |
 
 ### Built-in Tools (`ottools`)
 
@@ -110,7 +110,6 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
 | [tool-webfetch](otdev/tool-webfetch/spec.md) | Web content extraction via trafilatura |
-| [tool-worktree](otdev/tool-worktree/spec.md) | Git worktree management for parallel agent workflows |
 
 ---
 
@@ -167,7 +166,6 @@ Specs that have been consolidated into other specs:
 - `tool-transform` → renamed to [tool-llm](ottools/tool-llm/spec.md)
 - `tool-web-fetch` → renamed to [tool-web](otdev/tool-web/spec.md)
 - `tool-web` → renamed to [tool-webfetch](otdev/tool-webfetch/spec.md)
-- `tool-notify` → consolidated into [tool-ot](tool-ot/spec.md)
 - `tool-sdk` → removed (extensions use `ot.*` imports directly)
 - `changes/add-excalidraw-pack` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (spec updated to match final implementation: pack renamed `wb`, tools renamed, file format changed, new tools added)
 - `changes/excalidraw-ascii-note` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (note tool requirements merged; `Swim` type replaced by `seq`)

@@ -150,9 +150,6 @@ Timing
 - ot_timer.list() - show all active and stored timers
 - ot_timer.clear() - clear all running timers
 
-Notifications
-- ot.notify(topic="...", message="...") - publish messages to topic files
-
 Configuration
 - ot.reload() - force config reload
 

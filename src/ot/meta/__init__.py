@@ -1,6 +1,6 @@
 """OneTool core introspection tools (ot pack).
 
-Provides tool discovery and messaging under the unified `ot` pack.
+Provides tool discovery and management under the unified `ot` pack.
 These are core introspection functions, not external tools, so they
 live in the core package rather than tools_dir.
 
@@ -16,7 +16,6 @@ Functions:
     ot.health() - Check system health
     ot.stats() - Get runtime statistics
     ot.result() - Query stored large output results
-    ot.notify() - Publish message to topic
     ot.reload() - Force configuration reload
 """
 
@@ -40,7 +39,6 @@ from ot.meta._help_formatting import (
     _get_doc_url,
 )
 from ot.meta._introspection import aliases, snippet_info, snippets
-from ot.meta._messaging import _match_topic_to_file, _resolve_path, notify
 from ot.meta._server_mgmt import security, server, skills
 from ot.meta._stats import result, stats
 from ot.meta._tool_discovery import (
@@ -64,9 +62,7 @@ __all__ = [
     "_format_tool_help",
     "_fuzzy_match",
     "_get_doc_url",
-    "_match_topic_to_file",
     "_parse_input_schema",
-    "_resolve_path",
     "_schema_to_signature",
     "_truncate",
     "aliases",
@@ -75,7 +71,6 @@ __all__ = [
     "get_ot_pack_functions",
     "health",
     "help",
-    "notify",
     "pack_info",
     "packs",
     "reload",
@@ -130,7 +125,6 @@ def get_ot_pack_functions() -> dict[str, Any]:
         "result": result,
         "security": security,
         "stats": stats,
-        "notify": notify,
         "reload": reload,
         "version": version,
     }

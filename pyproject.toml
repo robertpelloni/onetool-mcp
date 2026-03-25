@@ -176,8 +176,8 @@ show_error_codes = true
 files = ["src/ot"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
+testpaths = ["tests", "packages/onetool-pack/tests"]
+pythonpath = ["src", "packages/onetool-pack/src"]
 addopts = "-v"
 asyncio_mode = "auto"
 cache_dir = "tmp/.pytest_cache"

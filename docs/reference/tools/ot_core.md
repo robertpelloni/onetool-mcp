@@ -38,7 +38,6 @@ Core tools for OneTool introspection and management.
 | `ot.version()` | Show OneTool version information |
 | `ot.stats(period, tool, output, info)` | Get runtime usage statistics |
 | `ot.result(handle, ...)` | Query stored large output with pagination and search |
-| `ot.notify(topic, message)` | Publish message to configured topic |
 | `ot.reload()` | Force configuration reload |
 | `ot.security(check)` | Check security rules and allowlists |
 
@@ -456,26 +455,6 @@ ot.result(handle="abc123", tail=20)
 | `progress` | Human-readable position, e.g. `"lines 1-50 of 343 (15%)"` |
 | `total_size_bytes` | Full size of stored result in bytes |
 | `next_query` | Ready-to-run call to fetch the next chunk (omitted when `has_more=False`) |
-
-## ot.notify()
-
-Publish a message to a configured topic.
-
-```python
-ot.notify(topic="notes", message="Remember to review PR #123")
-```
-
-Configure topics in `onetool.yaml`:
-
-```yaml
-tools:
-  msg:
-    topics:
-      - pattern: "notes"
-        file: .notes/inbox.md
-      - pattern: "ideas"
-        file: .notes/ideas.md
-```
 
 ## ot.reload()
 

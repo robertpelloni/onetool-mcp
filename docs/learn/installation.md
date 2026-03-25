@@ -49,7 +49,7 @@ Tools are split into optional extras for leaner installs:
 | Extra | Tools | Install |
 |-------|-------|---------|
 | `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem` | `uv tool install 'onetool-mcp[util]'` |
-| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `web`, `worktree` | `uv tool install 'onetool-mcp[dev]'` |
+| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `webfetch` | `uv tool install 'onetool-mcp[dev]'` |
 | `[all]` | Everything | `uv tool install 'onetool-mcp[all]'` |
 
 ```bash

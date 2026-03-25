@@ -48,7 +48,7 @@ Not all packs are installed by default.
 |---------|-------------------------------------------------------|
 | (core)  | mem, ot_llm, ot, package.audit                        |
 | [util]  | brave, convert, excel, file, ground                   |
-| [dev]   | context7, db, diagram, package, ripgrep, webfetch, worktree |
+| [dev]   | context7, db, diagram, package, ripgrep, webfetch |
 
 Check loaded packs: `ot.packs()`. Install: `pip install onetool-mcp[util]`.
 

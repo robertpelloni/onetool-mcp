@@ -27,7 +27,6 @@ PACK_SHORT_NAMES: dict[str, str] = {
     "ripgrep": "rg",
     "chrome_util": "chrome",
     "play_util": "play",
-    "worktree": "wt",
     "convert": "cv",
     "excel": "xls",
     "file": "f",

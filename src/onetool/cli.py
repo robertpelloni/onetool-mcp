@@ -289,7 +289,6 @@ def init_callback(
             ("security.yaml", "custom security rules"),
             ("diagram.yaml",  "diagram tool config"),
             ("snippets.yaml", "code snippets"),
-            ("worktree.yaml", "git worktree config"),
         ]
         choices = [
             questionary.Choice("None           (no extensions)", value=None),

@@ -44,7 +44,6 @@ DOC_MAP = {
     "ripgrep": "ripgrep.md",
     "whiteboard": "whiteboard.md",
     "webfetch": "webfetch.md",
-    "worktree": "worktree.md",
 }
 
 EXTRA_MAP = {
@@ -72,7 +71,6 @@ EXTRA_MAP = {
     "ripgrep": "[dev]",
     "whiteboard": "[dev]",
     "webfetch": "[dev]",
-    "worktree": "[dev]",
 }
 
 

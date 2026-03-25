@@ -262,18 +262,6 @@ No pack-specific `tools.whiteboard` settings.
 | `timeout` | float | `30.0` | `1.0-120.0` | Request timeout in seconds |
 | `max_length` | int | `50000` | `1000-500000` | Maximum content length in chars |
 
-### worktree
-
-| Field | Type | Default | Range | Description |
-|------|------|---------|-------|-------------|
-| `workspace_dir` | string | `../{repo}-work/{task_id}` | - | Worktree dir template |
-| `branch_name` | string | `{task_id}` | - | Branch name template |
-| `launch_cmd` | string | `cd {workspace_dir} && claude` | - | Launch command template |
-| `ot_cmd` | string | `worktree.info()` | - | First tool call instruction |
-| `prepare` | string[] | `[]` | - | Post-create shell commands |
-| `commit.types` | string[] | `["feat","fix","refactor","perf","docs","test","build","ci","chore","style","revert"]` | - | Allowed conventional commit types |
-| `commit.scopes` | string[] | `[]` | - | Project commit scopes |
-
 Example:
 
 ```yaml
@@ -519,22 +507,6 @@ tools:
 ```
 
 Requires `OPENAI_API_KEY` in secrets.yaml (or compatible provider key).
-
-## Message Configuration
-
-Configure `ot.notify()` topic-to-file routing:
-
-```yaml
-tools:
-  msg:
-    topics:
-      - pattern: "status:*"           # Glob-style topic pattern
-        file: "~/.onetool/status.log" # Output file (supports ~ and ${VAR})
-      - pattern: "doc:*"
-        file: "./docs/notes.md"
-```
-
-Messages are appended to matching files. First pattern match wins.
 
 ## Output Configuration
 

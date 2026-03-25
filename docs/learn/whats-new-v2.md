@@ -89,19 +89,6 @@ Generates the boilerplate for new tool packs — file structure, type hints, key
 >>> ot_forge.validate_ext(path="src/mypack.py")
 ```
 
-### worktree — Parallel agent tasks `[dev]` *(beta)*
-
-Running multiple agents on the same repo is risky — they step on each other's files, create merge conflicts, and lose work. The worktree pack solves this by giving each task an isolated git worktree with its own branch and working directory. Agents can work in parallel without coordination. When a task is done, `commit` squashes, rebases, and pushes to main cleanly.
-
-```python
->>> worktree.add(id="fix-login", description="Fix login timeout")
->>> worktree.list()
->>> worktree.commit(message="fix: resolve login timeout")
->>> worktree.remove(id="fix-login")
-```
-
-Also provides `checkout`, `diff`, `status`, `log`, `mark`, `prepare`, and `clean`.
-
 ### ot_timer — Named timers
 
 Simple named timers that persist across tool calls. Start a timer before a long operation, check elapsed time after, and compare results. Useful for profiling builds, API calls, or any workflow where you want to measure duration without leaving the conversation.
@@ -223,7 +210,7 @@ Runs ELK.js in the browser to automatically position all nodes, then calls `fit(
 
 ### Interactive setup with `onetool init`
 
-Getting started no longer means editing YAML by hand. Run `onetool init` and a TUI opens — a checkbox list of every available extension (prompts, servers, security rules, diagram config, snippets, worktree config). Toggle what you want, press enter, and the config files are written for you. Existing files are backed up to `.bak` automatically.
+Getting started no longer means editing YAML by hand. Run `onetool init` and a TUI opens — a checkbox list of every available extension (prompts, servers, security rules, diagram config, snippets). Toggle what you want, press enter, and the config files are written for you. Existing files are backed up to `.bak` automatically.
 
 ```bash
 onetool init -c ~/.onetool
@@ -262,7 +249,7 @@ In v1, all tools shipped in a single install. v2 splits heavy-dependency packs i
 | Extra    | Packs                                                                              |
 | -------- | ---------------------------------------------------------------------------------- |
 | `[util]` | brave, convert, excel, file, ground, mem                                           |
-| `[dev]`  | aws, context7, db, diagram, package, ripgrep, web, worktree, whiteboard, and browser utils |
+| `[dev]`  | aws, context7, db, diagram, package, ripgrep, webfetch, whiteboard, and browser utils |
 | `[all]`  | Everything                                                                         |
 
 ---
@@ -278,7 +265,7 @@ Or with optional tool packs:
 ```bash
 uv tool install 'onetool-mcp[all]'     # everything
 uv tool install 'onetool-mcp[util]'    # file, convert, excel, brave, ground, mem
-uv tool install 'onetool-mcp[dev]'     # ripgrep, db, web, diagram, aws, worktree, ...
+uv tool install 'onetool-mcp[dev]'     # ripgrep, db, webfetch, diagram, aws, ...
 ```
 
 ---

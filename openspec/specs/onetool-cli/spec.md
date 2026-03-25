@@ -51,7 +51,7 @@ Existing files in the target directory SHALL be backed up to `<filename>.bak` (o
   - The default shown is the fully-resolved `config_path`; pressing enter accepts it; typing a new path overrides it
   - Ctrl+C at this prompt cancels without writing any files
 - **AND** it SHALL display a checkbox multi-select TUI listing all available extensions:
-  - `prompts.yaml`, `servers.yaml`, `security.yaml`, `diagram.yaml`, `snippets.yaml`, `worktree.yaml`
+  - `prompts.yaml`, `servers.yaml`, `security.yaml`, `diagram.yaml`, `snippets.yaml`
 - **AND** materialise only the extensions selected by the user
 - **AND** write an `onetool.yaml` that includes only the materialised YAML files
 - **AND** if the user cancels (Ctrl+C) at the checkbox, exit with code 0 without writing any files

@@ -137,22 +137,6 @@ proxy: {status: ok, server_count: 1, servers: {proxy_package_version: connected}
 
 ---
 
-### Requirement: Notify Message
-
-The `ot.notify()` function SHALL publish messages to configured topics.
-
-#### Scenario: Send notification
-- **WHEN** `ot.notify(topic="notes", message="Remember to review PR #123")`
-- **THEN** the message is routed to the matching topic file
-- **AND** appended as a YAML document
-
-#### Scenario: No matching topic
-- **GIVEN** no topic pattern matches the provided topic
-- **WHEN** `ot.notify(topic="unknown:topic", message="test")` is called
-- **THEN** it SHALL return "SKIP: no matching topic"
-
----
-
 ### Requirement: Reload Configuration
 
 The `ot.reload()` function SHALL force reload of all configuration.

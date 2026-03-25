@@ -432,31 +432,6 @@ class StatsConfig(BaseModel):
     )
 
 
-# ==================== Message Configuration ====================
-
-
-class MsgTopicConfig(BaseModel):
-    """Topic-to-file mapping for message routing."""
-
-    pattern: str = Field(
-        ...,
-        description="Glob-style topic pattern (e.g., 'status:*', 'doc:*')",
-    )
-    file: str = Field(
-        ...,
-        description="File path for messages matching this pattern (supports ~ and ${VAR})",
-    )
-
-
-class MsgConfig(BaseModel):
-    """Message tool configuration."""
-
-    topics: list[MsgTopicConfig] = Field(
-        default_factory=list,
-        description="Topic patterns mapped to output files (first match wins)",
-    )
-
-
 # ==================== MCP Server Configuration ====================
 
 
@@ -541,7 +516,6 @@ class ToolsConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     # Core configs - always available
-    msg: MsgConfig = Field(default_factory=MsgConfig)
     stats: StatsConfig = Field(default_factory=StatsConfig)
 
 

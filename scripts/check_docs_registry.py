@@ -54,7 +54,6 @@ NAME_TO_PACK = {
     "OT Timer": "ot_timer",
     "WB (Whiteboard)": "whiteboard",
     "Webfetch": "webfetch",
-    "Worktree": "worktree",
 }
 
 
