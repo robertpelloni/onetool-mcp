@@ -93,7 +93,7 @@ def purge_images(*, all: bool = False, minutes: int = 15) -> dict[str, Any]:
     count = 0
     total_freed = 0
 
-    for meta_path in list(_images_dir().glob("*.meta.json")):
+    for meta_path in _images_dir().glob("*.meta.json"):
         handle_name = meta_path.name.removesuffix(".meta.json")
 
         if cutoff is not None:

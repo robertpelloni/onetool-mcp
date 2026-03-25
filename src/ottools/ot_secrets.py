@@ -229,13 +229,18 @@ def status(*, file: str | None = None) -> dict[str, Any]:
                 if not isinstance(data, dict):
                     result["file_error"] = "File must be a YAML mapping"
                 else:
-                    encrypted = [
-                        k for k, v in data.items() if v and str(v).startswith(_PREFIX)
-                    ]
-                    plain = [
-                        k for k, v in data.items() if v and not str(v).startswith(_PREFIX)
-                    ]
-                    nulls = [k for k, v in data.items() if v is None]
+                    encrypted = []
+                    plain = []
+                    nulls = []
+                    # Falsy non-None values (e.g. empty string) are treated as plain,
+                    # not null — they are present but unencrypted.
+                    for k, v in data.items():
+                        if v is None:
+                            nulls.append(k)
+                        elif str(v).startswith(_PREFIX):
+                            encrypted.append(k)
+                        else:
+                            plain.append(k)
                     result["file"] = str(path)
                     result["values"] = {"encrypted": encrypted, "plain": plain, "null_keys": nulls}
 

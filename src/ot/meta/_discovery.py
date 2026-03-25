@@ -58,6 +58,7 @@ def tools(
 
     # Resolve short alias to full pack name for filtering
     resolved_pattern = _SHORT_TO_FULL.get(pattern, pattern) if pattern else pattern
+    resolved_lower = resolved_pattern.lower() if resolved_pattern else ""
 
     with log(span="ot.tools", pattern=pattern or None, info=info) as s:
         runner_registry = load_tool_registry()
@@ -79,7 +80,7 @@ def tools(
             for func_name, func in func_items:
                 full_name = f"{pack_name}.{func_name}"
 
-                if resolved_pattern and resolved_pattern.lower() not in full_name.lower():
+                if resolved_lower and resolved_lower not in full_name.lower():
                     continue
 
                 tools_list.append(_build_tool_info(full_name, func, "local", info))
@@ -89,7 +90,7 @@ def tools(
             safe_server = _safe_server_name(proxy_tool.server)
             tool_name = f"{safe_server}.{proxy_tool.name}"
 
-            if resolved_pattern and resolved_pattern.lower() not in tool_name.lower():
+            if resolved_lower and resolved_lower not in tool_name.lower():
                 continue
 
             tools_list.append(
@@ -147,6 +148,7 @@ def tool_info(
             filter_pattern = f"{resolved}.{suffix}"
         else:
             filter_pattern = _SHORT_TO_FULL.get(filter_pattern, filter_pattern)
+    filter_lower = filter_pattern.lower() if filter_pattern else ""
 
     with log(span="ot.tool_info", name=name or None, pattern=pattern or None, info=info) as s:
         runner_registry = load_tool_registry()
@@ -167,7 +169,7 @@ def tool_info(
             for func_name, func in func_items:
                 full_name = f"{pack_name}.{func_name}"
 
-                if filter_pattern and filter_pattern.lower() not in full_name.lower():
+                if filter_lower and filter_lower not in full_name.lower():
                     continue
 
                 entry = _build_tool_info(full_name, func, "local", info, detail=True)
@@ -179,7 +181,7 @@ def tool_info(
             safe_server = _safe_server_name(proxy_tool.server)
             tool_name = f"{safe_server}.{proxy_tool.name}"
 
-            if filter_pattern and filter_pattern.lower() not in tool_name.lower():
+            if filter_lower and filter_lower not in tool_name.lower():
                 continue
 
             entry = _build_proxy_tool_info(

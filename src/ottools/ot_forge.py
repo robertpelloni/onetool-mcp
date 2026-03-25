@@ -243,7 +243,7 @@ def validate_ext(*, path: str) -> str:
 
         try:
             content = ext_path.read_text()
-        except Exception as e:
+        except OSError as e:
             s.add(error=str(e))
             return f"Error reading file: {e}"
 
@@ -390,7 +390,7 @@ def _get_skill_description(skill_name: str) -> str:
             try:
                 fm = yaml.safe_load(content[3:end]) or {}
                 return fm.get("description", skill_name)
-            except Exception:
+            except yaml.YAMLError:
                 pass
     return skill_name
 

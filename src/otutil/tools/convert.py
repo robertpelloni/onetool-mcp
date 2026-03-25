@@ -46,6 +46,20 @@ from otutil.tools._convert import (
 # Type alias for converter functions
 ConverterFunc = Callable[[Path, Path, str], dict[str, Any]]
 
+
+def _format_batch_result(result: dict[str, Any], summary: str) -> str:
+    lines = [summary]
+    if result["outputs"]:
+        lines.append("\nOutputs:")
+        for output in result["outputs"]:
+            lines.append(f"  {output}")
+    if result["errors"]:
+        lines.append("\nErrors:")
+        for error in result["errors"]:
+            lines.append(f"  {error}")
+    return "\n".join(lines)
+
+
 # Shared thread pool for file conversions (created lazily, sized for parallelism)
 _conversion_executor: ThreadPoolExecutor | None = None
 
@@ -319,17 +333,9 @@ def pdf(
             result = asyncio.run(_convert_batch_async(files, out_path, convert_pdf))
             s.add(converted=result["converted"], failed=result["failed"])
 
-            lines = [f"Converted {result['converted']} files, {result['failed']} failed"]
-            if result["outputs"]:
-                lines.append("\nOutputs:")
-                for output in result["outputs"]:
-                    lines.append(f"  {output}")
-            if result["errors"]:
-                lines.append("\nErrors:")
-                for error in result["errors"]:
-                    lines.append(f"  {error}")
-
-            return "\n".join(lines)
+            return _format_batch_result(
+                result, f"Converted {result['converted']} files, {result['failed']} failed"
+            )
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -383,17 +389,9 @@ def word(
             result = asyncio.run(_convert_batch_async(files, out_path, convert_word))
             s.add(converted=result["converted"], failed=result["failed"])
 
-            lines = [f"Converted {result['converted']} files, {result['failed']} failed"]
-            if result["outputs"]:
-                lines.append("\nOutputs:")
-                for output in result["outputs"]:
-                    lines.append(f"  {output}")
-            if result["errors"]:
-                lines.append("\nErrors:")
-                for error in result["errors"]:
-                    lines.append(f"  {error}")
-
-            return "\n".join(lines)
+            return _format_batch_result(
+                result, f"Converted {result['converted']} files, {result['failed']} failed"
+            )
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -455,17 +453,9 @@ def powerpoint(
             )
             s.add(converted=result["converted"], failed=result["failed"])
 
-            lines = [f"Converted {result['converted']} files, {result['failed']} failed"]
-            if result["outputs"]:
-                lines.append("\nOutputs:")
-                for output in result["outputs"]:
-                    lines.append(f"  {output}")
-            if result["errors"]:
-                lines.append("\nErrors:")
-                for error in result["errors"]:
-                    lines.append(f"  {error}")
-
-            return "\n".join(lines)
+            return _format_batch_result(
+                result, f"Converted {result['converted']} files, {result['failed']} failed"
+            )
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -536,17 +526,9 @@ def excel(
             )
             s.add(converted=result["converted"], failed=result["failed"])
 
-            lines = [f"Converted {result['converted']} files, {result['failed']} failed"]
-            if result["outputs"]:
-                lines.append("\nOutputs:")
-                for output in result["outputs"]:
-                    lines.append(f"  {output}")
-            if result["errors"]:
-                lines.append("\nErrors:")
-                for error in result["errors"]:
-                    lines.append(f"  {error}")
-
-            return "\n".join(lines)
+            return _format_batch_result(
+                result, f"Converted {result['converted']} files, {result['failed']} failed"
+            )
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -616,17 +598,10 @@ def auto(
             result = asyncio.run(_convert_auto_batch_async(files, out_path, converters))
             s.add(converted=result["converted"], failed=result["failed"], skipped=result["skipped"])
 
-            lines = [f"Converted {result['converted']} files, {result['failed']} failed, {result['skipped']} skipped (unsupported format)"]
-            if result["outputs"]:
-                lines.append("\nOutputs:")
-                for output in result["outputs"]:
-                    lines.append(f"  {output}")
-            if result["errors"]:
-                lines.append("\nErrors:")
-                for error in result["errors"]:
-                    lines.append(f"  {error}")
-
-            return "\n".join(lines)
+            return _format_batch_result(
+                result,
+                f"Converted {result['converted']} files, {result['failed']} failed, {result['skipped']} skipped (unsupported format)",
+            )
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"

@@ -150,7 +150,10 @@ def _copy_servers_yaml(
         console.print("[yellow]Warning: servers.yaml not found in package templates[/yellow]")
         return
 
-    raw = yaml.safe_load(src.read_text()) or {}
+    raw = yaml.safe_load(src.read_text())
+    if not isinstance(raw, dict):
+        console.print("[yellow]Warning: servers.yaml is not a YAML mapping, skipping[/yellow]")
+        return
     all_servers = raw.get("servers", {})
 
     selected: dict[str, object] = {}

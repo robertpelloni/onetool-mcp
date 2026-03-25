@@ -1075,13 +1075,10 @@ class TestEdgeIdUniqueness:
         assert result["edges"][0]["id"] == "edge-a-b-bar"
 
     def test_draw_dedup_distinguishes_arrowhead_types(self) -> None:
+        import otdev.tools.excalidraw as exc
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b\na<-->b')
@@ -1108,11 +1105,7 @@ class TestArrowLabels:
     def test_connect_shape_called_with_label(self) -> None:
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with (
             patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
@@ -1124,8 +1117,6 @@ class TestArrowLabels:
             edges = kwargs["edges"]
             assert len(edges) == 1
             assert edges[0]["label"] == "writes"
-
-
 
 
 # ===========================================================================
@@ -1179,11 +1170,7 @@ class TestNoteToolParsing:
     def test_note_tool_returns_error_on_no_blocks(self) -> None:
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.note(input="no blocks here")
@@ -1193,11 +1180,7 @@ class TestNoteToolParsing:
     def test_note_returns_error_on_renderer_error(self) -> None:
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with (
             patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
@@ -1216,11 +1199,7 @@ class TestNoteToolParsing:
     def test_note_unknown_type_returns_error(self) -> None:
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
             result = excalidraw.note(input="x[text:\nsome content\n]")
@@ -1232,11 +1211,7 @@ class TestNoteToolParsing:
     def test_note_tool_calls_draw_shape(self) -> None:
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         with (
             patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
@@ -1259,11 +1234,7 @@ class TestNoteToolParsing:
         """
         from otdev.tools import excalidraw
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-        exc._edge_keys = set()
-        exc._rendered_ids = set()
-
+        _reset_exc_state()
 
         multi_input = (
             "tr[tree:\nroot/\n-src/\n]\n"

@@ -23,6 +23,10 @@ from ot.executor.tool_loader import load_tool_registry
 from ot.executor.worker_proxy import WorkerPackProxy
 
 DOC = ROOT / "docs/reference/tools/index.md"
+
+_RE_BOLD_NAME = re.compile(r"\*\*([^*]+)\*\*")
+_RE_HEADER_COUNT = re.compile(r"\*\*(\d+) Packs\. (\d+) Tools\.\*\*")
+_RE_OT_SECRETS_LINK = re.compile(r"\[\*\*OT Secrets\*\*\]\(ot_secrets\.md\)")
 CFG = ROOT / "tests/.onetool/onetool.yaml"
 
 NAME_TO_PACK = {
@@ -61,7 +65,7 @@ def parse_table(text: str) -> dict[str, int]:
             continue
         cols = [c.strip() for c in line.strip("|").split("|")]
         name_cell = cols[0]
-        m = re.search(r"\*\*([^*]+)\*\*", name_cell)
+        m = _RE_BOLD_NAME.search(name_cell)
         if not m:
             continue
         name = m.group(1)
@@ -92,7 +96,7 @@ def main() -> int:
     failures: list[str] = []
 
     # Header count check
-    m = re.search(r"\*\*(\d+) Packs\. (\d+) Tools\.\*\*", text)
+    m = _RE_HEADER_COUNT.search(text)
     if not m:
         failures.append("Missing header count line '**N Packs. M Tools.**'")
     else:
@@ -121,7 +125,7 @@ def main() -> int:
             )
 
     # Ensure OT Secrets has a page link
-    if not re.search(r"\[\*\*OT Secrets\*\*\]\(ot_secrets\.md\)", text):
+    if not _RE_OT_SECRETS_LINK.search(text):
         failures.append("OT Secrets row must link to secrets.md")
 
     if failures:

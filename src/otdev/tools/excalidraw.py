@@ -63,6 +63,11 @@ _edge_keys: set[tuple[str, str, str, str | None, str | None]] = set()
 _rendered_ids: set[str] = set()
 
 
+def _edge_key(e: dict[str, Any]) -> tuple[str, str, str, str | None, str | None]:
+    """Return the deduplication key for an edge."""
+    return (e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead"))
+
+
 def _reset_state() -> None:
     """Reset all module-level DSL and render state to empty."""
     _dsl_state.clear()
@@ -951,7 +956,7 @@ def _parse_dsl_to_state(dsl_str: str) -> None:
         "groups": parsed["groups"],
     })
     for e in parsed["edges"]:
-        _edge_keys.add((e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead")))
+        _edge_keys.add(_edge_key(e))
 
 
 # ---------------------------------------------------------------------------
@@ -1028,21 +1033,20 @@ def draw(*, input: str) -> str:
                 if nid not in parsed["shapes"] and nid not in _dsl_state["shapes"]:
                     parsed["shapes"][nid] = {"label": nid, "classes": []}
 
-        # Separate new shapes from existing shapes
-        new_shapes = {
-            id_: sh for id_, sh in parsed["shapes"].items()
-            if id_ not in _dsl_state["shapes"]
-        }
-        existing_shape_updates = {
-            id_: sh for id_, sh in parsed["shapes"].items()
-            if id_ in _dsl_state["shapes"]
-        }
+        # Separate new shapes from existing shapes in one pass
+        new_shapes: dict[str, Any] = {}
+        existing_shape_updates: dict[str, Any] = {}
+        for id_, sh in parsed["shapes"].items():
+            if id_ in _dsl_state["shapes"]:
+                existing_shape_updates[id_] = sh
+            else:
+                new_shapes[id_] = sh
         new_groups = {gid for gid in parsed["groups"] if gid not in _dsl_state["groups"]}
 
         merged_edges = list(_dsl_state["edges"])
         new_edges_to_commit: list[tuple[tuple[str, str, str, str | None, str | None], dict[str, Any]]] = []
         for e in parsed["edges"]:
-            key = (e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead"))
+            key = _edge_key(e)
             if key not in _edge_keys:
                 merged_edges.append(e)
                 new_edges_to_commit.append((key, e))
@@ -1077,8 +1081,7 @@ def draw(*, input: str) -> str:
             y = col_y[sg]
             col_y[sg] += 100.0
             # Apply inline styles for new shapes
-            style = dict(inline_styles.get(id_, {}))
-            shape_payloads.append(_shape_payload(id_, shape, x, y, style))
+            shape_payloads.append(_shape_payload(id_, shape, x, y, inline_styles.get(id_, {})))
 
         # Build patch payloads for existing shapes that changed
         patch_payloads = []
@@ -1434,7 +1437,7 @@ def erase(*, ids: list[str]) -> str:
 
         # Remove edges by their own ID or if their src/dst is being erased
         keys_to_remove = {
-            (e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead"))
+            _edge_key(e)
             for e in _dsl_state["edges"]
             if e["id"] in id_set or e["src"] in id_set or e["dst"] in id_set
         }

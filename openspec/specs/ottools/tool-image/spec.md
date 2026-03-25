@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the `ot_image` pack providing image loading, querying, and lifecycle management for AI agents. Images are stored in the session directory (`.onetool/sessions/<date-hex>/images/`), accessed via stable content-hash handles, and queried using a configurable vision model. A session-scoped LRU cache avoids re-reading files on repeated access.
+Defines the `ot_image` pack providing image loading, querying, and lifecycle management for AI agents. Images are stored in `.onetool/images/`, accessed via stable content-hash handles, and queried using a configurable vision model. A session-scoped LRU cache avoids re-reading files on repeated access.
 
 ## Requirements
 
@@ -26,7 +26,7 @@ and image metadata.
 
 - **WHEN** `image.load(img="~/screenshots/ui.png")` is called
 - **THEN** it SHALL return `{"handle": "#img_<8hexchars>", "source": "<path>", "dims": [W, H], "resized": bool, "dedup": false}`
-- **AND** the original file SHALL be saved verbatim to `.onetool/sessions/<date-hex>/images/img_<hash>.png`
+- **AND** the original file SHALL be saved verbatim to `.onetool/images/img_<hash>.png`
 - **AND** `img_<hash>.meta.json` SHALL be created with `source`, `hash`,
   `original_dims`, `model_dims`, `resized`, `max_edge`, `original_format`,
   `created_at`, and `summary: null`

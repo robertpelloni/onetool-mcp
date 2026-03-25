@@ -31,11 +31,6 @@ def get_ot_imports(tree: ast.Module) -> list[tuple[int, str]]:
     """
     violations: list[tuple[int, str]] = []
 
-    for node in ast.walk(tree):
-        # Only flag imports that are NOT inside a try block
-        if isinstance(node, ast.Try):
-            continue  # skip into Try nodes handled below
-
     # Walk top-level statements only (not inside try/except)
     for node in tree.body:
         _check_node_for_bare_ot_imports(node, violations)
@@ -142,8 +137,9 @@ def main() -> int:
     allowed_files = {"config.py", "logging.py"}
 
     all_errors: list[str] = []
+    py_files = sorted(src_dir.glob("*.py"))
 
-    for py_file in sorted(src_dir.glob("*.py")):
+    for py_file in py_files:
         allow = py_file.name in allowed_files
         errors = check_file(py_file, allow_ot_imports=allow)
         all_errors.extend(errors)
@@ -154,7 +150,7 @@ def main() -> int:
             print(f"  {error}", file=sys.stderr)
         return 1
 
-    print(f"✓ otpack boundary OK ({len(list(src_dir.glob('*.py')))} files checked)")
+    print(f"✓ otpack boundary OK ({len(py_files)} files checked)")
     return 0
 
 

@@ -117,7 +117,7 @@ def find_by_hash(sha256_hex: str) -> str | None:
             meta = json.loads(meta_path.read_text(encoding="utf-8"))
             if meta.get("hash") == sha256_hex:
                 return str(meta.get("handle", ""))
-        except Exception:
+        except (json.JSONDecodeError, OSError):
             continue
     return None
 

@@ -67,6 +67,15 @@ _EXTRACT_FORMAT_VALUES = frozenset(["markdown", "text"])
 _EXTRACT_DEPTH_VALUES = frozenset(["basic", "advanced"])
 _RESEARCH_MODEL_VALUES = frozenset(["mini", "pro", "auto"])
 
+# Pre-sorted for error messages
+_SEARCH_DEPTH_LIST = sorted(_SEARCH_DEPTH_VALUES)
+_TOPIC_LIST = sorted(_TOPIC_VALUES)
+_TIME_RANGE_LIST = sorted(_TIME_RANGE_VALUES)
+_OUTPUT_FORMAT_LIST = sorted(_OUTPUT_FORMAT_VALUES)
+_EXTRACT_FORMAT_LIST = sorted(_EXTRACT_FORMAT_VALUES)
+_EXTRACT_DEPTH_LIST = sorted(_EXTRACT_DEPTH_VALUES)
+_RESEARCH_MODEL_LIST = sorted(_RESEARCH_MODEL_VALUES)
+
 
 def _create_http_client() -> httpx.Client:
     """Create HTTP client for Tavily API requests."""
@@ -302,14 +311,14 @@ def _validate_search_depth(search_depth: str) -> str | None:
     """Validate search_depth value. Returns error string or None if valid."""
     if search_depth in _SEARCH_DEPTH_VALUES:
         return None
-    return f"Error: Invalid search_depth '{search_depth}'. Use {sorted(_SEARCH_DEPTH_VALUES)}"
+    return f"Error: Invalid search_depth '{search_depth}'. Use {_SEARCH_DEPTH_LIST}"
 
 
 def _validate_topic(topic: str) -> str | None:
     """Validate topic value. Returns error string or None if valid."""
     if topic in _TOPIC_VALUES:
         return None
-    return f"Error: Invalid topic '{topic}'. Use {sorted(_TOPIC_VALUES)}"
+    return f"Error: Invalid topic '{topic}'. Use {_TOPIC_LIST}"
 
 
 def _validate_time_range(time_range: str | None) -> str | None:
@@ -318,7 +327,7 @@ def _validate_time_range(time_range: str | None) -> str | None:
         return None
     if time_range in _TIME_RANGE_VALUES:
         return None
-    return f"Error: Invalid time_range '{time_range}'. Use {sorted(_TIME_RANGE_VALUES)}"
+    return f"Error: Invalid time_range '{time_range}'. Use {_TIME_RANGE_LIST}"
 
 
 def _validate_days(days: int) -> str | None:
@@ -339,28 +348,28 @@ def _validate_output_format(output_format: str) -> str | None:
     """Validate output_format value. Returns error string or None if valid."""
     if output_format in _OUTPUT_FORMAT_VALUES:
         return None
-    return f"Error: Invalid output_format '{output_format}'. Use {sorted(_OUTPUT_FORMAT_VALUES)}"
+    return f"Error: Invalid output_format '{output_format}'. Use {_OUTPUT_FORMAT_LIST}"
 
 
 def _validate_extract_format(fmt: str) -> str | None:
     """Validate extract format value. Returns error string or None if valid."""
     if fmt in _EXTRACT_FORMAT_VALUES:
         return None
-    return f"Error: Invalid format '{fmt}'. Use {sorted(_EXTRACT_FORMAT_VALUES)}"
+    return f"Error: Invalid format '{fmt}'. Use {_EXTRACT_FORMAT_LIST}"
 
 
 def _validate_extract_depth(extract_depth: str) -> str | None:
     """Validate extract_depth value. Returns error string or None if valid."""
     if extract_depth in _EXTRACT_DEPTH_VALUES:
         return None
-    return f"Error: Invalid extract_depth '{extract_depth}'. Use {sorted(_EXTRACT_DEPTH_VALUES)}"
+    return f"Error: Invalid extract_depth '{extract_depth}'. Use {_EXTRACT_DEPTH_LIST}"
 
 
 def _validate_research_model(model: str) -> str | None:
     """Validate research model value. Returns error string or None if valid."""
     if model in _RESEARCH_MODEL_VALUES:
         return None
-    return f"Error: Invalid model '{model}'. Use {sorted(_RESEARCH_MODEL_VALUES)}"
+    return f"Error: Invalid model '{model}'. Use {_RESEARCH_MODEL_LIST}"
 
 
 # ---------------------------------------------------------------------------
@@ -455,7 +464,6 @@ def search(
         if not success:
             return str(result)
 
-        assert isinstance(result, dict)
         output = _format_search_results(result, output_format, min_score)
 
         filtered = result.get("results", [])
@@ -518,7 +526,6 @@ def extract(
         if not success:
             return str(result)
 
-        assert isinstance(result, dict)
         output = _format_extract_results(result)
         span.add(outputLen=len(output))
         return output
@@ -756,8 +763,6 @@ def research(
         if not success:
             return str(result)
 
-        assert isinstance(result, dict)
-
         status = result.get("status", "")
 
         # Completed immediately (synchronous response)
@@ -789,7 +794,6 @@ def research(
             if not poll_success:
                 continue
 
-            assert isinstance(poll_result, dict)
             poll_status = poll_result.get("status", "")
 
             if poll_status == "completed":
