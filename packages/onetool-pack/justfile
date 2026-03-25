@@ -29,3 +29,8 @@ fmt:
 # Type check
 typecheck:
     uv run mypy
+
+# Build distributable wheel
+build-pack:
+    rm -rf dist/
+    uv build --wheel

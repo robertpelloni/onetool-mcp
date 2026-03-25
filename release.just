@@ -58,12 +58,13 @@ publish version *args:
 # INDIVIDUAL PUBLISH STEPS (escape hatches)
 # ============================================================================
 
-# Set version in pyproject.toml and server.json
+# Set version in pyproject.toml, server.json, and onetool-pack
 set-version version:
     @echo "Setting version to {{ version }}"
     sed -i '' 's/^version = ".*"/version = "{{ version }}"/' pyproject.toml
     sed -i '' 's/"version": ".*"/"version": "{{ version }}"/g' server.json
-    @echo "Updated pyproject.toml and server.json"
+    sed -i '' 's/^version = ".*"/version = "{{ version }}"/' packages/onetool-pack/pyproject.toml
+    @echo "Updated pyproject.toml, server.json, and packages/onetool-pack/pyproject.toml"
 
 # Build package
 build:
