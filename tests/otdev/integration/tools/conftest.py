@@ -81,7 +81,7 @@ def _inject_secrets():
 _TEST_CONFIG = _PROJECT_ROOT / "tests" / ".onetool" / "onetool.yaml"
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def _connect_proxy_servers():
     """Connect all MCP proxy servers configured in the test onetool.yaml.
 

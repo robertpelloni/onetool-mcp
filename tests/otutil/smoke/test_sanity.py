@@ -19,6 +19,8 @@ def test_import_package() -> None:
 @pytest.mark.smoke
 def test_import_tool_modules() -> None:
     """Test that all tool modules can be imported."""
+    pytest.importorskip("fitz", reason="pymupdf not installed (install onetool-mcp[util])")
+    pytest.importorskip("google.genai", reason="google-genai not installed (install onetool-mcp[util])")
     from otutil.tools import brave, convert, excel, file, ground, mem
 
     # Check pack names

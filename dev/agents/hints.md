@@ -26,10 +26,12 @@ src/
   ot/           Core framework (executor, config, logging, registry)
   ottools/     Built-in tool packs (15+ packs, 100+ tools)
   onetool/      MCP server CLI
-  bench/        Benchmark harness CLI
   otdev/        [dev] extra: context7, db, diagram, package, ripgrep, web
   otutil/       [util] extra: brave, convert, excel, file, ground, tavily
   otdesign/     [design] extra: figma
+
+packages/
+  onetool-bench/  Benchmark harness (internal, not installed)
 
 tests/          All tests (smoke, unit, integration)
 dev/            Developer documentation (THIS folder)

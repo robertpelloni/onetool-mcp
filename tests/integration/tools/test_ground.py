@@ -7,10 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-try:
-    import google.genai  # noqa: F401
-except ImportError:
-    pytest.fail("google-genai not installed (install onetool-mcp[util])", pytrace=False)
+pytest.importorskip("google.genai", reason="google-genai not installed (install onetool-mcp[util])")
 
 from .conftest import get_test_secret
 

@@ -28,10 +28,7 @@ class TestConvertPdf:
 
     def test_pdf_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a minimal PDF with fitz and verify text is extracted."""
-        try:
-            import fitz
-        except ImportError:
-            pytest.fail("pymupdf not installed")
+        fitz = pytest.importorskip("fitz", reason="pymupdf not installed (install onetool-mcp[util])")
 
         doc: Any = fitz.open()
         page = doc.new_page()
@@ -62,10 +59,7 @@ class TestConvertWord:
 
     def test_word_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a DOCX with python-docx and verify content is extracted."""
-        try:
-            import docx
-        except ImportError:
-            pytest.fail("python-docx not installed")
+        docx = pytest.importorskip("docx", reason="python-docx not installed (install onetool-mcp[util])")
 
         doc = docx.Document()
         doc.add_heading("Test Document", level=1)
@@ -96,10 +90,7 @@ class TestConvertPptx:
 
     def test_pptx_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create a PPTX with python-pptx and verify slides are extracted."""
-        try:
-            import pptx
-        except ImportError:
-            pytest.fail("python-pptx not installed")
+        pptx = pytest.importorskip("pptx", reason="python-pptx not installed (install onetool-mcp[util])")
 
         prs = pptx.Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[0])
@@ -130,10 +121,7 @@ class TestConvertExcel:
 
     def test_excel_to_markdown(self, tmp_path: Path, output_dir: Path) -> None:
         """Create an XLSX with openpyxl and verify sheet data is extracted."""
-        try:
-            import openpyxl
-        except ImportError:
-            pytest.fail("openpyxl not installed")
+        openpyxl = pytest.importorskip("openpyxl", reason="openpyxl not installed (install onetool-mcp[util])")
 
         wb = openpyxl.Workbook()
         ws = wb.active

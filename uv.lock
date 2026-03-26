@@ -4,6 +4,7 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
+    "onetool-bench",
     "onetool-mcp",
     "onetool-pack",
 ]
@@ -1789,6 +1790,21 @@ wheels = [
 ]
 
 [[package]]
+name = "onetool-bench"
+version = "2.1.1"
+source = { editable = "packages/onetool-bench" }
+dependencies = [
+    { name = "onetool-mcp" },
+    { name = "questionary" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "onetool-mcp", editable = "." },
+    { name = "questionary", specifier = ">=2.1.1" },
+]
+
+[[package]]
 name = "onetool-mcp"
 version = "2.1.1"
 source = { editable = "." }
@@ -1829,7 +1845,6 @@ all = [
     { name = "pymupdf" },
     { name = "python-docx" },
     { name = "python-pptx" },
-    { name = "questionary" },
     { name = "send2trash" },
     { name = "sqlalchemy" },
     { name = "tabulate" },
@@ -1838,7 +1853,6 @@ all = [
 dev = [
     { name = "boto3" },
     { name = "filelock" },
-    { name = "questionary" },
     { name = "sqlalchemy" },
     { name = "tabulate" },
     { name = "trafilatura" },
@@ -1904,7 +1918,6 @@ requires-dist = [
     { name = "python-docx", marker = "extra == 'util'", specifier = ">=1.2.0" },
     { name = "python-pptx", marker = "extra == 'util'", specifier = ">=1.0.2" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "questionary", marker = "extra == 'dev'", specifier = ">=2.1.1" },
     { name = "resvg-py", specifier = ">=0.2.6" },
     { name = "rich", specifier = ">=14.3.3" },
     { name = "send2trash", marker = "extra == 'util'", specifier = ">=2.1.0" },

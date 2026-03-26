@@ -10,6 +10,7 @@ Tests missing required markers are automatically skipped.
 from __future__ import annotations
 
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -20,10 +21,16 @@ if TYPE_CHECKING:
 SPEED_MARKERS = {"smoke", "unit", "integration"}
 COMPONENT_MARKERS = {"pkg"}
 
+_THIS_DIR = Path(__file__).parent.resolve()
+
 
 def pytest_collection_modifyitems(items: list[Item]) -> None:
     """Skip tests that are missing required markers."""
     for item in items:
+        # Only enforce markers for tests within this package
+        if not Path(item.fspath).resolve().is_relative_to(_THIS_DIR):
+            continue
+
         markers = {m.name for m in item.iter_markers()}
 
         if not markers & SPEED_MARKERS:

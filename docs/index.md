@@ -197,16 +197,6 @@ Multiple layers built in: isolated [`secrets.yaml`](reference/cli/onetool-config
 
 </div>
 
-<div class="card span-2" markdown>
-
-### :material-test-tube: Testing & Benchmarking
-
-The **bench** harness compares tools against other MCP servers using a real agent. Define tasks in YAML. Get objective metrics: token counts, costs, accuracy scores, timing.
-
-[:octicons-arrow-right-24: The Bench Tool](reference/cli/bench.md)
-
-</div>
-
 <div class="card span-4" markdown>
 
 ### :material-check-circle: Engineering Practices

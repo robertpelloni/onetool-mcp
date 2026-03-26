@@ -191,8 +191,6 @@ my-extension/
 │   └── config/
 │       ├── onetool.yaml     # Server config (tools_dir, etc.)
 │       ├── secrets.yaml     # API keys for testing
-│       └── bench.yaml       # Benchmark harness config (optional)
-├── demo.yaml            # Test scenarios
 └── src/
     └── mytool.py
 ```
@@ -226,8 +224,6 @@ From your extension directory:
 # Start the server with your local config
 onetool
 
-# In another terminal, run benchmarks
-bench run demo.yaml
 ```
 
 ## Configuration Access

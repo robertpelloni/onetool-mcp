@@ -18,7 +18,7 @@ Ref: #123
 | Scope | Description | Examples |
 |-------|-------------|----------|
 | `config` | Configuration system | Loader, models, secrets, includes |
-| `cli` | Command-line interface | onetool/bench CLI, arg parsing |
+| `cli` | Command-line interface | onetool CLI, arg parsing |
 | `serve` | MCP server | Server startup, tool discovery |
 | `proxy` | MCP proxy/client | Client connections, tool routing |
 | `executor` | Execution engine | Runner, validator, tool loader |

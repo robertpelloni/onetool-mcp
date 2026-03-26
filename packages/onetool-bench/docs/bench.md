@@ -199,3 +199,68 @@ brave.search_batch(queries=["topic 1", "topic 2"])
 - Use `>>>` for simple calls
 - Use code fences for multi-step operations
 - Prefer batch operations over multiple calls
+
+## CLI Structure
+
+```text
+packages/onetool-bench/src/bench/
+├── __init__.py          # __version__
+├── cli.py               # Main entry point
+├── commands/            # Subcommand implementations
+│   ├── __init__.py
+│   ├── run.py           # bench run
+│   └── report.py        # bench report
+└── core.py              # Shared business logic
+```
+
+### Main Entry Point
+
+```python
+# src/bench/cli.py
+from ot._cli import create_cli, version_callback
+
+app = create_cli(
+    "bench",
+    "OneTool benchmark harness.",
+    no_args_is_help=True,
+)
+
+@app.callback()
+def main(
+    version: bool | None = typer.Option(
+        None, "--version", "-v",
+        callback=version_callback("bench", __version__),
+        is_eager=True,
+    ),
+) -> None:
+    """Benchmark harness for OneTool."""
+    pass
+
+# Import subcommands to auto-register
+from bench.commands import run, report  # noqa: E402, F401
+```
+
+### Subcommand Module
+
+```python
+# src/bench/commands/run.py
+from bench.cli import app
+from ot.logging import LogSpan
+
+@app.command()
+def run(
+    scenario: Annotated[str, typer.Argument(help="Scenario file")],
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+) -> None:
+    """Run benchmark scenarios."""
+    with LogSpan(span="bench.run", scenario=scenario) as s:
+        # Implementation
+        s.add("result", "success")
+```
+
+### pyproject.toml Entry Point
+
+```toml
+[project.scripts]
+bench = "bench.cli:cli"
+```

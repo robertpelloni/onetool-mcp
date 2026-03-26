@@ -16,11 +16,8 @@ class TestWebFetchLive:
 
     @pytest.fixture(autouse=True)
     def require_trafilatura(self):
-        """Fail if trafilatura is not installed."""
-        try:
-            import trafilatura  # noqa: F401
-        except ImportError:
-            pytest.fail("trafilatura not installed")
+        """Skip if trafilatura is not installed."""
+        pytest.importorskip("trafilatura", reason="trafilatura not installed ([dev] extra)")
 
     def test_fetch_live(self):
         """Verify web fetch works with a real URL."""

@@ -135,8 +135,7 @@ def test_tools_config_defaults() -> None:
 
     config = OneToolConfig()
 
-    # Core infrastructure config (msg, stats) is still typed
-    assert config.tools.msg is not None
+    # Core infrastructure config (stats) is still typed
     assert config.tools.stats is not None
     # Tool configs are now stored as extra dicts (validated at runtime by tools)
     # The ToolsConfig uses ConfigDict(extra="allow")

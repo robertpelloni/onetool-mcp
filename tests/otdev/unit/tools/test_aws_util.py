@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -9,6 +10,12 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+_boto3_available = (
+    importlib.util.find_spec("boto3") is not None
+    and importlib.util.find_spec("botocore") is not None
+)
+_skip_boto = pytest.mark.skipif(not _boto3_available, reason="boto3/botocore not installed ([dev] extra)")
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +125,7 @@ class TestAwsArn:
 # ---------------------------------------------------------------------------
 
 
+@_skip_boto
 @pytest.mark.unit
 @pytest.mark.tools
 class TestAwsCheck:
@@ -520,6 +528,7 @@ class TestAwsUtilModuleSmoke:
 # ---------------------------------------------------------------------------
 
 
+@_skip_boto
 @pytest.mark.unit
 @pytest.mark.tools
 class TestAwsRegions:

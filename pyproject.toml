@@ -66,7 +66,6 @@ util = [
 dev = [
     "boto3>=1.42.64",
     "filelock>=3.25.1",
-    "questionary>=2.1.1",         # bench interactive prompts
     "sqlalchemy>=2.0.48",
     "tabulate>=0.10.0",
     "trafilatura>=2.0.0",
@@ -81,7 +80,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ot", "src/ottools", "src/onetool", "src/bench", "src/otdev", "src/otutil"]
+packages = ["src/ot", "src/ottools", "src/onetool", "src/otdev", "src/otutil"]
 artifacts = ["src/ottools/_panel/dist/**"]
 
 [dependency-groups]
@@ -107,7 +106,7 @@ dev = [
 default-groups = ["dev", "docs"]
 
 [tool.uv.workspace]
-members = ["packages/onetool-pack"]
+members = ["packages/onetool-pack", "packages/onetool-bench"]
 
 [tool.uv.sources]
 onetool-pack = { workspace = true }
@@ -142,13 +141,12 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ot", "ottools", "onetool", "bench", "otdev", "otutil"]
+known-first-party = ["ot", "ottools", "onetool", "otdev", "otutil"]
 
 [tool.ruff.lint.per-file-ignores]
 # CLI files need Path and CaseResult at runtime for typer type annotations and callbacks
 # E402 in cli.py is intentional - atexit.register must run before importing pymupdf
 "src/onetool/*.py" = ["TC001", "TCH003", "E402"]
-"src/bench/*.py" = ["TC001", "TCH003"]
 # Tools use namespace declarations before imports for tool discovery
 "src/ottools/*.py" = ["E402"]
 "src/otdev/tools/*.py" = ["E402"]
@@ -176,8 +174,8 @@ show_error_codes = true
 files = ["src/ot"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "packages/onetool-pack/tests"]
-pythonpath = ["src", "packages/onetool-pack/src"]
+testpaths = ["tests", "packages/onetool-pack/tests", "packages/onetool-bench/tests"]
+pythonpath = ["src", "packages/onetool-pack/src", "packages/onetool-bench/src"]
 addopts = "-v"
 asyncio_mode = "auto"
 cache_dir = "tmp/.pytest_cache"
@@ -212,7 +210,7 @@ markers = [
 
 [tool.deptry]
 # Ignore internal packages (DEP001) - these are first-party, not external deps
-per_rule_ignores = { DEP001 = ["ot", "ottools", "bench", "onetool", "otdev", "otutil", "anyio"] }
+per_rule_ignores = { DEP001 = ["ot", "ottools", "onetool", "otdev", "otutil", "anyio"] }
 # Map package names where import name differs
 [tool.deptry.package_module_name_map]
 pyyaml = "yaml"

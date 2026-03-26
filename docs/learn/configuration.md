@@ -18,7 +18,6 @@ onetool init validate -c .onetool/onetool.yaml
 |------|---------|
 | `onetool.yaml` | Main configuration (tools, servers, snippets) |
 | `secrets.yaml` | API keys (gitignored, passed via `--secrets`) |
-| `bench.yaml` | Benchmark harness config |
 
 ## Security Configuration
 
@@ -69,4 +68,3 @@ ot.security(check="pickle.load") # Check qualified call
 ## Reference
 
 - **[onetool Configuration](../reference/cli/onetool-config.md)** - Full YAML schema, pack settings, secrets, MCP servers, aliases, snippets, security
-- **[bench Configuration](../reference/cli/bench.md#configuration)** - Benchmark harness settings

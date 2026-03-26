@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import importlib.util
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+_skip_no_trafilatura = pytest.mark.skipif(
+    importlib.util.find_spec("trafilatura") is None,
+    reason="trafilatura not installed ([dev] extra)",
+)
 
 
 @pytest.mark.unit
@@ -187,6 +193,7 @@ def _make_mock_response(html: str, content_type: str = "text/html") -> MagicMock
     return mock
 
 
+@_skip_no_trafilatura
 @pytest.mark.unit
 @pytest.mark.tools
 class TestFetch:

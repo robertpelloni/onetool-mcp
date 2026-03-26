@@ -89,7 +89,8 @@ src/
     webfetch.py              #   Web page fetching
 
   onetool/                   # MCP server CLI (onetool.cli:cli)
-  bench/                     # Benchmark harness CLI (bench.cli:cli)
+
+packages/onetool-bench/src/bench/  # Benchmark harness (internal)
 ```
 
 ## Deep Dives

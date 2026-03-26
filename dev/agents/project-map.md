@@ -40,9 +40,9 @@ Standalone CLI wrapper.
 |------|---------|
 | `cli.py` | onetool CLI entry point and commands |
 
-### Benchmark Harness (`src/bench/`)
+### Benchmark Harness (`packages/onetool-bench/src/bench/`)
 
-Performance benchmarking CLI.
+Performance benchmarking CLI (internal, not distributed with `onetool-mcp`).
 
 | File | Purpose |
 |------|---------|
@@ -96,7 +96,7 @@ Tests mirror the source package structure:
 
 | Source package | Test root |
 |----------------|-----------|
-| `src/ot/`, `src/onetool/`, `src/bench/` | `tests/` |
+| `src/ot/`, `src/onetool/` | `tests/` |
 | `src/ottools/` | `tests/ottools/` |
 | `src/otdev/` | `tests/otdev/` |
 | `src/otutil/` | `tests/otutil/` |

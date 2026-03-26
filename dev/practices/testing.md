@@ -71,7 +71,6 @@ Every test must have **two markers** - a speed tier and a component:
 | `core` | Core library (`ot`) - executor, config, registry |
 | `serve` | MCP server (`onetool`) |
 | `tools` | Tool implementations (`ottools`) |
-| `bench` | Benchmark harness (`bench`) |
 | `pkg` | Package management |
 | `spec` | OpenSpec tooling |
 
@@ -96,7 +95,6 @@ tests/
 ├── smoke/                   # Quick sanity checks
 ├── unit/                    # Fast isolated tests (mocked dependencies)
 │   ├── core/                # Core library tests
-│   ├── bench/               # Benchmark harness tests
 │   ├── serve/               # MCP server tests
 │   └── tools/               # Tool unit tests
 │       ├── test_brave_search.py
@@ -371,7 +369,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.skip(reason="disabled")]
 ### Checklist
 
 - [ ] Add speed marker (`smoke`, `unit`, `integration`, or `slow`)
-- [ ] Add component marker (`tools`, `core`, `serve`, `bench`, `pkg`, `spec`)
+- [ ] Add component marker (`tools`, `core`, `bench`, `serve`, `pkg`, `spec`)
 - [ ] Add dependency markers if needed (`network`, `api`, `playwright`, `docker`)
 - [ ] Write descriptive docstring explaining what is tested
 - [ ] Use class grouping for related tests

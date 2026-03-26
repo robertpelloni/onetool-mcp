@@ -18,7 +18,7 @@ import pytest
 
 from .conftest import require_server
 
-pytestmark = [pytest.mark.integration, pytest.mark.tools]
+pytestmark = [pytest.mark.integration, pytest.mark.tools, pytest.mark.usefixtures("_connect_proxy_servers")]
 
 _TEST_PAGE = (
     "data:text/html,"

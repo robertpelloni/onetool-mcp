@@ -19,10 +19,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.tools]
 
 
 def _require_sqlalchemy() -> None:
-    try:
-        import sqlalchemy  # noqa: F401
-    except ImportError:
-        pytest.fail("sqlalchemy not installed — install with: pip install onetool-mcp[dev]")
+    pytest.importorskip("sqlalchemy", reason="sqlalchemy not installed (install onetool-mcp[dev])")
 
 
 @pytest.fixture(scope="module")
@@ -99,6 +96,7 @@ class TestTables:
         assert result == []
 
     def test_empty_db_url_returns_error(self) -> None:
+        _require_sqlalchemy()
         from otdev.tools import db
 
         result = json.loads(db.tables(db_url=""))

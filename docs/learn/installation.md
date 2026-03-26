@@ -40,7 +40,7 @@ irm https://astral.sh/uv/install.ps1 | iex
 uv tool install onetool-mcp
 ```
 
-This installs `onetool` and `bench` commands globally with the core tool set.
+This installs the `onetool` command globally with the core tool set.
 
 ### Optional Tool Packs
 
@@ -191,8 +191,6 @@ onetool --version
 onetool init -c ~/.onetool
 onetool init validate -c ~/.onetool/onetool.yaml
 
-# Run benchmarks (from source)
-bench run demo/bench/compare.yaml
 ```
 
 ## Next Steps

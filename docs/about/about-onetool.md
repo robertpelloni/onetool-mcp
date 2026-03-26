@@ -132,10 +132,6 @@ Every developer loves plugins, extensions, and ways to make tools even better. O
 - [Scaffold tools](../learn/extension-tools.md) -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the [demo](https://youtu.be/AZz03Yw0s1E) of Claude building a Wikipedia fetcher in under three minutes.
 - [MCP server proxy](../reference/cli/onetool-config.md#external-mcp-servers) - allows you to wrap any MCP server with OneTool, configure it with YAML, and call it explicitly - without the tool tax and context rot.
 
-### Testing, benchmarking, and proper engineering
-
-To make it easy to develop new tool packs (groups of tools), OneTool includes a powerful [testing and benchmarking](../reference/cli/bench.md) harness that compares your tool against other MCP servers using a real LLM. Define tasks in YAML and get objective metrics: token counts, costs, accuracy scores, timing, and more.
-
 OneTool was written with strong engineering practices:
 
 - 1,200+ tests (smoke, unit, integration tiers)

@@ -1,17 +1,18 @@
 # CLI Patterns
 
-Patterns used in OneTool's CLIs: `onetool` and `bench`.
+Patterns used in the `onetool` CLI.
 
-## CLIs Overview
+## CLI Overview
 
 | CLI | Package | Purpose |
 |-----|---------|---------|
 | `onetool` | `src/onetool/` | MCP server, setup, configuration |
-| `bench` | `src/bench/` | Benchmark harness for testing tools |
+
+`bench` is an internal tool in `packages/onetool-bench/` and is not user-facing.
 
 ## Shared Utilities
 
-Both CLIs use shared utilities from `ot._cli`:
+CLIs use shared utilities from `ot._cli`:
 
 ```python
 from ot._cli import console, create_cli, version_callback
@@ -104,66 +105,6 @@ console.print(table)
 | 1 | General error |
 | 2 | Invalid arguments |
 
-## Multi-Command Structure (bench)
-
-The `bench` CLI uses subcommands:
-
-```text
-src/bench/
-├── __init__.py          # __version__
-├── cli.py               # Main entry point
-├── commands/            # Subcommand implementations
-│   ├── __init__.py
-│   ├── run.py           # bench run
-│   └── report.py        # bench report
-└── core.py              # Shared business logic
-```
-
-### Main Entry Point
-
-```python
-# src/bench/cli.py
-from ot._cli import create_cli, version_callback
-
-app = create_cli(
-    "bench",
-    "OneTool benchmark harness.",
-    no_args_is_help=True,
-)
-
-@app.callback()
-def main(
-    version: bool | None = typer.Option(
-        None, "--version", "-v",
-        callback=version_callback("bench", __version__),
-        is_eager=True,
-    ),
-) -> None:
-    """Benchmark harness for OneTool."""
-    pass
-
-# Import subcommands to auto-register
-from bench.commands import run, report  # noqa: E402, F401
-```
-
-### Subcommand Module
-
-```python
-# src/bench/commands/run.py
-from bench.cli import app
-from ot.logging import LogSpan
-
-@app.command()
-def run(
-    scenario: Annotated[str, typer.Argument(help="Scenario file")],
-    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
-) -> None:
-    """Run benchmark scenarios."""
-    with LogSpan(span="bench.run", scenario=scenario) as s:
-        # Implementation
-        s.add("result", "success")
-```
-
 ## Common Flag Patterns
 
 ### Config Flag
@@ -224,5 +165,4 @@ def test_help():
 ```toml
 [project.scripts]
 onetool = "onetool.cli:cli"
-bench = "bench.cli:cli"
 ```

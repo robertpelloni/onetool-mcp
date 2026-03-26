@@ -409,7 +409,7 @@ def init_validate(
         templates_dir = get_global_templates_dir()
 
         # Known includeable template files (filter on dest name after transformation)
-        _excluded = {"onetool.yaml", "bench.yaml", "bench-secrets.yaml", "secrets.yaml"}
+        _excluded = {"onetool.yaml", "secrets.yaml"}
         known_templates = sorted(
             dest
             for tmpl in templates_dir.glob("*.yaml")

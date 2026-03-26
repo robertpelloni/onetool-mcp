@@ -82,7 +82,7 @@ python, mcp, model-context-protocol, mcp-server, llm, code-execution, mcp-tools,
 ```text
 - 15+ packs
 - 100+ tools
-- 2 CLIs (onetool, bench)
+- 1 CLI (onetool)
 - 96% token reduction
 - 30x cost reduction
 ```

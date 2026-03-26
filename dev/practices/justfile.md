@@ -73,8 +73,8 @@ just tool-diagram-logs     # view Kroki logs
 ## Module Commands
 
 ```bash
-just demo::<task>      # run demo tasks
-just release::<task>   # run release tasks
+just bench::demo::<task>   # run demo tasks
+just release::<task>       # run release tasks
 ```
 
 ## Key Details

@@ -18,9 +18,18 @@ import pytest
 pytestmark = [pytest.mark.integration, pytest.mark.network, pytest.mark.tools, pytest.mark.pydoll]
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _browser_session():
+    """Close the whiteboard browser after the entire test session."""
+    yield
+    from otdev.tools import excalidraw
+    with contextlib.suppress(Exception):
+        excalidraw.close()
+
+
 @pytest.fixture(autouse=True)
 def _clean_canvas():
-    """Open a fresh whiteboard before each test; close cleanly after."""
+    """Open a fresh whiteboard before each test; clear canvas after."""
     from otdev.tools import excalidraw
 
     result = excalidraw.open()

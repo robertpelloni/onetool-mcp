@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("google.genai", reason="google-genai not installed ([util] extra)")
+
 from otutil.tools.ground import (
     _extract_sources,
     _format_error,

@@ -33,7 +33,6 @@ Use **"agent"** consistently when referring to tool-using behavior. Avoid "LLM",
 
 - "The agent generates code you can review before execution"
 - "Explicit calls prevent agent tool selection errors"
-- "Real agent + MCP testing with bench"
 - "LLM performance degrades as tokens increase" (model characteristic)
 
 **Avoid:**
