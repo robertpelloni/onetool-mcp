@@ -36,6 +36,9 @@ Persistent memory for AI agents with SQLite storage and optional semantic search
 | `mem.slice(topic, select, id)` | Extract content by section number, heading, line range, or list |
 | `mem.search(query, mode, ...)` | Search memories (returns meta + truncated extract) |
 | `mem.grep(pattern, mode, ...)` | Regex/text search across memory content |
+| `mem.ask(topic, q, ...)` | Q&A over a memory using LLM synthesis |
+| `mem.query(topic, expr, ...)` | JMESPath query against a JSON/YAML memory |
+| `mem.inspect(topic, ...)` | Low-level structured metadata for a single memory |
 | `mem.list(topic, category)` | List memories (returns meta only, no content) |
 | `mem.count(topic, category)` | Count memories |
 | `mem.delete(topic, id, confirm)` | Delete memories |
@@ -45,16 +48,15 @@ Persistent memory for AI agents with SQLite storage and optional semantic search
 | `mem.update_batch(search_text, replace_text, ...)` | Batch search-and-replace (recomputes toc if sections exist) |
 | `mem.decay(dry_run)` | Apply importance decay (never increases relevance) |
 | `mem.stats()` | Show statistics |
-| `mem.embed(topic, limit, dry_run)` | Backfill embeddings for un-embedded memories |
+| `mem.index(topic, ...)` | Backfill embeddings for un-embedded memories (scoped) |
+| `mem.reindex(...)` | Reindex all un-embedded memories |
 | `mem.flush()` | Wait for background embeddings to complete |
 | `mem.export(topic, output)` | Export to YAML |
-| `mem.load(file)` | Import from YAML (skips duplicates) |
 | `mem.snap(output, topic, ext, on_conflict)` | Snapshot memories to directory with index.yaml |
 | `mem.restore(input, topic, overwrite)` | Restore memories from snap directory |
 | `mem.stale(topic)` | Check which file-backed memories are outdated |
 | `mem.refresh(topic, dry_run)` | Re-read source files for stale memories |
 | `mem.slice_batch(items)` | Extract sections from multiple memories in one call |
-| `mem.cache_clear(topic)` | Clear the in-memory read cache |
 
 ## Retrieval Functions
 
@@ -444,9 +446,9 @@ When `embeddings_async: true` (default), writes return immediately and embedding
 To backfill embeddings for existing memories:
 
 ```python
-mem.embed(dry_run=True)           # Preview: how many need embeddings
-mem.embed(dry_run=False)          # Generate embeddings
-mem.embed(topic="projects/", dry_run=False)  # Scoped backfill
+mem.reindex()                                  # Backfill all un-embedded memories
+mem.index(topic="projects/", dry_run=True)     # Preview scoped backfill
+mem.index(topic="projects/", dry_run=False)    # Run scoped backfill
 ```
 
 When embeddings are disabled, `mem.search(mode="semantic")` and `mem.search(mode="hybrid")` return a helpful message. Pattern search always works regardless of embedding state.

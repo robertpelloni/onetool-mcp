@@ -187,15 +187,16 @@ def stats() -> str:
             return f"Error getting stats: {e}"
 
 
-def embed(
+def reindex(
     *,
     topic: str | None = None,
     limit: int = 100,
     dry_run: bool = True,
 ) -> str:
-    """Generate embeddings for memories that don't have them.
+    """Backfill or update vector embeddings for memories missing them.
 
-    Use after enabling embeddings_enabled to backfill existing memories.
+    Use after enabling embeddings_enabled or after mem.index() to generate
+    embeddings for imported records.
 
     Args:
         topic: Optional topic prefix filter
@@ -206,15 +207,15 @@ def embed(
         Summary of backfill results.
 
     Example:
-        mem.embed(dry_run=True)           # Preview count
-        mem.embed(dry_run=False)           # Generate embeddings
-        mem.embed(topic="projects/", dry_run=False)  # Scoped backfill
+        mem.reindex(dry_run=True)           # Preview count
+        mem.reindex(dry_run=False)           # Generate embeddings
+        mem.reindex(topic="projects/", dry_run=False)  # Scoped backfill
     """
     config = _get_config()
     if not config.embeddings_enabled:
         return "Embeddings are disabled. Enable with: tools.mem.embeddings_enabled: true"
 
-    with LogSpan(span="mem.embed", topic=topic, limit=limit, dry_run=dry_run) as s:
+    with LogSpan(span="mem.reindex", topic=topic, limit=limit, dry_run=dry_run) as s:
         try:
             conn = _get_connection()
 
@@ -275,4 +276,4 @@ def flush() -> str:
         return f"Error: {e}"
 
 
-__all__ = ["decay", "embed", "flush", "stats"]
+__all__ = ["decay", "flush", "reindex", "stats"]

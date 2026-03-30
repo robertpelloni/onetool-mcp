@@ -37,6 +37,7 @@ PACK_SHORT_NAMES: dict[str, str] = {
     "whiteboard": "wb",
     "ot_context": "ctx",
     "ot_image": "img",
+    "knowledge": "kb",
 }
 
 DOC_SLUGS: dict[str, str] = {

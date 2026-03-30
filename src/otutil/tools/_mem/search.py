@@ -184,7 +184,7 @@ def search(
                     "SELECT 1 FROM memories WHERE embedding IS NOT NULL LIMIT 1"
                 ).fetchone()
                 if not has_embeddings:
-                    return "No embeddings found. Run mem.embed(dry_run=False) to generate them."
+                    return "No embeddings found. Run mem.reindex(dry_run=False) to generate them."
 
             if mode == "semantic":
                 results = _search_semantic(conn, query, topic, category, tags, limit)

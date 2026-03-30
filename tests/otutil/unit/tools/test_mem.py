@@ -323,6 +323,42 @@ class TestRead:
 
         assert "No memory found" in result
 
+    @patch("otutil.tools._mem.read._get_connection")
+    def test_reads_by_wildcard_topic(self, mock_conn):
+        """Wildcard topic routes through LIKE, not exact match."""
+        from otutil.tools.mem import read
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-456", "projects/onetool/rules", "rule content", "rule",
+            '[]', 8, 1, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
+        )
+
+        result = read(topic="projects/*/rules")
+
+        assert result == "rule content"
+        sql_call = conn.execute.call_args_list[0][0][0]
+        assert "LIKE" in sql_call
+
+    @patch("otutil.tools._mem.read._get_connection")
+    def test_reads_use_created_at_desc_ordering(self, mock_conn):
+        """read() uses ORDER BY created_at DESC so latest row wins."""
+        from otutil.tools.mem import read
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-789", "test/topic", "latest content", "note",
+            '[]', 5, 0, datetime.now().isoformat(), datetime.now().isoformat(), '{}',
+        )
+
+        read(topic="test/topic")
+
+        sql_call = conn.execute.call_args_list[0][0][0]
+        assert "ORDER BY created_at DESC" in sql_call
+        assert "LIMIT 1" in sql_call
+
 
 @pytest.mark.unit
 @pytest.mark.tools
@@ -668,7 +704,7 @@ class TestSearchNoEmbeddings:
         conn.execute.return_value.fetchone.return_value = None  # No embeddings exist
 
         result = search(query="test query")
-        assert "mem.embed" in result
+        assert "mem.reindex" in result
 
 
 @pytest.mark.unit
@@ -697,20 +733,20 @@ class TestWriteWithoutEmbeddings:
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestEmbedFunction:
-    """Test mem.embed() backfill function."""
+class TestReindex:
+    """Test mem.reindex() backfill function."""
 
     @patch("otutil.tools._mem.lifecycle._get_config", return_value=Config(embeddings_enabled=False))
     def test_disabled_returns_message(self, _mock_config):
-        from otutil.tools.mem import embed
+        from otutil.tools.mem import reindex
 
-        result = embed()
+        result = reindex()
         assert "disabled" in result.lower()
 
     @patch("otutil.tools._mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
     @patch("otutil.tools._mem.lifecycle._get_connection")
     def test_dry_run_shows_count(self, mock_conn, _mock_config):
-        from otutil.tools.mem import embed
+        from otutil.tools.mem import reindex
 
         conn = MagicMock()
         mock_conn.return_value = conn
@@ -719,14 +755,14 @@ class TestEmbedFunction:
             ("id-2", "content two"),
         ]
 
-        result = embed(dry_run=True)
+        result = reindex(dry_run=True)
         assert "2 memories" in result
 
     @patch("otutil.tools._mem.lifecycle._generate_embedding", return_value=[0.1] * 1536)
     @patch("otutil.tools._mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
     @patch("otutil.tools._mem.lifecycle._get_connection")
     def test_generates_embeddings(self, mock_conn, _mock_config, _mock_embed):
-        from otutil.tools.mem import embed
+        from otutil.tools.mem import reindex
 
         conn = MagicMock()
         mock_conn.return_value = conn
@@ -734,19 +770,19 @@ class TestEmbedFunction:
             ("id-1", "content one"),
         ]
 
-        result = embed(dry_run=False)
+        result = reindex(dry_run=False)
         assert "Generated embeddings for 1 memories" in result
 
     @patch("otutil.tools._mem.lifecycle._get_config", return_value=Config(embeddings_enabled=True))
     @patch("otutil.tools._mem.lifecycle._get_connection")
     def test_all_embedded_returns_message(self, mock_conn, _mock_config):
-        from otutil.tools.mem import embed
+        from otutil.tools.mem import reindex
 
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchall.return_value = []
 
-        result = embed()
+        result = reindex()
         assert "already have embeddings" in result
 
 
@@ -1224,14 +1260,14 @@ class TestExport:
 
 @pytest.mark.unit
 @pytest.mark.tools
-class TestLoad:
-    """Test mem.load() YAML import."""
+class TestIndex:
+    """Test mem.index() YAML import."""
 
     @pytest.mark.usefixtures("_mock_cwd")
     def test_file_not_found(self, tmp_path):
-        from otutil.tools.mem import load
+        from otutil.tools.mem import index
 
-        result = load(file=str(tmp_path / "nonexistent.yaml"))
+        result = index(file=str(tmp_path / "nonexistent.yaml"))
         assert "Error" in result
         assert "not found" in result.lower()
 
@@ -1239,7 +1275,7 @@ class TestLoad:
     @patch("otutil.tools._mem.io._maybe_embed")
     @patch("otutil.tools._mem.io._get_connection")
     def test_imports_from_yaml(self, mock_conn, mock_embed, tmp_path):
-        from otutil.tools.mem import load
+        from otutil.tools.mem import index
 
         mock_embed.return_value = None
         conn = MagicMock()
@@ -1256,7 +1292,7 @@ class TestLoad:
             '    relevance: 7\n'
         )
 
-        result = load(file=str(yaml_file))
+        result = index(file=str(yaml_file))
 
         assert "Imported 1 memories" in result
 
@@ -1758,10 +1794,10 @@ class TestFilePathSecurity:
         assert "Error" in result
         assert "outside allowed directories" in result
 
-    def test_load_rejects_path_outside_cwd(self):
-        from otutil.tools.mem import load
+    def test_index_rejects_path_outside_cwd(self):
+        from otutil.tools.mem import index
 
-        result = load(file="/etc/shadow")
+        result = index(file="/etc/shadow")
 
         assert "Error" in result
         assert "not found" in result.lower() or "outside allowed" in result
@@ -2099,49 +2135,201 @@ class TestSliceFunction:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestReadMode:
-    """Test mem.read() mode parameter."""
+    """Test that mem.read() raises ValueError for removed mode parameter."""
 
-    @patch("otutil.tools._mem.read._get_connection")
-    def test_toc_mode(self, mock_conn):
+    def test_mode_toc_raises_with_redirect(self):
         from otutil.tools.mem import read
+
+        with pytest.raises(ValueError, match="mem.toc"):
+            read(topic="spec", mode="toc")
+
+    def test_mode_meta_raises_with_redirect(self):
+        from otutil.tools.mem import read
+
+        with pytest.raises(ValueError, match="mem.inspect"):
+            read(topic="spec", mode="meta")
+
+    def test_mode_all_raises_with_redirect(self):
+        from otutil.tools.mem import read
+
+        with pytest.raises(ValueError, match="meta=True"):
+            read(topic="spec", mode="all")
+
+    def test_mode_unknown_raises(self):
+        from otutil.tools.mem import read
+
+        with pytest.raises(ValueError, match="no longer accepts mode="):
+            read(topic="spec", mode="invalid")
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestInspect:
+    """Test mem.inspect() structured metadata."""
+
+    @patch("otutil.tools._mem.inspect._get_connection")
+    def test_returns_metadata_dict(self, mock_conn):
+        from otutil.tools.mem import inspect
 
         sections_str = _encode_sections(_parse_headings(SAMPLE_MD))
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", SAMPLE_MD, "note", '[]', 5, 0,
+            "id-1", "spec", "rule", '["tag1"]', 7, 3,
             datetime.now().isoformat(), datetime.now().isoformat(),
-            _serialize_meta({"sections": sections_str}),
+            _serialize_meta({"sections": sections_str, "section_count": "4"}),
         )
 
-        result = read(topic="spec", mode="toc")
-        assert "Introduction" in result
-        assert "Requirements" in result
+        result = inspect(topic="spec")
 
-    @patch("otutil.tools._mem.read._get_connection")
-    def test_meta_mode(self, mock_conn):
-        from otutil.tools.mem import read
+        assert result["id"] == "id-1"
+        assert result["topic"] == "spec"
+        assert result["category"] == "rule"
+        assert result["tags"] == ["tag1"]
+        assert result["relevance"] == 7
+        assert result["access_count"] == 3
+        assert result["toc_entry_count"] == 4
+
+    @patch("otutil.tools._mem.inspect._get_connection")
+    def test_not_found_returns_error(self, mock_conn):
+        from otutil.tools.mem import inspect
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        result = inspect(topic="missing/topic")
+        assert "error" in result
+
+    @patch("otutil.tools._mem.inspect._get_connection")
+    def test_no_toc_returns_zero_count(self, mock_conn):
+        from otutil.tools.mem import inspect
 
         conn = MagicMock()
         mock_conn.return_value = conn
         conn.execute.return_value.fetchone.return_value = (
-            "id-1", "spec", "some stored body", "rule", '["tag1"]', 7, 3,
+            "id-1", "plain", "note", '[]', 5, 0,
             datetime.now().isoformat(), datetime.now().isoformat(),
-            _serialize_meta({"source": "/path/to/file"}),
+            _serialize_meta({}),
         )
 
-        result = read(topic="spec", mode="meta")
-        assert "Topic: spec" in result
-        assert "Category: rule" in result
-        assert "source: /path/to/file" in result
-        assert "some stored body" not in result  # meta mode excludes content
+        result = inspect(topic="plain")
+        assert result["toc_entry_count"] == 0
 
-    def test_invalid_mode(self):
-        from otutil.tools.mem import read
 
-        result = read(topic="test", mode="invalid")
-        assert "Error" in result
-        assert "Invalid mode" in result
+@pytest.mark.unit
+@pytest.mark.tools
+class TestAsk:
+    """Test mem.ask() LLM synthesis."""
+
+    @patch("otutil.tools._mem.ask._get_connection")
+    def test_not_found_returns_error(self, mock_conn):
+        from otutil.tools.mem import ask
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        result = ask(topic="missing/topic", q="What is this?")
+        assert "error" in result
+
+    @patch("otutil.tools._mem.ask._get_connection")
+    def test_ot_llm_not_installed_returns_error(self, mock_conn):
+        import sys
+        from otutil.tools.mem import ask
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "docs/api", "API documentation content",
+        )
+
+        with patch.dict(sys.modules, {"ottools.ot_llm": None}):
+            result = ask(topic="docs/api", q="What endpoints exist?")
+        assert "error" in result
+        assert "ot_llm" in result["error"]
+
+    @patch("otutil.tools._mem.ask._get_connection")
+    def test_single_question_returns_answer(self, mock_conn):
+        import types
+        from otutil.tools.mem import ask
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "docs/api", "The main endpoint is /health.",
+        )
+
+        fake_llm_mod = types.ModuleType("ottools.ot_llm")
+        fake_llm_mod.transform = MagicMock(return_value="The /health endpoint.")  # type: ignore[attr-defined]
+        with patch.dict("sys.modules", {"ottools": MagicMock(), "ottools.ot_llm": fake_llm_mod}):
+            result = ask(topic="docs/api", q="What is the main endpoint?")
+
+        assert "result" in result
+        assert result["result"][0]["question"] == "What is the main endpoint?"
+        assert result["result"][0]["answer"] == "The /health endpoint."
+
+
+@pytest.mark.unit
+@pytest.mark.tools
+class TestQuery:
+    """Test mem.query() JMESPath queries."""
+
+    @patch("otutil.tools._mem.query._get_connection")
+    def test_not_found_returns_error(self, mock_conn):
+        from otutil.tools.mem import query
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = None
+
+        result = query(topic="missing/topic", expr="name")
+        assert "error" in result
+
+    @patch("otutil.tools._mem.query._get_connection")
+    def test_json_content_query(self, mock_conn):
+        import json
+        from otutil.tools.mem import query
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "config/servers",
+            json.dumps({"servers": [{"host": "alpha"}, {"host": "beta"}]}),
+        )
+
+        result = query(topic="config/servers", expr="servers[0].host")
+        assert result.get("result") == "alpha"
+
+    @patch("otutil.tools._mem.query._get_connection")
+    def test_non_json_returns_error(self, mock_conn):
+        from otutil.tools.mem import query
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "plain/text",
+            "This is just plain text content.",
+        )
+
+        result = query(topic="plain/text", expr="name")
+        assert "error" in result
+        assert "JSON or YAML" in result["error"]
+
+    @patch("otutil.tools._mem.query._get_connection")
+    def test_no_match_returns_error(self, mock_conn):
+        import json
+        from otutil.tools.mem import query
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        conn.execute.return_value.fetchone.return_value = (
+            "id-1", "config/data", json.dumps({"name": "onetool"}),
+        )
+
+        result = query(topic="config/data", expr="nonexistent.path")
+        assert "error" in result
+        assert result["error"] == "No match"
 
 
 @pytest.mark.unit

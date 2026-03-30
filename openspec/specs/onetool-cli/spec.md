@@ -94,3 +94,89 @@ The `onetool init validate` command SHALL report the source of each resolved inc
 - **GIVEN** an include using a package default (`[default]` source)
 - **WHEN** validation output is shown
 - **THEN** it SHALL include a hint suggesting how to materialise the file locally to customise it
+
+---
+
+### Requirement: KB Subcommand Group
+
+The `onetool kb` subcommand group SHALL provide offline knowledge base management commands.
+
+All commands call the implementation layer directly (not MCP wrappers) so they can emit real-time progress output.
+
+Global options on the `kb` callback: `--config`/`-c` (path to onetool.yaml) and `--secrets`/`-s` (path to secrets file). Both auto-detect from CWD if omitted.
+
+#### Commands
+
+| Command | Description |
+|---|---|
+| `onetool kb index <project> [--path PATH] [--overwrite skip\|update]` | Index a project's scraped content into the knowledge database |
+| `onetool kb reindex <db>` | Backfill missing embeddings |
+| `onetool kb stats <db>` | Print chunk counts, embedding coverage, file size |
+| `onetool kb info <db>` | Print DB metadata, path, version |
+| `onetool kb export <db> --output PATH [--category CAT] [--topic TOPIC]` | Export all chunks (or filtered subset) to JSON |
+| `onetool kb scrape <project> [--only ...] [--resume] [--debug] [--max-pages N] [--flat-files\|--no-flat-files]` | Crawl all sources in a scrape project |
+
+#### Scenario: Index a project
+- **GIVEN** `onetool kb index <project>` is run and `<project>` is configured under `tools.knowledge.kb`
+- **WHEN** indexing completes
+- **THEN** it SHALL print indexed count, skipped count, and link edges added
+- If `--path` is supplied, it overrides the project's `output_base_dir`
+- `--overwrite` accepts `skip` (default, skip existing entries) or `update` (re-index changed entries)
+
+#### Scenario: Reindex missing embeddings
+- **GIVEN** `onetool kb reindex <db>` is run
+- **WHEN** reindexing completes
+- **THEN** it SHALL print the number of embeddings generated
+
+#### Scenario: Stats
+- **GIVEN** `onetool kb stats <db>` is run
+- **THEN** it SHALL print chunk counts by category, embedding coverage, and file size
+- **AND** it SHALL print a `✓ Stats for '<name>'.` completion summary
+
+#### Scenario: Info
+- **GIVEN** `onetool kb info <db>` is run
+- **THEN** it SHALL print the DB path, size, chunk count, and _meta content
+- **AND** it SHALL print a `✓ Info for '<name>'.` completion summary
+
+#### Scenario: Export
+- **GIVEN** `onetool kb export <db> --output <path>` is run
+- **THEN** it SHALL write all chunks (or filtered subset) to a JSON file and print the export count
+- `--category` and `--topic` are optional filters
+
+#### Scenario: Scrape a project
+- **GIVEN** `onetool kb scrape <project>` is run and `<project>` exists in `tools.knowledge.kb` with a `scrape:` section
+- **WHEN** scraping completes
+- **THEN** it SHALL crawl all sources in insertion order and print per-source written/failed/skipped counts, then print `Report: <path>` for each source's `._run_report.json`
+
+#### Scenario: Scrape a subset with --only
+- **GIVEN** `onetool kb scrape <project> --only "src-a,src-b"` is run
+- **THEN** only the named sources are crawled; unknown names → error before any crawl starts
+
+#### Scenario: Unknown project name
+- **GIVEN** `onetool kb scrape <name>` is run and `<name>` is not in `tools.knowledge.kb`
+- **THEN** the command SHALL exit with an error listing available project names
+
+#### Scenario: Resume per source
+- **GIVEN** `onetool kb scrape <project> --resume` is run
+- **THEN** sources whose output dir contains `.state.json` SHALL resume; others start fresh
+
+#### Scenario: Debug mode
+- **GIVEN** `onetool kb scrape <project> --debug` is run
+- **THEN** per-page debug artifacts (`cleaned.html`, `raw.html`, `screenshot.png`, `meta.json`) SHALL be written to `._debug/<slug>/` inside each source output dir
+
+#### Scenario: Missing crawl4ai package
+- **GIVEN** `onetool kb scrape` is run and `crawl4ai` is not installed
+- **THEN** the command SHALL exit with: `"crawl4ai is required. Install with: pip install 'onetool[scrape]'"`
+
+#### Scenario: Missing Playwright browser
+- **GIVEN** `crawl4ai` is installed but Playwright Chromium browser is not
+- **THEN** the command SHALL exit with: `"Playwright browser not found. Run: playwright install chromium"`
+
+#### Scenario: Override max_pages at runtime
+- **GIVEN** `onetool kb scrape <project> --max-pages 50` is run
+- **THEN** each source SHALL stop writing pages once 50 pages are written, regardless of the configured `max_pages` value
+- **AND** the `--max-pages` value applies to each source independently (i.e. each source may write up to 50 pages)
+
+#### Scenario: max_pages hard limit enforced in BFS loop
+- **WHEN** a BFS crawl is running and `max_pages` written pages are reached
+- **THEN** the crawl loop SHALL break and no further pages SHALL be written, even if crawl4ai's strategy continues to yield results

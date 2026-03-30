@@ -18,19 +18,22 @@ __all__ = [
     "VALID_CATEGORIES",
     "Config",
     "append",
+    "ask",
     "context",
     "count",
     "decay",
     "delete",
-    "embed",
     "export",
     "flush",
     "grep",
+    "index",
+    "inspect",
     "list",
-    "load",
+    "query",
     "read",
     "read_batch",
     "refresh",
+    "reindex",
     "restore",
     "search",
     "slice",
@@ -54,14 +57,17 @@ __ot_requires__ = {
     # API key checked at runtime when embeddings enabled (not pack-level requirement)
 }
 
+from .ask import ask
 from .config import VALID_CATEGORIES, Config
 from .db import _close_connection, _get_connection  # noqa: F401
 from .formatting import stale
-from .io import export, load
-from .lifecycle import decay, embed, flush, stats
+from .inspect import inspect
+from .io import export, index
+from .lifecycle import decay, flush, reindex, stats
 from .listing import count, list
 from .maintenance import context, update_batch
 from .mutations import append, delete, update
+from .query import query
 from .read import read, read_batch
 from .refresh import refresh
 from .search import grep, search

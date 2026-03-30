@@ -12,6 +12,8 @@ from pathlib import Path
 
 import typer
 
+from onetool.kb import kb_app
+
 
 def _suppress_shutdown_warnings() -> None:
     """Suppress pymupdf SWIG warnings at exit.
@@ -73,6 +75,8 @@ def _setup_signal_handlers() -> None:
     # Handle SIGINT (Ctrl+C) and SIGTERM
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
+
+app.add_typer(kb_app, name="kb")
 
 # Init subcommand group - manage OneTool configuration directory
 init_app = typer.Typer(

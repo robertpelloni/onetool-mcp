@@ -300,11 +300,18 @@ def test_init_tty_path_confirmation_default_accepted(tmp_path: Path) -> None:
     ot_dir = tmp_path / ".onetool"
     config_path = ot_dir / "onetool.yaml"
 
+    from unittest.mock import MagicMock
+
+    mock_tui = MagicMock()
+    mock_tui.ask_text_sync.return_value = str(config_path)
+    mock_tui.ask_checkbox.return_value = []
+
     runner = CliRunner()
-    with patch("onetool.cli._stdin_is_tty", return_value=True):
-        with patch("ot._tui.ask_text_sync", return_value=str(config_path)) as mock_ask:
-            with patch("ot._tui.ask_checkbox", return_value=[]):
-                result = runner.invoke(app, ["init", "-c", str(config_path)])
+    with patch.dict("sys.modules", {"ot._tui": mock_tui, "questionary": MagicMock()}):
+        with patch("onetool.cli._stdin_is_tty", return_value=True):
+            result = runner.invoke(app, ["init", "-c", str(config_path)])
+
+    mock_ask = mock_tui.ask_text_sync
 
     assert result.exit_code == 0, result.output
     mock_ask.assert_called_once()
@@ -321,9 +328,14 @@ def test_init_tty_path_confirmation_cancelled(tmp_path: Path) -> None:
 
     from onetool.cli import app
 
+    from unittest.mock import MagicMock
+
+    mock_tui = MagicMock()
+    mock_tui.ask_text_sync.return_value = None
+
     runner = CliRunner()
-    with patch("onetool.cli._stdin_is_tty", return_value=True):
-        with patch("ot._tui.ask_text_sync", return_value=None):
+    with patch.dict("sys.modules", {"ot._tui": mock_tui, "questionary": MagicMock()}):
+        with patch("onetool.cli._stdin_is_tty", return_value=True):
             result = runner.invoke(app, ["init"])
 
     assert result.exit_code == 0

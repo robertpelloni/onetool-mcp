@@ -108,11 +108,13 @@ def _export_yaml(rows: list[tuple]) -> str:
     return "\n".join(lines)
 
 
-def load(
+def index(
     *,
     file: str,
 ) -> str:
-    """Import memories from a YAML file. Skips duplicates.
+    """Import memories from a YAML file. Skips duplicates by content hash.
+
+    Does not generate embeddings. Use mem.reindex() after import if needed.
 
     Args:
         file: Path to YAML file to import
@@ -121,9 +123,9 @@ def load(
         Import summary.
 
     Example:
-        mem.load(file="memories.yaml")
+        mem.index(file="memories.yaml")
     """
-    with LogSpan(span="mem.load", file=file) as s:
+    with LogSpan(span="mem.index", file=file) as s:
         try:
             try:
                 import yaml
@@ -145,12 +147,13 @@ def load(
             conn = _get_connection()
             imported = 0
             skipped = 0
+            malformed = 0
 
             for mem_data in memories:
                 topic = mem_data.get("topic", "")
                 content = mem_data.get("content", "")
                 if not topic or not content:
-                    skipped += 1
+                    malformed += 1
                     continue
 
                 content_hash = _content_hash(content)
@@ -195,7 +198,11 @@ def load(
             conn.commit()
             s.add("imported", imported)
             s.add("skipped", skipped)
-            return f"Imported {imported} memories, skipped {skipped}"
+            s.add("malformed", malformed)
+            msg = f"Imported {imported} memories, skipped {skipped} duplicates"
+            if malformed:
+                msg += f", {malformed} malformed (missing topic or content)"
+            return msg
 
         except ImportError as e:
             return f"Error: {e}"
@@ -204,4 +211,4 @@ def load(
             return f"Error importing memories: {e}"
 
 
-__all__ = ["_export_yaml", "export", "load"]
+__all__ = ["_export_yaml", "export", "index"]
