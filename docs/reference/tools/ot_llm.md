@@ -32,8 +32,8 @@ Short alias: `llm`
 
 Configuration (tool not available until all are set):
 - `OPENAI_API_KEY` in secrets.yaml
-- `tools.ot_llm.base_url` in onetool.yaml (e.g., `https://openrouter.ai/api/v1`)
-- `tools.ot_llm.model` in onetool.yaml (e.g., `openai/gpt-5-mini`)
+- `base_url` — set via top-level `llm.base_url` or `tools.ot_llm.base_url`
+- `model` — set via top-level `llm.model` or `tools.ot_llm.model`
 
 ## Examples
 
@@ -73,32 +73,30 @@ ot_llm.transform_file(
 
 ## Configuration
 
-### Required
+### Top-level llm: block (recommended)
 
-- `OPENAI_API_KEY` must be set in `secrets.yaml`.
-- `tools.ot_llm.base_url` must be configured.
-- `tools.ot_llm.model` must be configured.
+Configure `base_url` and `model` once for all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`, `ctx`):
 
-### Optional
+```yaml
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: google/gemini-2-flash-preview
+  embedding_model: text-embedding-3-small  # for mem and knowledge
+```
+
+### Per-tool override (optional)
+
+`tools.ot_llm.*` overrides the top-level `llm:` values for `ot_llm` only:
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `tools.ot_llm.base_url` | string | `""` | OpenAI-compatible API base URL. Required in practice to use the pack. |
-| `tools.ot_llm.model` | string | `""` | Default model for transforms. Required in practice to use the pack. |
+| `tools.ot_llm.base_url` | string | `""` | Overrides `llm.base_url` for this tool only. |
+| `tools.ot_llm.model` | string | `""` | Overrides `llm.model` for this tool only. |
 | `tools.ot_llm.timeout` | int | `30` | API timeout in seconds. |
 | `tools.ot_llm.max_tokens` | int \| null | `null` | Max response tokens. `null` means no limit. |
-
-```yaml
-tools:
-  ot_llm:
-    base_url: https://openrouter.ai/api/v1
-    model: openai/gpt-5-mini
-    timeout: 30
-    max_tokens: 4096
-```
 
 ### Defaults
 
 - `timeout` defaults to `30`.
 - `max_tokens` defaults to `null`.
-- `base_url` and `model` default to empty strings, which means the pack is not usable until you set them.
+- `base_url` and `model` fall back to the top-level `llm:` block; the tool is not usable if neither is set.

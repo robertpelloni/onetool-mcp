@@ -315,9 +315,13 @@ The legacy `databases:` and `scrape:` top-level keys SHALL raise a validation er
 - **WHEN** `tools.knowledge.databases` or `tools.knowledge.scrape` is set at the top level
 - **THEN** a validation error is raised with a message directing the user to migrate to `tools.knowledge.kb`
 
-#### Scenario: model falls back to ot_llm default
+#### Scenario: model and base_url fall back to top-level llm config
 - **WHEN** `tools.knowledge.model` is not set
-- **THEN** the embedding model is inherited from the `ot_llm` configuration
+- **THEN** the embedding model is inherited from `llm.embedding_model` in the top-level `llm:` config block
+- **WHEN** `tools.knowledge.base_url` is not set
+- **THEN** the API base URL is inherited from `llm.base_url` in the top-level `llm:` config block
+- **WHEN** `tools.knowledge.enrich_model` is not set
+- **THEN** the synthesis model for `kb.ask()` is inherited from `llm.model` in the top-level `llm:` config block
 
 ---
 

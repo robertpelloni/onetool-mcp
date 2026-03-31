@@ -8,11 +8,11 @@ structured summaries cached in meta.json.
 
     tools:
       ot_image:
-        vision_model: openai/gpt-4o-mini   # required for ask/summary
-        max_edge: 1568                      # default resize limit
-        session_cache_size: 10             # default LRU cap
+        model: openai/gpt-4o-mini   # overrides llm.model for vision calls
+        max_edge: 1568              # default resize limit
+        session_cache_size: 10     # default LRU cap
 
-API key and base URL are inherited from ``tools.ot_llm`` if not set.
+API key, base URL, and model are inherited from the top-level ``llm:`` config if not set.
 """
 
 from __future__ import annotations

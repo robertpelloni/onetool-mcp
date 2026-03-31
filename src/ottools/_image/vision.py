@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from openai import OpenAI
 
+from .config import get_image_api_key
+
 if TYPE_CHECKING:
     from .config import Config
 
@@ -24,9 +26,10 @@ _client_key: tuple[str, str] = ("", "")
 
 def _get_client(config: Config) -> OpenAI:
     global _client, _client_key
-    key = (config.api_key, config.base_url)
+    api_key = get_image_api_key() or ""
+    key = (api_key, config.base_url)
     if _client is None or _client_key != key:
-        _client = OpenAI(api_key=config.api_key, base_url=config.base_url or None)
+        _client = OpenAI(api_key=api_key, base_url=config.base_url or None)
         _client_key = key
     return _client
 
@@ -58,18 +61,18 @@ def call_vision(model_bytes: bytes, prompt: str, config: Config) -> str:
     Args:
         model_bytes: PNG bytes ready for upload (should already be resized).
         prompt: Text prompt to accompany the image.
-        config: Image pack config (must have ``vision_model`` and ``api_key``).
+        config: Image pack config (must have ``model``).
 
     Returns:
         Model response text, or an error string starting with ``"Error:"`` if
         the model is not configured or the API call fails.
     """
-    if not config.vision_model:
+    if not config.model:
         return (
-            "Error: ot_image.vision_model not configured — "
-            "set tools.ot_image.vision_model in onetool.yaml"
+            "Error: ot_image.model not configured — "
+            "set tools.ot_image.model in onetool.yaml"
         )
-    if not config.api_key:
+    if not get_image_api_key():
         return (
             "Error: image API key not configured — "
             "set OPENAI_API_KEY in secrets.yaml"
@@ -80,7 +83,7 @@ def call_vision(model_bytes: bytes, prompt: str, config: Config) -> str:
     try:
         client = _get_client(config)
         response = client.chat.completions.create(
-            model=config.vision_model,
+            model=config.model,
             messages=[
                 {
                     "role": "user",

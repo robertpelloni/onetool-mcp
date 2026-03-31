@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 from otpack import LogSpan, get_secret
 
+from ot.config import get_llm_config
+
 from .config import _get_config
 from .db import _serialize_embedding, _use_connection
 
@@ -47,7 +49,8 @@ def _get_openai_client() -> OpenAI:
             "OPENAI_API_KEY not configured in secrets.yaml (required for memory embeddings)"
         )
     config = _get_config()
-    return OpenAI(api_key=api_key, base_url=config.base_url or None)
+    base_url = config.base_url or get_llm_config().base_url or None
+    return OpenAI(api_key=api_key, base_url=base_url)
 
 
 def _import_tiktoken() -> ModuleType:
@@ -88,6 +91,13 @@ def _chunk_text_by_tokens(text: str, max_tokens: int, model: str) -> list[str]:
     return chunks
 
 
+def _get_embedding_model(config: Any) -> str:
+    """Resolve the embedding model, falling back to top-level llm config."""
+    if config.model:
+        return config.model
+    return get_llm_config().embedding_model or config.model
+
+
 def _generate_embedding(text: str) -> list[float]:
     """Generate embedding vector for text.
 
@@ -96,12 +106,13 @@ def _generate_embedding(text: str) -> list[float]:
     of the full document rather than silently losing the tail.
     """
     config = _get_config()
+    model = _get_embedding_model(config)
     effective_limit = max(1, config.max_embedding_tokens - _TOKEN_SAFETY_MARGIN)
-    chunks = _chunk_text_by_tokens(text, effective_limit, config.model)
+    chunks = _chunk_text_by_tokens(text, effective_limit, model)
 
     with LogSpan(
         span="mem.embedding",
-        model=config.model,
+        model=model,
         textLen=len(text),
         chunks=len(chunks),
     ) as span:
@@ -109,7 +120,7 @@ def _generate_embedding(text: str) -> list[float]:
 
         if len(chunks) == 1:
             response = client.embeddings.create(
-                model=config.model,
+                model=model,
                 input=chunks[0],
             )
             span.add("dimensions", len(response.data[0].embedding))
@@ -117,7 +128,7 @@ def _generate_embedding(text: str) -> list[float]:
 
         # Batch embed all chunks in one API call
         response = client.embeddings.create(
-            model=config.model,
+            model=model,
             input=chunks,
         )
         vectors = [item.embedding for item in response.data]

@@ -41,10 +41,16 @@ class SnippetDef(BaseModel):
 
 
 class LlmConfig(BaseModel):
-    """Configuration for the llm (transform) tools."""
+    """Top-level shared LLM configuration.
 
-    model: str = Field(default="", description="Model for code generation")
-    base_url: str = Field(default="", description="Base URL for OpenAI-compatible API")
+    All tool packs (ot_llm, ot_image, mem, knowledge, ctx) fall back to these
+    values when their own ``base_url`` / ``model`` settings are not set.
+    Configure once here instead of repeating in every tool section.
+    """
+
+    model: str = Field(default="", description="Default completion model (e.g. google/gemini-2-flash-preview)")
+    embedding_model: str = Field(default="", description="Default embedding model (e.g. text-embedding-3-small)")
+    base_url: str = Field(default="", description="OpenAI-compatible API base URL (e.g. https://openrouter.ai/api/v1)")
     max_tokens: int = Field(default=4096, description="Max output tokens")
 
 

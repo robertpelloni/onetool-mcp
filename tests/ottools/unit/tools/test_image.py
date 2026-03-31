@@ -90,50 +90,31 @@ class TestImageConfig:
         config = get_image_config()
         assert config.max_edge == 1568
         assert config.session_cache_size == 10
-        assert config.vision_model == ""
+        assert config.model == ""
 
-    @patch("ottools._image.config.get_tool_config")
     @patch("ottools._image.config.get_secret")
-    def test_api_key_from_secret(self, mock_secret: MagicMock, mock_gtc: MagicMock) -> None:
-        from ottools._image.config import Config, get_image_config
+    def test_api_key_from_secret(self, mock_secret: MagicMock) -> None:
+        from ottools._image.config import get_image_api_key
 
         mock_secret.return_value = "sk-test-key"
-        mock_gtc.return_value = Config()
-        config = get_image_config()
-        assert config.api_key == "sk-test-key"
+        assert get_image_api_key() == "sk-test-key"
 
     @patch("ottools._image.config.get_tool_config")
-    @patch("ottools._image.config.get_secret")
-    def test_explicit_api_key_takes_precedence(
-        self, mock_secret: MagicMock, mock_gtc: MagicMock
+    @patch("ot.config.get_llm_config")
+    def test_base_url_and_model_fallback_from_llm_config(
+        self, mock_glc: MagicMock, mock_gtc: MagicMock
     ) -> None:
         from ottools._image.config import Config, get_image_config
+        from ot.config.models import LlmConfig
 
-        mock_secret.return_value = "sk-fallback"
-        mock_gtc.return_value = Config(api_key="sk-explicit")
-        config = get_image_config()
-        assert config.api_key == "sk-explicit"
-        mock_secret.assert_not_called()
-
-    @patch("ottools._image.config.get_tool_config")
-    @patch("ottools._image.config.get_secret")
-    def test_base_url_fallback_from_ot_llm(
-        self, mock_secret: MagicMock, mock_gtc: MagicMock
-    ) -> None:
-        from ottools._image.config import Config, _LlmConfig, get_image_config
-
-        mock_secret.return_value = None
-
-        def _gtc_side(name: str, model: Any) -> Any:
-            if name == "ot_image":
-                return Config()
-            if name == "ot_llm":
-                return _LlmConfig(base_url="https://openrouter.ai/api/v1")
-            return model()
-
-        mock_gtc.side_effect = _gtc_side
+        mock_gtc.return_value = Config()
+        mock_glc.return_value = LlmConfig(
+            base_url="https://openrouter.ai/api/v1",
+            model="google/gemini-3-flash-preview",
+        )
         config = get_image_config()
         assert config.base_url == "https://openrouter.ai/api/v1"
+        assert config.model == "google/gemini-3-flash-preview"
 
 
 # ---------------------------------------------------------------------------
@@ -559,13 +540,19 @@ class TestVision:
         import ottools._image.vision as _v
         _v._client = None
         _v._client_key = ("", "")
+        self._api_key_patch = patch(
+            "ottools._image.vision.get_image_api_key", return_value="sk-test"
+        )
+        self._api_key_patch.start()
+
+    def teardown_method(self) -> None:
+        self._api_key_patch.stop()
 
     def _make_config(self, **kwargs: Any) -> Any:
         from ottools._image.config import Config
 
         defaults = {
-            "vision_model": "openai/gpt-4o-mini",
-            "api_key": "sk-test",
+            "model": "openai/gpt-4o-mini",
             "base_url": "https://openrouter.ai/api/v1",
             "max_edge": 1568,
             "session_cache_size": 10,
@@ -576,16 +563,19 @@ class TestVision:
     def test_vision_not_configured_returns_error(self) -> None:
         from ottools._image.vision import call_vision
 
-        config = self._make_config(vision_model="")
+        config = self._make_config(model="")
         result = call_vision(b"png", "What is this?", config)
         assert result.startswith("Error:")
-        assert "vision_model" in result or "ot_image" in result
+        assert "model" in result or "ot_image" in result
 
     def test_api_key_missing_returns_error(self) -> None:
         from ottools._image.vision import call_vision
 
-        config = self._make_config(api_key="")
-        result = call_vision(b"png", "What is this?", config)
+        config = self._make_config()
+        self._api_key_patch.stop()
+        with patch("ottools._image.vision.get_image_api_key", return_value=None):
+            result = call_vision(b"png", "What is this?", config)
+        self._api_key_patch.start()
         assert result.startswith("Error:")
 
     def test_single_question_call(self) -> None:
@@ -870,7 +860,7 @@ class TestLoad:
         ):
             mock_cfg.return_value = Config(
                 session_cache_size=10,
-                vision_model="openai/gpt-4o-mini",
+                model="openai/gpt-4o-mini",
             )
             tools._clip_handle = None
             mock_t = MagicMock()
@@ -884,14 +874,14 @@ class TestLoad:
         assert call_kwargs.kwargs.get("daemon") is True
         mock_t.start.assert_called_once()
 
-    def test_background_summary_worker_skips_when_no_vision_model(self, tmp_path: Path) -> None:
-        """Worker exits early when vision_model is not configured; no API call made."""
+    def test_background_summary_worker_skips_when_no_model(self, tmp_path: Path) -> None:
+        """Worker exits early when model is not configured; no API call made."""
         from ottools._image import tools
         from ottools._image.config import Config
 
         with patch("ottools._image.tools.get_image_config") as mock_cfg, \
              patch("ottools._image.tools.extract_summary") as mock_extract:
-            mock_cfg.return_value = Config(session_cache_size=10, vision_model="")
+            mock_cfg.return_value = Config(session_cache_size=10, model="")
             tools._background_summarise("img_abc12345", b"fake_bytes")
 
         mock_extract.assert_not_called()
@@ -909,9 +899,14 @@ class TestAsk:
         self._thread_patcher = patch("ottools._image.tools.threading.Thread")
         self._mock_thread_cls = self._thread_patcher.start()
         self._mock_thread_cls.return_value = MagicMock()
+        self._api_key_patch = patch(
+            "ottools._image.vision.get_image_api_key", return_value="sk-test"
+        )
+        self._api_key_patch.start()
 
     def teardown_method(self) -> None:
         self._thread_patcher.stop()
+        self._api_key_patch.stop()
 
     def _setup(self, tmp_path: Path, mock_cfg: MagicMock) -> str:
         """Load a test image and return its handle name."""
@@ -924,8 +919,7 @@ class TestAsk:
 
         mock_cfg.return_value = Config(
             session_cache_size=10,
-            vision_model="openai/gpt-4o-mini",
-            api_key="sk-test",
+            model="openai/gpt-4o-mini",
         )
         tools._clip_handle = None
 
@@ -981,7 +975,7 @@ class TestAsk:
             patch.object(store, "_images_dir", return_value=tmp_path),
             patch("ottools._image.tools.get_image_config") as mock_cfg,
         ):
-            mock_cfg.return_value = Config(session_cache_size=10, vision_model="")
+            mock_cfg.return_value = Config(session_cache_size=10, model="")
             tools._clip_handle = None
             handle = tools.load(img=str(img_path))["handle"]
             result = tools.ask(img=handle, q="test")
@@ -1023,9 +1017,14 @@ class TestSummary:
         self._thread_patcher = patch("ottools._image.tools.threading.Thread")
         self._mock_thread_cls = self._thread_patcher.start()
         self._mock_thread_cls.return_value = MagicMock()
+        self._api_key_patch = patch(
+            "ottools._image.vision.get_image_api_key", return_value="sk-test"
+        )
+        self._api_key_patch.start()
 
     def teardown_method(self) -> None:
         self._thread_patcher.stop()
+        self._api_key_patch.stop()
 
     def test_first_call_calls_model(self, tmp_path: Path) -> None:
         from ottools._image import store, tools
@@ -1052,8 +1051,7 @@ class TestSummary:
         ):
             mock_cfg.return_value = Config(
                 session_cache_size=10,
-                vision_model="openai/gpt-4o-mini",
-                api_key="sk-test",
+                model="openai/gpt-4o-mini",
             )
             MockOAI.return_value.chat.completions.create.return_value = mock_resp
             tools._clip_handle = None
@@ -1089,8 +1087,7 @@ class TestSummary:
         ):
             mock_cfg.return_value = Config(
                 session_cache_size=10,
-                vision_model="openai/gpt-4o-mini",
-                api_key="sk-test",
+                model="openai/gpt-4o-mini",
             )
             MockOAI.return_value.chat.completions.create.return_value = mock_resp
             tools._clip_handle = None

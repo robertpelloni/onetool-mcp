@@ -736,8 +736,8 @@ Parameters: `pattern` (str, required), `topic` (str|None), `category` (str|None)
 tools:
   mem:
     db_path: mem.db  # relative to .onetool/
-    model: text-embedding-3-small
-    base_url: https://openrouter.ai/api/v1
+    model: ""      # inherits from llm.embedding_model; default: text-embedding-3-small
+    base_url: ""   # inherits from top-level llm.base_url
     dimensions: 1536
     search_limit: 10
     search_extract: 200

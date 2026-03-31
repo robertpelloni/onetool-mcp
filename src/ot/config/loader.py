@@ -33,7 +33,7 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel
 
-from ot.config.models import OneToolConfig
+from ot.config.models import LlmConfig, OneToolConfig
 from ot.config.secrets import expand_vars, get_secrets
 
 # Current config schema version
@@ -448,6 +448,23 @@ def is_log_verbose() -> bool:
             return _config.log_verbose
 
     return False
+
+
+def get_llm_config() -> LlmConfig:
+    """Get the top-level llm: config section.
+
+    Returns the shared LLM configuration from the root ``llm:`` key in
+    onetool.yaml.  All tool packs should fall back to these values when their
+    own ``base_url`` / ``model`` settings are empty, so users only need to
+    configure the API endpoint and default model once.
+
+    Returns:
+        LlmConfig instance (with empty-string defaults if not configured)
+    """
+    try:
+        return get_config().llm
+    except Exception:
+        return LlmConfig()
 
 
 @overload

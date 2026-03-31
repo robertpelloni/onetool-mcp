@@ -41,41 +41,38 @@ Short alias: `img`
 
 ## Requires
 
-- `tools.ot_image.vision_model` must be set for `ask()`, `summary()`, `clip_ask()`, and `clip_view()`.
-  Set to an OpenAI-compatible model identifier (e.g. `openai/gpt-4o-mini`).
-- An API key: set `tools.ot_image.api_key` in `onetool.yaml` or store `OPENAI_API_KEY` as a secret.
+- A vision model: set `tools.ot_image.model` or the top-level `llm.model` for `ask()`, `summary()`, `clip_ask()`, and `clip_view()`.
+- `OPENAI_API_KEY` in `secrets.yaml` for vision model calls.
 
 ## Configuration
-
-### Required
-
-| Key | Description |
-|-----|-------------|
-| `tools.ot_image.vision_model` | Vision model for `ask()` and `summary()` (e.g. `openai/gpt-4o-mini`) |
 
 ### Optional
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `tools.ot_image.api_key` | str | `""` | API key for the vision model. Falls back to `OPENAI_API_KEY` secret |
-| `tools.ot_image.base_url` | str | `""` | OpenAI-compatible base URL. Falls back to `tools.ot_llm.base_url` |
+| `tools.ot_image.model` | str | `""` | Vision model for `ask()` and `summary()`. Falls back to `llm.model` |
+| `tools.ot_image.base_url` | str | `""` | OpenAI-compatible base URL. Falls back to `llm.base_url` |
 | `tools.ot_image.max_edge` | int | `1568` | Maximum longest edge (pixels) for model-upload resize |
 | `tools.ot_image.session_cache_size` | int | `10` | In-memory LRU cache cap (number of images) |
 
 ```yaml
+# Minimal — inherits model and base_url from top-level llm: block
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: google/gemini-2-flash-preview
+
+# Override just for ot_image (optional)
 tools:
   ot_image:
-    vision_model: openai/gpt-4o-mini
-    api_key: ""              # falls back to OPENAI_API_KEY secret
-    base_url: ""             # falls back to tools.ot_llm.base_url
+    model: openai/gpt-4o-mini   # overrides llm.model for vision calls only
     max_edge: 1568
     session_cache_size: 10
 ```
 
 ### Defaults
 
-- If `tools.ot_image` is omitted, `load()` and `list()` work without config. `ask()` and `summary()` require `vision_model` to be set.
-- API key and base URL fall back automatically to `OPENAI_API_KEY` secret and `tools.ot_llm.base_url`.
+- If `tools.ot_image` is omitted, `load()` and `list()` work without config. `ask()` and `summary()` require a model via `tools.ot_image.model` or `llm.model`.
+- `model` and `base_url` fall back to the top-level `llm:` config block. API key is always read from the `OPENAI_API_KEY` secret.
 
 ## Examples
 

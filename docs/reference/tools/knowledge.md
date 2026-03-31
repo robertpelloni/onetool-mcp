@@ -59,14 +59,14 @@ Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `tools.knowledge.model` | string | `text-embedding-3-small` | OpenAI embedding model. |
-| `tools.knowledge.base_url` | string | `""` | OpenAI-compatible API base URL. Empty = inherit from `tools.ot_llm.base_url`. |
+| `tools.knowledge.model` | string | `""` | OpenAI embedding model. Falls back to `llm.embedding_model`; built-in default: `text-embedding-3-small`. |
+| `tools.knowledge.base_url` | string | `""` | OpenAI-compatible API base URL. Empty = inherit from top-level `llm.base_url`. |
 | `tools.knowledge.dimensions` | int | `1536` | Embedding dimensions. Must match the configured model. |
 | `tools.knowledge.max_embedding_tokens` | int | `8191` | Max tokens per embedding input. |
 | `tools.knowledge.embedding_batch_size` | int | `200` | Texts per embeddings API call. Range: `1-2048`. |
 | `tools.knowledge.search_limit` | int | `10` | Default max search results. Range: `1-100`. |
 | `tools.knowledge.search_extract` | int | `300` | Character limit for content extract in search results (`0` = full). |
-| `tools.knowledge.enrich_model` | string | `""` | LLM model for `kb.ask()` synthesis. Empty = falls back to `ot_llm` default. |
+| `tools.knowledge.enrich_model` | string | `""` | LLM model for `kb.ask()` synthesis. Empty = falls back to top-level `llm.model`. |
 | `tools.knowledge.min_chunk_chars` | int | `200` | Minimum body characters per chunk. Chunks below threshold are merged. `0` disables. |
 
 Project registry (under `tools.knowledge.kb`):
@@ -97,8 +97,9 @@ tools:
 
 ### Defaults
 
-- If `tools.knowledge.base_url` is empty, it inherits from `tools.ot_llm.base_url`.
-- If `tools.knowledge.enrich_model` is empty, it falls back to the `ot_llm` default model.
+- If `tools.knowledge.base_url` is empty, it inherits from the top-level `llm.base_url`.
+- If `tools.knowledge.model` is empty, it inherits from `llm.embedding_model`.
+- If `tools.knowledge.enrich_model` is empty, it falls back to `llm.model`.
 
 ## Examples
 

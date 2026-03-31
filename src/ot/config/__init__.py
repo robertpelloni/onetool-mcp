@@ -33,6 +33,7 @@ Usage:
 
 from ot.config.loader import (
     get_config,
+    get_llm_config,
     get_tool_config,
     is_log_verbose,
     load_config,
@@ -41,6 +42,7 @@ from ot.config.loader import (
     reset as reset_config,
 )
 from ot.config.models import (
+    LlmConfig,
     McpServerConfig,
     OneToolConfig,
     SecurityConfig,
@@ -70,6 +72,7 @@ def reset() -> None:
 
 
 __all__ = [
+    "LlmConfig",
     "McpServerConfig",
     "OneToolConfig",
     "SecurityConfig",
@@ -78,6 +81,7 @@ __all__ = [
     "expand_secrets",
     "expand_vars",
     "get_config",
+    "get_llm_config",
     "get_secret",
     "get_secrets",
     "get_tool_config",

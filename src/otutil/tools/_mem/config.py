@@ -45,8 +45,8 @@ class Config(BaseModel):
         description="OpenAI embedding model",
     )
     base_url: str = Field(
-        default="https://openrouter.ai/api/v1",
-        description="OpenAI-compatible API base URL for embeddings",
+        default="",
+        description="OpenAI-compatible API base URL for embeddings (empty = inherit from top-level llm config)",
     )
     dimensions: int = Field(
         default=1536,

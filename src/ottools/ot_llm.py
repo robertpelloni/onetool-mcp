@@ -76,10 +76,13 @@ def _get_api_config() -> tuple[str | None, str | None, str | None, Config]:
         Tuple of (api_key, base_url, default_model, config) - api_key/base_url/model
         are None if not configured
     """
+    from ot.config import get_llm_config
+
     config = _get_config()
+    llm = get_llm_config()
     api_key = get_secret("OPENAI_API_KEY")
-    base_url = config.base_url or None
-    default_model = config.model or None
+    base_url = config.base_url or llm.base_url or None
+    default_model = config.model or llm.model or None
     return api_key, base_url, default_model, config
 
 

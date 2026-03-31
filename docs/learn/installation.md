@@ -130,18 +130,18 @@ Pass it to the server via `--secrets /path/to/secrets.yaml`. If omitted, no secr
 | `OT_LOG_LEVEL` | `INFO`    | Logging verbosity                         |
 | `OT_LOG_DIR`   | `../logs` | Log file directory (relative to config)   |
 
-### Transform Tool Configuration
+### LLM Configuration
 
-The transform tool requires explicit configuration in `onetool.yaml` under `tools.ot_llm`:
+Configure `base_url` and `model` once at the top level — all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`, `ctx`) inherit from it:
 
 ```yaml
-tools:
-  ot_llm:
-    base_url: "https://openrouter.ai/api/v1"  # Required
-    model: "openai/gpt-5-mini"                # Required
+llm:
+  base_url: "https://openrouter.ai/api/v1"    # Required
+  model: "google/gemini-2-flash-preview"       # Required for transform/vision
+  embedding_model: "text-embedding-3-small"    # Required for mem/knowledge embeddings
 ```
 
-The tool is not available until both `base_url` and `model` are configured, plus `OPENAI_API_KEY` in secrets.
+The transform tool is not available until `base_url` and `model` are configured (via `llm:` or `tools.ot_llm.*`), plus `OPENAI_API_KEY` in secrets.
 
 ## MCP Configuration
 

@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
 from otpack import LogSpan, get_secret
 
+from ot.config import get_llm_config
+
 from .config import _get_config
 
 if TYPE_CHECKING:
@@ -27,29 +29,26 @@ _EMBED_CACHE: dict[tuple[str, str, int], tuple[list[float], float]] = {}
 _EMBED_CACHE_TTL = 900.0  # 15 minutes
 
 
-def _get_llm_base_url() -> str | None:
-    """Read base_url from ot_llm config as fallback."""
-    from otpack import get_tool_config
-    from pydantic import BaseModel, Field
-
-    class _MinimalLLMConfig(BaseModel):
-        base_url: str = Field(default="")
-
-    return get_tool_config("ot_llm", _MinimalLLMConfig).base_url or None
-
-
 def _get_openai_client() -> OpenAI:
-    """Get OpenAI client using knowledge pack config, falling back to ot_llm config."""
+    """Get OpenAI client using knowledge pack config, falling back to top-level llm config."""
     try:
         from openai import OpenAI
     except ImportError as e:
         raise ImportError("openai is required for knowledge embeddings. Install with: pip install openai") from e
+
     api_key = get_secret("OPENAI_API_KEY") or ""
     if not api_key:
         raise ValueError("OPENAI_API_KEY not configured in secrets.yaml (required for knowledge embeddings)")
     config = _get_config()
-    base_url = config.base_url or _get_llm_base_url()
+    base_url = config.base_url or get_llm_config().base_url or None
     return OpenAI(api_key=api_key, base_url=base_url)
+
+
+def _get_embedding_model(config: Any) -> str:
+    """Resolve the embedding model, falling back to top-level llm config."""
+    if config.model:
+        return config.model
+    return get_llm_config().embedding_model or config.model
 
 
 def _get_tiktoken_encoding(model: str) -> Any:
@@ -77,12 +76,12 @@ def _chunk_text_by_tokens(text: str, max_tokens: int, model: str) -> list[str]:
     return chunks
 
 
-def _prepare_safe_batch(texts: list[str], config: Any) -> list[str]:
+def _prepare_safe_batch(texts: list[str], config: Any, model: str) -> list[str]:
     """Truncate texts to token limit and replace empty strings for the OpenAI API."""
     effective_limit = max(1, config.max_embedding_tokens - _TOKEN_SAFETY_MARGIN)
     safe: list[str] = []
     for text in texts:
-        chunks = _chunk_text_by_tokens(text, effective_limit, config.model)
+        chunks = _chunk_text_by_tokens(text, effective_limit, model)
         safe.append(chunks[0] if chunks else text)
     # OpenAI rejects batches that contain empty strings
     return [t if t.strip() else " " for t in safe]
@@ -135,7 +134,8 @@ def generate_embedding(text: str) -> list[float]:
     when the same query is issued multiple times in a session.
     """
     config = _get_config()
-    cache_key = (text, config.model, config.dimensions)
+    model = _get_embedding_model(config)
+    cache_key = (text, model, config.dimensions)
     now = time.monotonic()
     cached = _EMBED_CACHE.get(cache_key)
     if cached is not None:
@@ -144,17 +144,17 @@ def generate_embedding(text: str) -> list[float]:
             return vec
 
     effective_limit = max(1, config.max_embedding_tokens - _TOKEN_SAFETY_MARGIN)
-    text_chunks = _chunk_text_by_tokens(text, effective_limit, config.model)
+    text_chunks = _chunk_text_by_tokens(text, effective_limit, model)
 
-    with LogSpan(span="kb.embedding", model=config.model, textLen=len(text), chunks=len(text_chunks)) as span:
+    with LogSpan(span="kb.embedding", model=model, textLen=len(text), chunks=len(text_chunks)) as span:
         client = _get_openai_client()
 
         if len(text_chunks) == 1:
-            response = client.embeddings.create(model=config.model, input=text_chunks[0])
+            response = client.embeddings.create(model=model, input=text_chunks[0])
             span.add("dimensions", len(response.data[0].embedding))
             result = response.data[0].embedding
         else:
-            response = client.embeddings.create(model=config.model, input=text_chunks)
+            response = client.embeddings.create(model=model, input=text_chunks)
             vectors = [item.embedding for item in response.data]
             dims = len(vectors[0])
             span.add("dimensions", dims)
@@ -188,6 +188,7 @@ def generate_embeddings_batch(
         return []
 
     config = _get_config()
+    model = _get_embedding_model(config)
     if batch_size is None:
         batch_size = config.embedding_batch_size
     client = _get_openai_client()
@@ -196,10 +197,10 @@ def generate_embeddings_batch(
 
     for i in range(0, total, batch_size):
         batch = texts[i : i + batch_size]
-        safe_batch = _prepare_safe_batch(batch, config)
+        safe_batch = _prepare_safe_batch(batch, config, model)
 
-        with LogSpan(span="kb.embedding.batch", model=config.model, batchSize=len(safe_batch)):
-            vecs = _embed_batch_with_retry(client, config.model, safe_batch)
+        with LogSpan(span="kb.embedding.batch", model=model, batchSize=len(safe_batch)):
+            vecs = _embed_batch_with_retry(client, model, safe_batch)
             results.extend(vecs)
 
         if on_batch:

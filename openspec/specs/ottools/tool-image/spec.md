@@ -30,12 +30,12 @@ and image metadata.
 - **AND** `img_<hash>.meta.json` SHALL be created with `source`, `hash`,
   `original_dims`, `model_dims`, `resized`, `max_edge`, `original_format`,
   `created_at`, and `summary: null`
-- **AND** if `vision_model` is configured, a background daemon thread SHALL be spawned
+- **AND** if `model` is configured, a background daemon thread SHALL be spawned
   to call `extract_summary()` and persist the result via `save_summary()` — the
   `load()` call SHALL NOT block on this
 
 #### Scenario: Background summary skipped when no vision model
-- **WHEN** `image.load()` is called and `vision_model` is not configured (empty string)
+- **WHEN** `image.load()` is called and `model` is not configured (empty string)
 - **THEN** no background thread SHALL be spawned for auto-summary
 
 #### Scenario: Load from clipboard
@@ -164,7 +164,7 @@ model and return answers.
 
 #### Scenario: Vision model not configured
 
-- **WHEN** `image.ask()` is called and no `vision_model` is set in config
+- **WHEN** `image.ask()` is called and no `model` is set in config
 - **THEN** it SHALL return `{"error": "Error: ...", "handle": "..."}` where `error` starts with `"Error:"`
 - **AND** it SHALL NOT raise an exception
 
@@ -291,17 +291,19 @@ memory growth.
 
 The `ot_image` pack SHALL be configurable via `onetool.yaml` under `tools.ot_image`.
 
-#### Scenario: vision_model required for ask and summary
+#### Scenario: model required for ask and summary
 
-- **WHEN** `tools.ot_image.vision_model` is not set
+- **WHEN** `tools.ot_image.model` is not set
 - **AND** `image.ask()` or `image.summary()` is called
 - **THEN** it SHALL return an error string (not raise) indicating the setting is missing
 
-#### Scenario: Inherit api_key and base_url from ot_llm
+#### Scenario: Inherit model and base_url from top-level llm config
 
-- **WHEN** `tools.ot_image.api_key` is not set
-- **AND** `tools.ot_llm.api_key` is set
-- **THEN** `image` SHALL use `tools.ot_llm.api_key` for vision model calls
+- **WHEN** `tools.ot_image.model` is not set
+- **THEN** `image` SHALL use `llm.model` from the top-level `llm:` config block
+- **WHEN** `tools.ot_image.base_url` is not set
+- **THEN** `image` SHALL use `llm.base_url` from the top-level `llm:` config block
+- **AND** the API key is always read from the `OPENAI_API_KEY` secret — there is no `tools.ot_image.api_key` config field
 
 #### Scenario: max_edge override
 

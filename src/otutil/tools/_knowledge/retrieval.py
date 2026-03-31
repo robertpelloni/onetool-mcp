@@ -22,14 +22,13 @@ def _create_llm_client() -> OpenAI | None:
         from openai import OpenAI
         from otpack import get_secret
 
+        from ot.config import get_llm_config
+
         api_key = get_secret("OPENAI_API_KEY") or ""
         if not api_key:
             return None
         config = _get_config()
-        base_url = config.base_url or None
-        if base_url is None:
-            from .embedding import _get_llm_base_url
-            base_url = _get_llm_base_url()
+        base_url = config.base_url or get_llm_config().base_url or None
         return OpenAI(api_key=api_key, base_url=base_url)
     except Exception:
         return None
@@ -326,7 +325,8 @@ def _llm_rerank(query: str, results: list[dict[str, Any]]) -> list[dict[str, Any
             return results
 
         config = _get_config()
-        model = config.enrich_model or "gpt-4o-mini"
+        from ot.config import get_llm_config
+        model = config.enrich_model or get_llm_config().model or "gpt-4o-mini"
 
         snippets = "\n\n".join(
             f"[{i}] {r['topic']}\n{r['content'][:500]}"
@@ -360,7 +360,8 @@ def _synthesise(query: str, context: str) -> str:
             return "(LLM synthesis requires OPENAI_API_KEY — here are the retrieved chunks:)\n\n" + context[:2000]
 
         config = _get_config()
-        model = config.enrich_model or "gpt-4o-mini"
+        from ot.config import get_llm_config
+        model = config.enrich_model or get_llm_config().model or "gpt-4o-mini"
         prompt = (
             f"Answer the following question based on the provided context. "
             f"Be concise and cite sources by their [N] numbers.\n\n"

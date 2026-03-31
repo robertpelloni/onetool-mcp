@@ -42,7 +42,7 @@ def _background_summarise(handle_name: str, model_bytes: bytes) -> None:
     """
     try:
         config = get_image_config()
-        if not config.vision_model:
+        if not config.model:
             return
         result = extract_summary(model_bytes, config)
         if isinstance(result, dict):
@@ -219,7 +219,7 @@ def load(*, img: str, handle: str | None = None, max_edge: int = 1568) -> dict[s
         save_image(raw_bytes, handle_name, meta)
         cache_put(handle_name, prep.model_bytes)
 
-        # Spawn background summary — silently skipped if vision_model not set
+        # Spawn background summary — silently skipped if model not set
         thread = threading.Thread(
             target=_background_summarise,
             args=(handle_name, prep.model_bytes),
