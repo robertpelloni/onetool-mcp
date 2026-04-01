@@ -5,7 +5,6 @@ then run the link-graph second pass.
 """
 from __future__ import annotations
 
-import logging
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -13,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urldefrag, urljoin
 
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -176,7 +175,7 @@ def _build_pathspec(patterns: list[str]) -> Any:
         return pathspec.PathSpec.from_lines("gitwildmatch", patterns)
     except ImportError:
         logger.warning(
-            "pathspec not installed — %d ignore pattern(s) will not be applied "
+            "pathspec not installed — {} ignore pattern(s) will not be applied "
             "(install with: uv add pathspec)",
             len(patterns),
         )
@@ -290,7 +289,7 @@ def _store_embeddings_batch(
         sub = pending[i : i + batch_size]
         chunk_ids = [p[0] for p in sub]
         contents = [p[1] for p in sub]
-        safe_batch = _prepare_safe_batch(contents, config)
+        safe_batch = _prepare_safe_batch(contents, config, config.model)
 
         try:
             vecs = _embed_batch_with_retry(client, config.model, safe_batch)

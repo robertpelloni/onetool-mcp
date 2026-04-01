@@ -1,13 +1,11 @@
 """CRUD operations for the knowledge pack."""
 from __future__ import annotations
 
-import logging
 import uuid
 from typing import Any
 
+from loguru import logger
 from otpack import LogSpan
-
-logger = logging.getLogger(__name__)
 
 from .chunker import _content_hash
 from .config import VALID_CATEGORIES
@@ -101,7 +99,7 @@ def read(*, topic: str | None = None, source_path: str | None = None, id: str | 
     if topic is None and source_path is None and id is None:
         return "Error: Provide topic=, id=, or source_path="
 
-    with LogSpan(span="kb.read", topic=topic, source_path=source_path, db=db):
+    with LogSpan(span="kb.read", topic=topic, sourcePath=source_path, db=db):
         try:
             conn = get_connection(db)
             if source_path is not None:
@@ -270,7 +268,7 @@ def delete(*, topic: str | None = None, source_path: str | None = None, id: str 
     if topic is None and source_path is None and id is None:
         return "Error: Provide topic=, id=, or source_path="
 
-    with LogSpan(span="kb.delete", topic=topic, source_path=source_path, db=db):
+    with LogSpan(span="kb.delete", topic=topic, sourcePath=source_path, db=db):
         try:
             conn = get_connection(db)
             if id is not None:
@@ -310,7 +308,7 @@ def _try_embed(conn: Any, chunk_id: str, content: str) -> str | None:
         )
         return None
     except Exception as e:
-        logger.warning("Embedding generation failed for chunk %s: %s", chunk_id, e)
+        logger.warning("Embedding generation failed for chunk {}: {}", chunk_id, e)
         return str(e)
 
 

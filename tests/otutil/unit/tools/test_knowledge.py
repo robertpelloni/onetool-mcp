@@ -418,9 +418,9 @@ class TestKnowledgeSearch:
         conn.executescript(_FTS_SQL)
         conn.executescript(_FTS_TRIGGERS_SQL)
         _insert_chunk(conn, "c1", "docs/move", "nudge objects along axis",
-                      meta='{"source": "docs.example.com", "url": "https://docs.example.com/move"}')
+                      meta='{"source": "docs.test.invalid", "url": "https://docs.test.invalid/move"}')
         _insert_chunk(conn, "c2", "docs/rotate", "rotate object around point",
-                      meta='{"source": "docs.example.com"}')
+                      meta='{"source": "docs.test.invalid"}')
         _insert_chunk(conn, "c3", "python/list", "list comprehension filter map",
                       meta='{}')
         conn.commit()
@@ -460,10 +460,10 @@ class TestKnowledgeSearch:
     def test_metadata_filter_source(self):
         from otutil.tools._knowledge.search import apply_metadata_filters
         results = [
-            {"id": "a", "meta_dict": {"source": "docs.example.com"}, "tags_list": [], "created_at": "2024-01-01"},
+            {"id": "a", "meta_dict": {"source": "docs.test.invalid"}, "tags_list": [], "created_at": "2024-01-01"},
             {"id": "b", "meta_dict": {"source": "other.com"}, "tags_list": [], "created_at": "2024-01-01"},
         ]
-        filtered = apply_metadata_filters(results, source="docs.example.com")
+        filtered = apply_metadata_filters(results, source="docs.test.invalid")
         assert len(filtered) == 1
         assert filtered[0]["id"] == "a"
 
@@ -1426,7 +1426,7 @@ class TestKnowledgeBatchEmbedding:
         with patch("otutil.tools._knowledge.db._check_vec_available", return_value=True):
             with patch("otutil.tools._knowledge.embedding._embed_batch_with_retry", side_effect=fake_embed):
                 with patch("otutil.tools._knowledge.embedding._get_openai_client", return_value=MagicMock()):
-                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c: t):
+                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c, _m: t):
                         with patch("otutil.tools._knowledge.indexer._get_config") as mock_cfg:
                             mock_cfg.return_value.model = "text-embedding-3-small"
                             result = _store_embeddings_batch(conn, pending, batch_size=batch_size)
@@ -1460,7 +1460,7 @@ class TestKnowledgeBatchEmbedding:
         with patch("otutil.tools._knowledge.db._check_vec_available", return_value=True):
             with patch("otutil.tools._knowledge.embedding._embed_batch_with_retry", side_effect=fake_embed):
                 with patch("otutil.tools._knowledge.embedding._get_openai_client", return_value=MagicMock()):
-                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c: t):
+                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c, _m: t):
                         with patch("otutil.tools._knowledge.indexer._get_config") as mock_cfg:
                             mock_cfg.return_value.model = "text-embedding-3-small"
                             result = _store_embeddings_batch(conn, pending, batch_size=10)
@@ -1495,7 +1495,7 @@ class TestKnowledgeBatchEmbedding:
         with patch("otutil.tools._knowledge.db._check_vec_available", return_value=True):
             with patch("otutil.tools._knowledge.embedding._embed_batch_with_retry", side_effect=fake_embed):
                 with patch("otutil.tools._knowledge.embedding._get_openai_client", return_value=MagicMock()):
-                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c: t):
+                    with patch("otutil.tools._knowledge.embedding._prepare_safe_batch", side_effect=lambda t, _c, _m: t):
                         with patch("otutil.tools._knowledge.indexer._get_config") as mock_cfg:
                             mock_cfg.return_value.model = "text-embedding-3-small"
                             result = _store_embeddings_batch(conn, pending, batch_size=20)

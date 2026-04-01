@@ -1,7 +1,6 @@
 """Embedding generation for the knowledge pack."""
 from __future__ import annotations
 
-import logging
 import struct
 import time
 from typing import TYPE_CHECKING, Any
@@ -9,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+from loguru import logger
 from otpack import LogSpan, get_secret
 
 from ot.config import get_llm_config
@@ -18,7 +18,6 @@ from .config import _get_config
 if TYPE_CHECKING:
     from openai import OpenAI
 
-logger = logging.getLogger(__name__)
 
 _TOKEN_SAFETY_MARGIN = 100
 _RETRYABLE_HTTP_STATUS = {429, 500, 503}
@@ -116,7 +115,7 @@ def _embed_batch_with_retry(
                 raise
             wait = 2.0 ** attempt
             logger.warning(
-                "Embedding API error (%s), retrying in %.0fs (attempt %d/%d): %s",
+                "Embedding API error ({}), retrying in {:.0f}s (attempt {}/{}): {}",
                 status or type(e).__name__,
                 wait,
                 attempt + 1,
