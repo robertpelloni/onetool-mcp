@@ -1,7 +1,7 @@
 # docs Specification
 
 ## Purpose
-TBD - created by archiving change add-project-docs. Update Purpose after archive.
+Defines the structure, format, and completeness requirements for all OneTool documentation — `docs/`, `dev/`, and tool reference pages. Covers MkDocs site configuration, section organisation, tool reference format, plugin guides, and the GitHub Pages deployment pipeline.
 ## Requirements
 ### Requirement: Getting Started Documentation
 

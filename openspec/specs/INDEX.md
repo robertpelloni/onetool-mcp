@@ -36,7 +36,7 @@ The main CLI for configuration management.
 
 | Spec | Purpose |
 |------|---------|
-| [onetool-cli](onetool-cli/spec.md) | Config upgrade, dependency check, config display |
+| [onetool-cli](onetool-cli/spec.md) | MCP server entry point, config management (`init`), and knowledge base management (`kb`) |
 
 ---
 
@@ -86,6 +86,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-mem](ottools/tool-mem/spec.md) | Persistent agent memory with semantic search |
 | [tool-secrets](ottools/tool-secrets/spec.md) | Age-encrypted secrets management |
 | [tool-timer](ottools/tool-timer/spec.md) | Named stopwatch timers |
+| [knowledge-pack](knowledge-pack/spec.md) | Retrieval-augmented knowledge base with FTS5 and vector search (`knowledge` / `kb` pack) |
 
 ### Domain Tools (`[util]` extra)
 
@@ -97,6 +98,8 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-file](otutil/tool-file/spec.md) | File operations |
 | [tool-ground](otutil/tool-ground/spec.md) | Google grounding via Gemini API |
 | [tool-tavily](otutil/tool-tavily/spec.md) | AI-powered web search and deep research via Tavily API |
+| [kb-scrape-debug](kb-scrape-debug/spec.md) | `--debug` artifacts and per-run config threshold warnings for `onetool kb scrape` |
+| [kb-scrape](kb-scrape/spec.md) | Knowledge base scraping pipeline |
 
 ### Domain Tools (`[dev]` extra)
 
@@ -106,7 +109,7 @@ The MCP server that exposes tools for LLM code execution.
 | [tool-context7](otdev/tool-context7/spec.md) | Context7 library documentation API |
 | [tool-db](otdev/tool-db/spec.md) | SQL database queries via SQLAlchemy |
 | [tool-diagram](otdev/tool-diagram/spec.md) | Diagram generation |
-| [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via Playwright (`whiteboard` pack, short alias `wb`) |
+| [tool-excalidraw](otdev/tool-excalidraw/spec.md) | Live diagram drawing on excalidraw.com via pydoll (Chrome CDP) (`whiteboard` pack, short alias `wb`) |
 | [tool-package](otdev/tool-package/spec.md) | Package version checks (npm, PyPI, OpenRouter) |
 | [tool-ripgrep](otdev/tool-ripgrep/spec.md) | Text/regex search via ripgrep |
 | [tool-webfetch](otdev/tool-webfetch/spec.md) | Web content extraction via trafilatura |
@@ -139,11 +142,11 @@ CLI for testing and benchmarking MCP servers.
 | onetool Core | 12 |
 | Tool Infrastructure | 1 |
 | Built-in Tools (core) | 2 |
-| Built-in Tools (ottools) | 8 |
-| Domain Tools [util] | 6 |
-| Domain Tools [dev] | 9 |
+| Built-in Tools (ottools) | 9 |
+| Domain Tools [util] | 8 |
+| Domain Tools [dev] | 8 |
 | bench | 8 |
-| **Total** | **52** |
+| **Total** | **54** |
 
 ---
 
@@ -154,7 +157,7 @@ Specs that have been consolidated into other specs:
 - `serve-observability` → consolidated into [_nf-observability](_nf-observability/spec.md)
 - `tool-observability` → consolidated into [_nf-observability](_nf-observability/spec.md)
 - `bench-observability` → split into [_nf-observability](_nf-observability/spec.md) and [bench-logging](bench-logging/spec.md)
-- `tool-internal` → consolidated into [tool-ot](tool-ot/spec.md)
+- `tool-internal` → consolidated into [tool-ot](tool-ot/spec.md) and [_nf-conventions](_nf-conventions/spec.md); spec deleted
 - `tool-info` → consolidated into [tool-ot](tool-ot/spec.md)
 - `observability` → renamed to [_nf-observability](_nf-observability/spec.md)
 - `tool-conventions` → renamed to [_nf-conventions](_nf-conventions/spec.md)
@@ -167,5 +170,6 @@ Specs that have been consolidated into other specs:
 - `tool-web-fetch` → renamed to [tool-web](otdev/tool-web/spec.md)
 - `tool-web` → renamed to [tool-webfetch](otdev/tool-webfetch/spec.md)
 - `tool-sdk` → removed (extensions use `ot.*` imports directly)
+- `kb-scrape-dry-run` → removed (feature replaced by `--debug`; requirements covered in `knowledge-pack/spec.md` and `onetool-cli/spec.md`)
 - `changes/add-excalidraw-pack` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (spec updated to match final implementation: pack renamed `wb`, tools renamed, file format changed, new tools added)
 - `changes/excalidraw-ascii-note` → archived into [tool-excalidraw](otdev/tool-excalidraw/spec.md) (note tool requirements merged; `Swim` type replaced by `seq`)

@@ -14,10 +14,12 @@ Python 3.12+, FastMCP, Pydantic, httpx, SQLAlchemy, Typer, PyYAML
 
 | Package | MCP Server | Tool Packs |
 |---------|------------|------------|
-| `otutil` | `onetool-util` | file, excel, brave, convert, ground |
-| `otdev` | `onetool-dev` | ripgrep, web, package, db, diagram, context7 |
+| `otutil` | `onetool-util` | file, excel, brave, convert, ground, knowledge, mem, ot_image, tavily |
+| `otdev` | `onetool-dev` | ripgrep, webfetch, package, db, diagram, context7 |
 | `otcommon` | (shared) | Registry, tool discovery utilities |
 | `ot` | (shared) | Core framework (executor, config, logging, proxy) |
+| `onetool-pack` | `packages/onetool-pack/` | Shared utilities for pack authors (logging, config, caching, HTTP, paths, batch, text) |
+| `onetool-bench` | `packages/onetool-bench/` | Benchmark harness for MCP server testing |
 
 ## Full Documentation
 

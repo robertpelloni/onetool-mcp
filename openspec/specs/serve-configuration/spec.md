@@ -1063,6 +1063,60 @@ Tools SHALL access their configuration via `get_tool_config()` at runtime.
 - **THEN** the section SHALL be preserved (extra="allow")
 - **AND** no error SHALL occur
 
+### Requirement: Top-Level LLM Configuration
+
+The config SHALL support a top-level `llm:` key providing shared defaults inherited by all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`).
+
+```yaml
+llm:
+  model: ""            # default chat/completion model
+  embedding_model: ""  # default embedding model (e.g. text-embedding-3-small)
+  base_url: ""         # OpenAI-compatible API base URL
+  api_key: ""          # API key (prefer secrets file)
+```
+
+#### Scenario: Tool-specific override
+- **GIVEN** both `llm.model` and `tools.<pack>.model` are set
+- **WHEN** the pack resolves its model
+- **THEN** `tools.<pack>.model` SHALL take precedence over `llm.model`
+
+#### Scenario: Base URL override
+- **GIVEN** both `llm.base_url` and `tools.<pack>.base_url` are set
+- **WHEN** the pack resolves its base URL
+- **THEN** `tools.<pack>.base_url` SHALL take precedence over `llm.base_url`
+
+#### Scenario: LLM section absent
+- **GIVEN** no `llm:` section in onetool.yaml
+- **WHEN** the server starts
+- **THEN** it SHALL start without error
+- **AND** each tool SHALL use its own tool-specific config directly
+
+#### Scenario: Inherited fields
+- **GIVEN** a top-level `llm:` section
+- **WHEN** an LLM-using tool resolves its configuration
+- **THEN** the following fields SHALL be inheritable: `model`, `base_url`, `api_key`
+
+#### Scenario: Resolution order
+- **GIVEN** an LLM-using tool needs a config field (e.g. `model`)
+- **WHEN** the field is resolved
+- **THEN** the resolution order SHALL be:
+  1. Tool-specific config (`tools.<pack>.model`)
+  2. Top-level LLM config (`llm.model`)
+  3. Error if required and not found at either level
+
+#### Scenario: API key always from secrets
+- **GIVEN** `llm.api_key` is set in `onetool.yaml`
+- **WHEN** a tool resolves its API key
+- **THEN** the key SHALL be retrieved via `get_secret()` from `secrets.yaml`
+- **AND** the `api_key` field in `llm:` config is for documentation/reference only
+- **AND** secrets SHALL never be stored in plain-text YAML config
+
+#### Scenario: Participating tools
+- **GIVEN** the top-level `llm:` section
+- **WHEN** tools resolve LLM configuration
+- **THEN** the following tools SHALL participate in inheritance: `ot_llm`, `ot_image`, `mem`, `knowledge`
+- **AND** tools that do not use an LLM SHALL ignore the `llm:` section
+
 ### Requirement: Stats Configuration Location
 
 Statistics configuration SHALL be at the root level.

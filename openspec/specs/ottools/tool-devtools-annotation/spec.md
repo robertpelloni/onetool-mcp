@@ -1,7 +1,7 @@
 # tool-devtools-annotation Specification
 
 ## Purpose
-TBD - created by archiving change add-inject-v2. Update Purpose after archive.
+Defines the bundled `inject.js` annotation script asset and the `window.__inspector` JavaScript API it exposes. Covers script loading, annotation add/remove/clear operations, and the attribute-based visual highlighting system used by `chrome_util` and `play_util`.
 ## Requirements
 ### Requirement: Annotation Script Asset
 

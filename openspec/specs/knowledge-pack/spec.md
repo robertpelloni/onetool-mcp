@@ -21,12 +21,12 @@ The `knowledge` pack SHALL be registered in the tool loader and available under 
 
 ---
 
-### Requirement: KB project registry
-The `knowledge` pack SHALL read named KB project configurations from `onetool.yaml` under `tools.knowledge.kb`. Each entry maps a project name to a `KBProjectConfig` containing `db:`, optional `scrape:`, and `index:` sub-sections. The `db.path` field is resolved relative to `.onetool/`.
+### Requirement: Multi-database registry
+The `knowledge` pack SHALL read named database configurations from `onetool.yaml` under `tools.knowledge.kb`. Each entry maps a short name to a `KBProjectConfig` containing at minimum a `db` sub-config. The `db.path` field is resolved relative to `.onetool/`.
 
-#### Scenario: Named project resolves to file path
-- **WHEN** a user calls `kb.search(q='...', db='docs')`
-- **THEN** the pack opens the path configured under `tools.knowledge.kb.docs.db.path`
+#### Scenario: Named database resolves to file path
+- **WHEN** a user calls `kb.search(q='...', db='rhino')`
+- **THEN** the pack opens the path configured under `tools.knowledge.kb.rhino.db.path`
 
 #### Scenario: Unregistered db name uses convention
 - **WHEN** a user calls `kb.search(q='...', db='custom')` and `custom` is not in the registry
@@ -34,7 +34,7 @@ The `knowledge` pack SHALL read named KB project configurations from `onetool.ya
 
 #### Scenario: dbs() lists configured databases
 - **WHEN** a user calls `kb.dbs()`
-- **THEN** the tool returns the list of database names and descriptions from config
+- **THEN** the tool returns the list of database names and descriptions from `tools.knowledge.kb`
 
 ---
 
@@ -111,25 +111,29 @@ The `knowledge` pack SHALL read named KB project configurations from `onetool.ya
 ---
 
 ### Requirement: kb.read — Entry retrieval
-`kb.read()` is read-one for topic and id: it returns the most recently created matching chunk (`ORDER BY created_at DESC LIMIT 1`). `source_path` returns all chunks for a source file (page-level and per-section, ordered by anchor). `id=` (chunk UUID) overrides topic when provided.
+`kb.read()` SHALL return a list of chunks matching the given `topic` or `source_path`. A `topic` match may return multiple chunks (topic is not unique). An `id` match returns at most one chunk. `id=` (chunk UUID) overrides topic when provided.
 
 `id=` is also supported on `kb.update()`, `kb.append()`, and `kb.delete()` as a stable alternative to topic — consistent with `mem` CRUD behaviour.
 
-#### Scenario: Read by topic (read-one)
-- **WHEN** `kb.read(topic='guides/move', db='docs')` is called
-- **THEN** the single most recently created chunk with that topic is returned
+#### Scenario: Read by topic returns list
+- **WHEN** `kb.read(topic='commands/move', db='rhino')` is called
+- **THEN** all chunks with that topic are returned as a list (may be one or more)
 
 #### Scenario: Read by id
 - **WHEN** `kb.read(id='abc-123', db='docs')` is called
 - **THEN** the chunk with that UUID is returned
 
-#### Scenario: Read by source_path
-- **WHEN** `kb.read(source_path='guides/v1/en-us/commands/move', db='docs')` is called
-- **THEN** all chunks for that source file are returned (page-level and per-section, ordered by anchor)
+#### Scenario: Read by source_path returns all anchors
+- **WHEN** `kb.read(source_path='rhino/8mac/help/en-us/commands/move', db='rhino')` is called
+- **THEN** all chunks (page-level and per-section) from that file are returned
 
-#### Scenario: Missing topic raises error
-- **WHEN** `kb.read(topic='nonexistent', db='docs')` is called
-- **THEN** a descriptive error is returned (not a silent None)
+#### Scenario: Missing topic returns empty list
+- **WHEN** `kb.read(topic='nonexistent', db='rhino')` is called
+- **THEN** an empty list is returned
+
+#### Scenario: source_path filter in CRUD
+- **WHEN** `kb.read(source_path='rhino/8mac/help/en-us/commands/move', db='rhino')` is called
+- **THEN** all chunks with that `source_path` are returned (may span multiple anchors)
 
 #### Scenario: topic, id, or source_path required
 - **WHEN** `kb.read(db='docs')` is called without any parameter
@@ -208,20 +212,36 @@ Parameters:
 ---
 
 ### Requirement: kb.update — Replace entry content
-`kb.update()` SHALL replace the `content` of an existing entry.
+`kb.update()` SHALL replace the `content` of all chunks matching the given `topic`. For precision targeting, `source_path=` and `anchor=` parameters may be supplied.
 
 #### Scenario: Content replaced
 - **WHEN** `kb.update(topic='python/tips/loops', content='new content', db='docs')` is called
 - **THEN** the entry's content is replaced and `updated_at` is refreshed
 
+#### Scenario: Update by topic affects all matching chunks
+- **WHEN** `kb.update(topic='commands/move', content='new content', db='rhino')` is called and two chunks have that topic
+- **THEN** both chunks have their content replaced and `updated_at` refreshed
+
+#### Scenario: Update by source_path and anchor targets one chunk
+- **WHEN** `kb.update(source_path='rhino/8mac/help/en-us/commands/move', anchor='', db='rhino', content='new content')` is called
+- **THEN** exactly the page-level preamble chunk for that file is updated
+
 ---
 
 ### Requirement: kb.delete — Remove entry
-`kb.delete()` SHALL remove an entry by topic or id, cascading to FTS5, `chunks_vec`, and `edges`.
+`kb.delete()` SHALL remove all chunks matching the given `topic`, cascading to FTS5, `chunks_vec`, and `edges`. For precision targeting, `source_path=` and `anchor=` parameters may be supplied.
 
 #### Scenario: Entry deleted
 - **WHEN** `kb.delete(topic='python/tips/loops', db='docs')` is called
 - **THEN** the chunk row and all related FTS5/vec/edge rows are removed
+
+#### Scenario: Delete by topic removes all matching chunks
+- **WHEN** `kb.delete(topic='commands/move', db='rhino')` is called and two chunks have that topic
+- **THEN** both chunks and all related FTS5/vec/edge rows are removed
+
+#### Scenario: Delete by source_path removes entire file's chunks
+- **WHEN** `kb.delete(source_path='rhino/8mac/help/en-us/commands/move', db='rhino')` is called
+- **THEN** all chunks (all anchors) from that source path are removed
 
 ---
 
@@ -292,9 +312,32 @@ Repeated query embeddings within a session SHALL be served from a short-lived in
 ---
 
 ### Requirement: Config schema — tools.knowledge
-The `onetool.yaml` `tools.knowledge` block SHALL use a unified `kb:` map of named projects. Each project bundles `db:`, `scrape:`, and `index:` config together. The top-level block also accepts global embedding/search settings: `model`, `enrich_model`, `min_chunk_chars`, `dimensions`, `max_embedding_tokens`, `search_limit`, `search_extract`.
+The `onetool.yaml` `tools.knowledge` block SHALL support: `kb` (map of project name → `KBProjectConfig`), `model` (embedding model), `base_url`, `enrich_model`, `enrich_prompt`, `min_chunk_chars`, `dimensions`, `search_limit`, `search_extract`.
+
+Each `KBProjectConfig` SHALL contain:
+- `db`: `DBConfig` with `path`, `description`, `embeddings_enabled`
+- `scrape` (optional): `ScrapeProjectConfig` — same fields as before except `url_base_path` is removed from `ScrapeSourceConfig`
+- `index` (optional): `IndexProjectConfig` with `ignore_patterns` (default `[]`) and `topic_roots` (default `[]`)
+
+`topic_roots` entries accept a full URL or bare path prefix. During indexing, the first matching root is stripped from each chunk's canonical topic to derive the stored topic.
 
 The legacy `databases:` and `scrape:` top-level keys SHALL raise a validation error with a migration message.
+
+#### Scenario: KB project config resolves db path
+- **WHEN** `tools.knowledge.kb.rhino.db.path: scratch/rhino-db/rhino.db` is configured
+- **THEN** `kb.search(q='...', db='rhino')` opens that path
+
+#### Scenario: KB project config resolves scrape sources
+- **WHEN** `tools.knowledge.kb.rhino.scrape.sources` is configured
+- **THEN** `kb scrape rhino` crawls the configured sources into `output_base_dir/source_name/`
+
+#### Scenario: topic_roots applied during indexing
+- **WHEN** `tools.knowledge.kb.rhino.index.topic_roots` contains `https://docs.mcneel.com/rhino/8mac/help/en-us/`
+- **THEN** chunks from that URL prefix are stored with the prefix stripped from their canonical topic
+
+#### Scenario: ignore_patterns applied during indexing
+- **WHEN** `tools.knowledge.kb.rhino.index.ignore_patterns` contains `*.tmp`
+- **THEN** files matching `*.tmp` are skipped during `kb index rhino`
 
 #### Scenario: Unified kb: project config
 - **WHEN** `tools.knowledge.kb` is configured with a named project
@@ -322,6 +365,22 @@ The legacy `databases:` and `scrape:` top-level keys SHALL raise a validation er
 - **THEN** the API base URL is inherited from `llm.base_url` in the top-level `llm:` config block
 - **WHEN** `tools.knowledge.enrich_model` is not set
 - **THEN** the synthesis model for `kb.ask()` is inherited from `llm.model` in the top-level `llm:` config block
+
+#### Scenario: Named source resolves output dir
+- **WHEN** `tools.knowledge.scrape.sources.mysite.output_dir` is set
+- **THEN** `onetool kb scrape mysite` writes to that directory
+
+#### Scenario: Missing output_dir uses convention
+- **WHEN** `tools.knowledge.scrape.sources.mysite` has no `output_dir`
+- **THEN** `onetool kb scrape mysite` writes to `.onetool/scrape/mysite/`
+
+#### Scenario: Unknown source name raises error
+- **WHEN** `onetool kb scrape unknown` is run and `unknown` is not in `tools.knowledge.scrape.sources`
+- **THEN** the command exits with: `"No source 'unknown' in tools.knowledge.scrape.sources"`
+
+#### Scenario: Missing scrape key is not an error
+- **WHEN** `tools.knowledge` has no `scrape` key
+- **THEN** `onetool kb scrape <named-source>` raises the unknown-source error (not a config parse error)
 
 ---
 
@@ -450,9 +509,17 @@ During indexing, `topic_roots` entries in `IndexProjectConfig` SHALL be stripped
 ### Requirement: source_path and anchor deduplication
 The `chunks` table SHALL deduplicate on `(source_path, anchor)` — not on `topic`. `source_path` is the canonical file path (same as canonical topic before `topic_roots` stripping). `anchor` is the heading slug within the file (`""` for page-level preamble). `topic` is a non-unique human-readable label with a plain (non-unique) index.
 
+#### Scenario: Re-index unchanged chunk is skipped
+- **WHEN** a chunk with the same `(source_path, anchor)` is re-indexed and content hash is unchanged
+- **THEN** the chunk SHALL be skipped without updating the DB
+
 #### Scenario: Duplicate (source_path, anchor) is an update, not an insert
 - **WHEN** a chunk with the same `(source_path, anchor)` is indexed a second time
 - **THEN** the existing row is updated (if content changed) or skipped (if unchanged) — no duplicate row is created
+
+#### Scenario: New chunk inserted
+- **WHEN** no row exists for a given `(source_path, anchor)` pair
+- **THEN** a new chunk row with a generated UUID is inserted
 
 #### Scenario: Same topic from two source files is allowed
 - **WHEN** two files produce chunks with the same `topic` value but different `source_path`

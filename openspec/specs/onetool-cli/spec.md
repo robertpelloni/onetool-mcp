@@ -180,3 +180,49 @@ Global options on the `kb` callback: `--config`/`-c` (path to onetool.yaml) and 
 #### Scenario: max_pages hard limit enforced in BFS loop
 - **WHEN** a BFS crawl is running and `max_pages` written pages are reached
 - **THEN** the crawl loop SHALL break and no further pages SHALL be written, even if crawl4ai's strategy continues to yield results
+
+---
+
+### Requirement: kb scrape command
+The `onetool kb` subcommand group SHALL include a `scrape` command that crawls a web source and writes `.md` + `.meta.yaml` pairs to an output directory.
+
+#### Scenario: Named source crawl uses config output dir
+- **WHEN** `onetool kb scrape mysite` is run and `mysite` is configured under `tools.knowledge.scrape.sources`
+- **THEN** pages are crawled and files written to the source's configured `output_dir`, or `.onetool/scrape/mysite/` if `output_dir` is not set
+
+#### Scenario: Named source with --output override
+- **WHEN** `onetool kb scrape mysite --output /tmp/out` is run
+- **THEN** files are written to `/tmp/out` regardless of the configured `output_dir`
+
+#### Scenario: Ad-hoc URL requires --output
+- **WHEN** `onetool kb scrape https://docs.example.com` is run without `--output`
+- **THEN** the command SHALL exit with an error: `"--output is required for ad-hoc URL scrapes"`
+
+#### Scenario: Ad-hoc URL with --output
+- **WHEN** `onetool kb scrape https://docs.example.com --output /tmp/out` is run
+- **THEN** pages are crawled and files written to `/tmp/out`
+
+#### Scenario: Unknown named source raises error
+- **WHEN** `onetool kb scrape unknown-source` is run and `unknown-source` is not in `tools.knowledge.scrape.sources`
+- **THEN** the command SHALL exit with an error: `"No source 'unknown-source' in tools.knowledge.scrape.sources"`
+
+#### Scenario: Resume flag
+- **GIVEN** a prior crawl was interrupted
+- **WHEN** `onetool kb scrape mysite --resume` is run
+- **THEN** the crawl resumes from `.state.json` in the output directory
+
+#### Scenario: --depth overrides config
+- **WHEN** `onetool kb scrape mysite --depth 2` is run
+- **THEN** the crawl uses `max_depth=2` regardless of the configured `depth`
+
+#### Scenario: --max-pages overrides config
+- **WHEN** `onetool kb scrape mysite --max-pages 100` is run
+- **THEN** the crawl stops after 100 pages regardless of the configured `max_pages`
+
+#### Scenario: Missing [scrape] extra
+- **WHEN** `onetool kb scrape` is run and `crawl4ai` is not installed
+- **THEN** the command SHALL exit with: `"crawl4ai is required. Install with: pip install 'onetool[scrape]'"`
+
+#### Scenario: Summary printed on completion
+- **WHEN** a crawl completes
+- **THEN** the command SHALL print the count of pages written, failed, and skipped

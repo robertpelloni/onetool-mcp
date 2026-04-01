@@ -200,12 +200,19 @@ Tools SHALL access configuration via get_config().
 
 ### Requirement: HTTP Client Usage
 
-Tools making HTTP requests SHALL use httpx with proper error handling.
+Tools making HTTP requests SHALL use the shared HTTP client utilities.
 
-#### Scenario: Request pattern
+#### Scenario: Client creation
 - **GIVEN** a tool making HTTP requests
-- **WHEN** implementing the request
-- **THEN** it SHALL use `httpx.Client` with configurable timeout
+- **WHEN** implementing the client
+- **THEN** it SHALL use `lazy_client()` from `ot.utils.factory` for thread-safe lazy initialization
+- **AND** it SHALL NOT use bare `httpx.Client()` module globals or `@functools.lru_cache` on client factories
+
+#### Scenario: Error formatting
+- **GIVEN** an HTTP request fails
+- **WHEN** formatting the error message
+- **THEN** it SHALL use `_format_http_error()` from `ot.http_client` for consistent error messages
+- **AND** it SHALL NOT manually inspect `hasattr(e, "response")` or format HTTP errors inline
 
 #### Scenario: Error handling
 - **GIVEN** an HTTP request
@@ -213,13 +220,6 @@ Tools making HTTP requests SHALL use httpx with proper error handling.
 - **THEN** it SHALL handle:
   - `httpx.HTTPStatusError` - HTTP errors
   - `httpx.RequestError` - Network errors
-
-#### Scenario: Return pattern
-- **GIVEN** a helper function for HTTP requests
-- **WHEN** returning results
-- **THEN** it SHALL return `tuple[bool, dict | str]`:
-  - `(True, data)` on success
-  - `(False, error_message)` on failure
 
 ---
 
@@ -344,7 +344,7 @@ All tool functions SHALL use type hints consistently.
 #### Scenario: Return type
 - **GIVEN** a public tool function
 - **WHEN** defining the signature
-- **THEN** it SHALL specify `-> str` return type
+- **THEN** it SHALL specify a return type annotation matching the actual return: `str`, `dict`, `list`, or a union thereof
 
 #### Scenario: Parameter types
 - **GIVEN** function parameters
@@ -482,4 +482,87 @@ Source code attribution SHALL match documentation attribution.
 - **GIVEN** a tool without source header attribution
 - **WHEN** the tool documentation is written
 - **THEN** the doc SHALL NOT include an attribution section
+
+---
+
+### Requirement: Result Truncation
+
+Tools SHALL use the shared truncation utility for output length limiting.
+
+#### Scenario: Truncation utility
+- **GIVEN** a tool that truncates output text
+- **WHEN** implementing truncation
+- **THEN** it SHALL use `truncate()` from `ot.utils.truncate`
+- **AND** it SHALL NOT implement manual `text[:N-3] + "..."` patterns
+
+---
+
+### Requirement: Caching
+
+Tools SHALL use the shared caching utilities instead of standard library caching.
+
+#### Scenario: Function memoization
+- **GIVEN** a tool that caches function results
+- **WHEN** implementing memoization
+- **THEN** it SHALL use `@cache.memoize()` from `ot.utils.cache`
+- **AND** it SHALL NOT use `@functools.lru_cache`
+
+#### Scenario: Key-value caching
+- **GIVEN** a tool that caches arbitrary key-value data (e.g. HTTP responses, session data)
+- **WHEN** implementing the cache
+- **THEN** it SHALL use `Cache()` from `ot.utils.cache`
+
+---
+
+### Requirement: Batch Operations Utilities
+
+Tools supporting batch operations SHALL use the shared batch utilities.
+
+#### Scenario: Batch execution
+- **GIVEN** a tool that processes multiple items concurrently
+- **WHEN** implementing batch execution
+- **THEN** it SHALL use `batch_execute`, `normalize_items`, and `format_batch_results` from `ot.utils.batch`
+- **AND** it SHALL NOT implement custom `ThreadPoolExecutor` loops for standard batch patterns
+
+---
+
+### Requirement: Path Resolution
+
+Tools SHALL use the shared path resolution utilities for all path handling.
+
+#### Scenario: User-supplied paths
+- **GIVEN** a tool that resolves user-supplied file paths
+- **WHEN** resolving the path
+- **THEN** it SHALL use `resolve_cwd_path()` from `ot.paths`
+- **AND** it SHALL NOT use bare `Path.expanduser()` or `expand_path()` for project-relative paths
+
+#### Scenario: Internal storage paths
+- **GIVEN** a tool that stores data under `.onetool/`
+- **WHEN** resolving the storage path
+- **THEN** it SHALL use `resolve_ot_path()` from `ot.paths`
+- **AND** it SHALL use relative defaults (e.g. `mem.db` not `~/.onetool/mem.db`)
+
+---
+
+### Requirement: Multi-File Pack Layout
+
+Packs exceeding approximately 500 lines SHALL use the facade plus private package pattern.
+
+#### Scenario: Pack file structure
+- **GIVEN** a pack implementation exceeding ~500 lines
+- **WHEN** the pack is structured
+- **THEN** it SHALL use a facade file (`pack.py`) and a private package (`_pack/`)
+- **AND** the facade file SHALL contain `pack`, `__all__`, and `__ot_requires__` declarations
+- **AND** the facade file SHALL re-export public functions from the private package
+
+#### Scenario: Private package naming
+- **GIVEN** a multi-file pack
+- **WHEN** naming the private package
+- **THEN** the directory SHALL use an underscore prefix (e.g. `_mem/`, `_image/`)
+- **AND** the underscore prefix SHALL prevent the tool loader from double-registering the package as a separate pack
+
+#### Scenario: Internal imports
+- **GIVEN** submodules within a private pack package
+- **WHEN** importing between submodules
+- **THEN** they SHALL use relative imports (e.g. `from .config import Config`)
 

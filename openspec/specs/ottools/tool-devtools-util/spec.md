@@ -1,7 +1,7 @@
 # tool-devtools-util Specification
 
 ## Purpose
-TBD - created by archiving change add-devtools-util. Update Purpose after archive.
+Defines the `chrome_util` extension tool pack, which exposes programmatic Chrome DevTools automation via the Chrome DevTools MCP server. Covers annotation injection, element highlighting, screenshot capture, page navigation, and JavaScript evaluation.
 ## Requirements
 ### Requirement: chrome_util Pack Declaration
 

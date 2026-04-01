@@ -667,6 +667,74 @@ The `mem.slice_batch()` function SHALL extract sections from multiple memories i
 - **WHEN** `mem.slice_batch()` fetches memories from the database
 - **THEN** it SHALL increment `access_count` and update `last_accessed` for all fetched rows
 
+### Requirement: LLM Q&A (mem.ask)
+
+The `mem.ask()` function SHALL synthesise an answer from a memory's content using an LLM.
+
+#### Scenario: Single question
+- **GIVEN** a topic that exists
+- **WHEN** `mem.ask(topic="projects/onetool/rules", q="What are the rules?")` is called
+- **THEN** it SHALL retrieve the memory content and pass it to the LLM with the question
+- **AND** return a synthesised answer
+
+#### Scenario: Multiple questions
+- **GIVEN** a topic that exists
+- **WHEN** `mem.ask(topic="...", q=["Q1", "Q2"])` is called
+- **THEN** it SHALL answer each question in sequence using the same memory content
+
+#### Scenario: Topic does not exist
+- **GIVEN** a topic that does not exist in the database
+- **WHEN** `mem.ask(topic="nonexistent", q="...")` is called
+- **THEN** it SHALL raise with a clear "not found" error
+
+#### Scenario: LLM not configured
+- **GIVEN** `ot_llm` is not configured (`base_url` and `model` are absent)
+- **WHEN** `mem.ask()` is called
+- **THEN** it SHALL raise with a clear message indicating `base_url` and `model` are required
+
+### Requirement: Memory Inspect (mem.inspect)
+
+The `mem.inspect()` function SHALL return structured metadata for a single memory.
+
+#### Scenario: Inspect by topic
+- **GIVEN** a topic matching exactly one memory
+- **WHEN** `mem.inspect(topic="projects/onetool/rules")` is called
+- **THEN** it SHALL return fields: id, topic, created_at, updated_at, size, toc entry count, category, tags
+
+#### Scenario: Inspect by id
+- **GIVEN** a valid memory id
+- **WHEN** `mem.inspect(topic="...", id="abc-123")` is called
+- **THEN** it SHALL return metadata for that specific memory
+
+#### Scenario: Topic does not exist
+- **GIVEN** a topic that does not exist
+- **WHEN** `mem.inspect(topic="nonexistent")` is called
+- **THEN** it SHALL raise with a clear "not found" error
+
+### Requirement: JMESPath Query (mem.query)
+
+The `mem.query()` function SHALL evaluate a JMESPath expression against a JSON or YAML memory.
+
+#### Scenario: Query JSON memory
+- **GIVEN** a memory whose content is valid JSON
+- **WHEN** `mem.query(topic="config", expr="tools.mem.model")` is called
+- **THEN** it SHALL parse the content as JSON and return the JMESPath result
+
+#### Scenario: Query YAML memory
+- **GIVEN** a memory whose content is valid YAML
+- **WHEN** `mem.query(topic="config", expr="tools.mem.model")` is called
+- **THEN** it SHALL parse the content as YAML and return the JMESPath result
+
+#### Scenario: Query by id
+- **GIVEN** a valid memory id
+- **WHEN** `mem.query(topic="...", id="abc-123", expr="key")` is called
+- **THEN** it SHALL evaluate the expression against that specific memory
+
+#### Scenario: Non-JSON/YAML content
+- **GIVEN** a memory whose content is neither valid JSON nor valid YAML
+- **WHEN** `mem.query()` is called
+- **THEN** it SHALL raise with a clear error indicating the content is not parseable
+
 ### Requirement: Regex Search
 
 The `mem.grep()` function SHALL search memory content using regular expressions and return line-level results with context.

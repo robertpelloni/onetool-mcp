@@ -1,7 +1,7 @@
 # tool-diagram Specification
 
 ## Purpose
-TBD - created by archiving change add-diagram-tool. Update Purpose after archive.
+Defines the `diagram` pack (`[dev]` extra), which generates diagram source files and renders images for Mermaid, Graphviz, PlantUML, D2, and Excalidraw providers. Covers source generation, image rendering, provider-specific validation, and playground URL construction.
 ## Requirements
 ### Requirement: Generate Source
 
