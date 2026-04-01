@@ -120,6 +120,7 @@ demo/tmp/
 .codex/
 .chunkhound/
 .mcp.json
+.playwright-mcp/
 
 # Worktree state files
 .gitworktree.json
