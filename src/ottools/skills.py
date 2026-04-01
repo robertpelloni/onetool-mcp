@@ -51,7 +51,9 @@ def _parse_frontmatter(content: str) -> tuple[dict[str, Any], str]:
 
     try:
         fm: dict[str, Any] = yaml.safe_load(fm_text) or {}
-    except Exception:
+    except Exception as e:
+        from loguru import logger
+        logger.warning("Malformed YAML frontmatter in skill file: {}", e)
         fm = {}
 
     return fm, body
@@ -100,7 +102,7 @@ def skills(
         skills(name="ot-chrome-devtools-mcp")     # retrieve body
         skills(info="full")                       # full info for each skill
     """
-    with LogSpan(span="skills") as s:
+    with LogSpan(span="skills.list") as s:
         index: dict[str, tuple[dict[str, Any], str]] = {**_load_skill_index()}
 
         if name is not None:

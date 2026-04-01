@@ -1,4 +1,4 @@
-"""Context loading and batch update."""
+"""Memory maintenance operations: delete, purge, stats, and batch update."""
 from __future__ import annotations
 
 import builtins
@@ -114,7 +114,7 @@ def update_batch(
         mem.update_batch(search_text="old_name", replace_text="new_name", topic="projects/", dry_run=True)
         mem.update_batch(search_text="old_name", replace_text="new_name", topic="projects/", dry_run=False)
     """
-    with LogSpan(span="mem.update_batch", search=search_text, replace=replace_text, dry_run=dry_run) as s:
+    with LogSpan(span="mem.update_batch", search=search_text, replace=replace_text, dryRun=dry_run) as s:
         try:
             conn = _get_connection()
 

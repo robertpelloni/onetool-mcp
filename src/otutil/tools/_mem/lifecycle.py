@@ -31,7 +31,7 @@ def decay(
         mem.decay(dry_run=True)
         mem.decay(dry_run=False)
     """
-    with LogSpan(span="mem.decay", dry_run=dry_run) as s:
+    with LogSpan(span="mem.decay", dryRun=dry_run) as s:
         try:
             config = _get_config()
             half_life = config.decay_half_life_days
@@ -215,7 +215,7 @@ def reindex(
     if not config.embeddings_enabled:
         return "Embeddings are disabled. Enable with: tools.mem.embeddings_enabled: true"
 
-    with LogSpan(span="mem.reindex", topic=topic, limit=limit, dry_run=dry_run) as s:
+    with LogSpan(span="mem.reindex", topic=topic, limit=limit, dryRun=dry_run) as s:
         try:
             conn = _get_connection()
 

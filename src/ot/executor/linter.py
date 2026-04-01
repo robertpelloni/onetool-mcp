@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from loguru import logger
+from ot.logging import LogSpan
 
 
 @dataclass
@@ -32,16 +32,17 @@ class LintResult:
 
 def _check_ruff_available() -> bool:
     """Check if Ruff is available on the system."""
-    try:
-        result = subprocess.run(
-            ["ruff", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
+    with LogSpan(span="linter.ruffCheck"):
+        try:
+            result = subprocess.run(
+                ["ruff", "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            return False
 
 
 # Cache Ruff availability check
@@ -80,49 +81,52 @@ def lint_code(
     result.available = True
 
     # Write code to temp file for Ruff
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".py",
-            delete=False,
-        ) as f:
-            f.write(code)
-            temp_path = Path(f.name)
+    with LogSpan(span="linter.exec") as s:
+        temp_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".py",
+                delete=False,
+            ) as f:
+                f.write(code)
+                temp_path = Path(f.name)
 
-        # Build Ruff command
-        cmd = ["ruff", "check", str(temp_path), "--output-format=text"]
+            # Build Ruff command
+            cmd = ["ruff", "check", str(temp_path), "--output-format=text"]
 
-        if select:
-            cmd.extend(["--select", ",".join(select)])
-        if ignore:
-            cmd.extend(["--ignore", ",".join(ignore)])
+            if select:
+                cmd.extend(["--select", ",".join(select)])
+            if ignore:
+                cmd.extend(["--ignore", ",".join(ignore)])
 
-        # Run Ruff
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+            # Run Ruff
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
 
-        # Parse output - each line is a warning
-        if proc.stdout:
-            for line in proc.stdout.strip().split("\n"):
-                if line.strip():
-                    # Remove temp file path from output
-                    warning = line.replace(str(temp_path), "<code>")
-                    result.warnings.append(warning)
+            # Parse output - each line is a warning
+            if proc.stdout:
+                for line in proc.stdout.strip().split("\n"):
+                    if line.strip():
+                        # Remove temp file path from output
+                        warning = line.replace(str(temp_path), "<code>")
+                        result.warnings.append(warning)
 
-    except subprocess.TimeoutExpired:
-        result.error = "Ruff linting timed out"
-        logger.warning("Ruff linting timed out")
-    except OSError as e:
-        result.error = f"Failed to run Ruff: {e}"
-        logger.warning(f"Failed to run Ruff: {e}")
-    finally:
-        # Clean up temp file
-        with contextlib.suppress(NameError, OSError):
-            temp_path.unlink()
+        except subprocess.TimeoutExpired:
+            result.error = "Ruff linting timed out"
+            s.add(error="timeout")
+        except OSError as e:
+            result.error = f"Failed to run Ruff: {e}"
+            s.add(error=str(e))
+        finally:
+            # Clean up temp file
+            if temp_path is not None:
+                with contextlib.suppress(OSError):
+                    temp_path.unlink()
 
     return result
 

@@ -169,7 +169,7 @@ def encrypt(*, file: str, backup: bool = True) -> dict[str, Any]:
         with path.open("w") as f:
             yaml.dump(updated, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
-        s.add(encrypted_count=len(encrypted_keys), skipped_count=len(skipped_keys))
+        s.add(encryptedCount=len(encrypted_keys), skippedCount=len(skipped_keys))
         return {
             "file": str(path),
             "backup": backup_path,
@@ -329,7 +329,7 @@ def rotate(*, file: str, backup: bool = True) -> dict[str, Any]:
         keyring.set_password(_SERVICE, _KEY_PUBKEY, new_pubkey)
         keyring.set_password(_SERVICE, _KEY_LABEL, label)
 
-        s.add(rotated_count=len(rotated_keys), status="rotated")
+        s.add(rotatedCount=len(rotated_keys), status="rotated")
         return {
             "old_pubkey_hint": _pubkey_hint(old_pubkey) if old_pubkey else None,
             "new_pubkey_hint": _pubkey_hint(new_pubkey),

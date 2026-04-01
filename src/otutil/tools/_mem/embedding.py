@@ -1,12 +1,12 @@
 """OpenAI embedding generation and background worker."""
 from __future__ import annotations
 
-import logging
 import queue
 import threading
 import time
 from typing import TYPE_CHECKING, Any
 
+from loguru import logger
 from otpack import LogSpan, get_secret
 
 from ot.config import get_llm_config
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
     from openai import OpenAI
 
-logger = logging.getLogger(__name__)
 
 # Safety margin subtracted from token limit to avoid edge-case overflows.
 # Standard safety margin for embedding token limits.
@@ -157,7 +156,7 @@ def _enqueue_embedding(memory_id: str) -> None:
         _embedding_dropped += 1
         if _embedding_dropped in {1, 10, 100} or _embedding_dropped % 1000 == 0:
             logger.warning(
-                "Embedding queue full; dropped %s pending job(s)",
+                "Embedding queue full; dropped {} pending job(s)",
                 _embedding_dropped,
             )
 
@@ -183,36 +182,37 @@ def _embedding_worker() -> None:
     global _embedding_errors
     while True:
         memory_id = _embedding_queue.get()
-        retries = 0
-        max_retries = 3
-        while retries < max_retries:
-            try:
-                with _use_connection() as conn:
-                    row = conn.execute(
-                        "SELECT content FROM memories WHERE id = ?", [memory_id]
-                    ).fetchone()
-                    if not row:
-                        break  # Memory was deleted before we got to it
-                    embedding = _generate_embedding(row[0])
-                    conn.execute(
-                        "UPDATE memories SET embedding = ? WHERE id = ?",
-                        [_serialize_embedding(embedding), memory_id],
-                    )
-                    conn.commit()
-                break
-            except Exception:
-                retries += 1
-                _embedding_errors += 1
-                if retries < max_retries:
-                    time.sleep(2**retries)  # 2s, 4s, 8s
-                else:
-                    logger.warning(
-                        "Failed embedding for %s after %s retries",
-                        memory_id,
-                        max_retries,
-                        exc_info=True,
-                    )
-        _embedding_queue.task_done()
+        try:
+            retries = 0
+            max_retries = 3
+            while retries < max_retries:
+                try:
+                    with _use_connection() as conn:
+                        row = conn.execute(
+                            "SELECT content FROM memories WHERE id = ?", [memory_id]
+                        ).fetchone()
+                        if not row:
+                            break  # Memory was deleted before we got to it
+                        embedding = _generate_embedding(row[0])
+                        conn.execute(
+                            "UPDATE memories SET embedding = ? WHERE id = ?",
+                            [_serialize_embedding(embedding), memory_id],
+                        )
+                        conn.commit()
+                    break
+                except Exception:
+                    retries += 1
+                    _embedding_errors += 1
+                    if retries < max_retries:
+                        time.sleep(2**retries)  # 2s, 4s, 8s
+                    else:
+                        logger.warning(
+                            "Failed embedding for {} after {} retries",
+                            memory_id,
+                            max_retries,
+                        )
+        finally:
+            _embedding_queue.task_done()
 
 
 def _maybe_embed(memory_id: str, content: str) -> list[float] | None:

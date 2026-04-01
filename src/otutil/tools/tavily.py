@@ -515,7 +515,7 @@ def extract(
     if error := _validate_extract_depth(extract_depth):
         return error
 
-    with LogSpan(span="tavily.extract", url_count=len(urls)) as span:
+    with LogSpan(span="tavily.extract", urlCount=len(urls)) as span:
         payload: dict[str, Any] = {
             "urls": urls,
             "extract_depth": extract_depth,
@@ -590,7 +590,7 @@ def extract_batch(
         if error := _validate_urls(urls_list):
             return error
 
-    with LogSpan(span="tavily.batch", url_set_count=len(normalized)) as s:
+    with LogSpan(span="tavily.batch", urlSetCount=len(normalized)) as s:
 
         def _extract_one(urls_list: list[str], label: str) -> tuple[str, str]:
             result = extract(urls=urls_list, format=format, extract_depth=extract_depth)

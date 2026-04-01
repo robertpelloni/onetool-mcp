@@ -309,7 +309,7 @@ def pdf(
         convert.pdf(pattern="docs/report.pdf", output_dir="docs/md")
         convert.pdf(pattern="input/*.pdf", output_dir="output")
     """
-    with LogSpan(span="convert.pdf", pattern=pattern, output_dir=output_dir) as s:
+    with LogSpan(span="convert.pdf", pattern=pattern, outputDir=output_dir) as s:
         files = _resolve_glob(pattern)
         if not files:
             s.add(error="no_match")
@@ -362,7 +362,7 @@ def word(
         convert.word(pattern="specs/design.docx", output_dir="specs/md")
         convert.word(pattern="docs/**/*.docx", output_dir="output")
     """
-    with LogSpan(span="convert.word", pattern=pattern, output_dir=output_dir) as s:
+    with LogSpan(span="convert.word", pattern=pattern, outputDir=output_dir) as s:
         files = _resolve_glob(pattern)
         if not files:
             s.add(error="no_match")
@@ -555,7 +555,7 @@ def auto(
         convert.auto(pattern="docs/*", output_dir="output")
         convert.auto(pattern="input/**/*.{pdf,docx}", output_dir="converted")
     """
-    with LogSpan(span="convert.auto", pattern=pattern, output_dir=output_dir) as s:
+    with LogSpan(span="convert.auto", pattern=pattern, outputDir=output_dir) as s:
         files = _resolve_glob(pattern)
         if not files:
             s.add(error="no_match")

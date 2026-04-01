@@ -601,7 +601,7 @@ def search_batch(
     # Fall back empty labels to query text
     normalized = [(q, label or q) for q, label in normalized]
 
-    with LogSpan(span="brave.batch", query_count=len(normalized), count=count) as s:
+    with LogSpan(span="brave.batch", queryCount=len(normalized), count=count) as s:
 
         def _search_one(query: str, label: str) -> tuple[str, str]:
             """Execute a single search and return (label, result)."""

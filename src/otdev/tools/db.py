@@ -128,7 +128,7 @@ def _get_engine(db_url: str) -> Any:
             return _engines[resolved_url]
 
     # Create engine outside lock (slow operation)
-    with LogSpan(span="db.connect", db_url=resolved_url) as span:
+    with LogSpan(span="db.connect", dbUrl=resolved_url) as span:
         try:
             engine = _create_engine(resolved_url)
         except Exception:
@@ -202,7 +202,7 @@ def tables(
         db.tables(db_url="sqlite:///data.db", filter="USER", ignore_case=True)
     """
     _require_sqlalchemy()
-    with LogSpan(span="db.tables", db_url=db_url, filter=filter) as s:
+    with LogSpan(span="db.tables", dbUrl=db_url, filter=filter) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
             return json.dumps({"error": "db_url parameter is required"})
@@ -250,7 +250,7 @@ def schema(*, table_names: list[str], db_url: str) -> str:
         db.schema(table_names=["users", "orders"], db_url="sqlite:///data.db")
     """
     _require_sqlalchemy()
-    with LogSpan(span="db.schema", tables=table_names, db_url=db_url) as s:
+    with LogSpan(span="db.schema", tables=table_names, dbUrl=db_url) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
             return json.dumps({"error": "db_url parameter is required"})
@@ -420,7 +420,7 @@ def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str
         )
     """
     _require_sqlalchemy()
-    with LogSpan(span="db.query", sql=sql, db_url=db_url) as s:
+    with LogSpan(span="db.query", sql=sql, dbUrl=db_url) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
             return json.dumps({"error": "db_url parameter is required"})

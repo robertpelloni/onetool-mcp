@@ -233,7 +233,7 @@ def fetch(
     if error := _validate_options(favor_precision, favor_recall):
         return error
 
-    with LogSpan(span="webfetch.fetch", url=url, output_format=output_format) as s:
+    with LogSpan(span="webfetch.fetch", url=url, outputFormat=output_format) as s:
         try:
             # Get config values
             pack_config = _get_config()

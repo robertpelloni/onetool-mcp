@@ -86,7 +86,7 @@ def server(
         available = ", ".join(sorted(configured.keys()))
         return f"Error: Unknown server '{name}'. Configured servers: {available}"
 
-    with LogSpan(span="server") as s:
+    with LogSpan(span="server.start") as s:
         # --- List all servers ---
         if status is None and enable is None and disable is None and restart is None:
             lines = [f"Servers ({len(configured)} configured):"]

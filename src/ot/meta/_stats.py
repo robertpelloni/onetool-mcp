@@ -78,7 +78,7 @@ def stats(
         reader = StatsReader.from_config(cfg)
 
         aggregated = reader.read(
-            period=period,  # type: ignore[arg-type]
+            period=period,
             tool=tool if tool else None,
         )
 

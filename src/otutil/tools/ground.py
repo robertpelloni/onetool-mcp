@@ -414,7 +414,7 @@ def search_batch(
     if not normalized:
         return "Error: queries list cannot be empty"
 
-    with LogSpan(span="ground.batch", query_count=len(normalized), focus=focus) as s:
+    with LogSpan(span="ground.batch", queryCount=len(normalized), focus=focus) as s:
 
         def _search_one(query: str, label: str) -> tuple[str, str]:
             """Execute a single search and return (label, result)."""

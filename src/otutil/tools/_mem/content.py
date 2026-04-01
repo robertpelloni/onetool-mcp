@@ -2,18 +2,17 @@
 from __future__ import annotations
 
 import hashlib
-import logging
 import re
 from pathlib import Path
 from typing import Any
+
+from loguru import logger
 
 from otutil.tools._content_util import HEADING_RE as _HEADING_RE
 from otutil.tools._content_util import build_toc as _build_toc
 from otutil.tools._content_util import parse_headings as _parse_headings
 
 from .config import _BUILTIN_REDACTION_PATTERNS, VALID_CATEGORIES, _get_config
-
-logger = logging.getLogger(__name__)
 
 
 def _content_hash(content: str) -> str:
@@ -68,7 +67,7 @@ def _redact(content: str) -> str:
         try:
             result = re.sub(pattern, "[REDACTED]", result)
         except re.error:
-            logger.warning("Invalid redaction pattern: %s", pattern)
+            logger.warning("Invalid redaction pattern: {}", pattern)
 
     return result
 

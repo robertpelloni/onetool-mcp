@@ -740,7 +740,7 @@ def generate_source(
             name="api-flow"
         )
     """
-    with LogSpan(span="diagram.generate_source", provider=provider, diagram_name=name) as s:
+    with LogSpan(span="diagram.generate_source", provider=provider, diagramName=name) as s:
         try:
             _validate_provider(provider)
 
@@ -832,7 +832,7 @@ def render_diagram(
     with LogSpan(
         span="diagram.render_diagram",
         provider=provider,
-        diagram_name=name,
+        diagramName=name,
         format=output_format,
         async_mode=async_mode,
     ) as s:
@@ -921,7 +921,7 @@ def render_diagram(
                 thread = threading.Thread(target=_do_async_render, daemon=True)
                 thread.start()
 
-                s.add(task_id=task_id)
+                s.add(taskId=task_id)
                 return f"Rendering started. Task ID: {task_id}"
 
             # Synchronous rendering
@@ -972,7 +972,7 @@ def get_render_status(*, task_id: str) -> str:
     Example:
         status = diagram.get_render_status(task_id="render-abc123")
     """
-    with LogSpan(span="diagram.get_render_status", task_id=task_id) as s:
+    with LogSpan(span="diagram.get_render_status", taskId=task_id) as s:
         with _render_tasks_lock:
             task = _render_tasks.get(task_id)
             if task is None:
@@ -1122,7 +1122,7 @@ def batch_render(
         completed = _render_tasks[task_id]["completed"]
         failed = _render_tasks[task_id]["failed"]
 
-        s.add(task_id=task_id, completed=completed, failed=failed)
+        s.add(taskId=task_id, completed=completed, failed=failed)
         return (
             f"Batch complete. Task ID: {task_id}\n"
             f"Completed: {completed}/{len(sources)}\n"
@@ -1489,7 +1489,7 @@ def get_template(*, name: str) -> str:
         # Then load it:
         template = diagram.get_template(name="api-flow")
     """
-    with LogSpan(span="diagram.get_template", template_name=name) as s:
+    with LogSpan(span="diagram.get_template", templateName=name) as s:
         config = _get_config()
         templates = config.templates
 
@@ -1544,7 +1544,7 @@ def list_providers(*, focus_only: bool = False) -> str:
         # Focus providers only
         focus = diagram.list_providers(focus_only=True)
     """
-    with LogSpan(span="diagram.list_providers", focus_only=focus_only) as s:
+    with LogSpan(span="diagram.list_providers", focusOnly=focus_only) as s:
         if focus_only:
             result = (
                 "Focus Providers (with full guidance)\n"
