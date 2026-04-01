@@ -96,18 +96,15 @@ def _load_js(filename: str) -> str:
 _browser: Any = None   # pydoll Chrome instance
 _tab: Any = None       # pydoll Tab instance
 _loop: asyncio.AbstractEventLoop | None = None
-_loop_thread: threading.Thread | None = None
 
-atexit.register(lambda: _close_browser())
 
 
 def _run(coro: Any) -> Any:
     """Run an async coroutine synchronously via a dedicated daemon event loop."""
-    global _loop, _loop_thread
+    global _loop
     if _loop is None or _loop.is_closed():
         _loop = asyncio.new_event_loop()
-        _loop_thread = threading.Thread(target=_loop.run_forever, daemon=True)
-        _loop_thread.start()
+        threading.Thread(target=_loop.run_forever, daemon=True).start()
     future = asyncio.run_coroutine_threadsafe(coro, _loop)
     return future.result(timeout=60)
 
@@ -115,8 +112,14 @@ def _run(coro: Any) -> Any:
 def _open_browser() -> None:
     """Launch pydoll browser, open tab, navigate to excalidraw.com."""
     global _browser, _tab
-    from pydoll.browser import Chrome
-    from pydoll.exceptions import NoValidTabFound
+    try:
+        from pydoll.browser import Chrome
+        from pydoll.exceptions import NoValidTabFound
+    except ImportError:
+        raise ImportError(
+            "pydoll-python is required for whiteboard. "
+            "Install with: pip install 'onetool-mcp[whiteboard]'"
+        ) from None
 
     async def _start() -> tuple[Any, Any]:
         # Chrome's initial page target may not be registered immediately after the
@@ -145,25 +148,44 @@ def _open_browser() -> None:
 def _close_browser() -> None:
     """Close browser process. Tolerates already-closed state.
 
-    Registered as an atexit handler on first browser open. During interpreter
-    shutdown the daemon event loop thread may already be dead, so we fall back
-    to killing the Chrome subprocess directly by PID.
+    Registered as an atexit handler at module load.  Must be fast and
+    reliable even during interpreter shutdown when the daemon event loop
+    thread may already be dead.
+
+    Strategy:
+    1. SIGKILL the Chrome subprocess immediately (< 1 ms, no waiting).
+       Using kill() rather than terminate()+wait() because pydoll's
+       stop_process() waits up to 15 s for a graceful SIGTERM and the
+       atexit path needs to be instant.
+    2. Close the WebSocket if the event loop is still alive (best-effort).
+    3. Remove pydoll's temp directories synchronously.
     """
     global _browser, _tab
     b, _browser, _tab = _browser, None, None
     if b is None:
         return
-    # Try graceful async shutdown first.
-    try:
-        _run(b.__aexit__(None, None, None))
-    except Exception:
-        # Event loop unavailable (e.g. atexit after daemon thread exit).
-        # Kill the Chrome subprocess directly if pydoll exposes a PID.
-        with contextlib.suppress(Exception):
-            proc = getattr(b, "_process_manager", None)
-            proc = getattr(proc, "_process", None) if proc else None
-            if proc is not None:
-                proc.kill()
+    # 1. Kill Chrome subprocess immediately.
+    with contextlib.suppress(Exception):
+        pm = getattr(b, "_browser_process_manager", None)
+        proc = getattr(pm, "_process", None) if pm else None
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+            proc.wait(timeout=2)
+    # 2. Close WebSocket connection (best-effort, needs live event loop).
+    with contextlib.suppress(Exception):
+        if _loop is not None and _loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(
+                b._connection_handler.close(), _loop
+            )
+            future.result(timeout=3)
+    # 3. Remove temp directories synchronously.
+    with contextlib.suppress(Exception):
+        tm = getattr(b, "_temp_directory_manager", None)
+        if tm is not None:
+            tm.cleanup()
+
+
+atexit.register(_close_browser)
 
 
 def _check_browser() -> str | None:
@@ -2540,6 +2562,18 @@ def close() -> str:
     Example:
         excalidraw.close()
     """
+    global _browser, _tab
     _reset_state()
-    _close_browser()
+    b, _browser, _tab = _browser, None, None
+    if b is not None:
+        # Graceful shutdown via pydoll's stop() — sends Browser.close CDP
+        # command, terminates process, cleans temp dirs, closes WebSocket.
+        with contextlib.suppress(Exception):
+            _run(b.stop())
+        # Fallback: kill process if stop() didn't terminate it.
+        with contextlib.suppress(Exception):
+            pm = getattr(b, "_browser_process_manager", None)
+            proc = getattr(pm, "_process", None) if pm else None
+            if proc is not None and proc.poll() is None:
+                proc.kill()
     return "whiteboard closed"

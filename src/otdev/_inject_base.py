@@ -76,9 +76,15 @@ def _extract_result(raw: str) -> str:
 
 
 def _eval_js(server: str, tool: str, expression: str) -> str:
-    """Evaluate a JavaScript expression in the browser and return its result.
+    """Evaluate a JavaScript expression in the browser and return its result as JSON.
 
-    Wraps the expression in an arrow function: ``() => { return <expr>; }``.
+    Wraps the expression in ``JSON.stringify()`` so the return value is always a
+    JSON string, regardless of how the MCP server formats object return values.
+
+    - Playwright MCP uses string coercion (``String(result)``), which turns objects
+      into ``[object Object]``. Wrapping in ``JSON.stringify`` avoids this.
+    - Chrome DevTools MCP JSON-encodes the result again (double-encoding). We unwrap
+      one level by checking if ``json.loads`` gives a string and returning that string.
 
     Args:
         server: MCP server name (e.g. ``"chrome_devtools"``, ``"playwright"``).
@@ -86,12 +92,21 @@ def _eval_js(server: str, tool: str, expression: str) -> str:
         expression: JavaScript expression to evaluate.
 
     Returns:
-        String result from the browser.
+        JSON string ready for ``json.loads()``.
     """
     proxy = get_proxy_manager()
-    fn = f"() => {{ return {expression}; }}"
+    fn = f"() => {{ return JSON.stringify({expression}); }}"
     raw = proxy.call_tool_sync(server, tool, {"function": fn})
-    return _extract_result(raw)
+    value = _extract_result(raw)
+    # Chrome DevTools MCP JSON-encodes the returned string a second time.
+    # Detect this by checking if the parsed result is itself a string.
+    try:
+        decoded = json.loads(value)
+        if isinstance(decoded, str):
+            return decoded
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return value
 
 
 def _exec_js(server: str, tool: str, script: str) -> str:

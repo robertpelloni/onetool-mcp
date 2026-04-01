@@ -858,16 +858,19 @@ class TestPublicToolsSmoke:
         assert exc._dsl_state["shapes"] == {}
         assert exc._rendered_ids == set()
 
-    def test_close_calls_close_browser(self) -> None:
+    def test_close_resets_browser_state(self) -> None:
         from otdev.tools import excalidraw
 
         self._reset_state()
+        # Simulate an active browser
+        excalidraw._browser = MagicMock()
+        excalidraw._tab = MagicMock()
 
-        with patch("otdev.tools.excalidraw._close_browser") as mock_close:
-            result = excalidraw.close()
+        result = excalidraw.close()
 
         assert "closed" in result
-        assert mock_close.called
+        assert excalidraw._browser is None
+        assert excalidraw._tab is None
 
     def test_bootstrap_failure_returns_error(self) -> None:
         from otdev.tools import excalidraw
