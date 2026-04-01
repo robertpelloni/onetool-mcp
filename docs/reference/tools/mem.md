@@ -2,13 +2,6 @@
 
 Persistent memory for AI agents with SQLite storage and optional semantic search.
 
-## TL;DR
-
-- Write with `mem.write()` / `mem.write_batch()`.
-- Retrieve with `mem.search()`, `mem.read()`, `mem.toc()`, and `mem.slice()`.
-- Maintain with `mem.update()`, `mem.append()`, `mem.decay()`, and `mem.refresh()`.
-- Back up with `mem.export()` / `mem.snap()` and recover with `mem.load()` / `mem.restore()`.
-
 ## Highlights
 
 - Topic-based memory with path hierarchy (`projects/onetool/rules`)

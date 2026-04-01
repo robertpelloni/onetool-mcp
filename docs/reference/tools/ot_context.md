@@ -2,13 +2,6 @@
 
 TTL-expiring, BM25-indexed storage for large tool outputs. Replace context-window saturation with targeted retrieval.
 
-## TL;DR
-
-- Store content with `ctx.write()` and get a handle in ~1ms.
-- Retrieve with `ctx.read()`, `ctx.search()`, `ctx.grep()`, `ctx.slice()`, and `ctx.toc()`.
-- Ask questions with `ctx.ask()` (requires ot_llm pack).
-- Maintain with `ctx.append()`, `ctx.inspect()`, `ctx.list()`, `ctx.stats()`, `ctx.delete()`, and `ctx.purge()`.
-
 ## Highlights
 
 - Handles large outputs (API responses, logs, docs) without saturating the context window

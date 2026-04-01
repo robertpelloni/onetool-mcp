@@ -77,6 +77,11 @@ To read a section efficiently:
 
 Images are named using content hashes (`img_abc123.png`) for stable diffs across regenerations.
 
+## Requires
+
+- `onetool-mcp[util]` extra (provides `pymupdf`, `python-docx`, `python-pptx`, `openpyxl`)
+- For formula evaluation (`compute_formulas=True`): also included in `onetool-mcp[util]` (`formulas`)
+
 ## Configuration
 
 ### Required
@@ -160,14 +165,14 @@ convert.auto(pattern="input/**/*", output_dir="output")
 
 ## Supported Formats
 
-| Format     | Extension | Converter    | Install                 |
+| Format     | Extension | Converter    | Extra                   |
 |------------|-----------|--------------|-------------------------|
-| PDF        | `.pdf`    | PyMuPDF      | included                |
-| Word       | `.docx`   | python-docx  | included                |
-| PowerPoint | `.pptx`   | python-pptx  | included                |
-| Excel      | `.xlsx`   | openpyxl     | included                |
+| PDF        | `.pdf`    | PyMuPDF      | `onetool-mcp[util]`     |
+| Word       | `.docx`   | python-docx  | `onetool-mcp[util]`     |
+| PowerPoint | `.pptx`   | python-pptx  | `onetool-mcp[util]`     |
+| Excel      | `.xlsx`   | openpyxl     | `onetool-mcp[util]`     |
 
-For formula evaluation with `compute_formulas=True`, install the optional `formulas` package: `pip install formulas`
+For formula evaluation with `compute_formulas=True`, the `formulas` package is required. It is included in `onetool-mcp[util]`.
 
 ## Features by Format
 

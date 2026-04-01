@@ -46,8 +46,7 @@ Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis.
 ## Requires
 
 - `OPENAI_API_KEY` in `secrets.yaml` (for embeddings and AI synthesis)
-- `pip install sqlite-vec` (or `pip install onetool-mcp[util]`)
-- `pip install python-frontmatter` (or `pip install onetool-mcp[util]`)
+- `onetool-mcp[util]` extra (provides `sqlite-vec` and `python-frontmatter`)
 
 ## Configuration
 
@@ -130,4 +129,103 @@ knowledge.stats(db='docs')
 
 # Read a specific entry
 knowledge.read(topic='python/tips/loops', db='docs')
+```
+
+## CLI
+
+The `onetool kb` command group handles offline knowledge base operations (scraping, indexing, and maintenance). All subcommands auto-detect `onetool.yaml` from the current directory.
+
+### Global options
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config PATH` | Path to `onetool.yaml` (auto-detected from `./onetool.yaml` or `.onetool/onetool.yaml`) |
+| `-s, --secrets PATH` | Path to secrets file (auto-detected alongside config if omitted) |
+
+### onetool kb scrape
+
+Crawl all sources in a scrape project. Requires the `onetool-mcp[scrape]` extra and `playwright install chromium`.
+
+```bash
+onetool kb scrape <project> [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--only TEXT` | Comma-separated source names to run (runs all if omitted) |
+| `--resume` | Resume each source from `.state.json` if present |
+| `--max-pages INT` | Hard limit on pages written per source (overrides config) |
+| `--flat-files / --no-flat-files` | Write flat `::` -separated files instead of subdirectories |
+| `--debug` | Write per-page debug artifacts (`cleaned.html`, `raw.html`, `screenshot.png`, `meta.json`) to `._debug/<slug>/` |
+
+```bash
+onetool kb scrape docs
+onetool kb scrape docs --only python,stdlib --max-pages 200
+onetool kb scrape docs --resume
+```
+
+### onetool kb index
+
+Index a project's scraped content into the knowledge database.
+
+```bash
+onetool kb index <project> [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--path PATH` | Directory to index (overrides project's `output_base_dir`) |
+| `--overwrite TEXT` | `skip` (default) or `update` |
+
+```bash
+onetool kb index docs
+onetool kb index docs --overwrite update
+onetool kb index docs --path /tmp/scraped
+```
+
+### onetool kb reindex
+
+Backfill missing embeddings for all chunks in an existing database.
+
+```bash
+onetool kb reindex <db>
+```
+
+```bash
+onetool kb reindex docs
+```
+
+### onetool kb stats
+
+Print chunk counts, embedding coverage, and file size.
+
+```bash
+onetool kb stats <db>
+```
+
+### onetool kb info
+
+Print database metadata, path, and version.
+
+```bash
+onetool kb info <db>
+```
+
+### onetool kb export
+
+Export all chunks (or a filtered subset) to a JSON file.
+
+```bash
+onetool kb export <db> --output <path> [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `-o, --output PATH` | Output JSON file path (required) |
+| `--category TEXT` | Filter by category |
+| `--topic TEXT` | Filter by topic prefix |
+
+```bash
+onetool kb export docs --output docs-dump.json
+onetool kb export docs --output rules.json --category rule
 ```

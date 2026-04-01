@@ -2,13 +2,6 @@
 
 Core tools for OneTool introspection and management.
 
-## TL;DR
-
-- Start with `ot.help()` and `ot.tools()` for discovery.
-- Use `ot.tool_info()` / `ot.pack_info()` for detailed signatures and docs.
-- Use `ot.health()`, `ot.security()`, and `ot.stats()` for operational visibility.
-- Use `ot.result()` for large outputs returned by handles.
-
 ## Highlights
 
 - List and filter available tools, packs, servers, aliases, and snippets

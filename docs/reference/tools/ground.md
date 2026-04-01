@@ -40,6 +40,7 @@ Short alias: `g`
 ## Requires
 
 - `GEMINI_API_KEY` in secrets.yaml
+- `onetool-mcp[util]` extra (provides `google-genai`)
 
 ## Configuration
 

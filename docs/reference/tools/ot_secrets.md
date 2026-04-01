@@ -32,7 +32,6 @@ Short alias: `sec`
 
 ## Requires
 
-- `pyrage` and `keyring` libraries
 - OS keychain support (macOS Keychain, Windows Credential Locker, or compatible Linux keyring)
 
 ## Configuration

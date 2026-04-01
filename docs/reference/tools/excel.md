@@ -76,6 +76,10 @@ Short alias: `xls`
 | `pattern` | str | Search pattern (wildcards or regex) |
 | `table_name` | str | Name for table operations |
 
+## Requires
+
+- `onetool-mcp[util]` extra (provides `openpyxl`)
+
 ## Configuration
 
 ### Required

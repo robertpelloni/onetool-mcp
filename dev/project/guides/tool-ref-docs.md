@@ -29,6 +29,7 @@ Every reference doc contains these sections in order:
 ## Requires
 ## Configuration
 ## Examples
+## CLI         ← only when the pack ships onetool subcommands
 ```
 
 ---
@@ -172,6 +173,49 @@ brave.search_batch(queries=["react hooks", "vue composition api"])
 
 ---
 
+### ## CLI
+
+Include a `## CLI` section **only** when the pack ships one or more `onetool <pack>` subcommands (i.e. it registers a Typer sub-app in `onetool/kb.py` or similar). Place it after `## Examples`.
+
+```markdown
+## CLI
+
+<One-line description of what the CLI group does. Mention auto-detection if applicable.>
+
+### Global options
+
+| Option | Description |
+|--------|-------------|
+| `-c, --config PATH` | … |
+| `-s, --secrets PATH` | … |
+
+### onetool <pack> <command>
+
+<One-sentence description.>
+
+```bash
+onetool <pack> <command> <arg> [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--foo TEXT` | … |
+
+```bash
+# Usage examples (1–3 lines)
+onetool <pack> <command> mydb
+```
+```
+
+**Rules:**
+- One `### onetool <pack> <command>` subsection per subcommand
+- List every option with its type and default; mark required options
+- Show 1–3 concrete bash examples per subcommand
+- If a subcommand requires an extra or an external binary, note it in the subsection intro (e.g. "Requires the `onetool-mcp[scrape]` extra and `playwright install chromium`.")
+- Do **not** duplicate this content in `docs/reference/cli/` — the tool reference page is the single source of truth for pack CLIs
+
+---
+
 ## Checklist
 
 When creating or updating a tool reference doc:
@@ -182,10 +226,11 @@ When creating or updating a tool reference doc:
 - [ ] `## Highlights` — 3–4 bullets
 - [ ] `## Functions` — table covers all public functions in `__all__`
 - [ ] `## Key Parameters` — covers the most useful params
-- [ ] `## Requires` — matches `__ot_requires__["secrets"]` in the pack
+- [ ] `## Requires` — secrets from `__ot_requires__["secrets"]`; Python extras from `pyproject.toml` optional-dependencies
 - [ ] `## Configuration` — `### Required`, `### Optional`, yaml block, `### Defaults`
 - [ ] Optional table keys match fields in the pack's `Config` class
 - [ ] `## Examples` — at least 3 realistic examples, comments on each
+- [ ] `## CLI` — present if the pack registers an `onetool <pack>` subcommand group; omit otherwise
 - [ ] All function names, param names, and default values match the source code
 
 ---

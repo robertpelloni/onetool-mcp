@@ -4,14 +4,6 @@ Live diagram manipulation on [excalidraw.com](https://excalidraw.com) via pydoll
 
 Short alias: `wb`
 
-## TL;DR
-
-- Call `whiteboard.open()` first, then `whiteboard.draw(...)`.
-- Use `whiteboard.note(...)` and `whiteboard.embed_dsl()` for documentation overlays.
-- Auto-arrange with `whiteboard.layout()` (ELK.js); fine-tune with `whiteboard.align(ids=[...], axis=...)`.
-- Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
-- Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
-
 ## Highlights
 
 - Mermaid-compatible DSL for shapes, edges, subgraphs, and inline styling
@@ -62,6 +54,7 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 ## Requires
 
 - Chrome or Chromium installed on the host
+- `onetool-mcp[whiteboard]` extra (provides `pydoll-python`; not included in `[all]`)
 
 ## Configuration
 
