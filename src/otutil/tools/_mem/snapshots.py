@@ -1,7 +1,6 @@
 """Memory snap and restore (directory-based snapshots)."""
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -131,32 +130,39 @@ def snap(
                 })
 
             # Write index.yaml
+            try:
+                import yaml
+            except ImportError as e:
+                raise ImportError(
+                    "pyyaml is required for YAML export. Install with: pip install pyyaml"
+                ) from e
+
             now_str = datetime.now(UTC).isoformat()
-            filter_val = f'"{topic}"' if topic else "null"
-            index_lines = [
-                "snapshot:",
-                f'  created_at: "{now_str}"',
-                f"  topic_filter: {filter_val}",
-                f'  ext: "{ext}"',
-                f"  count: {len(index_entries)}",
-                "",
-                "memories:",
-            ]
-            for entry in index_entries:
-                tags_str = "[" + ", ".join(f'"{t}"' for t in entry["tags"]) + "]"
-                meta_json = json.dumps(entry.get("meta", {}))
-                index_lines.extend([
-                    f'  - topic: "{entry["topic"]}"',
-                    f'    file: "{entry["file"]}"',
-                    f'    category: "{entry["category"]}"',
-                    f"    tags: {tags_str}",
-                    f'    relevance: {entry["relevance"]}',
-                    f"    meta: '{meta_json}'",
-                    "",
-                ])
+            index_data = {
+                "snapshot": {
+                    "created_at": now_str,
+                    "topic_filter": topic,
+                    "ext": ext,
+                    "count": len(index_entries),
+                },
+                "memories": [
+                    {
+                        "topic": e["topic"],
+                        "file": e["file"],
+                        "category": e["category"],
+                        "tags": e["tags"],
+                        "relevance": e["relevance"],
+                        "meta": e.get("meta", {}),
+                    }
+                    for e in index_entries
+                ],
+            }
 
             index_path = validated_path / "index.yaml"
-            index_path.write_text("\n".join(index_lines), encoding="utf-8")
+            index_path.write_text(
+                yaml.dump(index_data, default_flow_style=False, allow_unicode=True),
+                encoding="utf-8",
+            )
 
             s.add("written", written)
             s.add("skipped", skipped)

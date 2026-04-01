@@ -1409,6 +1409,33 @@ class TestSnap:
         assert (out_dir / "sub/deep").exists()
         assert (out_dir / "sub/deep").read_text() == "deep content"
 
+    @pytest.mark.usefixtures("_mock_cwd")
+    @patch("otutil.tools._mem.snapshots._get_connection")
+    def test_snapshot_meta_special_chars_round_trips(self, mock_conn, tmp_path):
+        """meta with pipes, colons, and quotes must survive YAML round-trip."""
+        import yaml
+        from otutil.tools.mem import snap
+
+        conn = MagicMock()
+        mock_conn.return_value = conn
+        meta_json = '{"sections": "Attack Summary:277-290|What It Doesn\'t Do:291-302|Recs:303"}'
+        conn.execute.return_value.fetchall.return_value = [
+            ("id-1", "tmp/security", "content", "note", '[]', 5, 0,
+             datetime.now().isoformat(), datetime.now().isoformat(), meta_json),
+        ]
+
+        out_dir = tmp_path / "snap"
+        result = snap(output=str(out_dir))
+
+        assert "Snap 1 memories" in result
+        # Verify index.yaml parses cleanly
+        index_data = yaml.safe_load((out_dir / "index.yaml").read_text())
+        assert index_data is not None
+        mem = index_data["memories"][0]
+        assert "sections" in mem["meta"]
+        assert "|" in mem["meta"]["sections"]
+        assert ":" in mem["meta"]["sections"]
+
 
 @pytest.mark.unit
 @pytest.mark.tools
