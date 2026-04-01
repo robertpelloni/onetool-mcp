@@ -41,7 +41,7 @@ class TestExtractSources:
         chunk = MagicMock()
         chunk.web = MagicMock()
         chunk.web.title = "Source Title"
-        chunk.web.uri = "https://example.com"
+        chunk.web.uri = "https://en.wikipedia.org/wiki/Test"
 
         response.candidates[0].grounding_metadata.grounding_chunks = [chunk]
         response.candidates[0].grounding_metadata.grounding_supports = None
@@ -50,7 +50,7 @@ class TestExtractSources:
 
         assert len(sources) == 1
         assert sources[0]["title"] == "Source Title"
-        assert sources[0]["url"] == "https://example.com"
+        assert sources[0]["url"] == "https://en.wikipedia.org/wiki/Test"
 
     def test_handles_no_candidates(self):
         response = MagicMock()
@@ -155,19 +155,19 @@ class TestFormatResponse:
         chunk1 = MagicMock()
         chunk1.web = MagicMock()
         chunk1.web.title = "Source 1"
-        chunk1.web.uri = "https://example.com"
+        chunk1.web.uri = "https://en.wikipedia.org/wiki/Test"
 
         chunk2 = MagicMock()
         chunk2.web = MagicMock()
         chunk2.web.title = "Source 2"
-        chunk2.web.uri = "https://example.com"  # Same URL
+        chunk2.web.uri = "https://en.wikipedia.org/wiki/Test"  # Same URL
 
         response.candidates[0].grounding_metadata.grounding_chunks = [chunk1, chunk2]
 
         result = _format_response(response)
 
         # Should only appear once
-        assert result.count("https://example.com") == 1
+        assert result.count("https://en.wikipedia.org/wiki/Test") == 1
 
 
 # -----------------------------------------------------------------------------
@@ -419,11 +419,11 @@ class TestFormatSources:
 
     def test_uses_url_when_title_empty(self):
         """Verify URL is used as title when title is empty."""
-        sources = [{"title": "", "url": "https://example.com"}]
+        sources = [{"title": "", "url": "https://en.wikipedia.org/wiki/Test"}]
 
         result = _format_sources(sources)
 
-        assert "[https://example.com](https://example.com)" in result
+        assert "[https://en.wikipedia.org/wiki/Test](https://en.wikipedia.org/wiki/Test)" in result
 
 
 # -----------------------------------------------------------------------------

@@ -763,7 +763,7 @@ def test_get_tool_config_expands_vars_at_runtime() -> None:
                     "version": 2,
                     "tools": {
                         "mypack": {
-                            "api_url": "https://api.example.com/${API_VERSION}",
+                            "api_url": "https://test.invalid/api/${API_VERSION}",
                             "cache_dir": "${CACHE_DIR}/mypack",
                         }
                     },
@@ -789,7 +789,7 @@ def test_get_tool_config_expands_vars_at_runtime() -> None:
         tool_cfg = get_tool_config("mypack")
 
         # Variables should be expanded
-        assert tool_cfg["api_url"] == "https://api.example.com/v2"
+        assert tool_cfg["api_url"] == "https://test.invalid/api/v2"
         assert tool_cfg["cache_dir"] == "/tmp/cache/mypack"
 
         # Cleanup

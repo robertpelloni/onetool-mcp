@@ -66,7 +66,7 @@ def test_mcp_server_config_with_auth() -> None:
     # Server config with OAuth auth
     config = McpServerConfig(
         type="http",
-        url="https://api.example.com/mcp",
+        url="https://test.invalid/mcp",
         auth=AuthConfig(type="oauth", scopes=["tools:read"]),
     )
     assert config.auth is not None
@@ -74,5 +74,5 @@ def test_mcp_server_config_with_auth() -> None:
     assert config.auth.scopes == ["tools:read"]
 
     # Server config with no auth (default)
-    config_no_auth = McpServerConfig(type="http", url="https://api.example.com/mcp")
+    config_no_auth = McpServerConfig(type="http", url="https://test.invalid/mcp")
     assert config_no_auth.auth is None

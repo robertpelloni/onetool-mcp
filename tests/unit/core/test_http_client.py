@@ -31,7 +31,7 @@ def test_http_get_json_response() -> None:
     mock_client.get.return_value = mock_response
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        success, result = http_get("https://api.example.com/data")
+        success, result = http_get("https://test.invalid/data")
 
         assert success is True
         assert result == {"key": "value"}
@@ -52,7 +52,7 @@ def test_http_get_text_response() -> None:
     mock_client.get.return_value = mock_response
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        success, result = http_get("https://api.example.com/text")
+        success, result = http_get("https://test.invalid/text")
 
         assert success is True
         assert result == "Hello, World!"
@@ -74,13 +74,13 @@ def test_http_get_with_params_and_headers() -> None:
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
         http_get(
-            "https://api.example.com/search",
+            "https://test.invalid/search",
             params={"q": "test"},
             headers={"Authorization": "Bearer token"},
         )
 
         mock_client.get.assert_called_once_with(
-            "https://api.example.com/search",
+            "https://test.invalid/search",
             params={"q": "test"},
             headers={"Authorization": "Bearer token"},
             timeout=30.0,
@@ -105,7 +105,7 @@ def test_http_get_http_status_error() -> None:
     )
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        success, result = http_get("https://api.example.com/missing")
+        success, result = http_get("https://test.invalid/missing")
 
         assert success is False
         assert "HTTP error (404)" in result
@@ -122,7 +122,7 @@ def test_http_get_request_error() -> None:
     mock_client.get.side_effect = httpx.RequestError("Connection refused")
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        success, result = http_get("https://api.example.com/data")
+        success, result = http_get("https://test.invalid/data")
 
         assert success is False
         assert "Request failed" in result
@@ -143,7 +143,7 @@ def test_http_get_with_timeout() -> None:
     mock_client.get.return_value = mock_response
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        http_get("https://api.example.com/data", timeout=60.0)
+        http_get("https://test.invalid/data", timeout=60.0)
 
         mock_client.get.assert_called_once()
         call_kwargs = mock_client.get.call_args.kwargs
@@ -165,7 +165,7 @@ def test_http_get_default_timeout() -> None:
     mock_client.get.return_value = mock_response
 
     with patch("ot.http_client._get_shared_client", return_value=mock_client):
-        http_get("https://api.example.com/data")
+        http_get("https://test.invalid/data")
 
         mock_client.get.assert_called_once()
         call_kwargs = mock_client.get.call_args.kwargs
@@ -192,7 +192,7 @@ def test_http_get_with_log_span() -> None:
             mock_span_class.return_value = mock_span
 
             success, _ = http_get(
-                "https://api.example.com/data",
+                "https://test.invalid/data",
                 log_span="test.fetch",
                 log_data={"key": "value"},
             )

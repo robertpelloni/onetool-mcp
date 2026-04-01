@@ -33,9 +33,8 @@ security:
   sanitize:
     enabled: false
 
-tools:
-  ot_llm:
-    model: google/gemini-3-flash-preview
-    base_url: https://openrouter.ai/api/v1
-  ot_image:
-    vision_model: google/gemini-3-flash-preview
+llm:
+  model: google/gemini-3-flash-preview
+  base_url: https://openrouter.ai/api/v1
+
+tools: {}

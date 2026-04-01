@@ -52,7 +52,7 @@ class TestValidateUrl:
     def test_valid_url(self):
         from otdev.tools.webfetch import _validate_url
 
-        assert _validate_url("https://example.com") is None
+        assert _validate_url("https://docs.python.org/3/library/test") is None
 
     def test_empty_url(self):
         from otdev.tools.webfetch import _validate_url
@@ -70,7 +70,7 @@ class TestValidateUrl:
     def test_missing_scheme(self):
         from otdev.tools.webfetch import _validate_url
 
-        result = _validate_url("example.com/path")
+        result = _validate_url("docs.python.org/path")
         assert result is not None
         assert "Invalid URL" in result
 
@@ -208,7 +208,7 @@ class TestFetch:
     def test_validation_both_precision_and_recall(self):
         from otdev.tools.webfetch import fetch
 
-        result = fetch(url="https://example.com", favor_precision=True, favor_recall=True)
+        result = fetch(url="https://test.invalid/page", favor_precision=True, favor_recall=True)
         assert "Error" in result
 
     def test_successful_fetch(self):
@@ -219,7 +219,7 @@ class TestFetch:
             patch("otdev.tools.webfetch._fetch_url_cached", return_value=("<html>test</html>", "text/html")),
             patch("trafilatura.extract", return_value="Extracted content"),
         ):
-            result = fetch(url="https://example.com")
+            result = fetch(url="https://test.invalid/page")
 
         assert result == "Extracted content"
 
@@ -230,7 +230,7 @@ class TestFetch:
             patch("otdev.tools.webfetch._require_trafilatura"),
             patch("otdev.tools.webfetch._fetch_url_cached", return_value=(None, None)),
         ):
-            result = fetch(url="https://example.com")
+            result = fetch(url="https://test.invalid/page")
 
         assert "Error" in result
         assert "fetch" in result.lower()
@@ -243,7 +243,7 @@ class TestFetch:
             patch("otdev.tools.webfetch._fetch_url_cached", return_value=("<html></html>", "text/html")),
             patch("trafilatura.extract", return_value=None),
         ):
-            result = fetch(url="https://example.com")
+            result = fetch(url="https://test.invalid/page")
 
         assert "Error" in result
         assert "No content" in result
@@ -256,7 +256,7 @@ class TestFetch:
             patch("otdev.tools.webfetch._require_trafilatura"),
             patch("otdev.tools.webfetch._fetch_url_cached", return_value=(raw, "application/json")),
         ):
-            result = fetch(url="https://api.example.com/data.json")
+            result = fetch(url="https://test.invalid/data.json")
 
         assert result == raw
 
@@ -270,7 +270,7 @@ class TestFetch:
             patch("otdev.tools.webfetch._fetch_url_cached", return_value=("<html>hi</html>", "text/html; charset=utf-8")),
             patch("trafilatura.extract", return_value='{"title": "Hi"}'),
         ):
-            result = fetch(url="https://example.com", output_format="json", include_metadata=True)
+            result = fetch(url="https://test.invalid/page", output_format="json", include_metadata=True)
 
         data = json.loads(result)
         assert data["metadata"]["content_type"] == "text/html; charset=utf-8"

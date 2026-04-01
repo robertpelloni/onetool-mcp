@@ -25,7 +25,7 @@ class TestSanitizeUrl:
 
     def test_url_without_credentials(self):
         """URL without credentials is unchanged."""
-        url = "https://example.com/path"
+        url = "https://test.invalid/path"
         result = sanitize_url(url)
         assert result == url
 
@@ -94,7 +94,7 @@ class TestSanitizeForOutput:
 
     def test_http_value_sanitized(self):
         """HTTP URLs are sanitized even without url in field name."""
-        result = sanitize_for_output("https://user:pass@api.example.com", "endpoint")
+        result = sanitize_for_output("https://user:pass@api.test.invalid", "endpoint")
         assert "***:***@" in result
 
     def test_non_url_unchanged(self):
@@ -139,7 +139,7 @@ class TestFormatLogEntry:
         """Multiple fields are all processed."""
         entry = {
             "query": "SELECT * FROM users",
-            "url": "https://user:pass@db.example.com",
+            "url": "https://user:pass@db.test.invalid",
             "path": "/very/long/path" + "/segment" * 50,
         }
         result = format_log_entry(entry, verbose=False)

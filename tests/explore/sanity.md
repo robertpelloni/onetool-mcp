@@ -323,17 +323,30 @@ Test data locations:
 
 ### MCP Server notes
 
+Disconnected servers can be enabled at runtime without restarting OneTool:
+```python
+ot.server(enable="github")       # enable + connect
+ot.server(status="github")       # check a specific server
+ot.server(restart="playwright")  # reconnect an already-enabled server
+ot.servers()                     # list all with current status
+```
+Changes are in-memory only (reset on server restart). Use `ot.server(disable="name")` to disconnect.
+
 - **devtools** (26 tools): Browser automation via Chrome DevTools Protocol
   - **Current config uses Remote mode** (`--browserUrl=http://127.0.0.1:9222`) — Chrome must be
     pre-launched with `--remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug` before testing
   - To use auto-launch instead, switch config to `--isolated` (no `--browserUrl` arg)
   - Verify Chrome is reachable: `curl http://127.0.0.1:9222/json/version`
+  - Enable: `ot.server(enable="chrome_devtools")`
   - Key tools: list_pages, navigate_page, take_snapshot, wait_for, list_console_messages
   - `devtools.wait_for()` requires `text=` parameter (not `selector=`). Example: `devtools.wait_for(text="Python")`
 - **github** (37 tools): GitHub API integration
   - Requires authentication via MCP proxy
+  - Enable: `ot.server(enable="github")`
   - Key tools: search_repositories, get_me, list_commits, get_file_contents
   - Works with both personal and organizational repositories
+- **playwright** (tools): Browser automation via Playwright
+  - Enable: `ot.server(enable="playwright")`
 
 ### Test ordering to avoid reload side effects
 

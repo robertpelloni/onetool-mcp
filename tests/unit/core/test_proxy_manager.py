@@ -213,7 +213,7 @@ class TestProxyManagerAuth:
         manager = ProxyManager()
         config = McpServerConfig(
             type="http",
-            url="https://api.example.com/mcp",
+            url="https://test.invalid/mcp",
         )
 
         manager._create_http_client("test", config)
@@ -238,7 +238,7 @@ class TestProxyManagerAuth:
         manager = ProxyManager()
         config = McpServerConfig(
             type="http",
-            url="https://api.example.com/mcp",
+            url="https://test.invalid/mcp",
             auth=AuthConfig(type="oauth", scopes=["tools:read", "tools:write"]),
         )
 
@@ -246,7 +246,7 @@ class TestProxyManagerAuth:
 
         # Verify OAuth created with correct params
         mock_oauth.assert_called_once_with(
-            mcp_url="https://api.example.com/mcp",
+            mcp_url="https://test.invalid/mcp",
             scopes=["tools:read", "tools:write"],
             client_name="OneTool",
         )
@@ -275,7 +275,7 @@ class TestProxyManagerAuth:
         manager = ProxyManager()
         config = McpServerConfig(
             type="http",
-            url="https://api.example.com/mcp",
+            url="https://test.invalid/mcp",
             auth=AuthConfig(type="bearer", token="${GITHUB_TOKEN}"),
         )
 
@@ -303,7 +303,7 @@ class TestProxyManagerAuth:
         manager = ProxyManager()
         config = McpServerConfig(
             type="http",
-            url="http://api.example.com/mcp",
+            url="http://test.invalid/mcp",
         )
 
         manager._create_http_client("test", config)
@@ -311,7 +311,7 @@ class TestProxyManagerAuth:
         # Verify URL was upgraded to HTTPS
         mock_transport.assert_called_once()
         call_kwargs = mock_transport.call_args[1]
-        assert call_kwargs["url"] == "https://api.example.com/mcp"
+        assert call_kwargs["url"] == "https://test.invalid/mcp"
 
 
 @pytest.mark.unit

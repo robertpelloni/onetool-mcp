@@ -229,7 +229,7 @@ class TestFormatWebResults:
                 "results": [
                     {
                         "title": "Python Tutorial",
-                        "url": "https://example.com/python",
+                        "url": "https://docs.python.org/3/tutorial",
                         "description": "Learn Python",
                     }
                 ]
@@ -239,7 +239,7 @@ class TestFormatWebResults:
         result = _format_web_results(data)
 
         assert "Python Tutorial" in result
-        assert "https://example.com/python" in result
+        assert "https://docs.python.org/3/tutorial" in result
         assert "Learn Python" in result
 
     def test_handles_empty_results(self):
@@ -358,8 +358,8 @@ class TestFormatImageResults:
             "results": [
                 {
                     "title": "Python Logo",
-                    "url": "https://example.com/python.png",
-                    "source": "example.com",
+                    "url": "https://docs.python.org/3/tutorial.png",
+                    "source": "test.invalid",
                     "properties": {"width": 800, "height": 600},
                 }
             ]
@@ -369,7 +369,7 @@ class TestFormatImageResults:
 
         assert "Python Logo" in result
         assert "800x600" in result
-        assert "example.com" in result
+        assert "test.invalid" in result
 
     def test_handles_empty_results(self):
         data = {"results": []}
@@ -381,7 +381,7 @@ class TestFormatImageResults:
     def test_blank_title_shows_no_title(self):
         data = {
             "results": [
-                {"title": "", "url": "https://example.com/img.jpg", "properties": {}}
+                {"title": "", "url": "https://test.invalid/img.jpg", "properties": {}}
             ]
         }
 
@@ -394,10 +394,10 @@ class TestFormatImageResults:
             "results": [
                 {
                     "title": "Photo",
-                    "url": "https://example.com/page",
-                    "source": "example.com",
+                    "url": "https://test.invalid/page",
+                    "source": "test.invalid",
                     "properties": {
-                        "url": "https://cdn.example.com/photo.jpg",
+                        "url": "https://cdn.test.invalid/photo.jpg",
                         "width": 800,
                         "height": 600,
                     },
@@ -407,8 +407,8 @@ class TestFormatImageResults:
 
         result = _format_image_results(data)
 
-        assert "Image: https://cdn.example.com/photo.jpg" in result
-        assert "https://example.com/page" in result
+        assert "Image: https://cdn.test.invalid/photo.jpg" in result
+        assert "https://test.invalid/page" in result
 
 
 @pytest.mark.unit
@@ -442,7 +442,7 @@ class TestFormatVideoResults:
             "results": [
                 {
                     "title": "Video",
-                    "url": "https://example.com",
+                    "url": "https://en.wikipedia.org/wiki/Test",
                     "description": long_desc,
                 }
             ]
@@ -480,7 +480,7 @@ class TestSearch:
                     "results": [
                         {
                             "title": "Result",
-                            "url": "https://example.com",
+                            "url": "https://en.wikipedia.org/wiki/Test",
                             "description": "Description",
                         }
                     ]

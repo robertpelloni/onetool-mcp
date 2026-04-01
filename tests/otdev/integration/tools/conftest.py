@@ -1,6 +1,6 @@
 """Shared fixtures for integration tests.
 
-Loads API keys directly from project-root secrets.yaml.
+Loads and decrypts API keys from tests/.onetool/secrets.yaml.
 Injects them into the runtime secret cache so tools get keys without
 depending on the runtime secret resolver path resolution.
 
@@ -13,40 +13,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import threading
-from pathlib import Path
-
 import pytest
-import yaml
 
-import ot.config.secrets as _secrets_module
 from ot.config.loader import get_config
 from ot.proxy.manager import get_proxy_manager
 
-# tests/otdev/integration/tools/conftest.py → 5 parents to reach project root
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-_SECRETS_FILE = (
-    _PROJECT_ROOT / "secrets.yaml"
-    if (_PROJECT_ROOT / "secrets.yaml").exists()
-    else _PROJECT_ROOT / ".onetool" / "secrets.yaml"
-)
-
-_secrets: dict[str, str] = {}
-if _SECRETS_FILE.exists():
-    with _SECRETS_FILE.open() as f:
-        raw = yaml.safe_load(f) or {}
-    _secrets = {k: str(v) for k, v in raw.items() if isinstance(k, str) and v is not None}
-
-
-def get_test_secret(name: str) -> str | None:
-    """Get a secret value for test skip checks.
-
-    Args:
-        name: Secret name (e.g., "CONTEXT7_API_KEY")
-
-    Returns:
-        Secret value or None if not found
-    """
-    return _secrets.get(name)
+from tests._test_secrets import _PROJECT_ROOT, _secrets, _secrets_module, get_test_secret
 
 
 def require_server(name: str) -> None:
@@ -125,6 +97,28 @@ def _connect_proxy_servers():
         future.result(timeout=10)
     loop.call_soon_threadsafe(loop.stop)
     thread.join(timeout=5)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _browser_session():
+    """Close the whiteboard browser after the entire test session."""
+    yield
+    from otdev.tools import excalidraw
+    with contextlib.suppress(Exception):
+        excalidraw.close()
+
+
+@pytest.fixture(autouse=True)
+def _clean_canvas():
+    """Open a fresh whiteboard before each test; clear canvas after."""
+    from otdev.tools import excalidraw
+
+    result = excalidraw.open()
+    if "Error" in result:
+        pytest.fail(f"whiteboard open() failed (playwright not available?): {result}")
+    yield
+    with contextlib.suppress(Exception):
+        excalidraw.clear()
 
 
 __all__ = ["get_test_secret", "require_server"]

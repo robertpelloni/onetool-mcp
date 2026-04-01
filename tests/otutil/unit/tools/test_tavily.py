@@ -167,7 +167,7 @@ class TestValidateDays:
 @pytest.mark.tools
 class TestValidateUrls:
     def test_valid_urls(self):
-        assert _validate_urls(["https://example.com"]) is None
+        assert _validate_urls(["https://docs.python.org/3/library/test"]) is None
 
     def test_empty_urls(self):
         result = _validate_urls([])
@@ -344,12 +344,12 @@ class TestFormatExtractResults:
     def test_successful_extraction(self):
         data = {
             "results": [
-                {"url": "https://example.com", "raw_content": "Page content here."}
+                {"url": "https://test.invalid", "raw_content": "Page content here."}
             ],
             "failed_results": [],
         }
         result = _format_extract_results(data)
-        assert "https://example.com" in result
+        assert "https://test.invalid" in result
         assert "Page content here." in result
 
     def test_failed_extraction(self):
@@ -506,13 +506,13 @@ class TestSearch:
         ):
             search(
                 query="test",
-                include_domains=["example.com"],
+                include_domains=["docs.python.org"],
                 exclude_domains=["spam.com"],
             )
 
         call_kwargs = mock_client.post.call_args
         payload = call_kwargs[1]["json"]
-        assert payload["include_domains"] == ["example.com"]
+        assert payload["include_domains"] == ["docs.python.org"]
         assert payload["exclude_domains"] == ["spam.com"]
 
     def test_include_answer_sent_to_api(self):
@@ -554,7 +554,7 @@ class TestExtract:
         response_data = {
             "results": [
                 {
-                    "url": "https://example.com/page",
+                    "url": "https://test.invalid/page",
                     "raw_content": "This is the page content.",
                 }
             ],
@@ -567,9 +567,9 @@ class TestExtract:
             patch("otutil.tools.tavily._get_http_client", return_value=mock_client),
             patch("otutil.tools.tavily.require_api_key", return_value=("test-key", None)),
         ):
-            result = extract(urls=["https://example.com/page"])
+            result = extract(urls=["https://test.invalid/page"])
 
-        assert "https://example.com/page" in result
+        assert "https://test.invalid/page" in result
         assert "This is the page content." in result
 
     def test_validation_error_empty_urls(self):
@@ -578,11 +578,11 @@ class TestExtract:
         assert "empty" in result
 
     def test_validation_error_invalid_format(self):
-        result = extract(urls=["https://example.com"], format="html")
+        result = extract(urls=["https://test.invalid"], format="html")
         assert "Error" in result
 
     def test_validation_error_invalid_depth(self):
-        result = extract(urls=["https://example.com"], extract_depth="deep")
+        result = extract(urls=["https://test.invalid"], extract_depth="deep")
         assert "Error" in result
 
     def test_extract_depth_sent_in_payload(self):
@@ -601,7 +601,7 @@ class TestExtract:
 
     def test_missing_api_key(self):
         with patch("otutil.tools.tavily.require_api_key", return_value=("", "Error: TAVILY_API_KEY secret not configured")):
-            result = extract(urls=["https://example.com"])
+            result = extract(urls=["https://test.invalid"])
         assert "TAVILY_API_KEY" in result
 
 

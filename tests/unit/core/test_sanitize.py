@@ -151,8 +151,8 @@ class TestWrapExternalContent:
     def test_includes_source_attribute(self):
         """Source is included as attribute when provided."""
         content = "External data"
-        result = wrap_external_content(content, source="https://example.com")
-        assert 'source="https://example.com"' in result
+        result = wrap_external_content(content, source="https://test.invalid")
+        assert 'source="https://test.invalid"' in result
 
     def test_sanitizes_triggers(self):
         """Triggers are sanitized when wrapping."""
