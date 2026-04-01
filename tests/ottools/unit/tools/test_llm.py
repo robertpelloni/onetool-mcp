@@ -42,11 +42,14 @@ class TestGetApiConfig:
 
     @patch("ottools.ot_llm.get_tool_config")
     @patch("ottools.ot_llm.get_secret")
-    def test_returns_none_for_missing(self, mock_secret, mock_get_tool_config):
+    @patch("ot.config.get_llm_config")
+    def test_returns_none_for_missing(self, mock_llm, mock_secret, mock_get_tool_config):
+        from ot.config import LlmConfig
         from ottools.ot_llm import Config, _get_api_config
 
         mock_secret.return_value = None
         mock_get_tool_config.return_value = Config(base_url="", model="")
+        mock_llm.return_value = LlmConfig()
 
         api_key, base_url, model, config = _get_api_config()
 

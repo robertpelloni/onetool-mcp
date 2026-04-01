@@ -131,14 +131,14 @@ class TestImageVision:
 
     @pytest.fixture(autouse=True)
     def require_vision_config(self) -> None:
-        """Fail if vision API key or model is not configured."""
+        """Skip if vision API key or model is not configured."""
         if not get_test_secret("OPENAI_API_KEY") and not get_test_secret("OT_LLM_API_KEY"):
             pytest.fail("No vision API key configured (OPENAI_API_KEY or OT_LLM_API_KEY)")
 
         from ottools._image.config import get_image_config
         config = get_image_config()
-        if not config.vision_model:
-            pytest.fail("tools.ot_image.vision_model not configured in onetool.yaml")
+        if not config.model:
+            pytest.fail("tools.ot_image.model not configured in onetool.yaml")
 
     def test_ask_returns_answer(self, tmp_path: Path) -> None:
         """ask() returns a non-empty answer for a simple question."""
@@ -150,5 +150,10 @@ class TestImageVision:
             handle = load(img=str(img_path))["handle"]
             result = ask(img=handle, q="What colour is this image?")
 
+        if "error" in result:
+            err = result["error"]
+            if "Authentication" in err or "api_key" in err.lower():
+                pytest.fail(f"Vision API auth failed (check OPENAI_API_KEY / OT_LLM_API_KEY): {err}")
+            pytest.fail(f"ask() returned unexpected error: {err}")
         assert "result" in result
         assert result["result"][0]["answer"]

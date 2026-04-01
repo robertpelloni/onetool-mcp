@@ -82,7 +82,8 @@ class TestImageConfig:
 
     @patch("ottools._image.config.get_tool_config")
     @patch("ottools._image.config.get_secret")
-    def test_defaults(self, mock_secret: MagicMock, mock_gtc: MagicMock) -> None:
+    @patch("ot.config.get_llm_config", side_effect=Exception("no llm config"))
+    def test_defaults(self, _mock_llm: MagicMock, mock_secret: MagicMock, mock_gtc: MagicMock) -> None:
         from ottools._image.config import Config, get_image_config
 
         mock_gtc.return_value = Config()

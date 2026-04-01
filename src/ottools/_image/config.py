@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from loguru import logger
 from otpack import get_secret, get_tool_config
 from pydantic import BaseModel, Field
 
@@ -51,12 +52,16 @@ def get_image_config() -> Config:
             updates["model"] = llm.model
         if updates:
             config = config.model_copy(update=updates)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to load top-level llm config for ot_image fallbacks: {}", e)
 
     return config
 
 
 def get_image_api_key() -> str | None:
-    """Return the API key for vision model calls (always OPENAI_API_KEY secret)."""
-    return get_secret("OPENAI_API_KEY")
+    """Return the API key for vision model calls.
+
+    Tries ``OPENAI_API_KEY`` first, then falls back to ``OT_LLM_API_KEY``
+    so that a shared OpenRouter key works without duplication.
+    """
+    return get_secret("OPENAI_API_KEY") or get_secret("OT_LLM_API_KEY")
