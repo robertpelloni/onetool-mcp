@@ -59,7 +59,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from loguru import logger
 from otpack import LogSpan, get_tool_config
 from pydantic import BaseModel, Field
 
@@ -533,7 +532,13 @@ def _merged_roles() -> dict[str, list[str]]:
 
 def _boto3_session(profile: str | None = None, region: str | None = None) -> Any:
     """Create a boto3 Session with the active profile and region."""
-    import boto3  # type: ignore[import-untyped]
+    try:
+        import boto3  # type: ignore[import-untyped]
+    except ImportError as exc:
+        raise ImportError(
+            "AWS tools require the [dev] extra. "
+            "Install with: pip install 'onetool-mcp[dev]'"
+        ) from exc
 
     cfg = _get_config()
     return boto3.Session(
@@ -1094,10 +1099,9 @@ def regions(*, service: str = "ec2") -> list[str]:
             region_list = sorted(available)
             s.add(count=len(region_list))
             return region_list
-        except Exception:
+        except Exception as e:
             # Fallback: return EC2 regions as a proxy
-            logger.warning("aws.regions: get_available_regions({!r}) failed, falling back to EC2 regions", service)
-            s.add(status="fallback")
+            s.add(status="fallback", error=str(e))
             return regions(service="ec2")
 
 

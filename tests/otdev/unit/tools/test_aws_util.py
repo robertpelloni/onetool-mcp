@@ -534,8 +534,8 @@ class TestAwsUtilModuleSmoke:
 class TestAwsRegions:
     """Unit tests for aws.regions() fallback behaviour."""
 
-    def test_regions_fallback_emits_warning(self) -> None:
-        """Should log a warning when get_available_regions raises and falls back to EC2."""
+    def test_regions_fallback_on_unsupported_service(self) -> None:
+        """Should fall back to EC2 regions when get_available_regions raises."""
         from unittest.mock import MagicMock, patch
 
         from otdev.tools.aws_util import regions
@@ -546,7 +546,6 @@ class TestAwsRegions:
         # Patch EC2 fallback so it returns a known list without hitting AWS
         ec2_regions = ["us-east-1", "us-west-2"]
         with patch("otdev.tools.aws_util._boto3_session", return_value=mock_session), \
-             patch("otdev.tools.aws_util.logger") as mock_logger, \
              patch("otdev.tools.aws_util.regions", wraps=regions) as _wrapped:
             # We call with a fake service that raises, then it recursively calls regions("ec2")
             # Patch the ec2 branch so it doesn't hit real AWS
@@ -558,10 +557,7 @@ class TestAwsRegions:
 
             result = regions(service="fakesvc")
 
-        mock_logger.warning.assert_called_once()
-        warning_msg = mock_logger.warning.call_args[0]
-        assert "fakesvc" in str(warning_msg)
-        assert "fallback" in str(warning_msg).lower() or "EC2" in str(warning_msg)
+        assert sorted(result) == sorted(ec2_regions)
 
     def test_regions_ec2_returns_list(self) -> None:
         """EC2 branch should return a sorted list of region names."""

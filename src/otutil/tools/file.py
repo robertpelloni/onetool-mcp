@@ -107,13 +107,13 @@ class Config(BaseModel):
     )
 
 
-# Optional send2trash for safe deletion
 try:
     import send2trash
-
-    HAS_SEND2TRASH = True
-except ImportError:
-    HAS_SEND2TRASH = False
+except ImportError as _e:
+    raise ImportError(
+        "File tools require the [util] extra. "
+        "Install with: pip install 'onetool-mcp[util]'"
+    ) from _e
 
 # Pre-computed set of text characters for binary detection (P2 fix)
 # Includes common control chars (bell, backspace, tab, newline, formfeed, carriage return, escape)
@@ -1408,7 +1408,7 @@ def write(
         if dry_run:
             action = "append" if append else "write"
             exists = "existing" if resolved.exists() else "new"
-            s.add(dry_run=True, bytesToWrite=bytes_to_write)
+            s.add(dryRun=True, bytesToWrite=bytes_to_write)
             return f"Dry run: Would {action} {bytes_to_write} bytes to {exists} file {path}"
 
         # Create backup if file exists
@@ -1527,7 +1527,7 @@ def edit(
 
         # Dry run mode - show what would happen
         if dry_run:
-            s.add(dry_run=True, occurrences=count, wouldReplace=replace_count)
+            s.add(dryRun=True, occurrences=count, wouldReplace=replace_count)
             return f"Dry run: Would replace {replace_count} occurrence(s) of text in {path}"
 
         # Create backup
@@ -1631,12 +1631,12 @@ def delete(
             elif resolved.is_dir():
                 file_type = "directory"
                 if not recursive and any(resolved.iterdir()):
-                    s.add(dry_run=True, error="would_fail")
+                    s.add(dryRun=True, error="would_fail")
                     return f"Dry run: Would fail - directory not empty: {path}. Use recursive=True."
             else:
                 file_type = "unknown"
-            method = "trash" if cfg.use_trash and HAS_SEND2TRASH else "delete"
-            s.add(dry_run=True, fileType=file_type, method=method)
+            method = "trash" if cfg.use_trash else "delete"
+            s.add(dryRun=True, fileType=file_type, method=method)
             return f"Dry run: Would {method} {file_type}: {path}"
 
         try:
@@ -1647,8 +1647,8 @@ def delete(
                     s.add(error=f"backup_failed: {backup_error}")
                     return f"Error: {backup_error}"
 
-            # Use send2trash if available and configured
-            if cfg.use_trash and HAS_SEND2TRASH:
+            # Use send2trash if configured
+            if cfg.use_trash:
                 send2trash.send2trash(str(resolved))
                 s.add(deleted=True, method="trash")
                 return f"OK: Moved to trash: {path}"

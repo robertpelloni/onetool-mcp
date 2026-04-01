@@ -57,11 +57,17 @@ def _get_config() -> Config:
 
 
 def _create_http_client() -> httpx.Client:
-    """Create HTTP client for Context7 API requests."""
-    return httpx.Client(timeout=30.0, follow_redirects=True)
+    """Create HTTP client for Context7 API requests.
+
+    Called exactly once by lazy_client (double-checked locking). The timeout
+    set here is a client-level default, but every request also passes an
+    explicit per-request timeout via _make_request(), so the effective timeout
+    is always read fresh from config on each call.
+    """
+    return httpx.Client(timeout=_get_config().timeout, follow_redirects=True)
 
 
-# Thread-safe lazy client using SDK utility
+# Thread-safe lazy singleton — factory is called once on first request.
 _get_http_client = lazy_client(_create_http_client)
 
 
@@ -86,6 +92,8 @@ def _make_request(
         return False, err
 
     if timeout is None:
+        # Read config per-call so the timeout reflects the current config value,
+        # not the one baked into the cached client at startup.
         timeout = _get_config().timeout
 
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -430,7 +438,7 @@ def doc(
     if not query or not query.strip():
         return "query is required — the Context7 API does not accept empty queries."
 
-    with LogSpan(span="context7.doc", library_id=library_id, query=query) as s:
+    with LogSpan(span="context7.doc", libraryId=library_id, query=query) as s:
         # Normalize and resolve library ID (searches if needed)
         resolved_id, was_searched, found_match = _resolve_library_id(library_id)
         s.add(resolvedId=resolved_id, wasSearched=was_searched, foundMatch=found_match)
