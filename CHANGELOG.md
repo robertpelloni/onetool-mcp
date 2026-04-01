@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.2.0] - 2026-04-01
+
+### New Tool Packs
+- **`knowledge`** `[util]` — index local markdown directories into a searchable knowledge base; semantic search, full-text search, and RRF-merged results; knowledge packs for sharing curated content
+
+### mem Improvements
+- **`mem.ask()`** — ask a natural-language question across all memories; returns ranked, cited excerpts
+- **`mem.inspect()`** — detailed view of a single memory entry with metadata
+- **`mem.query()`** — structured query across memories with flexible filters
+
+### ctx Improvements
+- **File-based store** — replaced SQLite store with a file-based store; results are now addressable by handle
+- **New tools**: `ctx.toc()`, `ctx.slice()`, `ctx.grep()`, `ctx.query()`, `ctx.append()` — navigate and extract from large stored outputs without re-running tools
+
+### Configuration
+- **Top-level `llm:` config** — set `llm.base_url`, `llm.model`, `llm.api_key`, and `llm.embedding_model` once in `onetool.yaml`; all LLM-using tools (`mem`, `ot_image`, `ot_llm`, `knowledge`) inherit these as defaults
+
+### Changed
+- **`chrome_devtools`** renamed from `chrome-devtools` — update any `servers:` config referencing the old name
+- **Whiteboard driver** migrated from Playwright to pydoll
+- **`worktree` pack removed** — use git directly or a dedicated worktree workflow
+
+---
+
 ## [2.1.1] - 2026-03-10
 
 ### Changed

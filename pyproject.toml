@@ -1,6 +1,6 @@
 [project]
 name = "onetool-mcp"
-version = "2.1.1"
+version = "2.2.0"
 description = "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more."
 mcpName = "io.github.beycom/onetool"
 readme = "README.md"
@@ -32,9 +32,6 @@ dependencies = [
     "typer>=0.24.1",
     "jinja2>=3.1.6",              # Snippets template engine
     "docstring-parser>=0.17.0",   # ot.help() and ot.tools() docstring parsing
-    "aiofiles>=25.1.0",           # Message tool async file I/O
-    "aiohttp>=3.13.3",            # Panel pack companion server
-    "pydoll-python>=2.22.0",      # Panel pack CDP browser automation
     # === LLM & Search ===
     "openai>=2.30.0",             # mem embeddings, LLM tools
     "tiktoken>=0.12.0",           # Token counting for embedding truncation
@@ -74,6 +71,9 @@ dev = [
 ]
 scrape = [
     "crawl4ai>=0.8.5",
+]
+whiteboard = [
+    "pydoll-python>=2.22.0",
 ]
 all = ["onetool-mcp[util,dev]"]
 
@@ -178,6 +178,10 @@ warn_redundant_casts = true
 warn_unused_configs = true
 show_error_codes = true
 files = ["src/ot"]
+
+[[tool.mypy.overrides]]
+module = "questionary"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "packages/onetool-pack/tests", "packages/onetool-bench/tests"]

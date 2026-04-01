@@ -1,6 +1,6 @@
 [project]
 name = "onetool-pack"
-version = "2.1.1"
+version = "2.2.0"
 description = "Standalone infrastructure utilities for OneTool packs"
 requires-python = ">=3.12"
 

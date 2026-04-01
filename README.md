@@ -56,13 +56,13 @@ Requires [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install 'onetool-mcp[all]'   # everything
-onetool init -c ~/.onetool
+onetool init --config ~/.onetool
 ```
 
 Add to Claude Code:
 
 ```bash
-claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml
+claude mcp add onetool -- onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
 ```
 
 Or manually add to `~/.claude/mcp.json`:
@@ -72,7 +72,7 @@ Or manually add to `~/.claude/mcp.json`:
   "mcpServers": {
     "onetool": {
       "command": "onetool",
-      "args": ["--config", "/Users/yourname/.onetool/onetool.yaml"]
+      "args": ["--config", "/Users/yourname/.onetool/onetool.yaml", "--secrets", "/Users/yourname/.onetool/secrets.yaml"]
     }
   }
 }
@@ -80,7 +80,7 @@ Or manually add to `~/.claude/mcp.json`:
 
 That's it. All 100+ tools work out of the box.
 
-Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
+Verify: `onetool init validate --config ~/.onetool/onetool.yaml`
 
 [📖 Full installation guide](https://onetool.beycom.online/learn/installation/)
 
@@ -121,7 +121,8 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | `excel`       | `read`, `write`, `query`                       | `[util]` | Excel files                    |
 | `file`        | `read`, `write`, `grep`, `slice`, `toc`        | `[util]` | File operations                |
 | `ground`      | `search`                                       | `[util]` | Google Grounding search        |
-| `mem`         | `write`, `read`, `search`, `grep`              | `[util]` | Persistent memory              |
+| `knowledge`   | `search`, `ask`, `write`, `read`, `grep`       | `[util]` | RAG knowledge base (FTS5+vector) |
+| `mem`         | `write`, `read`, `search`, `grep`, `ask`, `inspect`, `query` | `[util]` | Persistent memory              |
 | `ot_forge`    | `create_ext`, `validate_ext`, `install_skills` |          | Scaffold new tool packs        |
 | `ot_context` (`ctx`) | `write`, `read`, `search`, `grep`, `slice`, `toc`                 |          | Smart context store (SQLite+FTS5)   |
 | `ot_image` (`img`)   | `load`, `load_batch`, `ask`, `summary`, `list`, `delete`, `purge` | `[util]` | Image vision via dedicated model    |
@@ -135,7 +136,6 @@ Verify: `onetool init validate -c ~/.onetool/onetool.yaml`
 | `tavily`      | `search`, `search_batch`, `research`           | `[util]` | AI-native search               |
 | `webfetch`    | `fetch`, `fetch_batch`                         | `[dev]`  | Web fetching                   |
 | `whiteboard`  | `open`, `draw`, `screenshot`, `save`           | `[dev]`  | Live Excalidraw canvas         |
-| `worktree`    | `add`, `commit`, `diff`, `remove`              | `[dev]`  | Parallel agent git worktrees   |
 
 [📖 Complete tools reference](https://onetool.beycom.online/reference/tools/) — full summary table with all 230+ tools
 
