@@ -35,6 +35,10 @@ Short alias: `rg`
 | `word_match` | bool | Match whole words only (default: False) |
 | `include_hidden` | bool | Search hidden files and directories (default: False) |
 
+## Requires
+
+- `rg` binary — install from [github.com/BurntSushi/ripgrep](https://github.com/BurntSushi/ripgrep) (macOS: `brew install ripgrep`, Linux: `apt install ripgrep`)
+
 ## Configuration
 
 ### Required
@@ -58,10 +62,6 @@ tools:
 ### Defaults
 
 - If `tools.ripgrep` is omitted, ripgrep uses the built-in timeout and path formatting shown above.
-
-## Requires
-
-- `rg` binary — install from [github.com/BurntSushi/ripgrep](https://github.com/BurntSushi/ripgrep) (macOS: `brew install ripgrep`, Linux: `apt install ripgrep`)
 
 ## Glob Patterns
 

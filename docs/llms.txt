@@ -8,7 +8,7 @@ OneTool reduces tool-definition context overhead by exposing tools as Python API
 
 ```bash
 uv tool install 'onetool-mcp[all]'
-onetool init -c ~/.onetool
+onetool init --config ~/.onetool
 onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
 ```
 
@@ -54,7 +54,7 @@ Source of truth: `src/ot/config/global_templates/prompts.yaml` (`prompts.packs`)
 ## Documentation
 
 - Learn: `docs/learn/`
-- Extending: `docs/learn/extending/`
+- Extending: `docs/learn/extension-tools.md`
 - Tool Reference: `docs/reference/tools/`
 - CLI Reference: `docs/reference/cli/`
 - Server Reference: `docs/reference/servers/`

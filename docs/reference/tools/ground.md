@@ -1,4 +1,4 @@
-# Grounding Search
+# Ground
 
 Web search with Google's grounding capabilities via Gemini API. Provides current information with source citations.
 

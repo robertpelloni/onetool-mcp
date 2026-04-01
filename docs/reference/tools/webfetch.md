@@ -9,10 +9,6 @@ Short alias: `wf`
 - Clean content extraction filtering navigation and ads
 - Multiple output formats (markdown, text, json)
 - Batch processing with concurrent execution
-- Output truncation with max_length parameter
-- URL validation with helpful error messages
-- JSON-structured errors when using json output format
-- Optional HTTP response metadata
 - Non-HTML content (plain text, JSON, XML, CSV) returned directly without extraction
 
 ## Functions
@@ -72,39 +68,39 @@ tools:
 
 ```python
 # Fetch single URL
-webfetch.fetch(url="https://example.com/article")
+webfetch.fetch(url="https://docs.python.org/3/library/json.html")
 
 # Fetch with markdown output
 webfetch.fetch(url="https://docs.python.org/3/tutorial/", output_format="markdown")
 
 # Fast mode without fallback
-webfetch.fetch(url="https://example.com/page", fast=True)
+webfetch.fetch(url="https://fastapi.tiangolo.com/tutorial/", fast=True)
 
 # JSON output with metadata
 webfetch.fetch(
-    url="https://example.com/article",
+    url="https://docs.astral.sh/uv/getting-started/",
     output_format="json",
     include_metadata=True
 )
 
 # Precision mode for cleaner extraction
-webfetch.fetch(url="https://example.com/page", favor_precision=True)
+webfetch.fetch(url="https://pydantic-docs.helpmanual.io/concepts/models/", favor_precision=True)
 
 # Batch fetch multiple URLs
 webfetch.fetch_batch(urls=[
-    "https://example.com/page1",
-    "https://example.com/page2"
+    "https://docs.python.org/3/library/asyncio.html",
+    "https://fastapi.tiangolo.com/tutorial/first-steps/"
 ])
 
 # Batch with all options
 webfetch.fetch_batch(
-    urls=["https://example.com/page1", "https://example.com/page2"],
+    urls=["https://docs.python.org/3/library/typing.html", "https://docs.pydantic.dev/latest/"],
     include_links=True,
     favor_precision=True,
     fast=True
 )
 
 # Fetch plain text or JSON files (returned directly without extraction)
-webfetch.fetch(url="https://example.com/data.json")
-webfetch.fetch(url="https://example.com/robots.txt")
+webfetch.fetch(url="https://pypi.org/pypi/requests/json")
+webfetch.fetch(url="https://docs.python.org/robots.txt")
 ```

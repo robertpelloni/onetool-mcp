@@ -10,8 +10,6 @@ Short alias: `xls`
 - Table operations with dictionary-based data access
 - Pure cell range functions (no file I/O required)
 - JSON-formatted output for LLM consumption
-- Auto-creates parent directories on workbook creation
-- Auto-prepends `=` to formulas if missing
 
 ## Core Operations
 

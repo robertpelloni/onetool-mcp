@@ -12,7 +12,12 @@ Short alias: `wb`
 - Persist with `whiteboard.save(file=...)` / `whiteboard.load(file=...)`.
 - Export visuals with `whiteboard.screenshot(...)`; recover with `whiteboard.hard_reset()` when state is broken.
 
-Requires Chrome/Chromium to be installed on the host.
+## Highlights
+
+- Mermaid-compatible DSL for shapes, edges, subgraphs, and inline styling
+- ELK.js auto-layout with five algorithms (layered, stress, mrtree, radial, force)
+- ASCII note overlays: tables, trees, sequence diagrams, timelines
+- Save/load native `.excalidraw` files and generate shareable links
 
 ## Quick Start
 
@@ -24,7 +29,7 @@ whiteboard.screenshot()
 whiteboard.save(file="diagrams/arch.excalidraw")
 ```
 
-## API Summary (Generated)
+## Functions
 
 Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstrings).
 
@@ -53,6 +58,10 @@ Source of truth: `src/otdev/tools/excalidraw.py` (`__all__` + function docstring
 | `whiteboard.sync() -> str` | Sync Python DSL state from the ``__otDSL`` canvas element. |
 | `whiteboard.zoom(*, level: float) -> str` | Set zoom level. Pass 0 to fit all elements in view. |
 <!-- END GENERATED:WB_HELP_SUMMARY -->
+
+## Requires
+
+- Chrome or Chromium installed on the host
 
 ## Configuration
 

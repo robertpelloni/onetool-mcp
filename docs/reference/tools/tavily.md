@@ -8,8 +8,6 @@ Short alias: `tav`
 
 - AI-synthesised answer + numbered results + sources in one call
 - Three topic modes: general, news, finance
-- `output_format` controls response structure (matching `ground` convention)
-- URL content extraction with optional depth control
 - Batch search and batch extraction with concurrent execution
 - Deep research via async polling (`research()`)
 

@@ -1,33 +1,33 @@
 # Knowledge
 
-Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis. Short alias: `knowledge` (`kb`).
+Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis. Short alias: `kb`.
 
 ## Highlights
 
-- Hybrid FTS5+vector search via `kb.search()` — keyword, semantic, or combined (hybrid) modes
-- AI synthesis via `kb.ask()` — retrieves relevant chunks then synthesises a concise answer with source citations
-- Personal annotations via `kb.write()` — store rules, notes, and mistakes alongside indexed content
-- Link-graph traversal via `kb.related()` — follow markdown hyperlinks between topics
+- Hybrid FTS5+vector search via `knowledge.search()` — keyword, semantic, or combined (hybrid) modes
+- AI synthesis via `knowledge.ask()` — retrieves relevant chunks then synthesises a concise answer with source citations
+- Personal annotations via `knowledge.write()` — store rules, notes, and mistakes alongside indexed content
+- Link-graph traversal via `knowledge.related()` — follow markdown hyperlinks between topics
 
 ## Functions
 
 | Function | Description |
 |----------|-------------|
-| `kb.write(topic, content, db, ...)` | Write a personal annotation to the knowledge database |
-| `kb.read(topic, db, ...)` | Read a single entry by topic |
-| `kb.update(topic, db, ...)` | Update an existing entry |
-| `kb.append(topic, db, ...)` | Append content to an existing entry |
-| `kb.delete(topic, db, ...)` | Delete an entry by topic |
-| `kb.search(q, db, ...)` | Hybrid FTS5+vector search (mode: hybrid/semantic/keyword) |
-| `kb.ask(q, db, ...)` | Retrieve relevant chunks and synthesise an AI answer |
-| `kb.grep(pattern, db, ...)` | Regex/text search across all content |
-| `kb.related(topic, db, ...)` | Find entries linked from or to a given topic |
-| `kb.list(db, ...)` | List entries (returns meta only, no content) |
-| `kb.toc(db, ...)` | Display table of contents for a database or topic prefix |
-| `kb.slice(topic, db, ...)` | Extract a section from a large entry |
-| `kb.stats(db)` | Chunk counts, embedding coverage, and file size |
-| `kb.info(db)` | Database metadata, path, and version |
-| `kb.dbs()` | List all configured knowledge databases |
+| `knowledge.write(topic, content, db, ...)` | Write a personal annotation to the knowledge database |
+| `knowledge.read(topic, db, ...)` | Read a single entry by topic |
+| `knowledge.update(topic, db, ...)` | Update an existing entry |
+| `knowledge.append(topic, db, ...)` | Append content to an existing entry |
+| `knowledge.delete(topic, db, ...)` | Delete an entry by topic |
+| `knowledge.search(q, db, ...)` | Hybrid FTS5+vector search (mode: hybrid/semantic/keyword) |
+| `knowledge.ask(q, db, ...)` | Retrieve relevant chunks and synthesise an AI answer |
+| `knowledge.grep(pattern, db, ...)` | Regex/text search across all content |
+| `knowledge.related(topic, db, ...)` | Find entries linked from or to a given topic |
+| `knowledge.list(db, ...)` | List entries (returns meta only, no content) |
+| `knowledge.toc(db, ...)` | Display table of contents for a database or topic prefix |
+| `knowledge.slice(topic, db, ...)` | Extract a section from a large entry |
+| `knowledge.stats(db)` | Chunk counts, embedding coverage, and file size |
+| `knowledge.info(db)` | Database metadata, path, and version |
+| `knowledge.dbs()` | List all configured knowledge databases |
 
 ## Key Parameters
 
@@ -40,8 +40,8 @@ Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis.
 | `k` | int | Max results (default: `config.search_limit`) |
 | `category` | str | Entry category filter — one of: `reference`, `rule`, `note`, `mistake` |
 | `source` | str | Filter by `meta.source` prefix |
-| `direction` | str | For `kb.related()`: `"out"` (links from topic), `"in"` (links to topic), `"both"` |
-| `depth` | int | For `kb.related()`: traversal depth (default: 1) |
+| `direction` | str | For `knowledge.related()`: `"out"` (links from topic), `"in"` (links to topic), `"both"` |
+| `depth` | int | For `knowledge.related()`: traversal depth (default: 1) |
 
 ## Requires
 
@@ -53,7 +53,7 @@ Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis.
 
 ### Required
 
-- `OPENAI_API_KEY` must be set in `secrets.yaml` for embeddings and `kb.ask()`.
+- `OPENAI_API_KEY` must be set in `secrets.yaml` for embeddings and `knowledge.ask()`.
 
 ### Optional
 
@@ -66,7 +66,7 @@ Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis.
 | `tools.knowledge.embedding_batch_size` | int | `200` | Texts per embeddings API call. Range: `1-2048`. |
 | `tools.knowledge.search_limit` | int | `10` | Default max search results. Range: `1-100`. |
 | `tools.knowledge.search_extract` | int | `300` | Character limit for content extract in search results (`0` = full). |
-| `tools.knowledge.enrich_model` | string | `""` | LLM model for `kb.ask()` synthesis. Empty = falls back to top-level `llm.model`. |
+| `tools.knowledge.enrich_model` | string | `""` | LLM model for `knowledge.ask()` synthesis. Empty = falls back to top-level `llm.model`. |
 | `tools.knowledge.min_chunk_chars` | int | `200` | Minimum body characters per chunk. Chunks below threshold are merged. `0` disables. |
 
 Project registry (under `tools.knowledge.kb`):
@@ -105,29 +105,29 @@ tools:
 
 ```python
 # Search a knowledge base (hybrid FTS5+vector)
-kb.search(q='context managers', db='docs')
+knowledge.search(q='context managers', db='docs')
 
 # Keyword-only search with more results
-kb.search(q='yield generator', db='docs', mode='keyword', k=20)
+knowledge.search(q='yield generator', db='docs', mode='keyword', k=20)
 
 # AI synthesis — retrieves relevant chunks then answers
-kb.ask(q='How do I configure authentication?', db='docs')
+knowledge.ask(q='How do I configure authentication?', db='docs')
 
 # Write a personal annotation
-kb.write(topic='python/tips/loops', content='Use enumerate() for index access', db='docs', category='rule')
+knowledge.write(topic='python/tips/loops', content='Use enumerate() for index access', db='docs', category='rule')
 
 # Grep for a pattern across all content
-kb.grep(pattern='def __init__', db='docs')
+knowledge.grep(pattern='def __init__', db='docs')
 
 # Follow related topics via link graph
-kb.related(topic='python/asyncio/tasks', db='docs', direction='out', depth=2)
+knowledge.related(topic='python/asyncio/tasks', db='docs', direction='out', depth=2)
 
 # List all configured databases
-kb.dbs()
+knowledge.dbs()
 
 # Check database stats
-kb.stats(db='docs')
+knowledge.stats(db='docs')
 
 # Read a specific entry
-kb.read(topic='python/tips/loops', db='docs')
+knowledge.read(topic='python/tips/loops', db='docs')
 ```

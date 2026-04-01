@@ -6,11 +6,10 @@ Short alias: `sec`
 
 ## Highlights
 
-- Generate and store an age X25519 identity in keychain (`init`)
-- Encrypt plaintext values in `secrets.yaml` in place (`encrypt`)
-- Check identity + file encryption status (`status`)
-- Rotate to a new identity and re-encrypt values (`rotate`)
-- Audit files for remaining plaintext secrets (`audit`)
+- Generate and store an age X25519 identity in your OS keychain
+- Encrypt plaintext values in `secrets.yaml` in place
+- Rotate to a new identity and re-encrypt all values
+- Audit files for remaining plaintext secrets
 
 ## Functions
 

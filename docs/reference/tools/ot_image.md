@@ -10,23 +10,20 @@ Short alias: `img`
 - Ask multiple questions in a single model call — answers returned as paired question/answer list
 - Structured summaries (text, mode, type, colours) extracted and cached in `meta.json`
 - Clipboard shortcuts `clip_ask()` and `clip_view()` — no handle juggling needed
-- Content-hash deduplication — loading the same image twice returns the existing handle
-- Session LRU cache keeps resized model bytes in-memory to avoid repeated disk reads
-- Storage at `.onetool/images/` persists across sessions; `purge()` cleans up by age
 
 ## Functions
 
 | Function | Description |
 |----------|-------------|
-| `img.load(img, ...)` | Load a single image; return a stable handle |
-| `img.load_batch(img, ...)` | Load multiple images from a glob or list |
-| `img.ask(img, q, ...)` | Ask one or more questions about an image |
-| `img.clip_ask(q, ...)` | Shorthand: ask about the current clipboard image |
-| `img.clip_view()` | Shorthand: structured summary of the current clipboard image |
-| `img.summary(img)` | Extract and cache a structured summary of an image |
-| `img.list()` | List all loaded images with metadata |
-| `img.delete(handle)` | Delete an image and free session cache |
-| `img.purge(...)` | Delete images by age or delete all |
+| `ot_image.load(img, ...)` | Load a single image; return a stable handle |
+| `ot_image.load_batch(img, ...)` | Load multiple images from a glob or list |
+| `ot_image.ask(img, q, ...)` | Ask one or more questions about an image |
+| `ot_image.clip_ask(q, ...)` | Shorthand: ask about the current clipboard image |
+| `ot_image.clip_view()` | Shorthand: structured summary of the current clipboard image |
+| `ot_image.summary(img)` | Extract and cache a structured summary of an image |
+| `ot_image.list()` | List all loaded images with metadata |
+| `ot_image.delete(handle)` | Delete an image and free session cache |
+| `ot_image.purge(...)` | Delete images by age or delete all |
 
 ## Key Parameters
 
@@ -78,43 +75,43 @@ tools:
 
 ```python
 # Load from file and ask a question
-result = img.load(img="~/screenshots/dashboard.png")
-img.ask(img=result["handle"], q="What is the main metric shown?")
+result = ot_image.load(img="~/screenshots/dashboard.png")
+ot_image.ask(img=result["handle"], q="What is the main metric shown?")
 
 # Ask multiple questions in one call
-img.ask(
+ot_image.ask(
     img="~/screenshots/dashboard.png",
     q=["What framework is shown?", "Is this dark mode?"]
 )
 
 # Load with a custom handle name
-img.load(img="~/assets/logo.png", handle="logo")
-img.ask(img="#logo", q="What colour is the logo?")
+ot_image.load(img="~/assets/logo.png", handle="logo")
+ot_image.ask(img="#logo", q="What colour is the logo?")
 
 # Clipboard shortcuts (no load step needed)
-img.clip_ask(q="Extract all text from this screenshot")
-img.clip_view()
+ot_image.clip_ask(q="Extract all text from this screenshot")
+ot_image.clip_view()
 
 # Structured summary — cached after first call
-img.summary(img="#logo")
+ot_image.summary(img="#logo")
 
 # Load a batch from glob
-img.load_batch(img="~/screenshots/*.png")
+ot_image.load_batch(img="~/screenshots/*.png")
 
 # Load a batch from a list
-img.load_batch(img=["~/a.png", "~/b.png"])
+ot_image.load_batch(img=["~/a.png", "~/b.png"])
 
 # List all loaded images
-img.list()
+ot_image.list()
 
 # Delete a single image
-img.delete(handle="#img_a3f7b2c4")
+ot_image.delete(handle="#img_a3f7b2c4")
 
 # Purge images older than 1 hour
-img.purge(minutes=60)
+ot_image.purge(minutes=60)
 
 # Purge all images
-img.purge(all=True)
+ot_image.purge(all=True)
 ```
 
 ## See Also

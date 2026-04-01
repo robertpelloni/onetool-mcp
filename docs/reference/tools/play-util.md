@@ -1,101 +1,41 @@
-# Playwright Util
+# Play Util
 
-Visual element annotation for the [Playwright MCP](../servers/playwright.md) server — highlight elements, guide users through workflows, and let users point Claude to elements with ++ctrl+i++.
+Visual element annotation for the Playwright MCP server — highlight elements, guide users through workflows, and read user selections.
 
 Short alias: `play`
 
-## Tools
+## Highlights
 
-### `inject_annotations()`
+- Inject overlays onto any page and highlight elements with labelled, coloured boxes
+- `enable_auto_inject()` persists annotations across page navigations for multi-page sessions
+- Multi-step workflow guidance — all steps visible at once via `guide_user`
+- Manual selection mode (Ctrl+I) lets users point Claude to page elements
 
-Loads inject.js v2.0 into the current page. Must be called before any other annotation function. Idempotent — re-calling on an already-injected page returns success without re-injecting.
+## Functions
 
-```python
-play_util.inject_annotations()
-# Returns: {"success": True, "ready": True, "version": "2.0.0"}
-```
+| Function | Description |
+|----------|-------------|
+| `play_util.inject_annotations()` | Load inject.js into the current page (idempotent) |
+| `play_util.enable_auto_inject()` | Register inject.js as an init script for all future pages |
+| `play_util.highlight_element(selector, ...)` | Highlight elements matching a CSS selector |
+| `play_util.scan_annotations()` | Return all current annotations on the page |
+| `play_util.clear_annotations()` | Remove all annotations and overlays |
+| `play_util.guide_user(task, steps)` | Highlight a sequence of elements for a workflow |
 
-### `enable_auto_inject()`
+## Key Parameters
 
-Registers inject.js as a Playwright init script so `window.__inspector` is available on every page for the rest of the browser session — including pages loaded after navigation — without any per-page re-injection.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `selector` | str | CSS selector to match elements |
+| `label` | str | Text label for the highlight overlay |
+| `color` | str | Overlay colour: `"orange"` (default), `"red"`, `"blue"`, `"green"` |
+| `element_id` | str | Optional ID for the annotation |
+| `task` | str | Description of the guided workflow |
+| `steps` | list[dict] | List of `{selector, label, color}` dicts for `guide_user` |
 
-```python
-play_util.enable_auto_inject()
-# Returns: {"success": True, "auto_inject": True}
-```
+## Requires
 
-Use this instead of `inject_annotations()` when navigating across multiple pages. The two approaches can coexist.
-
-### `highlight_element(selector, label, color, element_id)`
-
-Highlights all elements matching a CSS selector with a labelled overlay box.
-
-```python
-play_util.highlight_element(selector="button.submit", label="Click here")
-play_util.highlight_element(selector=".error", label="Fix this", color="red")
-```
-
-Available colours: `orange` (default), `red`, `blue`, `green`.
-
-### `scan_annotations()`
-
-Returns all current annotations on the page — both those added programmatically and those added by the user via selection mode.
-
-```python
-annotations = play_util.scan_annotations()
-# Returns: [{"id": "sel-1", "label": "My note", "selector": ".some-el",
-#            "content": "...", "tagName": "span", "color": "orange"}, ...]
-```
-
-### `clear_annotations()`
-
-Removes all annotations and overlays from the page.
-
-```python
-play_util.clear_annotations()
-# Returns: {"success": True, "cleared": 3}
-```
-
-### `guide_user(task, steps)`
-
-Highlights a sequence of elements at once so the user can see a full workflow in one view.
-
-```python
-play_util.guide_user(
-    task="Complete checkout",
-    steps=[
-        {"selector": "input[name='email']", "label": "1. Enter email"},
-        {"selector": "input[name='card']",  "label": "2. Card number"},
-        {"selector": "button.pay",          "label": "3. Pay now", "color": "green"},
-    ],
-)
-```
-
-## Manual Selection Mode (Ctrl+I / Cmd+I)
-
-Users can annotate elements directly in the browser without writing any code:
-
-1. Press ++ctrl+i++ (or ++cmd+i++ on macOS) to enter selection mode — the cursor changes to a crosshair
-2. Hover over elements to preview the selection highlight
-3. Click an element — a prompt appears to enter a custom label
-4. Press ++ctrl+i++ again (or cancel the prompt) to exit selection mode
-
-Claude reads the result with `scan_annotations()`:
-
-```python
-play_util.inject_annotations()
-# ... tell user to press Ctrl+I and click the element they mean ...
-annotations = play_util.scan_annotations()
-# Use annotations[0]["selector"] to interact with what they picked
-```
-
-## Usage Patterns
-
-- Call `inject_annotations()` before other annotation functions on a single page, or call `enable_auto_inject()` once at the start of a multi-page session to avoid re-injecting after each navigation
-- Use `highlight_element` to show the user what to interact with next
-- Use `guide_user` for multi-step workflows — all steps visible at once
-- Use `scan_annotations` after the user has used Ctrl+I to read their selections
-- Call `clear_annotations()` between tasks to avoid stale overlays
+- The `playwright` MCP server must be enabled in `servers.yaml` or via `ot.server(enable="playwright")`
 
 ## Configuration
 
@@ -121,36 +61,27 @@ Or enable for the current session only: `ot.server(enable="playwright")`
 
 ## Examples
 
-### Guide a user through a form
-
 ```python
-playwright.browser_navigate(url="https://myapp.com/settings")
+# Inject annotations and highlight an element
 play_util.inject_annotations()
+play_util.highlight_element(selector="button.submit", label="Click here")
+
+# Enable auto-inject for multi-page sessions
+play_util.enable_auto_inject()
+
+# Guide a user through a multi-step form
 play_util.guide_user(
-    task="Update your profile",
+    task="Complete checkout",
     steps=[
-        {"selector": "input[name='display_name']", "label": "1. Edit name"},
-        {"selector": "input[name='email']",         "label": "2. Confirm email"},
-        {"selector": "button[type='submit']",        "label": "3. Save", "color": "green"},
+        {"selector": "input[name='email']", "label": "1. Enter email"},
+        {"selector": "input[name='card']",  "label": "2. Card number"},
+        {"selector": "button.pay",          "label": "3. Pay now", "color": "green"},
     ],
 )
-playwright.browser_take_screenshot()
-```
 
-### Let a user point Claude to an element
-
-```python
-play_util.inject_annotations()
-# Ask user to press Ctrl+I and click the element they want
+# Read user selections after Ctrl+I
 annotations = play_util.scan_annotations()
-# annotations[0]["selector"] contains the CSS selector of what they clicked
-```
 
-### Highlight an error field
-
-```python
-play_util.inject_annotations()
-play_util.highlight_element(selector="#email-error", label="Fix this", color="red")
-playwright.browser_take_screenshot()
+# Clear all overlays
 play_util.clear_annotations()
 ```

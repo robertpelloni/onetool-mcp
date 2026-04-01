@@ -11,11 +11,10 @@ Core tools for OneTool introspection and management.
 
 ## Highlights
 
-- List and filter available tools and packs
-- Check system health and API connectivity
-- Access configuration, aliases, and snippets
-- Publish messages to configured topics
+- List and filter available tools, packs, servers, aliases, and snippets
+- Check system health, API connectivity, and security rules
 - Query stored large outputs with pagination and search
+- Unified `ot.help()` entry point for discovery across all resource types
 
 ## Functions
 

@@ -99,6 +99,19 @@ Simple named timers that persist across tool calls. Start a timer before a long 
 >>> ot_timer.list()
 ```
 
+### knowledge — RAG knowledge base `[util]`
+
+Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis. Index documentation from scraped sites or write personal annotations, then search with keyword, semantic, or combined (hybrid) modes. `knowledge.ask()` retrieves relevant chunks and synthesises a concise answer with source citations. Link-graph traversal via `knowledge.related()` follows markdown hyperlinks between topics.
+
+```python
+>>> knowledge.search(q='context managers', db='docs')
+>>> knowledge.ask(q='How do I configure authentication?', db='docs')
+>>> knowledge.write(topic='python/tips/loops', content='Use enumerate()', db='docs', category='rule')
+>>> knowledge.dbs()
+```
+
+Also provides `read`, `update`, `append`, `delete`, `grep`, `related`, `list`, `toc`, `slice`, `stats`, `info`. Short alias: `kb`.
+
 ### ot_context — Smart context store `[core]`
 
 Persistent SQLite + FTS5 store for large tool outputs. TTL-expiring, BM25-indexed. Write, search, grep, and navigate results across tool calls without burning your context window.
@@ -158,9 +171,19 @@ v1's memory pack already had semantic search via embeddings. v2 adds `grep` for 
 | ------------------- | ----------------------------------------------------- |
 | `mem.grep(pattern)` | Regex search across memory content with context lines |
 
+### mem `[util]` — new retrieval functions
+
+Three new functions extend mem beyond write/search/grep:
+
+| Function                        | What it does                                                  |
+| ------------------------------- | ------------------------------------------------------------- |
+| `mem.ask(topic, q)`             | Q&A over a memory using LLM synthesis                         |
+| `mem.inspect(topic)`            | Low-level structured metadata for a single memory             |
+| `mem.query(topic, expr)`        | JMESPath query against a JSON/YAML memory                     |
+
 ### context7 `[dev]`
 
-The Context7 integration has been simplified. `search()` now accepts a `limit` parameter to control how many results come back, and `doc()` has a cleaner signature — just pass the library identifier and your query. The underlying API was updated to v2 endpoints with better library resolution and semantic reranking.
+The Context7 integration has been simplified. `doc()` has a cleaner signature — just pass the library identifier and your query. The underlying API was updated to v2 endpoints with better library resolution and semantic reranking.
 
 ### diagram `[dev]`
 
@@ -213,7 +236,7 @@ Runs ELK.js in the browser to automatically position all nodes, then calls `fit(
 Getting started no longer means editing YAML by hand. Run `onetool init` and a TUI opens — a checkbox list of every available extension (prompts, servers, security rules, diagram config, snippets). Toggle what you want, press enter, and the config files are written for you. Existing files are backed up to `.bak` automatically.
 
 ```bash
-onetool init -c ~/.onetool
+onetool init --config ~/.onetool
 ```
 
 ### Cleaner config layout
@@ -226,6 +249,17 @@ v2 simplifies how config is found and passed to the server:
 
 ```bash
 onetool --config ~/.onetool/onetool.yaml --secrets ~/.onetool/secrets.yaml
+```
+
+### Top-level `llm:` config
+
+Configure `base_url`, `model`, and `embedding_model` once at the top level — all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`, `ctx`) inherit from it. Individual packs can still override with `tools.<pack>.model` etc.
+
+```yaml
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: google/gemini-2-flash-preview
+  embedding_model: text-embedding-3-small
 ```
 
 ### Slim prompts

@@ -6,10 +6,10 @@ OneTool uses YAML configuration files. The config file path is always specified 
 
 ```bash
 # Initialize config (interactive TUI)
-onetool init -c .onetool
+onetool init --config .onetool
 
 # Validate configuration
-onetool init validate -c .onetool/onetool.yaml
+onetool init validate --config .onetool/onetool.yaml
 ```
 
 ## Key Files

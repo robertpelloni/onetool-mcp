@@ -52,7 +52,7 @@ ot_llm.transform(
 
 # Summarize content
 ot_llm.transform(
-    data=web.fetch(url="https://example.com/article"),
+    data=webfetch.fetch(url="https://docs.python.org/3/library/json.html"),
     prompt="Summarize the main points in 3 bullet points"
 )
 
@@ -73,20 +73,12 @@ ot_llm.transform_file(
 
 ## Configuration
 
-### Top-level llm: block (recommended)
+### Required
 
-Configure `base_url` and `model` once for all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`, `ctx`):
+- `OPENAI_API_KEY` must be set in `secrets.yaml`.
+- `base_url` and `model` must be configured via top-level `llm:` or `tools.ot_llm.*`.
 
-```yaml
-llm:
-  base_url: https://openrouter.ai/api/v1
-  model: google/gemini-2-flash-preview
-  embedding_model: text-embedding-3-small  # for mem and knowledge
-```
-
-### Per-tool override (optional)
-
-`tools.ot_llm.*` overrides the top-level `llm:` values for `ot_llm` only:
+### Optional
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -94,6 +86,21 @@ llm:
 | `tools.ot_llm.model` | string | `""` | Overrides `llm.model` for this tool only. |
 | `tools.ot_llm.timeout` | int | `30` | API timeout in seconds. |
 | `tools.ot_llm.max_tokens` | int \| null | `null` | Max response tokens. `null` means no limit. |
+
+Configure `base_url` and `model` once at the top level for all LLM-using tools (`ot_llm`, `ot_image`, `mem`, `knowledge`, `ctx`):
+
+```yaml
+llm:
+  base_url: https://openrouter.ai/api/v1
+  model: google/gemini-2-flash-preview
+  embedding_model: text-embedding-3-small  # for mem and knowledge
+
+# Per-tool override (optional)
+tools:
+  ot_llm:
+    timeout: 30
+    max_tokens: null
+```
 
 ### Defaults
 

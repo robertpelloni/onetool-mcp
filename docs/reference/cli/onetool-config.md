@@ -4,11 +4,11 @@ Complete reference for `onetool.yaml` configuration.
 
 ## TL;DR
 
-- Use `onetool init -c ~/.onetool` for first-time setup.
+- Use `onetool init --config ~/.onetool` for first-time setup.
 - Core config lives in `onetool.yaml`; secrets live in `secrets.yaml`.
 - Relative include paths resolve from the directory containing `onetool.yaml`.
 - Start with `version`, `include`, `tools_dir`, `servers`, `tools`, `security`.
-- Validate with `onetool init validate -c ~/.onetool/onetool.yaml`.
+- Validate with `onetool init validate --config ~/.onetool/onetool.yaml`.
 
 ## CLI Flags
 
@@ -31,13 +31,13 @@ Run `onetool init` to create a config interactively:
 
 ```bash
 onetool init                          # Create onetool.yaml in current directory
-onetool init -c .onetool              # Create .onetool/onetool.yaml
-onetool init -c .onetool/onetool.yaml # Explicit file path
+onetool init --config .onetool              # Create .onetool/onetool.yaml
+onetool init --config .onetool/onetool.yaml # Explicit file path
 
-onetool init validate -c .onetool/onetool.yaml  # Validate + show status
+onetool init validate --config .onetool/onetool.yaml  # Validate + show status
 ```
 
-`onetool init` opens a TUI (interactive checkbox) to select which extensions to materialise. Existing files are backed up to `.bak` automatically. Running non-interactively (e.g., in CI) writes a minimal `onetool.yaml` with `version: 2`.
+`onetool init` opens a TUI (interactive checkbox) to select which extensions to install. Existing files are backed up to `.bak` automatically. Running non-interactively (e.g., in CI) writes a minimal `onetool.yaml` with `version: 2`.
 
 ## YAML Schema
 

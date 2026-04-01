@@ -4,11 +4,10 @@ Database introspection and query execution via SQLAlchemy. Supports any SQLAlche
 
 ## Highlights
 
-- Connection pooling with automatic health checks
+- Connection pooling with automatic health checks and 1-hour recycling
 - Vertical result formatting optimized for LLM consumption
 - Parameterized queries for safe SQL execution
-- Large results truncated at 4000 characters
-- Per-URL connection pools with 1-hour recycling
+- Large results truncated at configurable character limit
 
 ## Functions
 
@@ -27,29 +26,6 @@ Database introspection and query execution via SQLAlchemy. Supports any SQLAlche
 | `ignore_case` | bool | Case-insensitive filter matching (tables only, default: False) |
 | `table_names` | list[str] | Tables to inspect (schema only) |
 | `params` | dict | Query parameters for safe substitution (query only) |
-
-## Examples
-
-```python
-db_url = "postgresql://localhost/myapp"
-
-# List all tables
-db.tables(db_url=db_url)
-
-# Filter tables
-db.tables(db_url=db_url, filter="user")
-
-# Get schema for tables
-db.schema(["users", "orders"], db_url=db_url)
-
-# Execute queries (parameterized for safety)
-db.query("SELECT * FROM users LIMIT 5", db_url=db_url)
-db.query(
-    "SELECT * FROM users WHERE status = :status",
-    db_url=db_url,
-    params={"status": "active"}
-)
-```
 
 ## Project Configuration
 
@@ -97,6 +73,29 @@ tools:
 ### Defaults
 
 - If `tools.db` is omitted, query output is truncated at 4000 characters.
+
+## Examples
+
+```python
+db_url = "postgresql://localhost/myapp"
+
+# List all tables
+db.tables(db_url=db_url)
+
+# Filter tables
+db.tables(db_url=db_url, filter="user")
+
+# Get schema for tables
+db.schema(["users", "orders"], db_url=db_url)
+
+# Execute queries (parameterized for safety)
+db.query("SELECT * FROM users LIMIT 5", db_url=db_url)
+db.query(
+    "SELECT * FROM users WHERE status = :status",
+    db_url=db_url,
+    params={"status": "active"}
+)
+```
 
 ## Security
 

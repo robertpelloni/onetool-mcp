@@ -26,7 +26,7 @@ Initialize and manage the OneTool configuration directory.
 onetool init [subcommand]
 ```
 
-Running `onetool init` without a subcommand runs an interactive TUI to select which extensions to materialise. Existing files are backed up to `.bak` automatically.
+Running `onetool init` without a subcommand runs an interactive TUI to select which extensions to install. Existing files are backed up to `.bak` automatically.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -34,12 +34,12 @@ Running `onetool init` without a subcommand runs an interactive TUI to select wh
 
 #### init (default)
 
-Interactive setup — select which extensions to materialise into the config directory. Pass `-c` to specify a directory or config file path.
+Interactive setup — select which extensions to install into the config directory. Pass `--config` to specify a directory or config file path.
 
 ```bash
-onetool init                     # uses current directory
-onetool init -c .onetool         # explicit directory
-onetool init -c .onetool/ot.yaml # explicit file path
+onetool init                              # uses current directory
+onetool init --config .onetool            # explicit directory
+onetool init --config .onetool/ot.yaml    # explicit file path
 ```
 
 #### init validate
@@ -47,7 +47,7 @@ onetool init -c .onetool/ot.yaml # explicit file path
 Validates configuration files and displays status including packs, secrets (names only), snippets, aliases, and MCP servers.
 
 ```bash
-onetool init validate -c .onetool/onetool.yaml
+onetool init validate --config .onetool/onetool.yaml
 ```
 
 ## Examples
@@ -69,8 +69,8 @@ See [onetool Configuration](onetool-config.md) for full schema reference.
 ### Quick Setup
 
 ```bash
-onetool init -c .onetool           # Interactive TUI setup
-onetool init validate -c .onetool/onetool.yaml  # Check for errors
+onetool init --config .onetool     # Interactive TUI setup
+onetool init validate --config .onetool/onetool.yaml  # Check for errors
 ```
 
 ### Environment Variables

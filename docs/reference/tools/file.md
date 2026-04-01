@@ -7,12 +7,9 @@ Short alias: `f`
 ## Highlights
 
 - Configurable security boundaries with allowed directories
-- Automatic backup creation before writes
-- Recursive directory operations with pattern filtering
-- Line-numbered file reading with pagination
-- Text replacement with occurrence control
 - Pure-Python content search (no `rg` binary required) with `.gitignore` support
 - Section-aware navigation: TOC, slice, and batch slice for markdown files
+- Batch reads and recursive directory operations with pattern filtering
 
 ## Read Operations
 

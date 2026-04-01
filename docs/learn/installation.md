@@ -48,8 +48,8 @@ Tools are split into optional extras for leaner installs:
 
 | Extra | Tools | Install |
 |-------|-------|---------|
-| `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `mem` | `uv tool install 'onetool-mcp[util]'` |
-| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `webfetch` | `uv tool install 'onetool-mcp[dev]'` |
+| `[util]` | `brave`, `convert`, `excel`, `file`, `ground`, `knowledge`, `mem`, `tavily` | `uv tool install 'onetool-mcp[util]'` |
+| `[dev]` | `aws`, `chrome_util`, `context7`, `db`, `diagram`, `package`, `play_util`, `ripgrep`, `webfetch`, `whiteboard` | `uv tool install 'onetool-mcp[dev]'` |
 | `[all]` | Everything | `uv tool install 'onetool-mcp[all]'` |
 
 ```bash
@@ -188,8 +188,8 @@ winget install BurntSushi.ripgrep.MSVC
 onetool --version
 
 # Initialize and validate config
-onetool init -c ~/.onetool
-onetool init validate -c ~/.onetool/onetool.yaml
+onetool init --config ~/.onetool
+onetool init validate --config ~/.onetool/onetool.yaml
 
 ```
 

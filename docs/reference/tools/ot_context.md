@@ -100,15 +100,29 @@ With no arguments, deletes handles older than 15 minutes, then compacts the DB.
 
 ## Configuration
 
-Ctx reads from `onetool.yaml` under `tools.ctx`:
+### Required
+
+None — no secrets required.
+
+### Optional
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `tools.ctx.ttl` | int | `3600` | Handle TTL in seconds. `0` = no expiry. |
+| `tools.ctx.max_line_chars` | int | `500` | Lines longer than this are truncated with a `[+N chars]` suffix. |
+| `tools.ctx.ask_max_bytes` | int | `204800` | Content is truncated to this size before sending to `ctx.ask` (bytes). `0` = no limit. |
 
 ```yaml
 tools:
   ctx:
-    ttl: 3600           # Handle TTL in seconds (0 = no expiry)
-    max_inline_bytes: 1048576  # Spill to file above this size (default 1MB)
-    embedding_model: ""  # Optional: ot_llm model for semantic embeddings
+    ttl: 3600
+    max_line_chars: 500
+    ask_max_bytes: 204800
 ```
+
+### Defaults
+
+- If `tools.ctx` is omitted, handles expire after 3600 seconds and long lines are truncated at 500 characters.
 
 ## Examples
 

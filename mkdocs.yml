@@ -154,7 +154,6 @@ nav:
       - reference/index.md
       - CLIs:
           - reference/cli/index.md
-          - bench: reference/cli/bench.md
           - onetool: reference/cli/onetool.md
           - onetool Configuration: reference/cli/onetool-config.md
       - Tools:
@@ -170,6 +169,7 @@ nav:
           - Excel: reference/tools/excel.md
           - File: reference/tools/file.md
           - Ground: reference/tools/ground.md
+          - Knowledge: reference/tools/knowledge.md
           - LLM: reference/tools/ot_llm.md
           - Mem: reference/tools/mem.md
           - OT Core: reference/tools/ot_core.md
@@ -183,7 +183,6 @@ nav:
           - Tavily: reference/tools/tavily.md
           - Whiteboard: reference/tools/whiteboard.md
           - Webfetch: reference/tools/webfetch.md
-          - Worktree: reference/tools/worktree.md
       - Servers:
           - reference/servers/index.md
           - Chrome DevTools: reference/servers/chrome-devtools.md

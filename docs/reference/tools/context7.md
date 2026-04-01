@@ -18,20 +18,14 @@ Short alias: `c7`
 | `context7.search(query, library_name, ...)` | Search for libraries by name |
 | `context7.doc(library_id, query)` | Fetch semantically-reranked docs for a library |
 
-## Search Parameters
+## Key Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `query` | str | Your task or question — used for LLM relevance ranking (e.g. "How do I set up JWT auth?") |
-| `library_name` | str | The library to find (e.g. `"express"`, `"react"`, `"fastapi"`) |
+| `library_name` | str | The library to find in `search()` (e.g. `"express"`, `"react"`, `"fastapi"`) |
+| `library_id` | str | Library identifier for `doc()` — flexible formats accepted (see below) |
 | `output_format` | str | `"str"` (default) for formatted string, `"dict"` for raw API JSON |
-
-## Doc Parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `library_id` | str | Library identifier — flexible formats accepted (see below) |
-| `query` | str | Natural-language question for server-side semantic reranking |
 
 **Accepted `library_id` formats:**
 

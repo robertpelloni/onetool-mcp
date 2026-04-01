@@ -208,12 +208,6 @@ Re-reads source files for stale memories and updates their content. Preserves hi
 
 Extract sections from multiple memories in a single call.
 
-### `mem.cache_clear()`
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `topic` | str | Clear only entries under this topic prefix. If omitted, clears the entire cache. |
-
 ## Configuration
 
 ### Required
@@ -374,9 +368,6 @@ mem.slice_batch(items=[
     {"topic": "rules", "select": "Requirements"},
 ])
 
-# Clear read cache
-mem.cache_clear()
-mem.cache_clear(topic="docs/")
 ```
 
 ## Section Navigation
@@ -398,6 +389,12 @@ The `toc()` function checks if the source file has changed since storage and war
 - `"-50:"` - last 50 lines
 - `"Requirements"` - heading path (case-insensitive substring match)
 - `[1, "Requirements", "200:300"]` - mixed list
+
+## Requires
+
+- `OPENAI_API_KEY` in secrets.yaml (only when `embeddings_enabled: true`)
+- SQLite (Python stdlib `sqlite3`)
+- tiktoken (bundled with OneTool)
 
 ## Embedding Large Content
 
@@ -452,9 +449,3 @@ mem.index(topic="projects/", dry_run=False)    # Run scoped backfill
 ```
 
 When embeddings are disabled, `mem.search(mode="semantic")` and `mem.search(mode="hybrid")` return a helpful message. Pattern search always works regardless of embedding state.
-
-## Requirements
-
-- `OPENAI_API_KEY` in secrets.yaml (only when `embeddings_enabled: true`)
-- SQLite (Python stdlib `sqlite3`)
-- tiktoken (bundled with OneTool)

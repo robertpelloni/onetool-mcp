@@ -17,13 +17,13 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 ## 2. Install OneTool
 
 ```bash
-uv tool install onetool-mcp
+uv tool install 'onetool-mcp[all]'
 ```
 
 ## 3. Initialize
 
 ```bash
-onetool init -c ~/.onetool
+onetool init --config ~/.onetool
 ```
 
 An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, diagram config, snippets). Press space to toggle, enter to confirm.
@@ -69,7 +69,7 @@ Uncomment and add keys for the tools you want to use.
 ## 5. Validate
 
 ```bash
-onetool init validate -c ~/.onetool/onetool.yaml
+onetool init validate --config ~/.onetool/onetool.yaml
 ```
 
 This checks your configuration is correct.

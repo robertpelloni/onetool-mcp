@@ -9,9 +9,8 @@ Short alias: `diag`
 
 ## Highlights
 
-- Two-stage pipeline (generate source, then render)
-- Config-driven instructions and templates
-- Policy rules for LLM guidance
+- Two-stage pipeline (generate source, then render) via Kroki
+- Config-driven instructions, templates, and policy rules
 - Batch operations for self-hosted backends
 - Playground URL generation for debugging
 

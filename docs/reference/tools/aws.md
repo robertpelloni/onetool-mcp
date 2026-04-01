@@ -1,4 +1,4 @@
-# AWS MCP
+# AWS
 
 AWS services via the official [awslabs/mcp](https://github.com/awslabs/mcp) servers. Unlike the other proxy servers, AWS is managed as a dynamic tool pack — servers are activated on demand by role or name rather than being statically configured in `servers.yaml`.
 
