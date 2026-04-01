@@ -1563,6 +1563,100 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-scrape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb scrape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-reindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb reindex
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb stats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb info
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2565,6 +2659,100 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#global-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Global options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-scrape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb scrape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb index
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-reindex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb reindex
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-stats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb stats
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb info
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#onetool-kb-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        onetool kb export
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2791,8 +2979,7 @@
 <h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>OPENAI_API_KEY</code> in <code>secrets.yaml</code> (for embeddings and AI synthesis)</li>
-<li><code>pip install sqlite-vec</code> (or <code>pip install onetool-mcp[util]</code>)</li>
-<li><code>pip install python-frontmatter</code> (or <code>pip install onetool-mcp[util]</code>)</li>
+<li><code>onetool-mcp[util]</code> extra (provides <code>sqlite-vec</code> and <code>python-frontmatter</code>)</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
@@ -2922,6 +3109,134 @@
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="c1"># Read a specific entry</span>
 </span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;python/tips/loops&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h2>
+<p>The <code>onetool kb</code> command group handles offline knowledge base operations (scraping, indexing, and maintenance). All subcommands auto-detect <code>onetool.yaml</code> from the current directory.</p>
+<h3 id="global-options">Global options<a class="headerlink" href="#global-options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-c, --config PATH</code></td>
+<td>Path to <code>onetool.yaml</code> (auto-detected from <code>./onetool.yaml</code> or <code>.onetool/onetool.yaml</code>)</td>
+</tr>
+<tr>
+<td><code>-s, --secrets PATH</code></td>
+<td>Path to secrets file (auto-detected alongside config if omitted)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="onetool-kb-scrape">onetool kb scrape<a class="headerlink" href="#onetool-kb-scrape" title="Permanent link">&para;</a></h3>
+<p>Crawl all sources in a scrape project. Requires the <code>onetool-mcp[scrape]</code> extra and <code>playwright install chromium</code>.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>scrape<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--only TEXT</code></td>
+<td>Comma-separated source names to run (runs all if omitted)</td>
+</tr>
+<tr>
+<td><code>--resume</code></td>
+<td>Resume each source from <code>.state.json</code> if present</td>
+</tr>
+<tr>
+<td><code>--max-pages INT</code></td>
+<td>Hard limit on pages written per source (overrides config)</td>
+</tr>
+<tr>
+<td><code>--flat-files / --no-flat-files</code></td>
+<td>Write flat <code>::</code> -separated files instead of subdirectories</td>
+</tr>
+<tr>
+<td><code>--debug</code></td>
+<td>Write per-page debug artifacts (<code>cleaned.html</code>, <code>raw.html</code>, <code>screenshot.png</code>, <code>meta.json</code>) to <code>._debug/&lt;slug&gt;/</code></td>
+</tr>
+</tbody>
+</table>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>scrape<span class="w"> </span>docs
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>onetool<span class="w"> </span>kb<span class="w"> </span>scrape<span class="w"> </span>docs<span class="w"> </span>--only<span class="w"> </span>python,stdlib<span class="w"> </span>--max-pages<span class="w"> </span><span class="m">200</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>onetool<span class="w"> </span>kb<span class="w"> </span>scrape<span class="w"> </span>docs<span class="w"> </span>--resume
+</span></code></pre></div>
+<h3 id="onetool-kb-index">onetool kb index<a class="headerlink" href="#onetool-kb-index" title="Permanent link">&para;</a></h3>
+<p>Index a project's scraped content into the knowledge database.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>index<span class="w"> </span>&lt;project&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--path PATH</code></td>
+<td>Directory to index (overrides project's <code>output_base_dir</code>)</td>
+</tr>
+<tr>
+<td><code>--overwrite TEXT</code></td>
+<td><code>skip</code> (default) or <code>update</code></td>
+</tr>
+</tbody>
+</table>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>index<span class="w"> </span>docs
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>onetool<span class="w"> </span>kb<span class="w"> </span>index<span class="w"> </span>docs<span class="w"> </span>--overwrite<span class="w"> </span>update
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>onetool<span class="w"> </span>kb<span class="w"> </span>index<span class="w"> </span>docs<span class="w"> </span>--path<span class="w"> </span>/tmp/scraped
+</span></code></pre></div>
+<h3 id="onetool-kb-reindex">onetool kb reindex<a class="headerlink" href="#onetool-kb-reindex" title="Permanent link">&para;</a></h3>
+<p>Backfill missing embeddings for all chunks in an existing database.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>reindex<span class="w"> </span>&lt;db&gt;
+</span></code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>reindex<span class="w"> </span>docs
+</span></code></pre></div>
+<h3 id="onetool-kb-stats">onetool kb stats<a class="headerlink" href="#onetool-kb-stats" title="Permanent link">&para;</a></h3>
+<p>Print chunk counts, embedding coverage, and file size.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>stats<span class="w"> </span>&lt;db&gt;
+</span></code></pre></div>
+<h3 id="onetool-kb-info">onetool kb info<a class="headerlink" href="#onetool-kb-info" title="Permanent link">&para;</a></h3>
+<p>Print database metadata, path, and version.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span>info<span class="w"> </span>&lt;db&gt;
+</span></code></pre></div>
+<h3 id="onetool-kb-export">onetool kb export<a class="headerlink" href="#onetool-kb-export" title="Permanent link">&para;</a></h3>
+<p>Export all chunks (or a filtered subset) to a JSON file.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span><span class="nb">export</span><span class="w"> </span>&lt;db&gt;<span class="w"> </span>--output<span class="w"> </span>&lt;path&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-o, --output PATH</code></td>
+<td>Output JSON file path (required)</td>
+</tr>
+<tr>
+<td><code>--category TEXT</code></td>
+<td>Filter by category</td>
+</tr>
+<tr>
+<td><code>--topic TEXT</code></td>
+<td>Filter by topic prefix</td>
+</tr>
+</tbody>
+</table>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>onetool<span class="w"> </span>kb<span class="w"> </span><span class="nb">export</span><span class="w"> </span>docs<span class="w"> </span>--output<span class="w"> </span>docs-dump.json
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>onetool<span class="w"> </span>kb<span class="w"> </span><span class="nb">export</span><span class="w"> </span>docs<span class="w"> </span>--output<span class="w"> </span>rules.json<span class="w"> </span>--category<span class="w"> </span>rule
 </span></code></pre></div>
 
 
