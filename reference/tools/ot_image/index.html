@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -841,8 +841,6 @@
       
         
       
-        
-      
     
     
     
@@ -898,34 +896,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1429,6 +1399,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../ot_llm/" class="md-nav__link">
         
   
@@ -1655,17 +1653,6 @@
   
     <nav class="md-nav" aria-label="Configuration">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#required" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Required
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#optional" class="md-nav__link">
@@ -1936,34 +1923,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2558,17 +2517,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#required" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Required
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#optional" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2712,9 +2660,6 @@
 <li>Ask multiple questions in a single model call — answers returned as paired question/answer list</li>
 <li>Structured summaries (text, mode, type, colours) extracted and cached in <code>meta.json</code></li>
 <li>Clipboard shortcuts <code>clip_ask()</code> and <code>clip_view()</code> — no handle juggling needed</li>
-<li>Content-hash deduplication — loading the same image twice returns the existing handle</li>
-<li>Session LRU cache keeps resized model bytes in-memory to avoid repeated disk reads</li>
-<li>Storage at <code>.onetool/images/</code> persists across sessions; <code>purge()</code> cleans up by age</li>
 </ul>
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <table>
@@ -2726,39 +2671,39 @@
 </thead>
 <tbody>
 <tr>
-<td><code>img.load(img, ...)</code></td>
+<td><code>ot_image.load(img, ...)</code></td>
 <td>Load a single image; return a stable handle</td>
 </tr>
 <tr>
-<td><code>img.load_batch(img, ...)</code></td>
+<td><code>ot_image.load_batch(img, ...)</code></td>
 <td>Load multiple images from a glob or list</td>
 </tr>
 <tr>
-<td><code>img.ask(img, q, ...)</code></td>
+<td><code>ot_image.ask(img, q, ...)</code></td>
 <td>Ask one or more questions about an image</td>
 </tr>
 <tr>
-<td><code>img.clip_ask(q, ...)</code></td>
+<td><code>ot_image.clip_ask(q, ...)</code></td>
 <td>Shorthand: ask about the current clipboard image</td>
 </tr>
 <tr>
-<td><code>img.clip_view()</code></td>
+<td><code>ot_image.clip_view()</code></td>
 <td>Shorthand: structured summary of the current clipboard image</td>
 </tr>
 <tr>
-<td><code>img.summary(img)</code></td>
+<td><code>ot_image.summary(img)</code></td>
 <td>Extract and cache a structured summary of an image</td>
 </tr>
 <tr>
-<td><code>img.list()</code></td>
+<td><code>ot_image.list()</code></td>
 <td>List all loaded images with metadata</td>
 </tr>
 <tr>
-<td><code>img.delete(handle)</code></td>
+<td><code>ot_image.delete(handle)</code></td>
 <td>Delete an image and free session cache</td>
 </tr>
 <tr>
-<td><code>img.purge(...)</code></td>
+<td><code>ot_image.purge(...)</code></td>
 <td>Delete images by age or delete all</td>
 </tr>
 </tbody>
@@ -2807,26 +2752,10 @@
 </table>
 <h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>tools.ot_image.vision_model</code> must be set for <code>ask()</code>, <code>summary()</code>, <code>clip_ask()</code>, and <code>clip_view()</code>.
-  Set to an OpenAI-compatible model identifier (e.g. <code>openai/gpt-4o-mini</code>).</li>
-<li>An API key: set <code>tools.ot_image.api_key</code> in <code>onetool.yaml</code> or store <code>OPENAI_API_KEY</code> as a secret.</li>
+<li>A vision model: set <code>tools.ot_image.model</code> or the top-level <code>llm.model</code> for <code>ask()</code>, <code>summary()</code>, <code>clip_ask()</code>, and <code>clip_view()</code>.</li>
+<li><code>OPENAI_API_KEY</code> in <code>secrets.yaml</code> for vision model calls.</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Key</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tools.ot_image.vision_model</code></td>
-<td>Vision model for <code>ask()</code> and <code>summary()</code> (e.g. <code>openai/gpt-4o-mini</code>)</td>
-</tr>
-</tbody>
-</table>
 <h3 id="optional">Optional<a class="headerlink" href="#optional" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2839,16 +2768,16 @@
 </thead>
 <tbody>
 <tr>
-<td><code>tools.ot_image.api_key</code></td>
+<td><code>tools.ot_image.model</code></td>
 <td>str</td>
 <td><code>""</code></td>
-<td>API key for the vision model. Falls back to <code>OPENAI_API_KEY</code> secret</td>
+<td>Vision model for <code>ask()</code> and <code>summary()</code>. Falls back to <code>llm.model</code></td>
 </tr>
 <tr>
 <td><code>tools.ot_image.base_url</code></td>
 <td>str</td>
 <td><code>""</code></td>
-<td>OpenAI-compatible base URL. Falls back to <code>tools.ot_llm.base_url</code></td>
+<td>OpenAI-compatible base URL. Falls back to <code>llm.base_url</code></td>
 </tr>
 <tr>
 <td><code>tools.ot_image.max_edge</code></td>
@@ -2864,58 +2793,62 @@
 </tr>
 </tbody>
 </table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">ot_image</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">vision_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-4o-mini</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">              </span><span class="c1"># falls back to OPENAI_API_KEY secret</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">             </span><span class="c1"># falls back to tools.ot_llm.base_url</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">max_edge</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1568</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">session_cache_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Minimal — inherits model and base_url from top-level llm: block</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">llm</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://openrouter.ai/api/v1</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">google/gemini-2-flash-preview</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Override just for ot_image (optional)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">ot_image</span><span class="p">:</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-4o-mini</span><span class="w">   </span><span class="c1"># overrides llm.model for vision calls only</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">max_edge</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1568</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nt">session_cache_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
 </span></code></pre></div>
 <h3 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">&para;</a></h3>
 <ul>
-<li>If <code>tools.ot_image</code> is omitted, <code>load()</code> and <code>list()</code> work without config. <code>ask()</code> and <code>summary()</code> require <code>vision_model</code> to be set.</li>
-<li>API key and base URL fall back automatically to <code>OPENAI_API_KEY</code> secret and <code>tools.ot_llm.base_url</code>.</li>
+<li>If <code>tools.ot_image</code> is omitted, <code>load()</code> and <code>list()</code> work without config. <code>ask()</code> and <code>summary()</code> require a model via <code>tools.ot_image.model</code> or <code>llm.model</code>.</li>
+<li><code>model</code> and <code>base_url</code> fall back to the top-level <code>llm:</code> config block. API key is always read from the <code>OPENAI_API_KEY</code> secret.</li>
 </ul>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Load from file and ask a question</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/screenshots/dashboard.png&quot;</span><span class="p">)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">img</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;handle&quot;</span><span class="p">],</span> <span class="n">q</span><span class="o">=</span><span class="s2">&quot;What is the main metric shown?&quot;</span><span class="p">)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ot_image</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/screenshots/dashboard.png&quot;</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;handle&quot;</span><span class="p">],</span> <span class="n">q</span><span class="o">=</span><span class="s2">&quot;What is the main metric shown?&quot;</span><span class="p">)</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Ask multiple questions in one call</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">img</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span>
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/screenshots/dashboard.png&quot;</span><span class="p">,</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">q</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;What framework is shown?&quot;</span><span class="p">,</span> <span class="s2">&quot;Is this dark mode?&quot;</span><span class="p">]</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="p">)</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Load with a custom handle name</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">img</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/assets/logo.png&quot;</span><span class="p">,</span> <span class="n">handle</span><span class="o">=</span><span class="s2">&quot;logo&quot;</span><span class="p">)</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">img</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;#logo&quot;</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="s2">&quot;What colour is the logo?&quot;</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/assets/logo.png&quot;</span><span class="p">,</span> <span class="n">handle</span><span class="o">=</span><span class="s2">&quot;logo&quot;</span><span class="p">)</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;#logo&quot;</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="s2">&quot;What colour is the logo?&quot;</span><span class="p">)</span>
 </span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
 </span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Clipboard shortcuts (no load step needed)</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">img</span><span class="o">.</span><span class="n">clip_ask</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s2">&quot;Extract all text from this screenshot&quot;</span><span class="p">)</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">img</span><span class="o">.</span><span class="n">clip_view</span><span class="p">()</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">clip_ask</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s2">&quot;Extract all text from this screenshot&quot;</span><span class="p">)</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">clip_view</span><span class="p">()</span>
 </span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
 </span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># Structured summary — cached after first call</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">img</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;#logo&quot;</span><span class="p">)</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;#logo&quot;</span><span class="p">)</span>
 </span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
 </span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Load a batch from glob</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">img</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/screenshots/*.png&quot;</span><span class="p">)</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="s2">&quot;~/screenshots/*.png&quot;</span><span class="p">)</span>
 </span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
 </span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="c1"># Load a batch from a list</span>
-</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="n">img</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;~/a.png&quot;</span><span class="p">,</span> <span class="s2">&quot;~/b.png&quot;</span><span class="p">])</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">load_batch</span><span class="p">(</span><span class="n">img</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;~/a.png&quot;</span><span class="p">,</span> <span class="s2">&quot;~/b.png&quot;</span><span class="p">])</span>
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>
 </span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="c1"># List all loaded images</span>
-</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="n">img</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">list</span><span class="p">()</span>
 </span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>
 </span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="c1"># Delete a single image</span>
-</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="n">img</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">handle</span><span class="o">=</span><span class="s2">&quot;#img_a3f7b2c4&quot;</span><span class="p">)</span>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">handle</span><span class="o">=</span><span class="s2">&quot;#img_a3f7b2c4&quot;</span><span class="p">)</span>
 </span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>
 </span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a><span class="c1"># Purge images older than 1 hour</span>
-</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="n">img</span><span class="o">.</span><span class="n">purge</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">purge</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
 </span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>
 </span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a><span class="c1"># Purge all images</span>
-</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="n">img</span><span class="o">.</span><span class="n">purge</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="n">ot_image</span><span class="o">.</span><span class="n">purge</span><span class="p">(</span><span class="nb">all</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>

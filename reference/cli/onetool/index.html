@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://onetool.beycom.online/reference/cli/onetool/">
       
       
-        <link rel="prev" href="../bench/">
+        <link rel="prev" href="../">
       
       
         <link rel="next" href="../onetool-config/">
@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -843,8 +843,6 @@
       
         
       
-        
-      
     
     
     
@@ -900,34 +898,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1626,6 +1596,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../tools/knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../tools/ot_llm/" class="md-nav__link">
         
   
@@ -1970,34 +1968,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2804,7 +2774,7 @@
 <p>Initialize and manage the OneTool configuration directory.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>onetool<span class="w"> </span>init<span class="w"> </span><span class="o">[</span>subcommand<span class="o">]</span>
 </span></code></pre></div>
-<p>Running <code>onetool init</code> without a subcommand runs an interactive TUI to select which extensions to materialise. Existing files are backed up to <code>.bak</code> automatically.</p>
+<p>Running <code>onetool init</code> without a subcommand runs an interactive TUI to select which extensions to install. Existing files are backed up to <code>.bak</code> automatically.</p>
 <table>
 <thead>
 <tr>
@@ -2820,14 +2790,14 @@
 </tbody>
 </table>
 <h4 id="init-default">init (default)<a class="headerlink" href="#init-default" title="Permanent link">&para;</a></h4>
-<p>Interactive setup — select which extensions to materialise into the config directory. Pass <code>-c</code> to specify a directory or config file path.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init<span class="w">                     </span><span class="c1"># uses current directory</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool<span class="w">         </span><span class="c1"># explicit directory</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool/ot.yaml<span class="w"> </span><span class="c1"># explicit file path</span>
+<p>Interactive setup — select which extensions to install into the config directory. Pass <code>--config</code> to specify a directory or config file path.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init<span class="w">                              </span><span class="c1"># uses current directory</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>.onetool<span class="w">            </span><span class="c1"># explicit directory</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>.onetool/ot.yaml<span class="w">    </span><span class="c1"># explicit file path</span>
 </span></code></pre></div>
 <h4 id="init-validate">init validate<a class="headerlink" href="#init-validate" title="Permanent link">&para;</a></h4>
 <p>Validates configuration files and displays status including packs, secrets (names only), snippets, aliases, and MCP servers.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>.onetool/onetool.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>--config<span class="w"> </span>.onetool/onetool.yaml
 </span></code></pre></div>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Start MCP server with explicit config</span>
@@ -2840,8 +2810,8 @@
 <p>Config is specified via <code>--config</code>. All relative paths inside the config file resolve from the config file's parent directory.</p>
 <p>See <a href="../onetool-config/">onetool Configuration</a> for full schema reference.</p>
 <h3 id="quick-setup">Quick Setup<a class="headerlink" href="#quick-setup" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool<span class="w">           </span><span class="c1"># Interactive TUI setup</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>.onetool/onetool.yaml<span class="w">  </span><span class="c1"># Check for errors</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>.onetool<span class="w">     </span><span class="c1"># Interactive TUI setup</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>--config<span class="w"> </span>.onetool/onetool.yaml<span class="w">  </span><span class="c1"># Check for errors</span>
 </span></code></pre></div>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
 <table>
@@ -2966,7 +2936,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../bench/" class="md-footer__link md-footer__link--prev" aria-label="Previous: bench">
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: CLI Reference">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2976,7 +2946,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                bench
+                CLI Reference
               </div>
             </div>
           </a>

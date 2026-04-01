@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -841,8 +841,6 @@
       
         
       
-        
-      
     
     
     
@@ -898,34 +896,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1429,6 +1399,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../ot_llm/" class="md-nav__link">
         
   
@@ -1793,17 +1791,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#otnotify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ot.notify()
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#otreload" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2101,34 +2088,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2915,17 +2874,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#otnotify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ot.notify()
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#otreload" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3044,11 +2992,10 @@
 </ul>
 <h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
 <ul>
-<li>List and filter available tools and packs</li>
-<li>Check system health and API connectivity</li>
-<li>Access configuration, aliases, and snippets</li>
-<li>Publish messages to configured topics</li>
+<li>List and filter available tools, packs, servers, aliases, and snippets</li>
+<li>Check system health, API connectivity, and security rules</li>
 <li>Query stored large outputs with pagination and search</li>
+<li>Unified <code>ot.help()</code> entry point for discovery across all resource types</li>
 </ul>
 <h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <table>
@@ -3128,10 +3075,6 @@
 <td>Query stored large output with pagination and search</td>
 </tr>
 <tr>
-<td><code>ot.notify(topic, message)</code></td>
-<td>Publish message to configured topic</td>
-</tr>
-<tr>
 <td><code>ot.reload()</code></td>
 <td>Force configuration reload</td>
 </tr>
@@ -3196,7 +3139,7 @@
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;brave&quot;</span><span class="p">)</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Exact server lookup (MCP proxy servers)</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;chrome-devtools&quot;</span><span class="p">)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;chrome_devtools&quot;</span><span class="p">)</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">ot</span><span class="o">.</span><span class="n">help</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;github&quot;</span><span class="p">)</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Snippet lookup (prefix with $)</span>
@@ -3212,7 +3155,7 @@
 <p><strong>Behaviour:</strong></p>
 <ul>
 <li>No query: Returns general help overview with discovery commands and examples</li>
-<li>Exact server match: Returns server help with type, status, instructions, and tool list</li>
+<li>Exact server match: Returns server help with status, source, instructions, and tool list</li>
 <li>Exact tool match (contains <code>.</code>): Returns detailed tool help with signature, args, returns, example</li>
 <li>Exact pack match: Returns pack help with instructions and tool list</li>
 <li>Snippet match (starts with <code>$</code>): Returns snippet definition with params and body</li>
@@ -3266,12 +3209,12 @@
 </span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">ot</span><span class="o">.</span><span class="n">pack_info</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;brave&quot;</span><span class="p">)</span>
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
 </span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># MCP server packs show source=&quot;mcp:...&quot;</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="n">ot</span><span class="o">.</span><span class="n">packs</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;chrome-devtools&quot;</span><span class="p">)</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="n">ot</span><span class="o">.</span><span class="n">packs</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;chrome_devtools&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>MCP proxy servers appear as packs with <code>source: "mcp:{server_name}"</code>.</p>
 <h2 id="otservers">ot.servers()<a class="headerlink" href="#otservers" title="Permanent link">&para;</a></h2>
 <p>List configured MCP proxy servers with connection status.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># List all servers (default: info=&quot;default&quot; → {name, type, enabled, status})</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># List all servers (default: info=&quot;default&quot; → {name, status, enabled, [call_as], [tool_count]})</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">servers</span><span class="p">()</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Filter by pattern</span>
@@ -3280,22 +3223,20 @@
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Names only</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">servers</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Full details (type, status, instructions, tools)</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">ot</span><span class="o">.</span><span class="n">servers</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;chrome-devtools&quot;</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Full structured dicts (status, source, tool_count, tools list)</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">ot</span><span class="o">.</span><span class="n">servers</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s2">&quot;chrome_devtools&quot;</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>Returns server configuration including:</p>
+<p>Returns server information (operational view):</p>
 <ul>
 <li><code>name</code> - Server name from config</li>
-<li><code>type</code> - Connection type (stdio or http)</li>
-<li><code>enabled</code> - Whether server is enabled</li>
 <li><code>status</code> - Connection status (connected/disconnected)</li>
+<li><code>enabled</code> - Whether server is enabled</li>
+<li><code>call_as</code> - Python-safe identifier (only when name has hyphens, e.g. <code>aws-iam</code> → <code>iam</code>)</li>
+<li><code>tool_count</code> - Number of available tools (only when connected)</li>
+<li><code>error</code> - Connection error (only when disconnected with error)</li>
 </ul>
-<p>With <code>info="full"</code>, also shows:</p>
-<ul>
-<li>Server instructions (if configured)</li>
-<li>List of available tools (if connected)</li>
-<li>URL or command details</li>
-</ul>
+<p>With <code>info="full"</code>, returns structured dicts also including <code>source</code> and <code>tools</code> list.
+For guidance, instructions, and examples, use <code>ot.help(query="&lt;server_name&gt;")</code> instead.</p>
 <h2 id="otserver">ot.server()<a class="headerlink" href="#otserver" title="Permanent link">&para;</a></h2>
 <p>Manage runtime proxy server state. All changes are in-memory only and reset when OneTool restarts.</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># List all servers with status</span>
@@ -3582,34 +3523,21 @@ meaningful (non-empty, non-false) default, e.g. <code>$rg p="..." path=.</code>.
 </tr>
 </tbody>
 </table>
-<h2 id="otnotify">ot.notify()<a class="headerlink" href="#otnotify" title="Permanent link">&para;</a></h2>
-<p>Publish a message to a configured topic.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">notify</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Remember to review PR #123&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p>Configure topics in <code>onetool.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">msg</span><span class="p">:</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">topics</span><span class="p">:</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;notes&quot;</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">        </span><span class="nt">file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.notes/inbox.md</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;ideas&quot;</span>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="w">        </span><span class="nt">file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.notes/ideas.md</span>
-</span></code></pre></div>
 <h2 id="otreload">ot.reload()<a class="headerlink" href="#otreload" title="Permanent link">&para;</a></h2>
 <p>Force reload of all configuration.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Clears cached configuration and reloads from disk. Use after modifying config files during a session.</p>
 <h2 id="otsecurity">ot.security()<a class="headerlink" href="#otsecurity" title="Permanent link">&para;</a></h2>
 <p>Check security rules and allowlists.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Summary of all security rules</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Check specific pattern</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>         <span class="c1"># → allowed (in imports.allow)</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span>  <span class="c1"># → blocked (matches calls.block)</span>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;exec&quot;</span><span class="p">)</span>         <span class="c1"># → blocked (not in builtins.allow)</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span> <span class="c1"># → allowed (tool namespace)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Summary of all security rules</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Check specific pattern</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>         <span class="c1"># → allowed (in imports.allow)</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span>  <span class="c1"># → blocked (matches calls.block)</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;exec&quot;</span><span class="p">)</span>         <span class="c1"># → blocked (not in builtins.allow)</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span> <span class="c1"># → allowed (tool namespace)</span>
 </span></code></pre></div>
 <p>Returns:</p>
 <ul>

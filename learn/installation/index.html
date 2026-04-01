@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -755,10 +755,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#transform-tool-configuration" class="md-nav__link">
+  <a href="#llm-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Transform Tool Configuration
+        LLM Configuration
       
     </span>
   </a>
@@ -1122,8 +1122,6 @@
       
         
       
-        
-      
     
     
     
@@ -1176,34 +1174,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1702,6 +1672,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/tools/knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/tools/ot_llm/" class="md-nav__link">
         
   
@@ -2046,34 +2044,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2749,10 +2719,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#transform-tool-configuration" class="md-nav__link">
+  <a href="#llm-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Transform Tool Configuration
+        LLM Configuration
       
     </span>
   </a>
@@ -2951,7 +2921,7 @@
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>onetool-mcp
 </span></code></pre></div>
-<p>This installs <code>onetool</code> and <code>bench</code> commands globally with the core tool set.</p>
+<p>This installs the <code>onetool</code> command globally with the core tool set.</p>
 <h3 id="optional-tool-packs">Optional Tool Packs<a class="headerlink" href="#optional-tool-packs" title="Permanent link">&para;</a></h3>
 <p>Tools are split into optional extras for leaner installs:</p>
 <table>
@@ -2965,12 +2935,12 @@
 <tbody>
 <tr>
 <td><code>[util]</code></td>
-<td><code>brave</code>, <code>convert</code>, <code>excel</code>, <code>file</code>, <code>ground</code>, <code>mem</code></td>
+<td><code>brave</code>, <code>convert</code>, <code>excel</code>, <code>file</code>, <code>ground</code>, <code>knowledge</code>, <code>mem</code>, <code>tavily</code></td>
 <td><code>uv tool install 'onetool-mcp[util]'</code></td>
 </tr>
 <tr>
 <td><code>[dev]</code></td>
-<td><code>aws</code>, <code>chrome_util</code>, <code>context7</code>, <code>db</code>, <code>diagram</code>, <code>package</code>, <code>play_util</code>, <code>ripgrep</code>, <code>web</code>, <code>worktree</code></td>
+<td><code>aws</code>, <code>chrome_util</code>, <code>context7</code>, <code>db</code>, <code>diagram</code>, <code>package</code>, <code>play_util</code>, <code>ripgrep</code>, <code>webfetch</code>, <code>whiteboard</code></td>
 <td><code>uv tool install 'onetool-mcp[dev]'</code></td>
 </tr>
 <tr>
@@ -3065,14 +3035,14 @@
 </tr>
 </tbody>
 </table>
-<h3 id="transform-tool-configuration">Transform Tool Configuration<a class="headerlink" href="#transform-tool-configuration" title="Permanent link">&para;</a></h3>
-<p>The transform tool requires explicit configuration in <code>onetool.yaml</code> under <code>tools.ot_llm</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span><span class="w">  </span><span class="c1"># Required</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai/gpt-5-mini&quot;</span><span class="w">                </span><span class="c1"># Required</span>
+<h3 id="llm-configuration">LLM Configuration<a class="headerlink" href="#llm-configuration" title="Permanent link">&para;</a></h3>
+<p>Configure <code>base_url</code> and <code>model</code> once at the top level — all LLM-using tools (<code>ot_llm</code>, <code>ot_image</code>, <code>mem</code>, <code>knowledge</code>, <code>ctx</code>) inherit from it:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">llm</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span><span class="w">    </span><span class="c1"># Required</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;google/gemini-2-flash-preview&quot;</span><span class="w">       </span><span class="c1"># Required for transform/vision</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">embedding_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;text-embedding-3-small&quot;</span><span class="w">    </span><span class="c1"># Required for mem/knowledge embeddings</span>
 </span></code></pre></div>
-<p>The tool is not available until both <code>base_url</code> and <code>model</code> are configured, plus <code>OPENAI_API_KEY</code> in secrets.</p>
+<p>The transform tool is not available until <code>base_url</code> and <code>model</code> are configured (via <code>llm:</code> or <code>tools.ot_llm.*</code>), plus <code>OPENAI_API_KEY</code> in secrets.</p>
 <h2 id="mcp-configuration">MCP Configuration<a class="headerlink" href="#mcp-configuration" title="Permanent link">&para;</a></h2>
 <h3 id="claude-code">Claude Code<a class="headerlink" href="#claude-code" title="Permanent link">&para;</a></h3>
 <p>Add to <code>~/.claude/mcp.json</code> (or use <code>claude mcp add</code>):</p>
@@ -3104,11 +3074,8 @@
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>onetool<span class="w"> </span>--version
 </span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
 </span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Initialize and validate config</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>~/.onetool
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>~/.onetool/onetool.yaml
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="c1"># Run benchmarks (from source)</span>
-</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>bench<span class="w"> </span>run<span class="w"> </span>demo/bench/compare.yaml
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>~/.onetool
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml
 </span></code></pre></div>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

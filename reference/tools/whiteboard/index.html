@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -841,8 +841,6 @@
       
         
       
-        
-      
     
     
     
@@ -898,34 +896,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1429,6 +1399,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../ot_llm/" class="md-nav__link">
         
   
@@ -1808,6 +1806,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1819,10 +1828,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#api-summary-generated" class="md-nav__link">
+  <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        API Summary (Generated)
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requires
       
     </span>
   </a>
@@ -2380,34 +2400,6 @@
 
               
             
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
           </ul>
         </nav>
       
@@ -2944,6 +2936,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2955,10 +2958,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#api-summary-generated" class="md-nav__link">
+  <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        API Summary (Generated)
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requires
       
     </span>
   </a>
@@ -3566,7 +3580,7 @@
 
 
 <h1 id="whiteboard">Whiteboard<a class="headerlink" href="#whiteboard" title="Permanent link">&para;</a></h1>
-<p>Playwright-driven live diagram manipulation on <a href="https://excalidraw.com">excalidraw.com</a>. Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.</p>
+<p>Live diagram manipulation on <a href="https://excalidraw.com">excalidraw.com</a> via pydoll (Chrome CDP). Draw, annotate, save, and restore diagrams using a Mermaid-compatible DSL.</p>
 <p>Short alias: <code>wb</code></p>
 <h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
 <ul>
@@ -3576,21 +3590,21 @@
 <li>Persist with <code>whiteboard.save(file=...)</code> / <code>whiteboard.load(file=...)</code>.</li>
 <li>Export visuals with <code>whiteboard.screenshot(...)</code>; recover with <code>whiteboard.hard_reset()</code> when state is broken.</li>
 </ul>
-<p>Requires the Playwright MCP server. Enable it in <code>servers.yaml</code> (persistent):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">playwright</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span></code></pre></div>
-<p>Or enable for the current session only:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">server</span><span class="p">(</span><span class="n">enable</span><span class="o">=</span><span class="s2">&quot;playwright&quot;</span><span class="p">)</span>
-</span></code></pre></div>
+<h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Mermaid-compatible DSL for shapes, edges, subgraphs, and inline styling</li>
+<li>ELK.js auto-layout with five algorithms (layered, stress, mrtree, radial, force)</li>
+<li>ASCII note overlays: tables, trees, sequence diagrams, timelines</li>
+<li>Save/load native <code>.excalidraw</code> files and generate shareable links</li>
+</ul>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;]; b[&quot;DB&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:blue,sc:#1d4ed8&quot;</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;]; b[&quot;DB&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:blue,sc:#1d4ed8&quot;</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<h2 id="api-summary-generated">API Summary (Generated)<a class="headerlink" href="#api-summary-generated" title="Permanent link">&para;</a></h2>
+<h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <p>Source of truth: <code>src/otdev/tools/excalidraw.py</code> (<code>__all__</code> + function docstrings).</p>
 <!-- BEGIN GENERATED:WB_HELP_SUMMARY -->
 <table>
@@ -3611,7 +3625,7 @@
 </tr>
 <tr>
 <td><code>whiteboard.close() -&gt; str</code></td>
-<td>Close the excalidraw tab and reset all Python state.</td>
+<td>Close the excalidraw browser and reset all Python state.</td>
 </tr>
 <tr>
 <td><code>whiteboard.draw(*, input: str) -&gt; str</code></td>
@@ -3689,6 +3703,10 @@
 </table>
 <!-- END GENERATED:WB_HELP_SUMMARY -->
 
+<h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Chrome or Chromium installed on the host</li>
+</ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3701,13 +3719,13 @@
 <h3 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">&para;</a></h3>
 <ul>
 <li>OneTool uses the built-in defaults for whiteboard layout, DSL state, and save/load behavior.</li>
-<li>Runtime access still depends on the <code>playwright</code> MCP server being enabled.</li>
+<li>Requires Chrome/Chromium installed on the host. No external MCP server needed.</li>
 </ul>
 <h2 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h2>
 <h3 id="open"><code>open()</code><a class="headerlink" href="#open" title="Permanent link">&para;</a></h3>
 <p>Open excalidraw.com and start with a clean canvas. Resets all Python state.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1"># Returns: &quot;whiteboard ready&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Returns: &quot;whiteboard ready&quot;</span>
 </span></code></pre></div>
 <h3 id="drawinput"><code>draw(input)</code><a class="headerlink" href="#drawinput" title="Permanent link">&para;</a></h3>
 <p>Add or update diagram elements from DSL. Additive — never clears existing elements.</p>
@@ -3716,17 +3734,17 @@
 <li><strong>Existing shapes</strong> (by ID) are patched — label and inline style props are updated, position and size are preserved.</li>
 <li>Edges are deduplicated by <code>(src, dst, label, startArrowhead, endArrowhead)</code>.</li>
 </ul>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Service A&quot;]; b[&quot;DB&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># Returns: &quot;+2 shapes, +1 edge(s): edge-a-b&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Service A&quot;]; b[&quot;DB&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Returns: &quot;+2 shapes, +1 edge(s): edge-a-b&quot;</span>
 </span></code></pre></div>
 <p>Inline style props can be appended after the closing <code>]</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;] bc:blue,sc:#1d4ed8,sw:2&#39;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;] bc:blue,sc:#1d4ed8,sw:2&#39;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="styleids-style"><code>style(ids, style)</code><a class="headerlink" href="#styleids-style" title="Permanent link">&para;</a></h3>
 <p>Apply visual style properties to existing canvas elements. Never changes position or size unless <code>x</code>, <code>y</code>, <code>w</code>, <code>h</code> are given.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:green,sc:#16a34a&quot;</span><span class="p">)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;shape:d&quot;</span><span class="p">)</span>   <span class="c1"># change to diamond</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Returns: &quot;styled 2 element(s)&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:green,sc:#16a34a&quot;</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;shape:d&quot;</span><span class="p">)</span>   <span class="c1"># change to diamond</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="c1"># Returns: &quot;styled 2 element(s)&quot;</span>
 </span></code></pre></div>
 <p>Style shorthand reference (all keys and values are <strong>case-insensitive</strong>):</p>
 <table>
@@ -3812,34 +3830,34 @@
 </blockquote>
 <h3 id="help"><code>help()</code><a class="headerlink" href="#help" title="Permanent link">&para;</a></h3>
 <p>Return the full DSL syntax and style shorthand reference as plain text. No browser required. Call this before using <code>whiteboard.draw()</code> or <code>whiteboard.style()</code> for the first time.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">help</span><span class="p">()</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Returns: full DSL and style reference as a string</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">help</span><span class="p">()</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># Returns: full DSL and style reference as a string</span>
 </span></code></pre></div>
 <h3 id="noteinput-background"><code>note(input, background)</code><a class="headerlink" href="#noteinput-background" title="Permanent link">&para;</a></h3>
 <p>Insert ASCII-rendered text annotations below any existing diagram content.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="s2">t[table:</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="s2">Name,Role</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="s2">Alice,Dev</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="s2">Bob,QA</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="s2">]</span>
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="s2">t[table:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="s2">Name,Role</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="s2">Alice,Dev</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="s2">Bob,QA</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="s2">]</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="eraseids"><code>erase(ids)</code><a class="headerlink" href="#eraseids" title="Permanent link">&para;</a></h3>
 <p>Remove elements by ID. Dangling edges (whose src or dst is erased) are removed automatically.</p>
 <p>Edge IDs use the format <code>edge-{src}-{dst}</code> (plus optional label and arrowhead suffix). The <code>draw()</code> return value lists newly created edge IDs.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">erase</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;edge-a-b&quot;</span><span class="p">])</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Returns: &quot;erased 2 element(s)&quot;</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">erase</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">])</span>  <span class="c1"># b has edges a--&gt;b and b--&gt;c</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Returns: &quot;erased 1 element(s), 2 dangling edge(s) removed&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">erase</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;edge-a-b&quot;</span><span class="p">])</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Returns: &quot;erased 2 element(s)&quot;</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">erase</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">])</span>  <span class="c1"># b has edges a--&gt;b and b--&gt;c</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1"># Returns: &quot;erased 1 element(s), 2 dangling edge(s) removed&quot;</span>
 </span></code></pre></div>
 <h3 id="alignids-axis"><code>align(ids, axis)</code><a class="headerlink" href="#alignids-axis" title="Permanent link">&para;</a></h3>
 <p>Align or distribute a set of shapes using Excalidraw's built-in alignment actions.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;top&quot;</span><span class="p">)</span>        <span class="c1"># snap top edges</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;hcenter&quot;</span><span class="p">)</span>    <span class="c1"># centre horizontally</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;hdistribute&quot;</span><span class="p">)</span> <span class="c1"># even horizontal spacing</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Returns: &quot;aligned 3 element(s) (top)&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;top&quot;</span><span class="p">)</span>        <span class="c1"># snap top edges</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;hcenter&quot;</span><span class="p">)</span>    <span class="c1"># centre horizontally</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;hdistribute&quot;</span><span class="p">)</span> <span class="c1"># even horizontal spacing</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Returns: &quot;aligned 3 element(s) (top)&quot;</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3885,11 +3903,11 @@
 </table>
 <h3 id="layout"><code>layout(...)</code><a class="headerlink" href="#layout" title="Permanent link">&para;</a></h3>
 <p>Apply ELK.js graph auto-layout to the canvas. Loads ELK.js from CDN (once per session), runs the chosen algorithm in the browser, patches every node position, recomputes subgraph bounding boxes, and calls <code>wb.fit()</code>. Works on the full canvas or a selection.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span>                                         <span class="c1"># layered, top-to-bottom</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">gap_layer</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>         <span class="c1"># left-to-right pipeline</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;stress&quot;</span><span class="p">)</span>                       <span class="c1"># spring-based, undirected</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;mrtree&quot;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;DOWN&quot;</span><span class="p">)</span>     <span class="c1"># tree with clear root</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">arrow_type</span><span class="o">=</span><span class="s2">&quot;elbow&quot;</span><span class="p">)</span>    <span class="c1"># post-layout elbow arrows</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">()</span>                                         <span class="c1"># layered, top-to-bottom</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">gap_layer</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>         <span class="c1"># left-to-right pipeline</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;stress&quot;</span><span class="p">)</span>                       <span class="c1"># spring-based, undirected</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;mrtree&quot;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;DOWN&quot;</span><span class="p">)</span>     <span class="c1"># tree with clear root</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">layout</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;RIGHT&quot;</span><span class="p">,</span> <span class="n">arrow_type</span><span class="o">=</span><span class="s2">&quot;elbow&quot;</span><span class="p">)</span>    <span class="c1"># post-layout elbow arrows</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -3980,9 +3998,9 @@
 </table>
 <h3 id="read_sceneinfo"><code>read_scene(info)</code><a class="headerlink" href="#read_sceneinfo" title="Permanent link">&para;</a></h3>
 <p>Return a structured text summary of all canvas elements. Use to verify <code>draw()</code>, <code>style()</code>, and <code>erase()</code> results without a screenshot.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">()</span>                  <span class="c1"># default detail</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>        <span class="c1"># one-line count only</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span>       <span class="c1"># all style properties</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">()</span>                  <span class="c1"># default detail</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>        <span class="c1"># one-line count only</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">read_scene</span><span class="p">(</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span>       <span class="c1"># all style properties</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -4013,236 +4031,236 @@
 <p>A <code>⚠ TEXT=BG</code> warning appears when a shape's text colour matches its background (invisible label).</p>
 <h3 id="sync"><code>sync()</code><a class="headerlink" href="#sync" title="Permanent link">&para;</a></h3>
 <p>Sync Python DSL state from the <code>__otDSL</code> canvas element. Use this after loading a file directly in the Excalidraw UI or drag-and-dropping an <code>.excalidraw</code> file.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1"># Returns: &quot;synced: 4 shapes, 3 edges&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">sync</span><span class="p">()</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Returns: &quot;synced: 4 shapes, 3 edges&quot;</span>
 </span></code></pre></div>
 <h3 id="savefile"><code>save(file)</code><a class="headerlink" href="#savefile" title="Permanent link">&para;</a></h3>
 <p>Save the diagram to a native <code>.excalidraw</code> file (JSON). Also embeds the current DSL as a <code>__otDSL</code> text element on the canvas for state restoration.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="loadfile"><code>load(file)</code><a class="headerlink" href="#loadfile" title="Permanent link">&para;</a></h3>
 <p>Restore a diagram saved by <code>save()</code>. Reads the native <code>.excalidraw</code> JSON and restores Python state from the embedded <code>__otDSL</code> element.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Returns: &quot;loaded 4 shapes, 3 edges&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="c1"># Returns: &quot;loaded 4 shapes, 3 edges&quot;</span>
 </span></code></pre></div>
 <blockquote>
 <p>If the file has no <code>__otDSL</code> element (e.g. created outside <code>whiteboard.save()</code>), the canvas is still restored but Python state will be empty and the return includes a warning. Call <code>whiteboard.sync()</code> after manually adding a DSL element.</p>
 </blockquote>
 <h3 id="share"><code>share()</code><a class="headerlink" href="#share" title="Permanent link">&para;</a></h3>
 <p>Generate a shareable Excalidraw link. Encrypts the full scene client-side (AES-GCM, 128-bit) and uploads to Excalidraw's storage. Returns a URL anyone can open in a browser.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">share</span><span class="p">()</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># Returns: &quot;https://excalidraw.com/#json={id},{key}&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">share</span><span class="p">()</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="c1"># Returns: &quot;https://excalidraw.com/#json={id},{key}&quot;</span>
 </span></code></pre></div>
 <h3 id="embed_dsl"><code>embed_dsl()</code><a class="headerlink" href="#embed_dsl" title="Permanent link">&para;</a></h3>
 <p>Insert the current DSL as a grey code-font box on the canvas. Idempotent. Excluded from <code>save()</code> snapshots.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">embed_dsl</span><span class="p">()</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># Returns: &quot;embedded DSL (5 lines)&quot;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">embed_dsl</span><span class="p">()</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># Returns: &quot;embedded DSL (5 lines)&quot;</span>
 </span></code></pre></div>
 <h3 id="clear"><code>clear()</code><a class="headerlink" href="#clear" title="Permanent link">&para;</a></h3>
 <p>Clear all elements from the canvas and reset Python state.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="screenshotfile"><code>screenshot(file)</code><a class="headerlink" href="#screenshotfile" title="Permanent link">&para;</a></h3>
 <p>Take a PNG screenshot of the current canvas.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>                            <span class="c1"># return inline image</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/canvas.png&quot;</span><span class="p">)</span> <span class="c1"># save to disk</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>                            <span class="c1"># return inline image</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/canvas.png&quot;</span><span class="p">)</span> <span class="c1"># save to disk</span>
 </span></code></pre></div>
 <h3 id="scrolldx-dy"><code>scroll(dx, dy)</code><a class="headerlink" href="#scrolldx-dy" title="Permanent link">&para;</a></h3>
 <p>Pan the canvas.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">scroll</span><span class="p">(</span><span class="n">dx</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">scroll</span><span class="p">(</span><span class="n">dx</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">dy</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="zoomlevel"><code>zoom(level)</code><a class="headerlink" href="#zoomlevel" title="Permanent link">&para;</a></h3>
 <p>Set zoom level. Pass <code>0</code> to fit all elements in view.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>   <span class="c1"># 50%</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>     <span class="c1"># fit all</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>   <span class="c1"># 50%</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">zoom</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>     <span class="c1"># fit all</span>
 </span></code></pre></div>
 <h3 id="fit"><code>fit()</code><a class="headerlink" href="#fit" title="Permanent link">&para;</a></h3>
 <p>Fit all elements in view. Equivalent to <code>whiteboard.zoom(level=0)</code>.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="close"><code>close()</code><a class="headerlink" href="#close" title="Permanent link">&para;</a></h3>
-<p>Close the excalidraw tab and reset all Python state.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<p>Close the excalidraw browser and reset all Python state. An atexit handler also closes the browser automatically on interpreter exit.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="hard_reset"><code>hard_reset()</code><a class="headerlink" href="#hard_reset" title="Permanent link">&para;</a></h3>
-<p>Reset Python state unconditionally; attempt canvas clear if browser is available. Use to recover from broken Playwright state.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">hard_reset</span><span class="p">()</span>
+<p>Reset Python state unconditionally; attempt canvas clear if browser is available. Use to recover from broken state.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">hard_reset</span><span class="p">()</span>
 </span></code></pre></div>
 <hr />
 <h2 id="draw-dsl">Draw DSL<a class="headerlink" href="#draw-dsl" title="Permanent link">&para;</a></h2>
 <p>The <code>draw()</code> input uses a Mermaid-compatible syntax. Statements can be separated by <strong>semicolons</strong> (preferred) or newlines.</p>
 <h3 id="shapes">Shapes<a class="headerlink" href="#shapes" title="Permanent link">&para;</a></h3>
 <p>Only rectangles are supported:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>id[&quot;Label&quot;]               rectangle
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>id[&quot;Label&quot;] bc:blue       rectangle with inline style props
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>id[&quot;Line1\nLine2&quot;]        multiline label
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>id bc:blue                style-only update (label unchanged)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>id[&quot;Label&quot;]               rectangle
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>id[&quot;Label&quot;] bc:blue       rectangle with inline style props
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>id[&quot;Line1\nLine2&quot;]        multiline label
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>id bc:blue                style-only update (label unchanged)
 </span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> Ellipse <code>((...))</code> and diamond <code>{...}</code> syntax raise a <code>ValueError</code>. Use <code>whiteboard.style(ids=[...], style="shape:c")</code> or <code>shape:d</code> to change shape after drawing.</p>
 </blockquote>
 <h3 id="edges">Edges<a class="headerlink" href="#edges" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>a--&gt;b                     directed arrow
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>a--&gt;|label|b              directed arrow with label
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>a---b                     undirected (no arrowheads)
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>a&lt;--&gt;b                    bidirectional arrows
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>a --o b                   dot/circle arrowhead at end
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>a --x b                   bar/cross arrowhead at end
-</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>a-.-&gt;b                    dashed directed arrow
-</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>a-.-&gt;|label|b             dashed directed arrow with label
-</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>a-.-b                     dashed undirected
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>a--&gt;b                     directed arrow
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>a--&gt;|label|b              directed arrow with label
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>a---b                     undirected (no arrowheads)
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>a&lt;--&gt;b                    bidirectional arrows
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>a --o b                   dot/circle arrowhead at end
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>a --x b                   bar/cross arrowhead at end
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>a-.-&gt;b                    dashed directed arrow
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>a-.-&gt;|label|b             dashed directed arrow with label
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>a-.-b                     dashed undirected
 </span></code></pre></div>
 <h3 id="subgraphs">Subgraphs<a class="headerlink" href="#subgraphs" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>subgraph grp [&quot;Group Label&quot;]
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  a
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  b
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>end
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>subgraph grp [&quot;Group Label&quot;]
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>  a
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>  b
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>end
 </span></code></pre></div>
 <p>Draws a bounding rectangle around the listed members.</p>
 <h3 id="headers-ignored">Headers (ignored)<a class="headerlink" href="#headers-ignored" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>flowchart TD
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>graph LR
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>flowchart TD
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>graph LR
 </span></code></pre></div>
 <p>Mermaid direction headers are accepted and silently skipped.</p>
 <h3 id="comments">Comments<a class="headerlink" href="#comments" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>%% this is a comment
-</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a># this is also a comment
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>%% this is a comment
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a># this is also a comment
 </span></code></pre></div>
 <hr />
 <h2 id="note-dsl">Note DSL<a class="headerlink" href="#note-dsl" title="Permanent link">&para;</a></h2>
 <p>The <code>note()</code> input uses tagged blocks:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>id[type:
-</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>content...
-</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>id[type:
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>content...
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>]
 </span></code></pre></div>
 <p>One or more blocks per call. Each becomes a code-font rectangle placed below the diagram.</p>
 <h3 id="table-csv-grid"><code>table</code> — CSV grid<a class="headerlink" href="#table-csv-grid" title="Permanent link">&para;</a></h3>
 <p>First row is the header. Columns separated by commas; rows by newlines or semicolons.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="s2">t[table:</span>
-</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="s2">Task,In,Out</span>
-</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="s2">compare:base,33,273</span>
-</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="s2">compare:mcp,3261,92</span>
-</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="s2">]</span>
-</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="s2">t[table:</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="s2">Task,In,Out</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="s2">compare:base,33,273</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="s2">compare:mcp,3261,92</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="s2">]</span>
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Output:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>+----------------+------+------+
-</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>| Task           |   In |  Out |
-</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>+================+======+======+
-</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>| compare:base   |   33 |  273 |
-</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>+----------------+------+------+
-</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>| compare:mcp    | 3261 |   92 |
-</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>+----------------+------+------+
+<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>+----------------+------+------+
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>| Task           |   In |  Out |
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>+================+======+======+
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>| compare:base   |   33 |  273 |
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>+----------------+------+------+
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>| compare:mcp    | 3261 |   92 |
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>+----------------+------+------+
 </span></code></pre></div>
 <h3 id="tree-directory-hierarchy"><code>tree</code> — directory / hierarchy<a class="headerlink" href="#tree-directory-hierarchy" title="Permanent link">&para;</a></h3>
 <p>Depth indicated by leading <code>-</code>, <code>.</code>, <code>_</code>, or spaces. One character = one level (for spaces, the smallest non-zero indent is the unit).</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="s2">tr[tree:</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="s2">root/</span>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a><span class="s2">-src/</span>
-</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="s2">--main.py</span>
-</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a><span class="s2">--utils.py</span>
-</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="s2">-tests/</span>
-</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a><span class="s2">]</span>
-</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="s2">tr[tree:</span>
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="s2">root/</span>
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="s2">-src/</span>
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="s2">--main.py</span>
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="s2">--utils.py</span>
+</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="s2">-tests/</span>
+</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="s2">]</span>
+</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Output:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>root/
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>├── src/
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>│   ├── main.py
-</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>│   └── utils.py
-</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>└── tests/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>root/
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>├── src/
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>│   ├── main.py
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>│   └── utils.py
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>└── tests/
 </span></code></pre></div>
 <p>Space-indented trees also work:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>root/
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>  src/
-</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>    main.py
-</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>  tests/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>root/
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>  src/
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>    main.py
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>  tests/
 </span></code></pre></div>
 <h3 id="seq-sequence-diagram"><code>seq</code> — sequence diagram<a class="headerlink" href="#seq-sequence-diagram" title="Permanent link">&para;</a></h3>
 <p>One message per line: <code>Actor -&gt; Actor: label</code>. Label is optional.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="s2">s[seq:</span>
-</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="s2">Client -&gt; Server: request</span>
-</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="s2">Server -&gt; DB: query</span>
-</span><span id="__span-36-5"><a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="s2">DB -&gt; Server: rows</span>
-</span><span id="__span-36-6"><a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="s2">Server -&gt; Client:</span>
-</span><span id="__span-36-7"><a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="s2">]</span>
-</span><span id="__span-36-8"><a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="s2">s[seq:</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="s2">Client -&gt; Server: request</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="s2">Server -&gt; DB: query</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="s2">DB -&gt; Server: rows</span>
+</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a><span class="s2">Server -&gt; Client:</span>
+</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="s2">]</span>
+</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Output:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>+--------+      +--------+    +----+
-</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>| Client |      | Server |    | DB |
-</span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>+--------+      +--------+    +----+
-</span><span id="__span-37-4"><a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>    |                |            |
-</span><span id="__span-37-5"><a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>    |---request-----&gt;|            |
-</span><span id="__span-37-6"><a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a>    |                |---query---&gt;|
-</span><span id="__span-37-7"><a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>    |                |&lt;--rows-----|
-</span><span id="__span-37-8"><a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a>    |&lt;---------------|            |
-</span><span id="__span-37-9"><a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a>+--------+      +--------+    +----+
-</span><span id="__span-37-10"><a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>| Client |      | Server |    | DB |
-</span><span id="__span-37-11"><a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a>+--------+      +--------+    +----+
+<div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>+--------+      +--------+    +----+
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>| Client |      | Server |    | DB |
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>+--------+      +--------+    +----+
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>    |                |            |
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>    |---request-----&gt;|            |
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>    |                |---query---&gt;|
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>    |                |&lt;--rows-----|
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>    |&lt;---------------|            |
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>+--------+      +--------+    +----+
+</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>| Client |      | Server |    | DB |
+</span><span id="__span-35-11"><a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a>+--------+      +--------+    +----+
 </span></code></pre></div>
 <h3 id="timeline-gantt-bar-chart"><code>timeline</code> — Gantt bar chart<a class="headerlink" href="#timeline-gantt-bar-chart" title="Permanent link">&para;</a></h3>
 <p>One task per line: <code>name,start,duration</code> (integers, 1-indexed).</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="s2">g[timeline:</span>
-</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="s2">Design,1,4</span>
-</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="s2">Build,3,8</span>
-</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="s2">Test,9,4</span>
-</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="s2">]</span>
-</span><span id="__span-38-7"><a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="s2">g[timeline:</span>
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="s2">Design,1,4</span>
+</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="s2">Build,3,8</span>
+</span><span id="__span-36-5"><a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="s2">Test,9,4</span>
+</span><span id="__span-36-6"><a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="s2">]</span>
+</span><span id="__span-36-7"><a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Output:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>Design  [####........]
-</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>Build   [..########..]
-</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>Test    [...........####]
+<div class="language-text highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>Design  [####........]
+</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>Build   [..########..]
+</span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>Test    [...........####]
 </span></code></pre></div>
 <h3 id="note-plain-text"><code>note</code> — plain text<a class="headerlink" href="#note-plain-text" title="Permanent link">&para;</a></h3>
 <p>Word-wrapped paragraph text (default wrap at 60 chars).</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a><span class="s2">n[note:</span>
-</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="s2">This is a plain text annotation that will be</span>
-</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="s2">word-wrapped and displayed in a code-font box.</span>
-</span><span id="__span-40-5"><a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a><span class="s2">]</span>
-</span><span id="__span-40-6"><a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="s2">n[note:</span>
+</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="s2">This is a plain text annotation that will be</span>
+</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="s2">word-wrapped and displayed in a code-font box.</span>
+</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="s2">]</span>
+</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="architecture-diagram-with-styling">Architecture diagram with styling<a class="headerlink" href="#architecture-diagram-with-styling" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;api[&quot;API Gateway&quot;]; auth[&quot;Auth Service&quot;]; users[&quot;Users DB&quot;]; api--&gt;auth; auth--&gt;users&#39;</span><span class="p">)</span>
-</span><span id="__span-41-3"><a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;api&quot;</span><span class="p">,</span> <span class="s2">&quot;auth&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:#dae8fc,sc:#6c8ebf&quot;</span><span class="p">)</span>
-</span><span id="__span-41-4"><a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;users&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:#d5e8d4,sc:#82b366&quot;</span><span class="p">)</span>
-</span><span id="__span-41-5"><a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
-</span><span id="__span-41-6"><a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a><span class="s2">t[table:</span>
-</span><span id="__span-41-7"><a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a><span class="s2">Service,Latency,Owner</span>
-</span><span id="__span-41-8"><a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a><span class="s2">API Gateway,12ms,Platform</span>
-</span><span id="__span-41-9"><a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a><span class="s2">Auth Service,8ms,Security</span>
-</span><span id="__span-41-10"><a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a><span class="s2">]</span>
-</span><span id="__span-41-11"><a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
-</span><span id="__span-41-12"><a id="__codelineno-41-12" name="__codelineno-41-12" href="#__codelineno-41-12"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
-</span><span id="__span-41-13"><a id="__codelineno-41-13" name="__codelineno-41-13" href="#__codelineno-41-13"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+</span><span id="__span-39-2"><a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;api[&quot;API Gateway&quot;]; auth[&quot;Auth Service&quot;]; users[&quot;Users DB&quot;]; api--&gt;auth; auth--&gt;users&#39;</span><span class="p">)</span>
+</span><span id="__span-39-3"><a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;api&quot;</span><span class="p">,</span> <span class="s2">&quot;auth&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:#dae8fc,sc:#6c8ebf&quot;</span><span class="p">)</span>
+</span><span id="__span-39-4"><a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">style</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;users&quot;</span><span class="p">],</span> <span class="n">style</span><span class="o">=</span><span class="s2">&quot;bc:#d5e8d4,sc:#82b366&quot;</span><span class="p">)</span>
+</span><span id="__span-39-5"><a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">note</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+</span><span id="__span-39-6"><a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a><span class="s2">t[table:</span>
+</span><span id="__span-39-7"><a id="__codelineno-39-7" name="__codelineno-39-7" href="#__codelineno-39-7"></a><span class="s2">Service,Latency,Owner</span>
+</span><span id="__span-39-8"><a id="__codelineno-39-8" name="__codelineno-39-8" href="#__codelineno-39-8"></a><span class="s2">API Gateway,12ms,Platform</span>
+</span><span id="__span-39-9"><a id="__codelineno-39-9" name="__codelineno-39-9" href="#__codelineno-39-9"></a><span class="s2">Auth Service,8ms,Security</span>
+</span><span id="__span-39-10"><a id="__codelineno-39-10" name="__codelineno-39-10" href="#__codelineno-39-10"></a><span class="s2">]</span>
+</span><span id="__span-39-11"><a id="__codelineno-39-11" name="__codelineno-39-11" href="#__codelineno-39-11"></a><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-39-12"><a id="__codelineno-39-12" name="__codelineno-39-12" href="#__codelineno-39-12"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+</span><span id="__span-39-13"><a id="__codelineno-39-13" name="__codelineno-39-13" href="#__codelineno-39-13"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">screenshot</span><span class="p">()</span>
 </span></code></pre></div>
 <h3 id="save-and-restore">Save and restore<a class="headerlink" href="#save-and-restore" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
-</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a><span class="c1"># ... later ...</span>
-</span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
-</span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
+</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a><span class="c1"># ... later ...</span>
+</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">open</span><span class="p">()</span>
+</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="o">=</span><span class="s2">&quot;diagrams/arch.excalidraw&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="incremental-drawing">Incremental drawing<a class="headerlink" href="#incremental-drawing" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Start&quot;]; b[&quot;Process&quot;]&#39;</span><span class="p">)</span>
-</span><span id="__span-43-2"><a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;c[&quot;End&quot;]; b--&gt;c&#39;</span><span class="p">)</span>   <span class="c1"># additive, positions relative to existing</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Start&quot;]; b[&quot;Process&quot;]&#39;</span><span class="p">)</span>
+</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;c[&quot;End&quot;]; b--&gt;c&#39;</span><span class="p">)</span>   <span class="c1"># additive, positions relative to existing</span>
 </span></code></pre></div>
 <h3 id="upsert-update-label-or-style-without-moving">Upsert — update label or style without moving<a class="headerlink" href="#upsert-update-label-or-style-without-moving" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;]; b[&quot;DB&quot;]&#39;</span><span class="p">)</span>
-</span><span id="__span-44-2"><a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API Gateway&quot;] bc:blue&#39;</span><span class="p">)</span>   <span class="c1"># updates label and colour; position preserved</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API&quot;]; b[&quot;DB&quot;]&#39;</span><span class="p">)</span>
+</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;API Gateway&quot;] bc:blue&#39;</span><span class="p">)</span>   <span class="c1"># updates label and colour; position preserved</span>
 </span></code></pre></div>
 <h3 id="share-a-diagram">Share a diagram<a class="headerlink" href="#share-a-diagram" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Hello&quot;]; b[&quot;World&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
-</span><span id="__span-45-2"><a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">share</span><span class="p">()</span>
-</span><span id="__span-45-3"><a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a><span class="c1"># Returns a URL like: https://excalidraw.com/#json=abc123,key456</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">draw</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="s1">&#39;a[&quot;Hello&quot;]; b[&quot;World&quot;]; a--&gt;b&#39;</span><span class="p">)</span>
+</span><span id="__span-43-2"><a id="__codelineno-43-2" name="__codelineno-43-2" href="#__codelineno-43-2"></a><span class="n">whiteboard</span><span class="o">.</span><span class="n">share</span><span class="p">()</span>
+</span><span id="__span-43-3"><a id="__codelineno-43-3" name="__codelineno-43-3" href="#__codelineno-43-3"></a><span class="c1"># Returns a URL like: https://excalidraw.com/#json=abc123,key456</span>
 </span></code></pre></div>
 
 

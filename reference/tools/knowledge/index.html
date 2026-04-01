@@ -10,24 +10,24 @@
       
       
       
-        <link rel="canonical" href="https://onetool.beycom.online/reference/cli/bench/">
+        <link rel="canonical" href="https://onetool.beycom.online/reference/tools/knowledge/">
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../ground/">
       
       
-        <link rel="next" href="../onetool/">
+        <link rel="next" href="../ot_llm/">
       
       
         
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>bench - OneTool</title>
+        <title>Knowledge - OneTool</title>
       
     
     
@@ -95,7 +95,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#bench" class="md-skip">
+        <a href="#knowledge" class="md-skip">
           Skip to content
         </a>
       
@@ -130,7 +130,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              bench
+              Knowledge
             
           </span>
         </div>
@@ -828,8 +828,6 @@
                 
   
   
-    
-  
   
   
     
@@ -837,8 +835,6 @@
       
         
           
-        
-      
         
       
         
@@ -857,15 +853,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../cli/" class="md-nav__link ">
               
   
   
@@ -889,7 +885,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -906,302 +902,10 @@
                 
   
   
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Commands
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="run">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#task-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Task Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#benchmark-file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Benchmark File Structure
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Benchmark File Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-prompt-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Prompt Tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#demo-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Demo Project
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Demo Project">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#running-with-demo-config" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Running with Demo Config
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#benchmark-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Benchmark Files
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prompting-best-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prompting Best Practices
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Prompting Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#batch-operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-efficiency" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Efficiency
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
-      <a href="../onetool/" class="md-nav__link">
+      <a href="../../cli/onetool/" class="md-nav__link">
         
   
   
@@ -1229,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../onetool-config/" class="md-nav__link">
+      <a href="../../cli/onetool-config/" class="md-nav__link">
         
   
   
@@ -1262,8 +966,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -1333,15 +1039,15 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../tools/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -1365,7 +1071,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1385,7 +1091,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/aws/" class="md-nav__link">
+      <a href="../aws/" class="md-nav__link">
         
   
   
@@ -1413,7 +1119,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/brave/" class="md-nav__link">
+      <a href="../brave/" class="md-nav__link">
         
   
   
@@ -1441,7 +1147,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/chrome-util/" class="md-nav__link">
+      <a href="../chrome-util/" class="md-nav__link">
         
   
   
@@ -1469,7 +1175,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_context/" class="md-nav__link">
+      <a href="../ot_context/" class="md-nav__link">
         
   
   
@@ -1497,7 +1203,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/context7/" class="md-nav__link">
+      <a href="../context7/" class="md-nav__link">
         
   
   
@@ -1525,7 +1231,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/convert/" class="md-nav__link">
+      <a href="../convert/" class="md-nav__link">
         
   
   
@@ -1553,7 +1259,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/db/" class="md-nav__link">
+      <a href="../db/" class="md-nav__link">
         
   
   
@@ -1581,7 +1287,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/diagram/" class="md-nav__link">
+      <a href="../diagram/" class="md-nav__link">
         
   
   
@@ -1609,7 +1315,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/excel/" class="md-nav__link">
+      <a href="../excel/" class="md-nav__link">
         
   
   
@@ -1637,7 +1343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/file/" class="md-nav__link">
+      <a href="../file/" class="md-nav__link">
         
   
   
@@ -1665,7 +1371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ground/" class="md-nav__link">
+      <a href="../ground/" class="md-nav__link">
         
   
   
@@ -1690,10 +1396,190 @@
                 
   
   
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#highlights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Highlights
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Parameters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#requires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requires
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defaults
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_llm/" class="md-nav__link">
+      <a href="../ot_llm/" class="md-nav__link">
         
   
   
@@ -1721,7 +1607,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/mem/" class="md-nav__link">
+      <a href="../mem/" class="md-nav__link">
         
   
   
@@ -1749,7 +1635,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_core/" class="md-nav__link">
+      <a href="../ot_core/" class="md-nav__link">
         
   
   
@@ -1777,7 +1663,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_forge/" class="md-nav__link">
+      <a href="../ot_forge/" class="md-nav__link">
         
   
   
@@ -1805,7 +1691,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_image/" class="md-nav__link">
+      <a href="../ot_image/" class="md-nav__link">
         
   
   
@@ -1833,7 +1719,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_secrets/" class="md-nav__link">
+      <a href="../ot_secrets/" class="md-nav__link">
         
   
   
@@ -1861,7 +1747,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ot_timer/" class="md-nav__link">
+      <a href="../ot_timer/" class="md-nav__link">
         
   
   
@@ -1889,7 +1775,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/package/" class="md-nav__link">
+      <a href="../package/" class="md-nav__link">
         
   
   
@@ -1917,7 +1803,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/play-util/" class="md-nav__link">
+      <a href="../play-util/" class="md-nav__link">
         
   
   
@@ -1945,7 +1831,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/ripgrep/" class="md-nav__link">
+      <a href="../ripgrep/" class="md-nav__link">
         
   
   
@@ -1973,7 +1859,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/tavily/" class="md-nav__link">
+      <a href="../tavily/" class="md-nav__link">
         
   
   
@@ -2001,7 +1887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/whiteboard/" class="md-nav__link">
+      <a href="../whiteboard/" class="md-nav__link">
         
   
   
@@ -2029,7 +1915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../tools/webfetch/" class="md-nav__link">
+      <a href="../webfetch/" class="md-nav__link">
         
   
   
@@ -2037,34 +1923,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2603,10 +2461,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
+  <a href="#highlights" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Usage
+        Highlights
       
     </span>
   </a>
@@ -2614,55 +2472,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
+  <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commands
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Commands">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        run
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="run">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#task-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Task Types
+        Functions
       
     </span>
   </a>
@@ -2670,10 +2483,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
+  <a href="#key-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Examples
+        Key Parameters
       
     </span>
   </a>
@@ -2681,30 +2494,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#benchmark-file-structure" class="md-nav__link">
+  <a href="#requires" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Benchmark File Structure
+        Requires
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Benchmark File Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-prompt-tasks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Prompt Tasks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2717,36 +2513,14 @@
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#demo-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Demo Project
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Demo Project">
+    <nav class="md-nav" aria-label="Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#structure" class="md-nav__link">
+  <a href="#required" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Structure
+        Required
       
     </span>
   </a>
@@ -2754,10 +2528,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#running-with-demo-config" class="md-nav__link">
+  <a href="#optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Running with Demo Config
+        Optional
       
     </span>
   </a>
@@ -2765,10 +2539,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#benchmark-files" class="md-nav__link">
+  <a href="#defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Benchmark Files
+        Defaults
       
     </span>
   </a>
@@ -2781,41 +2555,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prompting-best-practices" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prompting Best Practices
+        Examples
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Prompting Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#batch-operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#token-efficiency" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Token Efficiency
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2883,7 +2629,7 @@
         <a href="../" class="md-path__link">
           
   <span class="md-ellipsis">
-    CLIs
+    Tools
   </span>
 
         </a>
@@ -2905,248 +2651,278 @@
   
 
 
-<h1 id="bench">bench<a class="headerlink" href="#bench" title="Permanent link">&para;</a></h1>
-<p>Real agent + MCP testing. Define tasks in YAML, get objective metrics: token counts, costs, accuracy scores, timing.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bench<span class="w"> </span><span class="o">[</span>COMMAND<span class="o">]</span><span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-</span></code></pre></div>
-<h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
-<h3 id="run">run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
-<p>Run benchmark tasks from a YAML file.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bench<span class="w"> </span>run<span class="w"> </span>FILE<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
-</span></code></pre></div>
-<h4 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h4>
+<h1 id="knowledge">Knowledge<a class="headerlink" href="#knowledge" title="Permanent link">&para;</a></h1>
+<p>Portable SQLite knowledge bases with hybrid FTS5+vector search and AI synthesis. Short alias: <code>kb</code>.</p>
+<h2 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Hybrid FTS5+vector search via <code>knowledge.search()</code> — keyword, semantic, or combined (hybrid) modes</li>
+<li>AI synthesis via <code>knowledge.ask()</code> — retrieves relevant chunks then synthesises a concise answer with source citations</li>
+<li>Personal annotations via <code>knowledge.write()</code> — store rules, notes, and mistakes alongside indexed content</li>
+<li>Link-graph traversal via <code>knowledge.related()</code> — follow markdown hyperlinks between topics</li>
+</ul>
+<h2 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Option</th>
+<th>Function</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>-c, --config PATH</code></td>
-<td>Path to <code>onetool.yaml</code> configuration file</td>
+<td><code>knowledge.write(topic, content, db, ...)</code></td>
+<td>Write a personal annotation to the knowledge database</td>
 </tr>
 <tr>
-<td><code>-s, --secrets PATH</code></td>
-<td>Path to secrets file (LLM API keys)</td>
+<td><code>knowledge.read(topic, db, ...)</code></td>
+<td>Read a single entry by topic</td>
 </tr>
 <tr>
-<td><code>--tui</code></td>
-<td>Interactive TUI for selecting benchmark files</td>
+<td><code>knowledge.update(topic, db, ...)</code></td>
+<td>Update an existing entry</td>
 </tr>
 <tr>
-<td><code>--csv</code></td>
-<td>Export results to CSV in <code>tmp/result-YYYYMMDD-HHMM.csv</code></td>
+<td><code>knowledge.append(topic, db, ...)</code></td>
+<td>Append content to an existing entry</td>
 </tr>
 <tr>
-<td><code>-o, --output PATH</code></td>
-<td>Write results to YAML file</td>
+<td><code>knowledge.delete(topic, db, ...)</code></td>
+<td>Delete an entry by topic</td>
 </tr>
 <tr>
-<td><code>--scenario NAME</code></td>
-<td>Run only scenarios matching NAME</td>
+<td><code>knowledge.search(q, db, ...)</code></td>
+<td>Hybrid FTS5+vector search (mode: hybrid/semantic/keyword)</td>
 </tr>
 <tr>
-<td><code>--task NAME</code></td>
-<td>Run only tasks matching NAME</td>
+<td><code>knowledge.ask(q, db, ...)</code></td>
+<td>Retrieve relevant chunks and synthesise an AI answer</td>
 </tr>
 <tr>
-<td><code>--tag TAG</code></td>
-<td>Run only tasks with matching tag</td>
+<td><code>knowledge.grep(pattern, db, ...)</code></td>
+<td>Regex/text search across all content</td>
 </tr>
 <tr>
-<td><code>-v, --verbose</code></td>
-<td>Show detailed per-call metrics</td>
+<td><code>knowledge.related(topic, db, ...)</code></td>
+<td>Find entries linked from or to a given topic</td>
 </tr>
 <tr>
-<td><code>--dry-run</code></td>
-<td>Validate config without making API calls</td>
+<td><code>knowledge.list(db, ...)</code></td>
+<td>List entries (returns meta only, no content)</td>
 </tr>
 <tr>
-<td><code>--trace</code></td>
-<td>Show timestamped request/response cycle for debugging</td>
+<td><code>knowledge.toc(db, ...)</code></td>
+<td>Display table of contents for a database or topic prefix</td>
 </tr>
 <tr>
-<td><code>--no-color</code></td>
-<td>Disable colored output (for CI/CD compatibility)</td>
+<td><code>knowledge.slice(topic, db, ...)</code></td>
+<td>Extract a section from a large entry</td>
+</tr>
+<tr>
+<td><code>knowledge.stats(db)</code></td>
+<td>Chunk counts, embedding coverage, and file size</td>
+</tr>
+<tr>
+<td><code>knowledge.info(db)</code></td>
+<td>Database metadata, path, and version</td>
+</tr>
+<tr>
+<td><code>knowledge.dbs()</code></td>
+<td>List all configured knowledge databases</td>
 </tr>
 </tbody>
 </table>
-<h2 id="task-types">Task Types<a class="headerlink" href="#task-types" title="Permanent link">&para;</a></h2>
+<h2 id="key-parameters">Key Parameters<a class="headerlink" href="#key-parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
+<th>Parameter</th>
 <th>Type</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>type: direct</code></td>
-<td>Direct MCP tool invocation (no LLM)</td>
+<td><code>q</code></td>
+<td>str</td>
+<td>Search or question text</td>
 </tr>
 <tr>
-<td><code>type: harness</code></td>
-<td>LLM benchmark with MCP servers (default)</td>
+<td><code>db</code></td>
+<td>str</td>
+<td>Database name (as configured under <code>tools.knowledge.kb</code>)</td>
+</tr>
+<tr>
+<td><code>topic</code></td>
+<td>str</td>
+<td>Entry topic path (e.g. <code>python/tips/generators</code>)</td>
+</tr>
+<tr>
+<td><code>mode</code></td>
+<td>str</td>
+<td>Search mode: <code>"hybrid"</code> (default), <code>"semantic"</code> (vector-only), <code>"keyword"</code> (FTS5-only)</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>int</td>
+<td>Max results (default: <code>config.search_limit</code>)</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>str</td>
+<td>Entry category filter — one of: <code>reference</code>, <code>rule</code>, <code>note</code>, <code>mistake</code></td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>str</td>
+<td>Filter by <code>meta.source</code> prefix</td>
+</tr>
+<tr>
+<td><code>direction</code></td>
+<td>str</td>
+<td>For <code>knowledge.related()</code>: <code>"out"</code> (links from topic), <code>"in"</code> (links to topic), <code>"both"</code></td>
+</tr>
+<tr>
+<td><code>depth</code></td>
+<td>int</td>
+<td>For <code>knowledge.related()</code>: traversal depth (default: 1)</td>
 </tr>
 </tbody>
 </table>
-<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Run comparison benchmark</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>bench<span class="w"> </span>run<span class="w"> </span>demo/bench/compare.yaml
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run tool benchmark</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>bench<span class="w"> </span>run<span class="w"> </span>demo/bench/tool_db.yaml
-</span></code></pre></div>
-<h2 id="benchmark-file-structure">Benchmark File Structure<a class="headerlink" href="#benchmark-file-structure" title="Permanent link">&para;</a></h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">defaults</span><span class="p">:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-5-mini</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">evaluators</span><span class="p">:</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">accuracy</span><span class="p">:</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">openai/gpt-5-mini</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="no">Evaluate this response.</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="no">Response: {response}</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="no">Return JSON: {&quot;score&quot;: &lt;0-100&gt;, &quot;reason&quot;: &quot;&lt;explanation&gt;&quot;}</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="nt">scenarios</span><span class="p">:</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Search Test</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="nt">tasks</span><span class="p">:</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;search:base&quot;</span>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">        </span><span class="nt">server</span><span class="p">:</span><span class="w">              </span><span class="c1"># No server = baseline</span>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">        </span><span class="nt">evaluate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">accuracy</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Search</span><span class="nv"> </span><span class="s">for</span><span class="nv"> </span><span class="s">AI</span><span class="nv"> </span><span class="s">news&quot;</span>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;search:onetool&quot;</span>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">        </span><span class="nt">server</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">onetool</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">        </span><span class="nt">evaluate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">accuracy</span>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">        </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">          </span><span class="no">&gt;&gt;&gt; brave.search(query=&quot;AI news&quot;)</span>
-</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>
-</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="nt">servers</span><span class="p">:</span>
-</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="w">  </span><span class="nt">onetool</span><span class="p">:</span>
-</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stdio</span>
-</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="w">    </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uv</span>
-</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;run&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;onetool&quot;</span><span class="p p-Indicator">]</span>
-</span></code></pre></div>
-<h3 id="multi-prompt-tasks">Multi-Prompt Tasks<a class="headerlink" href="#multi-prompt-tasks" title="Permanent link">&para;</a></h3>
-<p>Use <code>---PROMPT---</code> delimiter to split a task into sequential prompts. Each prompt completes its agentic loop before the next begins, with conversation history accumulating.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">multi-step-task</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">server</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">onetool</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="no">&gt;&gt;&gt;</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="no">```python</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="no">npm = package.version(registry=&quot;npm&quot;, packages={&quot;express&quot;: &quot;4.0.0&quot;})</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="no">```</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="no">Return the latest version.</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="no">---PROMPT---</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="no">&gt;&gt;&gt;</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="no">```python</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="no">pypi = package.version(registry=&quot;pypi&quot;, packages={&quot;httpx&quot;: &quot;0.20.0&quot;})</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="no">```</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="no">Return the latest version.</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="no">---PROMPT---</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="no">Summarize both versions as: &quot;express: [version], httpx: [version]&quot;</span>
-</span></code></pre></div>
+<h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>OPENAI_API_KEY</code> in <code>secrets.yaml</code> (for embeddings and AI synthesis)</li>
+<li><code>pip install sqlite-vec</code> (or <code>pip install onetool-mcp[util]</code>)</li>
+<li><code>pip install python-frontmatter</code> (or <code>pip install onetool-mcp[util]</code>)</li>
+</ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>OPENAI_API_KEY</code> must be set in <code>secrets.yaml</code> for embeddings and <code>knowledge.ask()</code>.</li>
+</ul>
+<h3 id="optional">Optional<a class="headerlink" href="#optional" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>File</th>
-<th>Location</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>bench.yaml</code></td>
-<td><code>.onetool/bench.yaml</code></td>
-<td>Benchmark harness config</td>
-</tr>
-<tr>
-<td><code>bench-secrets.yaml</code></td>
-<td>Passed via <code>-s</code> flag</td>
-<td>LLM API keys (OPENAI_API_KEY, etc.)</td>
-</tr>
-</tbody>
-</table>
-<p><strong><code>bench.yaml</code> resolution:</strong> <code>BENCH_CONFIG</code> env var → <code>cwd/.onetool/bench.yaml</code> → defaults</p>
-<p><strong><code>onetool.yaml</code> resolution:</strong> <code>-c</code> flag → <code>cwd/.onetool/onetool.yaml</code> → no config (logging only)</p>
-<p><strong>Note:</strong> Benchmark API keys (for running LLMs) go in <code>bench-secrets.yaml</code>, not <code>secrets.yaml</code> (which is for tool API keys).</p>
-<h2 id="output">Output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
-<p>Benchmarks produce:
-- Token counts (input, output, total)
-- Cost estimates (USD)
-- Timing information
-- Evaluation scores</p>
-<h2 id="demo-project">Demo Project<a class="headerlink" href="#demo-project" title="Permanent link">&para;</a></h2>
-<p>The <code>demo/</code> folder provides sample configurations and data for testing.</p>
-<h3 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>demo/
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  .onetool/
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    onetool.yaml      # MCP server config
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    bench.yaml        # Benchmark harness config
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    bench-secrets.yaml  # LLM API keys for benchmarks
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  bench/              # Benchmark YAML files
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  data/               # Sample data (northwind.db, downloaded via setup)
-</span></code></pre></div>
-<h3 id="running-with-demo-config">Running with Demo Config<a class="headerlink" href="#running-with-demo-config" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Run benchmarks</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>bench<span class="w"> </span>run<span class="w"> </span>demo/bench/compare.yaml
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Or use justfile</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>just<span class="w"> </span>demo::bench<span class="w"> </span>bench/compare.yaml<span class="w">   </span><span class="c1"># run with CSV output</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>just<span class="w"> </span>demo::bench<span class="w"> </span>--tui<span class="w">                </span><span class="c1"># interactive TUI picker</span>
-</span></code></pre></div>
-<h3 id="benchmark-files">Benchmark Files<a class="headerlink" href="#benchmark-files" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>File</th>
+<th>Key</th>
+<th>Type</th>
+<th>Default</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>compare.yaml</code></td>
-<td>Compare base vs MCP vs OneTool responses</td>
+<td><code>tools.knowledge.model</code></td>
+<td>string</td>
+<td><code>""</code></td>
+<td>OpenAI embedding model. Falls back to <code>llm.embedding_model</code>; built-in default: <code>text-embedding-3-small</code>.</td>
 </tr>
 <tr>
-<td><code>tool_db.yaml</code></td>
-<td>Database tool benchmark</td>
+<td><code>tools.knowledge.base_url</code></td>
+<td>string</td>
+<td><code>""</code></td>
+<td>OpenAI-compatible API base URL. Empty = inherit from top-level <code>llm.base_url</code>.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.dimensions</code></td>
+<td>int</td>
+<td><code>1536</code></td>
+<td>Embedding dimensions. Must match the configured model.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.max_embedding_tokens</code></td>
+<td>int</td>
+<td><code>8191</code></td>
+<td>Max tokens per embedding input.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.embedding_batch_size</code></td>
+<td>int</td>
+<td><code>200</code></td>
+<td>Texts per embeddings API call. Range: <code>1-2048</code>.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.search_limit</code></td>
+<td>int</td>
+<td><code>10</code></td>
+<td>Default max search results. Range: <code>1-100</code>.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.search_extract</code></td>
+<td>int</td>
+<td><code>300</code></td>
+<td>Character limit for content extract in search results (<code>0</code> = full).</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.enrich_model</code></td>
+<td>string</td>
+<td><code>""</code></td>
+<td>LLM model for <code>knowledge.ask()</code> synthesis. Empty = falls back to top-level <code>llm.model</code>.</td>
+</tr>
+<tr>
+<td><code>tools.knowledge.min_chunk_chars</code></td>
+<td>int</td>
+<td><code>200</code></td>
+<td>Minimum body characters per chunk. Chunks below threshold are merged. <code>0</code> disables.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="prompting-best-practices">Prompting Best Practices<a class="headerlink" href="#prompting-best-practices" title="Permanent link">&para;</a></h2>
-<p>Two rules prevent 90% of tool-calling problems:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="no">Never retry successful tool calls to get &quot;better&quot; results.</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="no">If a tool call fails, report the error - do not compute the result yourself.</span>
+<p>Project registry (under <code>tools.knowledge.kb</code>):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">knowledge</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">text-embedding-3-small</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">dimensions</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1536</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">search_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">search_extract</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">300</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="nt">enrich_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="nt">min_chunk_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nt">kb</span><span class="p">:</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">docs</span><span class="p">:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="nt">db</span><span class="p">:</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">kb/docs.db</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Scraped documentation</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">          </span><span class="nt">embeddings_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">        </span><span class="nt">scrape</span><span class="p">:</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">          </span><span class="nt">output_base_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/scraped/docs</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">          </span><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">            </span><span class="nt">python</span><span class="p">:</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">              </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://docs.python.org/3/</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">              </span><span class="nt">url_prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/3/</span>
 </span></code></pre></div>
-<p><strong>Why:</strong></p>
+<h3 id="defaults">Defaults<a class="headerlink" href="#defaults" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>No retries on success:</strong> Agents sometimes want to "improve" results by calling the same tool again. This wastes tokens and can cause loops.</li>
-<li><strong>No manual computation on failure:</strong> When a tool fails, agents often try to compute the answer themselves. This defeats the purpose of using tools.</li>
+<li>If <code>tools.knowledge.base_url</code> is empty, it inherits from the top-level <code>llm.base_url</code>.</li>
+<li>If <code>tools.knowledge.model</code> is empty, it inherits from <code>llm.embedding_model</code>.</li>
+<li>If <code>tools.knowledge.enrich_model</code> is empty, it falls back to <code>llm.model</code>.</li>
 </ul>
-<h3 id="batch-operations">Batch Operations<a class="headerlink" href="#batch-operations" title="Permanent link">&para;</a></h3>
-<p>For multiple related queries, use batch functions:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Instead of multiple calls</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;topic 1&quot;</span><span class="p">)</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="n">brave</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;topic 2&quot;</span><span class="p">)</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1"># Use batch</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">brave</span><span class="o">.</span><span class="n">search_batch</span><span class="p">(</span><span class="n">queries</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;topic 1&quot;</span><span class="p">,</span> <span class="s2">&quot;topic 2&quot;</span><span class="p">])</span>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Search a knowledge base (hybrid FTS5+vector)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s1">&#39;context managers&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Keyword-only search with more results</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s1">&#39;yield generator&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;keyword&#39;</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># AI synthesis — retrieves relevant chunks then answers</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">ask</span><span class="p">(</span><span class="n">q</span><span class="o">=</span><span class="s1">&#39;How do I configure authentication?&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Write a personal annotation</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;python/tips/loops&#39;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s1">&#39;Use enumerate() for index access&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s1">&#39;rule&#39;</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Grep for a pattern across all content</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">grep</span><span class="p">(</span><span class="n">pattern</span><span class="o">=</span><span class="s1">&#39;def __init__&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="c1"># Follow related topics via link graph</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">related</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;python/asyncio/tasks&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;out&#39;</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="c1"># List all configured databases</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">dbs</span><span class="p">()</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Check database stats</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="c1"># Read a specific entry</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="n">knowledge</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s1">&#39;python/tips/loops&#39;</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">)</span>
 </span></code></pre></div>
-<h3 id="token-efficiency">Token Efficiency<a class="headerlink" href="#token-efficiency" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Use <code>&gt;&gt;&gt;</code> for simple calls</li>
-<li>Use code fences for multi-step operations</li>
-<li>Prefer batch operations over multiple calls</li>
-</ul>
 
 
 
@@ -3236,7 +3012,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: CLI Reference">
+          <a href="../ground/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Ground">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3246,20 +3022,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                CLI Reference
+                Ground
               </div>
             </div>
           </a>
         
         
           
-          <a href="../onetool/" class="md-footer__link md-footer__link--next" aria-label="Next: onetool">
+          <a href="../ot_llm/" class="md-footer__link md-footer__link--next" aria-label="Next: LLM">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                onetool
+                LLM
               </div>
             </div>
             <div class="md-footer__button md-icon">

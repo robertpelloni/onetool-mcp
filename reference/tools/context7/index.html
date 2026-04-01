@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -841,8 +841,6 @@
       
         
       
-        
-      
     
     
     
@@ -898,34 +896,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1315,21 +1285,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#search-parameters" class="md-nav__link">
+  <a href="#key-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Search Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#doc-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Doc Parameters
+        Key Parameters
       
     </span>
   </a>
@@ -1583,6 +1542,34 @@
     
   
     Ground
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
   
 
     
@@ -1947,34 +1934,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2535,21 +2494,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#search-parameters" class="md-nav__link">
+  <a href="#key-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Search Parameters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#doc-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Doc Parameters
+        Key Parameters
       
     </span>
   </a>
@@ -2754,7 +2702,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="search-parameters">Search Parameters<a class="headerlink" href="#search-parameters" title="Permanent link">&para;</a></h2>
+<h2 id="key-parameters">Key Parameters<a class="headerlink" href="#key-parameters" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2772,34 +2720,17 @@
 <tr>
 <td><code>library_name</code></td>
 <td>str</td>
-<td>The library to find (e.g. <code>"express"</code>, <code>"react"</code>, <code>"fastapi"</code>)</td>
+<td>The library to find in <code>search()</code> (e.g. <code>"express"</code>, <code>"react"</code>, <code>"fastapi"</code>)</td>
+</tr>
+<tr>
+<td><code>library_id</code></td>
+<td>str</td>
+<td>Library identifier for <code>doc()</code> — flexible formats accepted (see below)</td>
 </tr>
 <tr>
 <td><code>output_format</code></td>
 <td>str</td>
 <td><code>"str"</code> (default) for formatted string, <code>"dict"</code> for raw API JSON</td>
-</tr>
-</tbody>
-</table>
-<h2 id="doc-parameters">Doc Parameters<a class="headerlink" href="#doc-parameters" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>library_id</code></td>
-<td>str</td>
-<td>Library identifier — flexible formats accepted (see below)</td>
-</tr>
-<tr>
-<td><code>query</code></td>
-<td>str</td>
-<td>Natural-language question for server-side semantic reranking</td>
 </tr>
 </tbody>
 </table>

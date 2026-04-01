@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -949,8 +949,6 @@
       
         
       
-        
-      
     
     
     
@@ -1003,34 +1001,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1529,6 +1499,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/tools/knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/tools/ot_llm/" class="md-nav__link">
         
   
@@ -1873,34 +1871,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2568,10 +2538,10 @@
 <p>OneTool uses YAML configuration files. The config file path is always specified explicitly via the <code>--config</code> flag.</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Initialize config (interactive TUI)</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>.onetool
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>.onetool
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Validate configuration</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>.onetool/onetool.yaml
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>--config<span class="w"> </span>.onetool/onetool.yaml
 </span></code></pre></div>
 <h2 id="key-files">Key Files<a class="headerlink" href="#key-files" title="Permanent link">&para;</a></h2>
 <table>
@@ -2589,10 +2559,6 @@
 <tr>
 <td><code>secrets.yaml</code></td>
 <td>API keys (gitignored, passed via <code>--secrets</code>)</td>
-</tr>
-<tr>
-<td><code>bench.yaml</code></td>
-<td>Benchmark harness config</td>
 </tr>
 </tbody>
 </table>
@@ -2631,7 +2597,6 @@ it only matters if you write your own <code>onetool.yaml</code> from scratch.</p
 <h2 id="reference">Reference<a class="headerlink" href="#reference" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong><a href="../../reference/cli/onetool-config/">onetool Configuration</a></strong> - Full YAML schema, pack settings, secrets, MCP servers, aliases, snippets, security</li>
-<li><strong><a href="../../reference/cli/bench/#configuration">bench Configuration</a></strong> - Benchmark harness settings</li>
 </ul>
 
 

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -841,8 +841,6 @@
       
         
       
-        
-      
     
     
     
@@ -898,34 +896,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1429,6 +1399,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../ot_llm/" class="md-nav__link">
         
   
@@ -1715,17 +1713,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#memcache_clear" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        mem.cache_clear()
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1826,6 +1813,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#requires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requires
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#embedding-large-content" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1852,17 +1850,6 @@
     <span class="md-ellipsis">
       
         Embeddings
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Requirements
       
     </span>
   </a>
@@ -2173,34 +2160,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2937,17 +2896,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#memcache_clear" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        mem.cache_clear()
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -3048,6 +2996,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#requires" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requires
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#embedding-large-content" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3074,17 +3033,6 @@
     <span class="md-ellipsis">
       
         Embeddings
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Requirements
       
     </span>
   </a>
@@ -3243,6 +3191,18 @@
 <td>Regex/text search across memory content</td>
 </tr>
 <tr>
+<td><code>mem.ask(topic, q, ...)</code></td>
+<td>Q&amp;A over a memory using LLM synthesis</td>
+</tr>
+<tr>
+<td><code>mem.query(topic, expr, ...)</code></td>
+<td>JMESPath query against a JSON/YAML memory</td>
+</tr>
+<tr>
+<td><code>mem.inspect(topic, ...)</code></td>
+<td>Low-level structured metadata for a single memory</td>
+</tr>
+<tr>
 <td><code>mem.list(topic, category)</code></td>
 <td>List memories (returns meta only, no content)</td>
 </tr>
@@ -3279,8 +3239,12 @@
 <td>Show statistics</td>
 </tr>
 <tr>
-<td><code>mem.embed(topic, limit, dry_run)</code></td>
-<td>Backfill embeddings for un-embedded memories</td>
+<td><code>mem.index(topic, ...)</code></td>
+<td>Backfill embeddings for un-embedded memories (scoped)</td>
+</tr>
+<tr>
+<td><code>mem.reindex(...)</code></td>
+<td>Reindex all un-embedded memories</td>
 </tr>
 <tr>
 <td><code>mem.flush()</code></td>
@@ -3289,10 +3253,6 @@
 <tr>
 <td><code>mem.export(topic, output)</code></td>
 <td>Export to YAML</td>
-</tr>
-<tr>
-<td><code>mem.load(file)</code></td>
-<td>Import from YAML (skips duplicates)</td>
 </tr>
 <tr>
 <td><code>mem.snap(output, topic, ext, on_conflict)</code></td>
@@ -3313,10 +3273,6 @@
 <tr>
 <td><code>mem.slice_batch(items)</code></td>
 <td>Extract sections from multiple memories in one call</td>
-</tr>
-<tr>
-<td><code>mem.cache_clear(topic)</code></td>
-<td>Clear the in-memory read cache</td>
 </tr>
 </tbody>
 </table>
@@ -3825,23 +3781,6 @@
 </tbody>
 </table>
 <p>Extract sections from multiple memories in a single call.</p>
-<h3 id="memcache_clear"><code>mem.cache_clear()</code><a class="headerlink" href="#memcache_clear" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>topic</code></td>
-<td>str</td>
-<td>Clear only entries under this topic prefix. If omitted, clears the entire cache.</td>
-</tr>
-</tbody>
-</table>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="required">Required<a class="headerlink" href="#required" title="Permanent link">&para;</a></h3>
 <ul>
@@ -3868,14 +3807,14 @@
 <tr>
 <td><code>tools.mem.model</code></td>
 <td>string</td>
-<td><code>text-embedding-3-small</code></td>
-<td>Embedding model.</td>
+<td><code>""</code></td>
+<td>Embedding model. Falls back to <code>llm.embedding_model</code>; built-in default: <code>text-embedding-3-small</code>.</td>
 </tr>
 <tr>
 <td><code>tools.mem.base_url</code></td>
 <td>string</td>
-<td><code>https://openrouter.ai/api/v1</code></td>
-<td>OpenAI-compatible embeddings API base URL.</td>
+<td><code>""</code></td>
+<td>OpenAI-compatible embeddings API base URL. Falls back to <code>llm.base_url</code>.</td>
 </tr>
 <tr>
 <td><code>tools.mem.dimensions</code></td>
@@ -4108,10 +4047,6 @@
 </span><span id="__span-2-75"><a id="__codelineno-2-75" name="__codelineno-2-75" href="#__codelineno-2-75"></a>    <span class="p">{</span><span class="s2">&quot;topic&quot;</span><span class="p">:</span> <span class="s2">&quot;spec&quot;</span><span class="p">,</span> <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
 </span><span id="__span-2-76"><a id="__codelineno-2-76" name="__codelineno-2-76" href="#__codelineno-2-76"></a>    <span class="p">{</span><span class="s2">&quot;topic&quot;</span><span class="p">:</span> <span class="s2">&quot;rules&quot;</span><span class="p">,</span> <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="s2">&quot;Requirements&quot;</span><span class="p">},</span>
 </span><span id="__span-2-77"><a id="__codelineno-2-77" name="__codelineno-2-77" href="#__codelineno-2-77"></a><span class="p">])</span>
-</span><span id="__span-2-78"><a id="__codelineno-2-78" name="__codelineno-2-78" href="#__codelineno-2-78"></a>
-</span><span id="__span-2-79"><a id="__codelineno-2-79" name="__codelineno-2-79" href="#__codelineno-2-79"></a><span class="c1"># Clear read cache</span>
-</span><span id="__span-2-80"><a id="__codelineno-2-80" name="__codelineno-2-80" href="#__codelineno-2-80"></a><span class="n">mem</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">()</span>
-</span><span id="__span-2-81"><a id="__codelineno-2-81" name="__codelineno-2-81" href="#__codelineno-2-81"></a><span class="n">mem</span><span class="o">.</span><span class="n">cache_clear</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;docs/&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="section-navigation">Section Navigation<a class="headerlink" href="#section-navigation" title="Permanent link">&para;</a></h2>
 <p>When storing markdown files, use <code>toc=True</code> to build a section index. This enables agents to inspect document structure and extract specific sections without consuming full token cost.</p>
@@ -4128,6 +4063,12 @@
 - <code>"-50:"</code> - last 50 lines
 - <code>"Requirements"</code> - heading path (case-insensitive substring match)
 - <code>[1, "Requirements", "200:300"]</code> - mixed list</p>
+<h2 id="requires">Requires<a class="headerlink" href="#requires" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>OPENAI_API_KEY</code> in secrets.yaml (only when <code>embeddings_enabled: true</code>)</li>
+<li>SQLite (Python stdlib <code>sqlite3</code>)</li>
+<li>tiktoken (bundled with OneTool)</li>
+</ul>
 <h2 id="embedding-large-content">Embedding Large Content<a class="headerlink" href="#embedding-large-content" title="Permanent link">&para;</a></h2>
 <p>When content exceeds the embedding model's token limit, it is automatically split into chunks, each chunk is embedded, and the vectors are averaged. This preserves semantic coverage of the full document — pattern search (<code>mode="pattern"</code>) always searches the complete stored text regardless.</p>
 <p>A safety margin of 100 tokens is subtracted from the limit to avoid edge-case overflows.</p>
@@ -4155,17 +4096,11 @@
 </span></code></pre></div>
 <p>When <code>embeddings_async: true</code> (default), writes return immediately and embeddings are generated by a background worker thread. Use <code>mem.flush()</code> to wait for pending embeddings.</p>
 <p>To backfill embeddings for existing memories:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">mem</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>           <span class="c1"># Preview: how many need embeddings</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">mem</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>          <span class="c1"># Generate embeddings</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">mem</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;projects/&quot;</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Scoped backfill</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">mem</span><span class="o">.</span><span class="n">reindex</span><span class="p">()</span>                                  <span class="c1"># Backfill all un-embedded memories</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">mem</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;projects/&quot;</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>     <span class="c1"># Preview scoped backfill</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">mem</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">topic</span><span class="o">=</span><span class="s2">&quot;projects/&quot;</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>    <span class="c1"># Run scoped backfill</span>
 </span></code></pre></div>
 <p>When embeddings are disabled, <code>mem.search(mode="semantic")</code> and <code>mem.search(mode="hybrid")</code> return a helpful message. Pattern search always works regardless of embedding state.</p>
-<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
-<ul>
-<li><code>OPENAI_API_KEY</code> in secrets.yaml (only when <code>embeddings_enabled: true</code>)</li>
-<li>SQLite (Python stdlib <code>sqlite3</code>)</li>
-<li>tiktoken (bundled with OneTool)</li>
-</ul>
 
 
 

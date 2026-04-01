@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -976,8 +976,6 @@
       
         
       
-        
-      
     
     
     
@@ -1030,34 +1028,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1556,6 +1526,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/tools/knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/tools/ot_llm/" class="md-nav__link">
         
   
@@ -1900,34 +1898,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2629,12 +2599,12 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>powershell<span class="w"> </span>-ExecutionPolicy<span class="w"> </span>ByPass<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;irm https://astral.sh/uv/install.ps1 | iex&quot;</span>
 </span></code></pre></div>
 <h2 id="2-install-onetool">2. Install OneTool<a class="headerlink" href="#2-install-onetool" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>onetool-mcp
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;onetool-mcp[all]&#39;</span>
 </span></code></pre></div>
 <h2 id="3-initialize">3. Initialize<a class="headerlink" href="#3-initialize" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>-c<span class="w"> </span>~/.onetool
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>--config<span class="w"> </span>~/.onetool
 </span></code></pre></div>
-<p>An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, diagram config, snippets, worktree config). Press space to toggle, enter to confirm.</p>
+<p>An interactive TUI opens. Select the extensions you want (prompts, servers, security rules, diagram config, snippets). Press space to toggle, enter to confirm.</p>
 <p>This creates <code>~/.onetool/onetool.yaml</code> with <code>include:</code> entries for your selected extensions.</p>
 <h2 id="4-set-up-secrets">4. Set Up Secrets<a class="headerlink" href="#4-set-up-secrets" title="Permanent link">&para;</a></h2>
 <p>Edit <code>~/.onetool/secrets.yaml</code> to add your API keys:</p>
@@ -2668,7 +2638,7 @@
 </span></code></pre></div>
 <p>Uncomment and add keys for the tools you want to use.</p>
 <h2 id="5-validate">5. Validate<a class="headerlink" href="#5-validate" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>-c<span class="w"> </span>~/.onetool/onetool.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>onetool<span class="w"> </span>init<span class="w"> </span>validate<span class="w"> </span>--config<span class="w"> </span>~/.onetool/onetool.yaml
 </span></code></pre></div>
 <p>This checks your configuration is correct.</p>
 <h2 id="6-connect-to-claude-code">6. Connect to Claude Code<a class="headerlink" href="#6-connect-to-claude-code" title="Permanent link">&para;</a></h2>

@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -836,8 +836,6 @@
       
         
       
-        
-      
     
     
     
@@ -890,34 +888,6 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/cli/bench/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    bench
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
               
             
               
@@ -1416,6 +1386,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../reference/tools/knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../reference/tools/ot_llm/" class="md-nav__link">
         
   
@@ -1760,34 +1758,6 @@
     
   
     Webfetch
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../reference/tools/worktree/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Worktree
   
 
     
@@ -2499,17 +2469,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#testing-benchmarking-and-proper-engineering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing, benchmarking, and proper engineering
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -2841,17 +2800,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#testing-benchmarking-and-proper-engineering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing, benchmarking, and proper engineering
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -3058,8 +3006,6 @@
 <li><a href="../../learn/extension-tools/">Scaffold tools</a> -  enables you and your coding agent to build new tools as part of the conversation. New tools are just Python functions. Check out the <a href="https://youtu.be/AZz03Yw0s1E">demo</a> of Claude building a Wikipedia fetcher in under three minutes.</li>
 <li><a href="../../reference/cli/onetool-config/#external-mcp-servers">MCP server proxy</a> - allows you to wrap any MCP server with OneTool, configure it with YAML, and call it explicitly - without the tool tax and context rot.</li>
 </ul>
-<h3 id="testing-benchmarking-and-proper-engineering">Testing, benchmarking, and proper engineering<a class="headerlink" href="#testing-benchmarking-and-proper-engineering" title="Permanent link">&para;</a></h3>
-<p>To make it easy to develop new tool packs (groups of tools), OneTool includes a powerful <a href="../../reference/cli/bench/">testing and benchmarking</a> harness that compares your tool against other MCP servers using a real LLM. Define tasks in YAML and get objective metrics: token counts, costs, accuracy scores, timing, and more.</p>
 <p>OneTool was written with strong engineering practices:</p>
 <ul>
 <li>1,200+ tests (smoke, unit, integration tiers)</li>
