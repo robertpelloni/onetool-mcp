@@ -368,6 +368,13 @@ def _ensure_ready() -> str | None:
     # Always re-inject ops.js so in-place code changes take effect without a page reload
     _browser_evaluate(_load_js("ops.js"))
 
+    # On fresh navigation: restore any saved session state into the canvas
+    if not ready:
+        saved = _session.load()
+        if saved["shapes"] or saved["edges"]:
+            with contextlib.suppress(Exception):
+                _rerender_from_state(saved)
+
     return None
 
 
@@ -1111,6 +1118,11 @@ def draw(*, input: str, board: str | None = None) -> str:
             "canvas_max_y": new_canvas_max_y,
         }, board)
 
+        # Push incremental update to browser if connected
+        if _tab is not None:
+            with contextlib.suppress(Exception):
+                _rerender_from_state({"shapes": shapes, "edges": edges, "groups": groups})
+
         new_edge_ids = [e["id"] for _, e in new_edges_to_commit]
         edge_msg = f", +{len(new_edge_ids)} edge(s): {', '.join(new_edge_ids)}" if new_edge_ids else ""
         updated_msg = f", {patch_count} updated" if patch_count else ""
@@ -1422,6 +1434,13 @@ def erase(*, ids: list[str], board: str | None = None) -> str:
             "edge_keys": edge_keys,
             "canvas_max_y": state.get("canvas_max_y", 60.0),
         }, board)
+
+        # Delete erased elements from browser canvas if connected
+        if _tab is not None:
+            all_erase_ids = to_erase + [eid for eid in orphaned_edge_ids if eid not in to_erase]
+            if all_erase_ids:
+                with contextlib.suppress(Exception):
+                    _browser_evaluate(f"() => window._batch_erase({json.dumps(all_erase_ids)})")
 
         n = len(to_erase)
         dangling = len(orphaned_edge_ids)

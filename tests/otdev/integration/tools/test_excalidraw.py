@@ -90,6 +90,7 @@ def test_save_and_load(tmp_path: Path) -> None:
     assert "loaded" in result.lower(), f"load() returned: {result!r}"
     assert "2 shapes" in result, f"shapes not restored: {result!r}"
 
-    from otdev.tools.excalidraw import _dsl_state
+    from otdev.tools._excalidraw import session as _session
 
-    assert "x" in _dsl_state["shapes"] and "y" in _dsl_state["shapes"], "Python state not restored after load"
+    state = _session.load()
+    assert "x" in state["shapes"] and "y" in state["shapes"], "Python state not restored after load"
