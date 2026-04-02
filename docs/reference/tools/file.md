@@ -297,3 +297,8 @@ All paths are validated against:
 - **Allowed directories**: Paths must be under configured `allowed_dirs`
 - **Exclude patterns**: Paths matching patterns like `.git` are blocked
 - **File size limits**: Large files are rejected to prevent memory issues
+
+## Inspired by
+
+This tool was inspired by [fast-filesystem-mcp](https://github.com/efforthye/fast-filesystem-mcp)
+by efforthye, licensed under Apache 2.0.

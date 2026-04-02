@@ -9,8 +9,15 @@ Explain each step so it is easy to follow what you did and why. Use 💭 to high
 Learn OneTool with `ot.help(info="full")` as well as the docs at ./docs. If it helps, look at the source code.
 Do sanity testing and find issues.
 
+Enable proxy servers before testing (they start disconnected):
+```
+ot.server(enable="github")
+ot.server(enable="playwright")
+ot.server(enable="chrome_devtools")
+```
+
 Test out the following packs:
-Packs: brave, context7, convert, db, chrome_devtools, diagram, excel, file, github, ground, ot_llm, mem, ot, ot_context, ot_image, package, ripgrep, ot_forge, tavily, webfetch
+Packs: brave, context7, convert, db, chrome_devtools, diagram, excel, file, github, ground, knowledge, ot_llm, mem, ot, ot_context, ot_image, package, playwright, ripgrep, ot_forge, tavily, webfetch, whiteboard
 
 When testing:
 - convert with files at tests/data/
@@ -19,9 +26,12 @@ When testing:
 - mem: use `tmp/test/` topic prefix for all writes. Test write, read, list, search, toc, slice, snap/restore, stale/refresh, write_batch, read_batch, slice_batch, stats, export/load, update, delete, decay, context, flush. Clean up with `mem.delete(topic="tmp/", confirm=True)` when done.
 - diagram: list_providers, get_template, generate_source, render_diagram, get_playground_url
 - ot_forge: create_ext, validate_ext, install_skills
-- web with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
-- devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
+- webfetch with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
+- chrome_devtools with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
+- playwright with a known URL like https://en.wikipedia.org/wiki/Python_(programming_language)
 - ot_llm: transform with simple data, transform_file with a file from tests/data/
+- knowledge: call `knowledge.dbs()` first — if no databases are configured, skip (note as config gap, not failure). If configured, test write, search, ask, list, toc, slice, delete.
+- whiteboard: hard_reset first, then draw, erase, note, read_scene, boards
 
 ```
 
@@ -238,6 +248,17 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `diagram.get_template(name="api-flow")` - get a template (valid names: api-flow, state-machine, class-diagram, project-gantt, feature-mindmap)
   - Example: `diagram.generate_source(provider="mermaid", source="graph TD; A-->B", name="test", output_dir="output/")`
   - Example: `diagram.render_diagram(provider="mermaid", source="graph TD; A-->B", name="test")`
+- **knowledge tools**: Always call `knowledge.dbs()` first — if no databases are configured, skip the pack (note as config gap, not failure). All write/search/ask tools require a `db=` parameter matching a configured database name.
+  - Example: `knowledge.dbs()` — list configured databases
+  - Example: `knowledge.write(topic="tmp/test", content="...", db="mydb", category="note")`
+  - Example: `knowledge.search(query="...", db="mydb")`
+  - Example: `knowledge.ask(question="...", db="mydb")`
+- **whiteboard tools**: Always call `whiteboard.hard_reset()` before testing to ensure clean state.
+  - Example: `whiteboard.hard_reset(); whiteboard.draw(input="A --> B --> C")`
+  - Example: `whiteboard.erase(ids=["a"])` — use element IDs from draw output
+  - Example: `whiteboard.note(input="n1[note:\nHello]")` — note type must be lowercase
+  - Example: `whiteboard.read_scene()` — list current canvas elements
+  - Example: `whiteboard.boards()` — list active session boards
 - **ot_forge tools**: Use `name=` for creating extensions
   - Example: `ot_forge.create_ext(name="my_tool")` - create a new extension
   - Example: `ot_forge.validate_ext(path=".onetool/tools/my_tool/my_tool.py")` - validate before reload
@@ -283,15 +304,10 @@ OneTool is setup correctly with all dependencies and secrets needed.
   - Example: `wb.note(input="n1[note:\ntext here]")` — note type must be lowercase (table/tree/seq/timeline/note)
 - **whiteboard.erase**: Uses `ids=` not `targets=`
   - Example: `wb.erase(ids=["nodeA", "nodeB"])`
-- **Large output → ctx handles**: `$f_r`, `$f_t`, `$f_g`, `$mem_r`, `$wf`, `$tav_x` return ctx handles for large output.
+- **Large output → ctx handles**: `$f_r`, `$f_t`, `$f_g`, `$mem_r`, `$wf`, `$tav_x`, `$gh`, `$rg_count` return ctx handles for large output.
   Use `ctx.read(handle)` to page through, `ctx.search(handle, queries=[...])` to search.
 - **ctx parallel write contention**: Avoid calling 5+ large-output tools simultaneously — SQLite may return
   "database is locked". Retry succeeds. Filed: `wip/issues/ctx-db-locked-parallel-writes.md`
-- **`preview` KeyError on large output**: Any tool returning output large enough to trigger ctx auto-deflection
-  currently crashes with `Error calling tool 'run': 'preview'`. Root cause: `runner.py:548` accesses
-  `write_result["preview"]` but `ctx_write` only includes it when `verbose=True`. Affects: `mem.read_batch`,
-  `github.search_repositories`, `chrome_devtools.take_snapshot`, `$wf`, `$g`, `$f_r`, `$mem_r`, `$f_g`, `$tav_x`.
-  Filed: `wip/issues/ctx-write-missing-preview-key.md`
 - **`ot.tools`/`ot.help` do NOT support `info="list"`**: Only `ot.stats` has `info="list"`. Use `"min"`,
   `"default"`, or `"full"` for `ot.tools` and `ot.help`.
 - **`ot.result()` requires `handle=`**: Not zero-arg. Example: `ot.result(handle="abc123")`
@@ -304,6 +320,7 @@ OneTool is setup correctly with all dependencies and secrets needed.
 - `ot.security()` shows allowed builtins, imports, and call rules - this is informational
 - `mem.search` requires embeddings enabled in config (`tools.mem.embeddings_enabled: true`)
 - `diagram.render_diagram` requires a Kroki server (self-hosted or public) to be configured
+- `knowledge.*` tools fail if no KB is configured — `knowledge.dbs()` returning empty is a config gap, not a code bug
 
 ### Test URLs
 
@@ -332,28 +349,25 @@ ot.servers()                     # list all with current status
 ```
 Changes are in-memory only (reset on server restart). Use `ot.server(disable="name")` to disconnect.
 
-- **devtools** (26 tools): Browser automation via Chrome DevTools Protocol
-  - **Current config uses Remote mode** (`--browserUrl=http://127.0.0.1:9222`) — Chrome must be
-    pre-launched with `--remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug` before testing
-  - To use auto-launch instead, switch config to `--isolated` (no `--browserUrl` arg)
-  - Verify Chrome is reachable: `curl http://127.0.0.1:9222/json/version`
+- **chrome_devtools** (29 tools): Browser automation via Chrome DevTools Protocol
   - Enable: `ot.server(enable="chrome_devtools")`
   - Key tools: list_pages, navigate_page, take_snapshot, wait_for, list_console_messages
   - `devtools.wait_for()` requires `text=` parameter (not `selector=`). Example: `devtools.wait_for(text="Python")`
-- **github** (37 tools): GitHub API integration
-  - Requires authentication via MCP proxy
+  - Note: if the server fails to connect, check config — may need `--isolated` flag or a running Chrome instance at `--remote-debugging-port=9222`
+- **github** (44 tools): GitHub API integration
   - Enable: `ot.server(enable="github")`
   - Key tools: search_repositories, get_me, list_commits, get_file_contents
   - Works with both personal and organizational repositories
-- **playwright** (tools): Browser automation via Playwright
+- **playwright** (21 tools): Browser automation via Playwright
   - Enable: `ot.server(enable="playwright")`
+  - Key tools: browser_navigate, browser_snapshot, browser_click, browser_type
 
 ### Test ordering to avoid reload side effects
 
 - **Test context7 and ground BEFORE calling `$reload`** — `ot.reload()` clears
   env-based secrets (GEMINI_API_KEY, CONTEXT7_API_KEY), causing all ground and context7
   tools to fail in the same session. These tools only work on fresh server startup.
-- **`$wf_s` and `$wf_d`** require `llm.transform` (OpenAI). Expect failure only if `OPENAI_API_KEY` is not configured.
+- **Enable proxy servers early** — `ot.server(enable=...)` calls at the top of the session before testing github, playwright, chrome_devtools.
 - **`mem.toc` / `mem.slice`** require `toc=True` at `mem.write` time. The section index
   is only built during write. Calling `mem.write(content="# Heading\n...", toc=True)` is
   required before `mem.toc()` or `mem.slice()` will return results.
@@ -362,6 +376,7 @@ Changes are in-memory only (reset on server restart). Use `ot.server(disable="na
 
 Test these first for fast coverage (one tool from each category):
 
+0. Enable proxy servers: `ot.server(enable="github"); ot.server(enable="playwright"); ot.server(enable="chrome_devtools")`
 1. `brave.search(query="test", count=2)` - web search
 2. `ripgrep.search(pattern="TODO", path=".", limit=3)` - file search
 3. `ot.health()` - introspection
@@ -370,10 +385,14 @@ Test these first for fast coverage (one tool from each category):
 6. `mem.write(topic="tmp/test/smoke", content="hello")` then `mem.read(topic="tmp/test/smoke")` then `mem.delete(topic="tmp/", confirm=True)` - memory
 7. `db.tables(db_url="sqlite:///tests/data/northwind.db")` - database
 8. `ground.search(query="test", max_sources=2)` - grounded search
+9. `whiteboard.hard_reset(); whiteboard.draw(input="A --> B")` - whiteboard
+10. `github.get_me()` - github
 
 If all pass, the core infrastructure is working.
 
 ### Cleanup after testing
 
 - Delete test memories: `mem.delete(topic="tmp/", confirm=True)`
-- Remove any generated files (diagrams, snapshots, converted output)
+- Delete test knowledge entries (if KB was configured): `knowledge.delete(topic="tmp/", db="mydb")`
+- Reset whiteboard state: `whiteboard.hard_reset()`
+- Remove any generated files in `tmp/`, `diagrams/`

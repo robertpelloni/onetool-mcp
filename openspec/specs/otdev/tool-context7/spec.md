@@ -73,8 +73,9 @@ The `doc()` function SHALL fetch documentation using the `/v2/context` endpoint.
 #### Scenario: Endpoint and params
 - **GIVEN** a resolved library ID and a query
 - **WHEN** `doc()` makes the API request
-- **THEN** it SHALL use `GET /v2/context?libraryId=<id>&query=<q>`
+- **THEN** it SHALL use `GET /v2/context?libraryId=<id>&type=txt&query=<q>`
 - **AND** `libraryId` is passed as a query param (not in the URL path)
+- **AND** `type=txt` SHALL always be included to request plain-text LLM-readable output
 
 #### Scenario: Version-specific docs
 - **GIVEN** a versioned library ID

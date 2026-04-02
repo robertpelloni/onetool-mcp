@@ -24,6 +24,11 @@ The `webfetch.fetch()` function SHALL fetch and extract content from a single UR
 - **WHEN** `webfetch.fetch(url=url, output_format="json")` is called
 - **THEN** it SHALL return JSON with text, metadata, and structure
 
+#### Scenario: HTML output
+- **GIVEN** a valid URL
+- **WHEN** `webfetch.fetch(url=url, output_format="html")` is called
+- **THEN** it SHALL return normalised HTML with tags preserved
+
 ### Requirement: Content Length Control
 
 The `webfetch.fetch()` function SHALL support output length limiting.

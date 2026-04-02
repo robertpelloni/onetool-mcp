@@ -107,6 +107,26 @@ console.print(table)
 
 ## Common Flag Patterns
 
+### Documentation Examples
+
+All documentation examples use **long flags** by default (`--config`, `--format`, `--port`).
+Short flags (`-c`, `-f`, `-p`) are only used when an example is specifically demonstrating the
+short form — for instance, in a "Flags" reference table that lists both forms side-by-side.
+
+```bash
+# CORRECT — long flags in examples
+onetool direct run --config onetool.yaml "ot.packs()" --format json
+
+# WRONG — short flags in examples
+onetool direct run -c onetool.yaml "ot.packs()" -f json
+```
+
+The one permitted exception: a flags reference table that lists both forms:
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--config PATH` | `-c` | Path to `onetool.yaml` |
+
 ### Config Flag
 
 ```python

@@ -110,3 +110,8 @@ ripgrep.files(glob="tests/**/test_*.py")
 ripgrep.search(pattern="TODO", glob="**/*.{js,ts}")
 ripgrep.count(pattern="import", glob="src/**/*.py")
 ```
+
+## Inspired by
+
+This tool was inspired by [mcp-ripgrep](https://github.com/mcollina/mcp-ripgrep)
+by Matteo Collina, licensed under MIT.

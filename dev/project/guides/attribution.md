@@ -92,4 +92,5 @@ by efforthye, licensed under Apache 2.0.
 - [ ] Attribution level determined (Based on / Inspired by / Original)
 - [ ] Source header in module docstring matches attribution level
 - [ ] License file in `licenses/` (if "Based on")
+- [ ] Entry added to `NOTICE.txt` (if "Based on")
 - [ ] Tool doc attribution section matches source header

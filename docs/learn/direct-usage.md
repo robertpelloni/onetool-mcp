@@ -1,6 +1,33 @@
 # Direct Usage Guide
 
+!!! tip "New in v2.2.1"
+    `onetool direct` was introduced in v2.2.1 as a first-class CLI execution mode for agent harnesses, scripts, and automation.
+
 The `onetool direct` subcommand group lets you run tools directly from the shell without an AI model in the loop. Useful for scripts, automation, and interactive exploration.
+
+---
+
+## Why direct?
+
+In 2026, a growing class of agent harnesses — Claude Code, Codex CLI, Gemini CLI — call tools via subprocess or HTTP rather than MCP. These systems benefit from a stable, low-overhead CLI contract with structured JSON output and no server lifecycle to manage. `onetool direct` is that contract.
+
+| | MCP (via Claude/Cursor) | onetool direct |
+|---|---|---|
+| **Who invokes it** | AI host via MCP tool call | Shell, script, or agent subprocess |
+| **Tool definition tokens** | ~2K per session | Zero — no schema loaded |
+| **State across calls** | Stateless | In-process or execution host |
+| **Output format** | MCP content blocks | JSON, YAML, or raw |
+| **Best for** | Interactive AI sessions | Automation, pipelines, agent harnesses |
+
+**Same call, two ways:**
+
+```bash
+# Via MCP (agent writes this inside an MCP session):
+>>> brave.search(query='react docs 2026')
+
+# Via onetool direct (agent calls as subprocess — no MCP client needed):
+onetool direct run "brave.search(query='react docs 2026')" --format raw
+```
 
 ---
 
@@ -9,32 +36,32 @@ The `onetool direct` subcommand group lets you run tools directly from the shell
 The simplest mode: load config, execute one tool call, print the result, exit. Packs are initialised fresh on every invocation — suitable for one-off calls.
 
 ```bash
-onetool direct run -c .onetool/onetool.yaml "ot.debug()"
-onetool direct run -c .onetool/onetool.yaml "ot.version()"
-onetool direct run -c .onetool/onetool.yaml "brave.search(query='latest AI news')"
+onetool direct run --config .onetool/onetool.yaml "ot.debug()"
+onetool direct run --config .onetool/onetool.yaml "ot.version()"
+onetool direct run --config .onetool/onetool.yaml "brave.search(query='latest AI news')"
 ```
 
 **Format options** (`--format` / `-f`):
 
 ```bash
 # Default: human-readable JSON
-onetool direct run -c onetool.yaml "ot.packs()"
+onetool direct run --config onetool.yaml "ot.packs()"
 
 # Compact JSON (for parsing in scripts)
-onetool direct run -c onetool.yaml "ot.packs()" --format json
+onetool direct run --config onetool.yaml "ot.packs()" --format json
 
 # Raw string (no serialisation)
-onetool direct run -c onetool.yaml "ot.version()" --format raw
+onetool direct run --config onetool.yaml "ot.version()" --format raw
 
 # YAML
-onetool direct run -c onetool.yaml "ot.packs()" --format yml
+onetool direct run --config onetool.yaml "ot.packs()" --format yml
 ```
 
 **Multi-line scripts** from a `.py` file or stdin:
 
 ```bash
-onetool direct run -c onetool.yaml report.py
-echo "ot.version()" | onetool direct run -c onetool.yaml -
+onetool direct run --config onetool.yaml report.py
+echo "ot.version()" | onetool direct run --config onetool.yaml -
 ```
 
 ---
@@ -59,8 +86,8 @@ Add `direct.host: enable` to `onetool.yaml` to auto-start the host on first use 
 Starting an execution host keeps tool state alive between calls — tool packs stay loaded and module-level state (e.g. whiteboard sessions) persists across multiple `direct run` invocations.
 
 ```bash
-# Start the execution host (output goes to ~/.onetool/direct-server-8765.log)
-onetool direct start -c .onetool/onetool.yaml
+# Start the execution host (blocks until ready, then exits)
+onetool direct start --config .onetool/onetool.yaml
 
 # Confirm it's running
 onetool direct status
@@ -79,18 +106,13 @@ onetool direct restart
 onetool direct stop
 ```
 
-**Wait until ready** (useful in scripts):
-
-```bash
-onetool direct start -c .onetool/onetool.yaml --wait
-onetool direct run "ot.version()"  # safe to call immediately after
-```
+`direct start` blocks until the host is accepting connections (up to 5 seconds), so the next command is always safe to run immediately after.
 
 **Multiple hosts** on different ports:
 
 ```bash
-onetool direct start -c project-a.yaml            # port 8765
-onetool direct start -c project-b.yaml --port 9000
+onetool direct start --config project-a.yaml            # port 8765
+onetool direct start --config project-b.yaml --port 9000
 
 onetool direct status --port 8765
 onetool direct status --port 9000
@@ -105,7 +127,7 @@ onetool direct stop --port 9000
 The REPL runs in-process — great for exploration and multi-step workflows.
 
 ```bash
-onetool direct repl -c .onetool/onetool.yaml
+onetool direct repl --config .onetool/onetool.yaml
 ```
 
 ```
@@ -164,19 +186,25 @@ onetool direct help "web search"       # fuzzy match
 Use `--format json` + exit codes for reliable automation:
 
 ```bash
-# Run a tool and capture the JSON output
-RESULT=$(onetool direct run "brave.search(query='AI')" --format json 2>/dev/null)
+# Run a tool that returns a dict/list and capture the JSON output
+RESULT=$(onetool direct run "ot.packs()" --format json 2>/dev/null)
 if [ $? -eq 0 ]; then
-    echo "$RESULT" | jq '.results[0].title'
+    echo "$RESULT" | jq '.[0].name'
 fi
 
+# For string-returning tools (search, fetch), use --format raw and process as plain text:
+onetool direct run "brave.search(query='AI')" --format raw 2>/dev/null | head -5
+
 # Feed tool output to an AI pipeline (enable sanitization)
-onetool direct run -c onetool.yaml "webfetch.fetch(url='...')" --sanitize --format raw | ai-pipeline
+onetool direct run --config onetool.yaml "webfetch.fetch(url='...')" --sanitize --format raw | ai-pipeline
 ```
+
+!!! note "`--format json` and jq"
+    `--format json` only serialises `dict`/`list` return values. String-returning tools (most search and fetch tools) pass through unchanged regardless of format. Use tools like `ot.packs()`, `ot.stats()`, or `db.query()` when piping to `jq`. For string results, use `--format raw` and process as plain text.
 
 **For AI agents calling onetool direct:**
 
-1. Start the execution host once: `onetool direct start -c onetool.yaml --wait`
+1. Start the execution host once: `onetool direct start --config onetool.yaml`
 2. Run tools without `--config` (host handles state): `onetool direct run "pack.tool(...)"`
 3. Use `--format json` for machine-readable results
 4. Exit code 0 = success, 1 = tool error, 2 = config error

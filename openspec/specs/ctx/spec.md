@@ -155,6 +155,11 @@ or line range, with format-aware dispatch.
 - **THEN** it SHALL return the content of the third section (from TOC line to next
   same-or-higher-level heading)
 
+#### Scenario: Slice by integer section number (markdown)
+- **GIVEN** a markdown handle with a TOC
+- **WHEN** `ctx.slice(h, select=3)` is called with an integer
+- **THEN** it SHALL treat the integer as equivalent to `"#3"` and return the third section
+
 #### Scenario: Slice by heading name (markdown)
 - **GIVEN** a markdown handle
 - **WHEN** `ctx.slice(h, select="Prerequisites")` is called

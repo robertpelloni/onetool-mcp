@@ -23,7 +23,7 @@ Short alias: `wf`
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `url` | str | URL to fetch content from |
-| `output_format` | str | "markdown" (default), "text", "json" |
+| `output_format` | str | "markdown" (default), "text", "json", "html" |
 | `include_links` | bool | Include links in output |
 | `include_images` | bool | Include image references |
 | `include_tables` | bool | Include tables in output (default: True) |
@@ -104,3 +104,8 @@ webfetch.fetch_batch(
 webfetch.fetch(url="https://pypi.org/pypi/requests/json")
 webfetch.fetch(url="https://docs.python.org/robots.txt")
 ```
+
+## Based on
+
+This tool is based on [trafilatura](https://github.com/adbar/trafilatura)
+by Adrien Barbaresi, licensed under Apache 2.0.

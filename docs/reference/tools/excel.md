@@ -191,3 +191,8 @@ excel.merged_cells(filepath="report.xlsx")
 
 Create a test spreadsheet with `excel.create()` and `excel.write()` to explore capabilities.
 
+## Based on
+
+This tool is based on [excel-mcp-server](https://github.com/haris-musa/excel-mcp-server)
+by Haris Musa, licensed under MIT.
+

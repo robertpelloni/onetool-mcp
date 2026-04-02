@@ -86,6 +86,23 @@ Verify: `onetool init validate --config ~/.onetool/onetool.yaml`
 
 ---
 
+## Use from the CLI
+
+Works as an MCP server **and** as a direct CLI — no MCP client needed. Useful for agent harnesses, scripts, and automation:
+
+```bash
+# Start a persistent execution host (keeps tool state across calls)
+onetool direct start --config ~/.onetool/onetool.yaml
+
+# Run any tool — JSON output, pipeable to jq
+onetool direct run "ot.packs()" --format json | jq '.[0].name'
+onetool direct run "brave.search(query='latest AI news')" --format raw
+```
+
+[📖 Direct usage guide](https://onetool.beycom.online/learn/direct-usage/)
+
+---
+
 ## Features
 
 | Feature                  | Description                                                   |

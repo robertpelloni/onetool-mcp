@@ -102,3 +102,8 @@ db.query(
 - Queries are read-only by default
 - Use parameterized queries for user input
 - Configure `max_chars` to prevent excessive output
+
+## Based on
+
+This tool is based on [mcp-alchemy](https://github.com/runekaagaard/mcp-alchemy)
+by Rui Machado, licensed under MPL-2.0.

@@ -56,12 +56,12 @@ Format is injected into the execution namespace as `__format__`. Exit code commu
 **Examples:**
 
 ```bash
-onetool direct run -c .onetool/onetool.yaml "ot.debug()"
-echo "ot.version()" | onetool direct run -c .onetool/onetool.yaml -
-onetool direct run -c .onetool/onetool.yaml report.py
-onetool direct run -c .onetool/onetool.yaml "brave.search(query='AI')" --format json
+onetool direct run --config .onetool/onetool.yaml "ot.debug()"
+echo "ot.version()" | onetool direct run --config .onetool/onetool.yaml -
+onetool direct run --config .onetool/onetool.yaml report.py
+onetool direct run --config .onetool/onetool.yaml "brave.search(query='AI')" --format json
 onetool direct run "ot.version()"            # routes to server if running
-onetool direct run --no-host -c .onetool/onetool.yaml "ot.version()"
+onetool direct run --no-host --config .onetool/onetool.yaml "ot.version()"
 onetool direct run "ot_llm.transform(data='...', prompt='summarise')" --timeout 120
 ```
 
@@ -120,12 +120,12 @@ onetool direct list [OPTIONS] [PATTERN]
 **Examples:**
 
 ```bash
-onetool direct list                          # all packs
-onetool direct list brave                    # tools in brave pack
-onetool direct list "brave.*"               # glob pattern
-onetool direct list -c onetool.yaml brave   # with explicit config
-onetool direct list --info full | head -20  # signatures + docs
-onetool direct list | fzf                   # interactive picking
+onetool direct list                                      # all packs
+onetool direct list brave                                # tools in brave pack
+onetool direct list "brave.*"                           # glob pattern
+onetool direct list --config onetool.yaml brave         # with explicit config
+onetool direct list --info full | head -20              # signatures + docs
+onetool direct list | fzf                               # interactive picking
 ```
 
 ---
@@ -153,7 +153,7 @@ onetool direct search [OPTIONS] QUERY
 ```bash
 onetool direct search "web search"
 onetool direct search "convert pdf"
-onetool direct search -c onetool.yaml "database query"
+onetool direct search --config onetool.yaml "database query"
 ```
 
 ---
@@ -183,7 +183,7 @@ onetool direct help [OPTIONS] [QUERY]
 onetool direct help brave.search        # full signature + docstring for one tool
 onetool direct help brave               # all tools in a pack with descriptions
 onetool direct help "web search"        # fuzzy search across all tools
-onetool direct help -c onetool.yaml brave.search
+onetool direct help --config onetool.yaml brave.search
 ```
 
 ---
@@ -210,7 +210,7 @@ onetool direct servers [OPTIONS] [PATTERN]
 **Examples:**
 
 ```bash
-onetool direct servers -c onetool.yaml
+onetool direct servers --config onetool.yaml
 onetool direct servers github
 onetool direct servers --info full
 ```
@@ -232,9 +232,8 @@ onetool direct start [OPTIONS]
 | `--config PATH` | `-c` | — | Path to `onetool.yaml` |
 | `--secrets PATH` | `-s` | — | Path to secrets file |
 | `--port N` | `-p` | `direct.port` or `8765` | Port to listen on |
-| `--wait` | | false | Poll until the host is ready before exiting |
 
-Starts the HTTP execution host as a daemon; PID and log are written to `~/.onetool/direct-server-{port}.pid` and `direct-server-{port}.log`.
+Starts the HTTP execution host as a daemon, then blocks until it is ready to accept connections (up to 5 seconds). PID and log are written to `~/.onetool/direct-server-{port}.pid` and `direct-server-{port}.log`.
 
 When `--config` is omitted, the host starts with no tools loaded (a warning is printed).
 
@@ -278,7 +277,7 @@ onetool direct restart [OPTIONS]
 
 Reuses the saved `--config` and `--port` from the previous start. Explicit flags override the saved values. If no host is running, starts fresh.
 
-**Options:** `--config`, `--secrets`, `--port`, `--wait` (same as `start`)
+**Options:** `--config`, `--secrets`, `--port` (same as `start`)
 
 ---
 

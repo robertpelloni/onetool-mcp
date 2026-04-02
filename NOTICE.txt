@@ -41,5 +41,23 @@ https://github.com/runekaagaard/mcp-alchemy
 Used in: ot_tools/db.py (database introspection and query patterns)
 
 ================================================================================
+excel-mcp-server
+================================================================================
+Copyright (c) 2024 Haris Musa
+Licensed under the MIT License
+https://github.com/haris-musa/excel-mcp-server
+
+Used in: tools/excel.py (Excel file manipulation patterns)
+
+================================================================================
+mcp-package-version
+================================================================================
+Copyright (c) 2024 Sam McLeod
+Licensed under the MIT License
+https://github.com/sammcj/mcp-package-version
+
+Used in: tools/package.py (package version checking patterns)
+
+================================================================================
 
 Full license texts are available in the licenses/ directory.

@@ -74,3 +74,8 @@ package.models(query="claude-sonnet-4.*", provider="anthropic")
 # Unified version check
 package.version(registry="npm", packages=["express", "fastify"])
 ```
+
+## Based on
+
+This tool is based on [mcp-package-version](https://github.com/sammcj/mcp-package-version)
+by Sam McLeod, licensed under MIT.

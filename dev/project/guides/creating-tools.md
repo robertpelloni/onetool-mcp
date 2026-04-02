@@ -208,7 +208,36 @@ def search(*, query: str) -> str:
 
 ## Return Types
 
-Tools return native Python types (str, dict, list). The framework handles serialisation to JSON/YAML/raw based on the caller's `__format__` setting.
+Tools return native Python types (`str`, `dict`, `list`). The framework handles
+serialisation to JSON/YAML/raw based on the caller's `__format__` setting.
+
+**Never call `json.dumps()` in a tool function.** The executor's
+`serialize_result()` does this. Calling it yourself bypasses `--format` (the
+output is already a string, so format modes like `yml_h` or `json_h` have no
+effect), and produces misleading `-> str` annotations for what is actually
+structured data.
+
+```python
+# WRONG — bypasses --format, lying return type
+def tables(*, db_url: str) -> str:
+    rows = _fetch(db_url)
+    return json.dumps(rows)
+
+# CORRECT — executor serializes; --format works
+def tables(*, db_url: str) -> list[str]:
+    return _fetch(db_url)
+```
+
+The same rule applies to error returns: always return a plain `str`, never
+`json.dumps({"error": "..."})`.
+
+```python
+# WRONG
+return json.dumps({"error": str(e)})
+
+# CORRECT
+return f"Error: {e}"
+```
 
 ---
 
@@ -522,6 +551,7 @@ from otutil.tools._mem import Config, _close_connection
 - [ ] Complete Google-style docstrings (Args, Returns, Example)
 - [ ] `LogSpan` for operations with external calls
 - [ ] Error handling returning strings (not raising exceptions)
+- [ ] No `json.dumps()` calls in tool functions — return native types (`dict`, `list`, `str`)
 - [ ] Lazy imports for optional dependencies
 - [ ] Secrets accessed via `get_secret()` from `ot.config`
 - [ ] Path resolution using `resolve_cwd_path()` or `resolve_ot_path()`

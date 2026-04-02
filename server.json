@@ -8,20 +8,5 @@
     "url": "https://github.com/beycom/onetool-mcp",
     "source": "github"
   },
-  "websiteUrl": "https://onetool.beycom.online",
-  "packages": [
-    {
-      "registryType": "pypi",
-      "identifier": "onetool-mcp",
-      "version": "2.2.0",
-      "transport": { "type": "stdio" },
-      "runtimeHint": "uvx",
-      "runtimeArguments": [
-        { "type": "positional", "value": "onetool" }
-      ],
-      "packageArguments": [
-        { "type": "positional", "value": "serve" }
-      ]
-    }
-  ]
+  "websiteUrl": "https://onetool.beycom.online"
 }

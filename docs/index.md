@@ -30,6 +30,7 @@ hide:
     - :material-package-variant: **Leaner install** — optional `[util]` and `[dev]` extras; install only the dependencies you need
     - :material-database: **Smart context store** — `ot_context` (`ctx`); SQLite+FTS5 store; search and navigate large tool outputs without filling context
     - :material-image-search: **Image vision** — `ot_image` (`img`); routes to a cheaper, better vision model; zero host tokens; supports local files, URLs, clipboard, and 8 formats (PNG, JPEG, GIF, WebP, TIFF, HEIC, AVIF, SVG)
+    - :material-console: **CLI-first execution** — `onetool direct` runs any tool pack from the shell; execution host keeps state across calls for agent harnesses and automation scripts
 
     [:octicons-arrow-right-24: See everything that's new in v2](learn/whats-new-v2.md)
 
@@ -125,6 +126,23 @@ Snippets with Jinja2. Aliases for common tools. Parameter prefixes (`q` for `que
 ### :material-file-cog: Configuration
 
 Single, well-structured [YAML config](learn/configuration.md) with global and project scopes. Per-pack settings for timeouts, limits, models.
+
+</div>
+
+<div class="card span-2" markdown>
+
+### :material-console: CLI-First Execution
+
+Run any OneTool pack from the shell — no MCP client, no AI in the loop.
+Persistent execution host keeps state across calls. Pipe JSON to scripts,
+agents, or other tools.
+
+```bash
+onetool direct start -c onetool.yaml --wait
+onetool direct run "ot.packs()" --format json | jq '.[0].name'
+```
+
+[:octicons-arrow-right-24: Direct usage guide](learn/direct-usage.md)
 
 </div>
 

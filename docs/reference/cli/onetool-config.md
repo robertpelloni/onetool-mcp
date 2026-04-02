@@ -603,12 +603,14 @@ See [Security Model](../../learn/security.md) for full documentation.
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `OT_LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) |
-| `OT_LOG_VERBOSE` | Enable verbose logging (true/false) |
-| `OT_LOG_DIR` | Log directory path |
-| `OT_COMPACT_MAX_LENGTH` | Max value length in compact output |
+Environment variables take priority over the corresponding `onetool.yaml` fields.
+
+| Variable | Description | YAML equivalent |
+|----------|-------------|-----------------|
+| `OT_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, or `ERROR` | `log_level` |
+| `OT_LOG_VERBOSE` | Enable verbose logging: `true`/`false`/`1`/`0` | `log_verbose` |
+| `OT_LOG_DIR` | Log directory path (absolute or relative) | `log_dir` |
+| `OT_COMPACT_MAX_LENGTH` | Max value length in compact output (integer) | `compact_max_length` |
 
 ## Environment Variable Expansion
 
