@@ -3,7 +3,8 @@
 Check latest versions for npm, PyPI packages and search OpenRouter AI models.
 No API keys required.
 
-Attribution: Based on mcp-package-version by Sam McLeod - MIT License
+Based on mcp-package-version by Sam McLeod (MIT License).
+https://github.com/sammcj/mcp-package-version
 """
 
 from __future__ import annotations

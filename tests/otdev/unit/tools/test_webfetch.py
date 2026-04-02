@@ -109,35 +109,6 @@ class TestValidateOptions:
         assert "favor_precision" in result and "favor_recall" in result
 
 
-@pytest.mark.unit
-@pytest.mark.tools
-class TestFormatError:
-    """Test _format_error."""
-
-    def test_json_format(self):
-        import json
-
-        from otdev.tools.webfetch import _format_error
-
-        result = _format_error("https://x.com", "fetch_failed", "Failed", "json")
-        data = json.loads(result)
-        assert data["error"] == "fetch_failed"
-        assert data["url"] == "https://x.com"
-        assert data["message"] == "Failed"
-
-    def test_text_format(self):
-        from otdev.tools.webfetch import _format_error
-
-        result = _format_error("https://x.com", "fetch_failed", "Failed", "text")
-        assert result.startswith("Error:")
-        assert "Failed" in result
-
-    def test_markdown_format(self):
-        from otdev.tools.webfetch import _format_error
-
-        result = _format_error("https://x.com", "fetch_failed", "Failed", "markdown")
-        assert result.startswith("Error:")
-
 
 @pytest.mark.unit
 @pytest.mark.tools
@@ -259,6 +230,21 @@ class TestFetch:
             result = fetch(url="https://test.invalid/data.json")
 
         assert result == raw
+
+    def test_fetch_html_format(self):
+        from otdev.tools.webfetch import fetch
+
+        with (
+            patch("otdev.tools.webfetch._require_trafilatura"),
+            patch("otdev.tools.webfetch._fetch_url_cached", return_value=("<html><body><p>Hello</p></body></html>", "text/html")),
+            patch("trafilatura.extract", return_value="<p>Hello</p>") as mock_extract,
+        ):
+            result = fetch(url="https://test.invalid/page", output_format="html")
+
+        assert result == "<p>Hello</p>"
+        mock_extract.assert_called_once()
+        call_kwargs = mock_extract.call_args.kwargs
+        assert call_kwargs["output_format"] == "html"
 
     def test_fetch_metadata_uses_actual_content_type(self):
         import json

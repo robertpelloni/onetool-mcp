@@ -20,7 +20,9 @@ __ot_requires__ = {
 }
 
 import re
-from typing import Any
+from typing import Any, Literal
+
+OutputFormat = Literal["full", "sources_only"]
 
 import httpx
 from otpack import (
@@ -128,34 +130,73 @@ def _make_request(
             return False, _format_http_error(e)
 
 
-def _format_web_results(data: dict[str, Any]) -> str:
-    """Format web search results for display."""
+def _format_sources(
+    results: list[dict[str, Any]], *, max_sources: int | None = None
+) -> str:
+    """Format source URLs as a numbered deduplicated markdown link list."""
+    seen_urls: set[str] = set()
     lines: list[str] = []
+    num = 0
+    for result in results:
+        url = result.get("url", "")
+        if not url or url in seen_urls:
+            continue
+        seen_urls.add(url)
+        num += 1
+        if max_sources is not None and num > max_sources:
+            break
+        title = result.get("title", "") or url
+        lines.append(f"{num}. [{title}]({url})")
+    return "\n".join(lines)
 
+
+def _format_web_results(
+    data: dict[str, Any],
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
+) -> str:
+    """Format web search results for display."""
     web = data.get("web", {})
     results = web.get("results", [])
 
     if not results:
         return "No results found."
 
+    if output_format == "sources_only":
+        return _format_sources(results, max_sources=max_sources) or "No sources found."
+
+    lines: list[str] = []
     for i, result in enumerate(results, 1):
         title = result.get("title", "No title")
         url = result.get("url", "")
         description = result.get("description", "")
+        age = result.get("age", "")
+        is_live = result.get("is_live", False)
 
-        lines.append(f"{i}. {title}")
+        prefix = "[LIVE] " if is_live else ""
+        lines.append(f"{i}. {prefix}{title}")
+        if age:
+            lines.append(f"   {age}")
         lines.append(f"   {url}")
         if description:
             lines.append(f"   {description}")
         lines.append("")
 
+    sources_text = _format_sources(results, max_sources=max_sources)
+    if sources_text:
+        lines.append("## Sources")
+        lines.append(sources_text)
+        lines.append("")
+
     return "\n".join(lines)
 
 
-def _format_news_results(data: dict[str, Any]) -> str:
+def _format_news_results(
+    data: dict[str, Any],
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
+) -> str:
     """Format news search results for display."""
-    lines: list[str] = []
-
     results = data.get("results", [])
 
     if not results:
@@ -168,14 +209,23 @@ def _format_news_results(data: dict[str, Any]) -> str:
         reverse=True,
     )
 
+    if output_format == "sources_only":
+        return _format_sources(results, max_sources=max_sources) or "No sources found."
+
+    lines: list[str] = []
     for i, result in enumerate(results, 1):
         title = result.get("title", "No title")
         url = result.get("url", "")
         source = result.get("meta_url", {}).get("hostname", "")
         age = result.get("age", "")
         breaking = result.get("breaking", False)
+        is_live = result.get("is_live", False)
 
-        prefix = "[BREAKING] " if breaking else ""
+        prefix = ""
+        if breaking:
+            prefix += "[BREAKING] "
+        if is_live:
+            prefix += "[LIVE] "
         lines.append(f"{i}. {prefix}{title}")
         if source:
             lines.append(f"   Source: {source} ({age})")
@@ -186,15 +236,21 @@ def _format_news_results(data: dict[str, Any]) -> str:
 
 
 
-def _format_image_results(data: dict[str, Any]) -> str:
+def _format_image_results(
+    data: dict[str, Any],
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
+) -> str:
     """Format image search results for display."""
-    lines: list[str] = []
-
     results = data.get("results", [])
 
     if not results:
         return "No image results found."
 
+    if output_format == "sources_only":
+        return _format_sources(results, max_sources=max_sources) or "No sources found."
+
+    lines: list[str] = []
     for i, result in enumerate(results, 1):
         title = result.get("title", "") or "No title"
         url = result.get("url", "")
@@ -203,8 +259,11 @@ def _format_image_results(data: dict[str, Any]) -> str:
         width = props.get("width", "")
         height = props.get("height", "")
         image_url = props.get("url", "")
+        confidence = result.get("confidence", "")
 
         lines.append(f"{i}. {title}")
+        if confidence:
+            lines.append(f"   Confidence: {confidence}")
         if width and height:
             lines.append(f"   Size: {width}x{height}")
         if source:
@@ -217,26 +276,38 @@ def _format_image_results(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _format_video_results(data: dict[str, Any]) -> str:
+def _format_video_results(
+    data: dict[str, Any],
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
+) -> str:
     """Format video search results for display."""
-    lines: list[str] = []
-
     results = data.get("results", [])
 
     if not results:
         return "No video results found."
 
+    if output_format == "sources_only":
+        return _format_sources(results, max_sources=max_sources) or "No sources found."
+
+    lines: list[str] = []
     for i, result in enumerate(results, 1):
         title = result.get("title", "No title")
         url = result.get("url", "")
         description = result.get("description", "")
-        creator = result.get("meta_url", {}).get("hostname", "")
-        duration = result.get("video", {}).get("duration", "")
-        views = result.get("video", {}).get("views", "")
+        video_data = result.get("video", {}) or {}
+        creator_obj = video_data.get("creator", {}) or {}
+        creator = (
+            creator_obj.get("name", "")
+            or creator_obj.get("long_name", "")
+            or result.get("meta_url", {}).get("hostname", "")
+        )
+        duration = video_data.get("duration", "")
+        views = video_data.get("views", "")
 
         lines.append(f"{i}. {title}")
         if creator:
-            lines.append(f"   Channel: {creator}")
+            lines.append(f"   Creator: {creator}")
         if duration:
             lines.append(f"   Duration: {duration}")
         if views:
@@ -253,6 +324,7 @@ _DATE_RANGE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}to\d{4}-\d{2}-\d{2}$")
 _FRESHNESS_VALUES = frozenset(["pd", "pw", "pm", "py"])
 _SAFESEARCH_WEB_VALUES = frozenset(["off", "moderate", "strict"])
 _SAFESEARCH_IMAGE_VALUES = frozenset(["off", "strict"])
+_OUTPUT_FORMAT_VALUES = frozenset(["full", "sources_only"])
 _COUNTRY_RE = re.compile(r"^[A-Z]{2}$")
 
 
@@ -287,6 +359,13 @@ def _validate_offset(offset: int) -> str | None:
     if 0 <= offset <= 9:
         return None
     return f"Error: offset must be between 0 and 9 (got {offset})"
+
+
+def _validate_output_format(output_format: str) -> str | None:
+    """Validate output_format value. Returns error string or None if valid."""
+    if output_format in _OUTPUT_FORMAT_VALUES:
+        return None
+    return f"Error: Invalid output_format '{output_format}'. Use {sorted(_OUTPUT_FORMAT_VALUES)}"
 
 
 def _validate_country(country: str) -> str | None:
@@ -325,6 +404,8 @@ def search(
     search_lang: str = "en",
     safesearch: str = "moderate",
     freshness: str | None = None,
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
 ) -> str:
     """Search the web using Brave Search API.
 
@@ -337,10 +418,15 @@ def search(
         safesearch: Content filter - "off", "moderate", "strict" (default: "moderate")
         freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
             or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
+        output_format: Controls response structure:
+            - "full" (default): numbered results with titles, ages, URLs, descriptions,
+              and a ## Sources section
+            - "sources_only": numbered markdown link list of sources only
+        max_sources: Maximum number of sources in the ## Sources section or
+            sources_only list (default: None, all sources)
 
     Returns:
-        Formatted search results as numbered list with titles, URLs, and
-        descriptions, or error message
+        Formatted search results or error message
 
     Example:
         # Basic search
@@ -348,6 +434,9 @@ def search(
 
         # Recent results only
         brave.search(query="AI news", freshness="pw", count=5)
+
+        # Sources only for piping or extraction
+        brave.search(query="Python tutorials", output_format="sources_only")
     """
     if error := _validate_query(query):
         return error
@@ -360,6 +449,8 @@ def search(
     if error := _validate_safesearch(safesearch, _SAFESEARCH_WEB_VALUES):
         return error
     if error := _validate_freshness(freshness):
+        return error
+    if error := _validate_output_format(output_format):
         return error
 
     params: dict[str, Any] = {
@@ -379,7 +470,7 @@ def search(
     if not success:
         return str(result)
 
-    return _format_web_results(result)  # type: ignore[arg-type]
+    return _format_web_results(result, output_format=output_format, max_sources=max_sources)  # type: ignore[arg-type]
 
 
 def news(
@@ -390,6 +481,8 @@ def news(
     country: str = "US",
     search_lang: str = "en",
     freshness: str | None = None,
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
 ) -> str:
     """Search news articles using Brave Search API.
 
@@ -404,6 +497,11 @@ def news(
         search_lang: Language code (default: "en")
         freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
             or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
+        output_format: Controls response structure:
+            - "full" (default): numbered results with source, age, and URL;
+              [BREAKING] and [LIVE] flags when applicable
+            - "sources_only": numbered markdown link list of sources only
+        max_sources: Maximum number of sources in sources_only list (default: None)
 
     Returns:
         Formatted news results or error message
@@ -414,6 +512,9 @@ def news(
 
         # UK news
         brave.news(query="technology", country="GB", count=5)
+
+        # Sources only
+        brave.news(query="AI funding", output_format="sources_only")
     """
     if error := _validate_query(query):
         return error
@@ -424,6 +525,8 @@ def news(
     if error := _validate_country(country):
         return error
     if error := _validate_freshness(freshness):
+        return error
+    if error := _validate_output_format(output_format):
         return error
 
     params: dict[str, Any] = {
@@ -441,7 +544,7 @@ def news(
 
     if not success:
         return str(result)
-    return _format_news_results(result)  # type: ignore[arg-type]
+    return _format_news_results(result, output_format=output_format, max_sources=max_sources)  # type: ignore[arg-type]
 
 
 
@@ -452,6 +555,8 @@ def image(
     country: str = "US",
     search_lang: str = "en",
     safesearch: str = "strict",
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
 ) -> str:
     """Search for images using Brave Search API.
 
@@ -463,6 +568,10 @@ def image(
         country: 2-letter country code (default: "US")
         search_lang: Language code (default: "en")
         safesearch: Content filter - "off" or "strict" (default: "strict")
+        output_format: Controls response structure:
+            - "full" (default): title, confidence, size, source, image URL, page URL
+            - "sources_only": numbered markdown link list of page URLs only
+        max_sources: Maximum number of sources in sources_only list (default: None)
 
     Returns:
         Formatted image results with URLs, sizes, and sources
@@ -470,6 +579,7 @@ def image(
     Example:
         brave.image(query="Python programming logo")
         brave.image(query="architecture diagrams", count=5)
+        brave.image(query="infographics", output_format="sources_only")
     """
     if error := _validate_query(query):
         return error
@@ -478,6 +588,8 @@ def image(
     if error := _validate_country(country):
         return error
     if error := _validate_safesearch(safesearch, _SAFESEARCH_IMAGE_VALUES):
+        return error
+    if error := _validate_output_format(output_format):
         return error
 
     params: dict[str, Any] = {
@@ -492,7 +604,7 @@ def image(
 
     if not success:
         return str(result)
-    return _format_image_results(result)  # type: ignore[arg-type]
+    return _format_image_results(result, output_format=output_format, max_sources=max_sources)  # type: ignore[arg-type]
 
 
 def video(
@@ -502,6 +614,8 @@ def video(
     country: str = "US",
     search_lang: str = "en",
     freshness: str | None = None,
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
 ) -> str:
     """Search for videos using Brave Search API.
 
@@ -514,13 +628,18 @@ def video(
         search_lang: Language code (default: "en")
         freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
             or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
+        output_format: Controls response structure:
+            - "full" (default): title, creator, duration, views, description, URL
+            - "sources_only": numbered markdown link list of video URLs only
+        max_sources: Maximum number of sources in sources_only list (default: None)
 
     Returns:
-        Formatted video results with titles, channels, durations, and URLs
+        Formatted video results with titles, creators, durations, and URLs
 
     Example:
         brave.video(query="Python tutorial for beginners")
         brave.video(query="tech conference keynote", freshness="pm", count=5)
+        brave.video(query="machine learning lectures", output_format="sources_only")
     """
     if error := _validate_query(query):
         return error
@@ -529,6 +648,8 @@ def video(
     if error := _validate_country(country):
         return error
     if error := _validate_freshness(freshness):
+        return error
+    if error := _validate_output_format(output_format):
         return error
 
     params: dict[str, Any] = {
@@ -545,7 +666,7 @@ def video(
 
     if not success:
         return str(result)
-    return _format_video_results(result)  # type: ignore[arg-type]
+    return _format_video_results(result, output_format=output_format, max_sources=max_sources)  # type: ignore[arg-type]
 
 
 def search_batch(
@@ -556,6 +677,8 @@ def search_batch(
     search_lang: str = "en",
     safesearch: str = "moderate",
     freshness: str | None = None,
+    output_format: OutputFormat = "full",
+    max_sources: int | None = None,
 ) -> str:
     """Execute multiple web searches concurrently and return combined results.
 
@@ -571,26 +694,34 @@ def search_batch(
         safesearch: Content filter - "off", "moderate", "strict" (default: "moderate")
         freshness: Time filter - "pd" (day), "pw" (week), "pm" (month), "py" (year),
             or date range "YYYY-MM-DDtoYYYY-MM-DD" (e.g. "2024-01-01to2024-06-30")
+        output_format: Controls response structure for each query - "full" (default)
+            or "sources_only" (see brave.search for details)
+        max_sources: Maximum number of sources per query (default: None)
 
     Returns:
         Combined formatted results with labels
 
     Example:
         # Simple list of queries
-        brave.search_batch(["scipy", "sqlalchemy", "jupyterlab"])
+        brave.search_batch(queries=["scipy", "sqlalchemy", "jupyterlab"])
 
         # With custom labels
-        brave.search_batch([
+        brave.search_batch(queries=[
             ("current Gold price USD/oz today", "Gold (USD/oz)"),
             ("current Silver price USD/oz today", "Silver (USD/oz)"),
             ("current Copper price USD/lb today", "Copper (USD/lb)"),
         ])
+
+        # Sources only across multiple queries
+        brave.search_batch(queries=["fastapi", "django"], output_format="sources_only")
     """
     if error := _validate_count(count):
         return error
     if error := _validate_safesearch(safesearch, _SAFESEARCH_WEB_VALUES):
         return error
     if error := _validate_freshness(freshness):
+        return error
+    if error := _validate_output_format(output_format):
         return error
 
     normalized = normalize_items(queries)
@@ -612,6 +743,8 @@ def search_batch(
                 search_lang=search_lang,
                 safesearch=safesearch,
                 freshness=freshness,
+                output_format=output_format,
+                max_sources=max_sources,
             )
             return label, result
 

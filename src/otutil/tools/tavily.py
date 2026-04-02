@@ -175,11 +175,14 @@ def _make_get_request(
         return False, _format_http_error(e)
 
 
-def _format_sources(results: list[dict[str, Any]]) -> str:
+def _format_sources(
+    results: list[dict[str, Any]], *, max_sources: int | None = None
+) -> str:
     """Format source URLs as a numbered deduplicated list with titles.
 
     Args:
         results: List of result dicts with 'url' and 'title' keys
+        max_sources: Maximum number of sources to include (None for unlimited)
 
     Returns:
         Numbered markdown link list, deduplicated by URL
@@ -194,6 +197,8 @@ def _format_sources(results: list[dict[str, Any]]) -> str:
             continue
         seen_urls.add(url)
         num += 1
+        if max_sources is not None and num > max_sources:
+            break
         title = result.get("title", "") or url
         lines.append(f"{num}. [{title}]({url})")
 
@@ -204,6 +209,7 @@ def _format_search_results(
     data: dict[str, Any],
     output_format: OutputFormat,
     min_score: float | None,
+    max_sources: int | None = None,
 ) -> str:
     """Format search results according to output_format, filtering by min_score."""
     results: list[dict[str, Any]] = data.get("results", [])
@@ -216,7 +222,7 @@ def _format_search_results(
     if output_format == "sources_only":
         if not results:
             return "No sources found."
-        return _format_sources(results)
+        return _format_sources(results, max_sources=max_sources)
 
     if output_format == "text_only":
         return answer or "No answer available."
@@ -244,7 +250,7 @@ def _format_search_results(
         lines.append("")
 
     # Sources section
-    sources_text = _format_sources(results)
+    sources_text = _format_sources(results, max_sources=max_sources)
     if sources_text:
         lines.append("## Sources")
         lines.append(sources_text)
@@ -385,6 +391,7 @@ def search(
     topic: str = "general",
     output_format: OutputFormat = "full",
     min_score: float | None = None,
+    max_sources: int | None = None,
     time_range: str | None = None,
     days: int = 3,
     include_domains: list[str] | None = None,
@@ -407,6 +414,8 @@ def search(
             - "text_only": AI answer only
             - "sources_only": Numbered source URL list only
         min_score: Minimum Tavily relevance score to include (0.0-1.0, default: None)
+        max_sources: Maximum number of sources in the ## Sources section or
+            sources_only list (default: None, all sources)
         time_range: Filter results by time - "day", "week", "month", "year"
             (default: None)
         days: For news topic, number of days back to search (1-30, default: 3)
@@ -464,7 +473,7 @@ def search(
         if not success:
             return str(result)
 
-        output = _format_search_results(result, output_format, min_score)
+        output = _format_search_results(result, output_format, min_score, max_sources=max_sources)
 
         filtered = result.get("results", [])
         if min_score is not None:
@@ -624,6 +633,7 @@ def search_batch(
     topic: str = "general",
     output_format: OutputFormat = "full",
     min_score: float | None = None,
+    max_sources: int | None = None,
     time_range: str | None = None,
 ) -> str:
     """Execute multiple Tavily searches concurrently and return combined results.
@@ -642,6 +652,7 @@ def search_batch(
         topic: Search topic - "general", "news", or "finance" (default: "general")
         output_format: Output format - "full" (default), "text_only", or "sources_only"
         min_score: Minimum relevance score to include (0.0-1.0, default: None)
+        max_sources: Maximum number of sources per query (default: None, all sources)
         time_range: Filter results by time - "day", "week", "month", "year"
 
     Returns:
@@ -695,6 +706,7 @@ def search_batch(
                 topic=topic,
                 output_format=output_format,
                 min_score=min_score,
+                max_sources=max_sources,
                 time_range=time_range,
             )
             return label, result

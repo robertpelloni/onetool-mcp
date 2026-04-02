@@ -11,7 +11,7 @@ Configuration via onetool.yaml:
         max_file_size: 10000000      # Max file size (10MB)
         backup_on_write: true        # Create .bak before writes
 
-Attribution: Inspired by fast-filesystem-mcp (Apache 2.0)
+Inspired by fast-filesystem-mcp by efforthye (Apache 2.0).
 https://github.com/efforthye/fast-filesystem-mcp
 """
 

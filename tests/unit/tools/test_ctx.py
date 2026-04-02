@@ -659,6 +659,17 @@ class TestCtxSlice:
         assert result["title"] == "Second"
         assert "Content of second" in result["content"]
 
+    def test_section_by_integer(self, tmp_path: Path) -> None:
+        from ot.ctx.slice import ctx_slice
+
+        store = _make_store(tmp_path)
+        content = "# First\nContent of first.\n## Second\nContent of second.\n# Third\nContent of third."
+        handle = _write_handle(store, content)
+        result = ctx_slice(handle, 2, store=store)  # type: ignore[arg-type]
+        assert "error" not in result
+        assert result["title"] == "Second"
+        assert "Content of second" in result["content"]
+
     def test_section_by_name(self, tmp_path: Path) -> None:
         from ot.ctx.slice import ctx_slice
 

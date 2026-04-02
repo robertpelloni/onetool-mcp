@@ -52,6 +52,10 @@ def ctx_slice(
 
         fmt = meta.get("format", "text")
 
+        # Accept int for section numbers: 2 → "#2"
+        if isinstance(select, int):
+            select = f"#{select}"
+
         # Line range: "N:M" — works for any format
         if _LINE_RANGE_RE.match(select):
             try:

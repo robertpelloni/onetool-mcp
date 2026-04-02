@@ -107,26 +107,6 @@ def _validate_options(favor_precision: bool, favor_recall: bool) -> str | None:
     return None
 
 
-def _format_error(
-    url: str,
-    error: str,
-    message: str,
-    output_format: str,
-) -> str:
-    """Format error message, using JSON structure when appropriate.
-
-    Args:
-        url: The URL that failed
-        error: Error type identifier
-        message: Human-readable error message
-        output_format: The requested output format
-
-    Returns:
-        Formatted error string (JSON if output_format is "json")
-    """
-    if output_format == "json":
-        return json.dumps({"error": error, "url": url, "message": message})
-    return f"Error: {message}"
 
 
 def _is_html_content_type(content_type: str | None) -> bool:
@@ -168,7 +148,7 @@ def _fetch_url_cached(url: str, timeout: float) -> tuple[str | None, str | None]
 def fetch(
     *,
     url: str,
-    output_format: Literal["text", "markdown", "json"] = "markdown",
+    output_format: Literal["text", "markdown", "json", "html"] = "markdown",
     include_links: bool = False,
     include_images: bool = False,
     include_tables: bool = True,
@@ -193,7 +173,7 @@ def fetch(
 
     Args:
         url: The URL to fetch
-        output_format: Output format - "text", "markdown" (default), or "json"
+        output_format: Output format - "text", "markdown" (default), "json", or "html"
         include_links: Include hyperlinks in output (default: False)
         include_images: Include image references (default: False)
         include_tables: Include table content (default: True)
@@ -265,9 +245,7 @@ def fetch(
 
             if downloaded is None:
                 s.add(error="fetch_failed")
-                return _format_error(
-                    url, "fetch_failed", f"Failed to fetch URL: {url}", output_format
-                )
+                return f"Error: Failed to fetch URL: {url}"
 
             # For non-HTML content, return raw content directly (no extraction needed)
             if not _is_html_content_type(content_type):
@@ -299,12 +277,7 @@ def fetch(
 
                 if result is None:
                     s.add(error="no_content")
-                    return _format_error(
-                        url,
-                        "no_content",
-                        f"No content could be extracted from: {url}",
-                        output_format,
-                    )
+                    return f"Error: No content could be extracted from: {url}"
 
             # Wrap with metadata if requested (JSON only)
             if include_metadata and output_format == "json":
@@ -333,31 +306,19 @@ def fetch(
 
         except TimeoutError:
             s.add(error="timeout")
-            return _format_error(
-                url,
-                "timeout",
-                f"Timeout after {timeout}s fetching: {url}",
-                output_format,
-            )
+            return f"Error: Timeout after {timeout}s fetching: {url}"
         except ConnectionError as e:
             s.add(error="connection_failed")
-            return _format_error(
-                url,
-                "connection_failed",
-                f"Connection failed for {url}: {e}",
-                output_format,
-            )
+            return f"Error: Connection failed for {url}: {e}"
         except Exception as e:
             s.add(error=str(e))
-            return _format_error(
-                url, "error", f"Error fetching {url}: {e}", output_format
-            )
+            return f"Error: Error fetching {url}: {e}"
 
 
 def fetch_batch(
     *,
     urls: list[str] | list[tuple[str, str]],
-    output_format: Literal["text", "markdown", "json"] = "markdown",
+    output_format: Literal["text", "markdown", "json", "html"] = "markdown",
     include_links: bool = False,
     include_images: bool = False,
     include_tables: bool = True,
@@ -381,7 +342,7 @@ def fetch_batch(
         urls: List of URLs to fetch. Each item can be:
               - A string (URL used as both source and label)
               - A tuple of (url, label) for custom section labels
-        output_format: Output format - "text", "markdown" (default), or "json"
+        output_format: Output format - "text", "markdown" (default), "json", or "html"
         include_links: Include hyperlinks in output (default: False)
         include_images: Include image references (default: False)
         include_tables: Include table content (default: True)
