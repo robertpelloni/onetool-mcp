@@ -41,6 +41,7 @@ dependencies = [
     "keyring>=25.7.0",
     "resvg-py>=0.2.6",
     "onetool-pack",               # Shared pack utilities (logging, config, http, cache, etc.)
+    "uvicorn>=0.30",              # ASGI server for `onetool direct` HTTP host
 ]
 
 [project.urls]

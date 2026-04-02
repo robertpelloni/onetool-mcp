@@ -17,24 +17,23 @@ Source: `src/otdev/tools/excalidraw.py`
 
 ### Requirement: Draw diagram elements
 
-`whiteboard.draw(input=)` SHALL add shapes, edges, and subgraphs to the live
-Excalidraw canvas from a Mermaid-compatible DSL string. It SHALL be additive —
-elements already on canvas are never removed or repositioned. New shapes
-receive column-based stacking positions: each subgraph's nodes are placed in a
-separate x column (300px apart); ungrouped nodes share one column. Edges are
-deduplicated by `(src, dst, label, startArrowhead, endArrowhead)`. Unknown edge
-endpoints are auto-created as shapes with their ID as label. New shapes are
-placed below existing canvas content. Call `whiteboard.layout()` to apply
-graph layout (topological layering via ELK).
+`whiteboard.draw(input=, board=)` SHALL add shapes, edges, and subgraphs to the board state. State SHALL be persisted to a session file; no Playwright browser SHALL be launched by this call. It SHALL be additive — elements already in state are never removed or repositioned. New shapes receive column-based stacking positions: each subgraph's nodes are placed in a separate x column (300px apart); ungrouped nodes share one column. Edges are deduplicated by `(src, dst, label, startArrowhead, endArrowhead)`. Unknown edge endpoints are auto-created as shapes with their ID as label. New shapes are placed below existing canvas content. Call `whiteboard.layout()` to apply graph layout (topological layering via ELK).
+
+The optional `board=` parameter specifies the named board to operate on. If omitted, the CWD-keyed default board is used.
 
 #### Scenario: Add shapes and edges
 - **WHEN** `whiteboard.draw(input='a["A"]\nb["B"]\na-->b')` is called
-- **THEN** two rectangles and a directed arrow SHALL appear on the canvas
+- **THEN** two rectangles and a directed arrow SHALL be added to the session state
 - **AND** the return value SHALL match `"+2 shapes, +1 edge(s): edge-a-b"` (format: `"+N shapes[, M updated][, +P edge(s): ids][, +Q group(s)]"`)
+- **AND** no browser SHALL be launched
 
 #### Scenario: Additive — existing shapes untouched
-- **WHEN** `whiteboard.draw(input='c["C"]')` is called after shapes `a` and `b` exist
+- **WHEN** `whiteboard.draw(input='c["C"]')` is called after shapes `a` and `b` exist in session state
 - **THEN** only shape `c` SHALL be added; `a` and `b` SHALL be untouched
+
+#### Scenario: Named board
+- **WHEN** `whiteboard.draw(input='box:A', board='myboard')` is called
+- **THEN** state SHALL be written to `~/.onetool/whiteboard/myboard.json`
 
 #### Scenario: Subgraph bounding rect
 - **WHEN** the DSL includes a `subgraph ... end` block naming existing shapes
@@ -53,7 +52,7 @@ graph layout (topological layering via ELK).
 
 #### Scenario: Edge deduplication
 - **WHEN** `draw()` is called twice with the same edge
-- **THEN** only one arrow SHALL appear on canvas
+- **THEN** only one arrow SHALL be present in the session state
 
 #### Scenario: Bidirectional and special arrowheads
 - **WHEN** the DSL contains `a<-->b`, `a --o b`, or `a --x b`
@@ -94,6 +93,21 @@ graph layout (topological layering via ELK).
 - **WHEN** `draw()` is called with `a["Foo"] x:100,y:200` (inline position props)
 - **THEN** shape `a` SHALL be placed at `x=100, y=200` instead of auto-layout coordinates
 - **AND** `x`/`y` SHALL be consumed from the style dict and NOT forwarded into `styleProps`
+
+### Requirement: share requires browser
+
+`whiteboard.share()` and `whiteboard.export()` SHALL load state from the session file, launch a Playwright browser, render the board, and return the result.
+
+#### Scenario: share loads session state
+
+- **WHEN** `wb.share()` is called after prior `wb.draw()` calls in separate processes
+- **THEN** all shapes from the session file SHALL appear in the rendered output
+- **AND** a shareable URL or exported content SHALL be returned
+
+#### Scenario: share does not modify session state
+
+- **WHEN** `wb.share()` is called
+- **THEN** the session file SHALL be unchanged after the call completes
 
 ### Requirement: Insert ASCII text notes
 

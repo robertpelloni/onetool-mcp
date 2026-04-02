@@ -66,6 +66,12 @@ class TestWorkerPool:
         assert pool.idle_timeout == 600.0
         assert pool._workers == {}
 
+    def test_init_starts_reaper_thread(self) -> None:
+        """Reaper thread should be alive immediately after __init__."""
+        pool = WorkerPool()
+        assert pool._reaper_thread is not None
+        assert pool._reaper_thread.is_alive()
+
     def test_init_with_custom_timeout(self) -> None:
         """Should accept custom idle timeout."""
         pool = WorkerPool(idle_timeout=300.0)

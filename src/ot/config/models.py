@@ -508,6 +508,45 @@ class McpServerConfig(BaseModel):
     )
 
 
+# ==================== Direct Configuration ====================
+
+
+class DirectConfig(BaseModel):
+    """Direct mode configuration for `onetool direct` commands."""
+
+    host: str | None = Field(
+        default=None,
+        description=(
+            "Execution server routing mode. "
+            "'enable' auto-starts a local server on first `direct run`; "
+            "'HOST:PORT' routes to a remote server. "
+            "Absent (default) runs all commands in-process."
+        ),
+    )
+
+    @field_validator("host")
+    @classmethod
+    def _validate_host(cls, v: str | None) -> str | None:
+        if v is None or v == "enable":
+            return v
+        if ":" not in v:
+            raise ValueError(
+                f"direct.host must be null, 'enable', or 'HOST:PORT' (got {v!r})"
+            )
+        return v
+    port: int = Field(
+        default=8765,
+        ge=1,
+        le=65535,
+        description="Port for the local execution server",
+    )
+    timeout: int = Field(
+        default=60,
+        ge=1,
+        description="HTTP request timeout in seconds when routing to the execution server",
+    )
+
+
 # ==================== Tools Configuration ====================
 
 
@@ -569,6 +608,11 @@ class OneToolConfig(BaseModel):
     servers: dict[str, McpServerConfig] = Field(
         default_factory=dict,
         description="External MCP servers to proxy through OneTool",
+    )
+
+    direct: DirectConfig = Field(
+        default_factory=DirectConfig,
+        description="Direct mode configuration (execution server routing)",
     )
 
     tools: ToolsConfig = Field(

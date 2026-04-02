@@ -64,7 +64,7 @@ class TestModuleCacheBounds:
         # Add entries up to and beyond maxsize
         for i in range(5):
             path = Path(f"/test/path/{i}")
-            loader._cache_set(path, (mock_tools, {f"file{i}": float(i)}))
+            loader._cache_set(path, (mock_tools, {f"file{i}": float(i)}, 0.0))
 
         # Should only have maxsize entries
         assert len(loader._module_cache) == 3
@@ -88,8 +88,8 @@ class TestModuleCacheBounds:
         # Add two entries
         path1 = Path("/test/lru/1")
         path2 = Path("/test/lru/2")
-        loader._cache_set(path1, (mock_tools, {"f1": 1.0}))
-        loader._cache_set(path2, (mock_tools, {"f2": 2.0}))
+        loader._cache_set(path1, (mock_tools, {"f1": 1.0}, 0.0))
+        loader._cache_set(path2, (mock_tools, {"f2": 2.0}, 0.0))
 
         # path1 was added first, so it's at the front
         first_key = next(iter(loader._module_cache))
@@ -101,3 +101,93 @@ class TestModuleCacheBounds:
         # Now path2 should be at front
         first_key = next(iter(loader._module_cache))
         assert first_key == path2
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestCheckCacheTTL:
+    """Tests for _check_cache TTL behaviour."""
+
+    def test_cache_ttl_constant_exists(self) -> None:
+        import ot.executor.tool_loader as loader
+        assert hasattr(loader, "_CACHE_TTL")
+        assert loader._CACHE_TTL > 0
+
+    def test_within_ttl_skips_stat(self, isolated_cache, tmp_path: Path) -> None:  # noqa: ARG002
+        """Cache hit within TTL should skip per-file stat and return registry."""
+        import time
+        import ot.executor.tool_loader as loader
+        from ot.executor.tool_loader import LoadedTools
+
+        f = tmp_path / "tool.py"
+        f.write_text("pack = 'test'")
+
+        mock_tools = LoadedTools(functions={}, packs={})
+        key = Path("__test_ttl__")
+        loader._cache_set(key, (mock_tools, {str(f): f.stat().st_mtime}, time.time()))
+
+        # File set must match exactly — pass the same set
+        result = loader._check_cache(key, {f})
+        assert result is mock_tools
+
+    def test_expired_ttl_checks_mtimes(self, isolated_cache, tmp_path: Path) -> None:  # noqa: ARG002
+        """Cache expired by TTL should perform per-file stat check."""
+        import ot.executor.tool_loader as loader
+        from ot.executor.tool_loader import LoadedTools
+
+        f = tmp_path / "tool.py"
+        f.write_text("pack = 'test'")
+
+        mock_tools = LoadedTools(functions={}, packs={})
+        key = Path("__test_ttl_expired__")
+        # Store with last_validated far in the past
+        loader._cache_set(key, (mock_tools, {str(f): f.stat().st_mtime}, 0.0))
+
+        result = loader._check_cache(key, {f})
+        assert result is mock_tools  # valid mtimes → cache hit
+
+    def test_expired_ttl_invalidates_on_mtime_change(self, isolated_cache, tmp_path: Path) -> None:  # noqa: ARG002
+        """Cache with stale mtime should return None after TTL expires."""
+        import ot.executor.tool_loader as loader
+        from ot.executor.tool_loader import LoadedTools
+
+        f = tmp_path / "tool.py"
+        f.write_text("pack = 'test'")
+
+        mock_tools = LoadedTools(functions={}, packs={})
+        key = Path("__test_ttl_stale__")
+        # Store with wrong (stale) mtime and expired TTL
+        loader._cache_set(key, (mock_tools, {str(f): 0.0}, 0.0))
+
+        result = loader._check_cache(key, {f})
+        assert result is None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+class TestResetClearsNamespaceCache:
+    """Tests that tool_loader.reset() clears both the module cache and namespace cache."""
+
+    def test_reset_clears_module_cache(self, isolated_cache) -> None:  # noqa: ARG002
+        """reset() must empty _module_cache so next load_tool_registry() re-imports."""
+        from ot.executor.tool_loader import LoadedTools
+        import ot.executor.tool_loader as loader
+
+        loader._cache_set(Path("__reset_test__"), (LoadedTools(functions={}, packs={}), {}, 0.0))
+        assert len(loader._module_cache) > 0
+
+        loader.reset()
+
+        assert len(loader._module_cache) == 0
+
+    def test_reset_clears_namespace_cache(self) -> None:
+        """reset() must also clear the pack_proxy namespace cache."""
+        from ot.executor import pack_proxy
+        import ot.executor.tool_loader as loader
+
+        # Seed the namespace cache with a dummy entry
+        pack_proxy._namespace_cache["__test__"] = {}  # type: ignore[assignment]
+
+        loader.reset()
+
+        assert "__test__" not in pack_proxy._namespace_cache

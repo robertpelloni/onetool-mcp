@@ -255,7 +255,7 @@ No pack-specific `tools.play_util` settings.
 
 No pack-specific `tools.whiteboard` settings.
 
-### web
+### webfetch
 
 | Field | Type | Default | Range | Description |
 |------|------|---------|-------|-------------|
@@ -466,6 +466,23 @@ snippets:
     body: "brave.search(query='test')"  # Inline overrides included
 ```
 
+## Execution Server Configuration
+
+Settings for the `onetool direct` subcommand group. Configure under `direct` in `onetool.yaml`.
+
+```yaml
+direct:
+  host: null    # Routing mode: null=in-process only, "enable"=auto-start local server, "HOST:PORT"=remote
+  port: 8765    # Port for the local execution server
+  timeout: 60   # HTTP request timeout in seconds for `direct run` → server routing
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `direct.host` | string or null | `null` | Routing mode: absent = in-process only; `"enable"` = auto-start a local server on first use; `"HOST:PORT"` = route to a remote server. Any other value raises a config error. |
+| `direct.port` | int (1–65535) | `8765` | Port for the local execution server |
+| `direct.timeout` | int (≥1) | `60` | HTTP request timeout in seconds when routing to a server |
+
 ## Statistics Configuration
 
 Track runtime statistics:
@@ -478,7 +495,7 @@ stats:
   flush_interval_seconds: 30
   context_per_call: 30000
   time_overhead_per_call_ms: 4000
-  model: anthropic/claude-opus-4.5
+  model: anthropic/claude-opus-4-6
   cost_per_million_input_tokens: 15.0
   cost_per_million_output_tokens: 75.0
   chars_per_token: 4.0
@@ -514,7 +531,7 @@ Control large output handling:
 
 ```yaml
 output:
-  max_inline_size: 3000       # Threshold in bytes (0 to disable)
+  max_inline_size: 5000       # Threshold in bytes (0 to disable)
   result_store_dir: tmp       # Directory for stored results
   result_ttl: 3600            # Time-to-live in seconds
   preview_lines: 10           # Lines in summary preview

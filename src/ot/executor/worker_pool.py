@@ -145,6 +145,7 @@ class WorkerPool:
         self._lock = threading.Lock()
         self._reaper_thread: threading.Thread | None = None
         self._shutdown = threading.Event()
+        self._start_reaper()
 
     def _start_reaper(self) -> None:
         """Start the background reaper thread if not already running."""
@@ -270,19 +271,24 @@ class WorkerPool:
         config = config or {}
         secrets = secrets or {}
 
-        # Ensure reaper is running
-        self._start_reaper()
+        # Optimistic read without the lock — avoids blocking concurrent calls
+        # to different tools while a worker is being spawned.
+        worker = self._workers.get(tool_path)
+        if worker is None or not worker.is_alive():
+            new_worker = self._spawn_worker(tool_path, config, secrets)
+            with self._lock:
+                existing = self._workers.get(tool_path)
+                if existing is None or not existing.is_alive():
+                    if existing is not None:
+                        logger.warning(f"Worker for {tool_path.name} died, respawning")
+                    self._workers[tool_path] = new_worker
+                    worker = new_worker
+                else:
+                    # Another thread spawned first; discard the extra worker
+                    new_worker.process.terminate()
+                    worker = existing
 
         with self._lock:
-            worker = self._workers.get(tool_path)
-
-            # Check if we need a new worker
-            if worker is None or not worker.is_alive():
-                if worker is not None:
-                    logger.warning(f"Worker for {tool_path.name} died, respawning")
-                worker = self._spawn_worker(tool_path, config, secrets)
-                self._workers[tool_path] = worker
-
             worker.refresh()
 
         # Build JSON-RPC request

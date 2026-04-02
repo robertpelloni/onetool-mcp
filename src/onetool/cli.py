@@ -12,6 +12,7 @@ from pathlib import Path
 
 import typer
 
+from onetool.cli_commands.direct_app import direct_app
 from onetool.kb import kb_app
 
 
@@ -76,7 +77,8 @@ def _setup_signal_handlers() -> None:
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
 
-app.add_typer(kb_app, name="kb")
+app.add_typer(direct_app, name="direct", rich_help_panel="Direct")
+app.add_typer(kb_app, name="kb", rich_help_panel="Knowledge Base")
 
 # Init subcommand group - manage OneTool configuration directory
 init_app = typer.Typer(
@@ -84,7 +86,7 @@ init_app = typer.Typer(
     help="Initialize and manage the OneTool configuration directory.",
     invoke_without_command=True,
 )
-app.add_typer(init_app)
+app.add_typer(init_app, rich_help_panel="Configuration")
 
 
 def _next_bak(path: Path) -> Path:

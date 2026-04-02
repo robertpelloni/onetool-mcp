@@ -20,6 +20,7 @@ pack = "whiteboard"
 
 __all__ = [
     "align",
+    "boards",
     "clear",
     "close",
     "draw",
@@ -54,26 +55,12 @@ from typing import Any
 
 from otpack import LogSpan, resolve_cwd_path
 
-# ---------------------------------------------------------------------------
-# Module-level DSL state
-# ---------------------------------------------------------------------------
-
-_dsl_state: dict[str, Any] = {"shapes": {}, "edges": [], "groups": {}}
-_edge_keys: set[tuple[str, str, str, str | None, str | None]] = set()
-_rendered_ids: set[str] = set()
+from otdev.tools._excalidraw import session as _session
 
 
 def _edge_key(e: dict[str, Any]) -> tuple[str, str, str, str | None, str | None]:
     """Return the deduplication key for an edge."""
     return (e["src"], e["dst"], e["label"], e.get("startArrowhead"), e.get("endArrowhead"))
-
-
-def _reset_state() -> None:
-    """Reset all module-level DSL and render state to empty."""
-    _dsl_state.clear()
-    _dsl_state.update({"shapes": {}, "edges": [], "groups": {}})
-    _rendered_ids.clear()
-    _edge_keys.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -377,8 +364,6 @@ def _ensure_ready() -> str | None:
             )
         except Exception:
             return "Error: timed out waiting for __drawApi to initialise"
-        if _dsl_state["shapes"]:
-            _rerender_from_state()
 
     # Always re-inject ops.js so in-place code changes take effect without a page reload
     _browser_evaluate(_load_js("ops.js"))
@@ -386,21 +371,18 @@ def _ensure_ready() -> str | None:
     return None
 
 
-def _rerender_from_state() -> None:
-    """Re-render all content from _dsl_state after a page loss.
+def _rerender_from_state(state: dict[str, Any]) -> None:
+    """Re-render all content from session state.
 
-    Shapes are placed in a flat grid (4 cols x N rows, 160x60, gap 40/20)
-    as a recovery fallback. Call ``wb.layout()`` afterwards to apply proper
-    graph layout.
+    Shapes are placed in a flat grid (4 cols x N rows, 160x60, gap 40/20).
+    Call ``wb.layout()`` afterwards to apply proper graph layout.
     """
-    _rendered_ids.clear()
-
     # Flat grid: 4 columns, fixed 160x60 nodes, 40px h-gap, 20px v-gap
-    shape_ids = list(_dsl_state["shapes"].keys())
+    shape_ids = list(state["shapes"].keys())
     cols, node_w, node_h, gap_x, gap_y = 4, 160, 60, 40, 20
     shape_payloads = []
     for i, id_ in enumerate(shape_ids):
-        shape = _dsl_state["shapes"][id_]
+        shape = state["shapes"][id_]
         col = i % cols
         row = i // cols
         x = 100.0 + col * (node_w + gap_x)
@@ -412,17 +394,15 @@ def _rerender_from_state() -> None:
          "label": e["label"], "startArrowhead": e.get("startArrowhead"),
          "endArrowhead": e.get("endArrowhead", "arrow"),
          "styleProps": e.get("styleProps", {})}
-        for e in _dsl_state["edges"]
+        for e in state["edges"]
     ]
 
     subgraph_payloads = [
         {"id": gid, "label": group["label"], "memberIds": group["members"], "savedBounds": None}
-        for gid, group in _dsl_state["groups"].items()
+        for gid, group in state["groups"].items()
     ]
 
     _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
-    _rendered_ids.update(s["id"] for s in shape_payloads)
-    _rendered_ids.update(e["id"] for e in edge_payloads)
 
 
 def _get_canvas_max_y() -> float:
@@ -968,17 +948,17 @@ def _write_dsl_to_canvas(dsl_str: str) -> None:
     _browser_evaluate(f"() => window._upsert_dsl_element({json.dumps(dsl_str)})")
 
 
-def _parse_dsl_to_state(dsl_str: str) -> None:
-    """Parse DSL string and update _dsl_state and _edge_keys."""
+def _parse_dsl_to_state(dsl_str: str) -> dict[str, Any]:
+    """Parse DSL string and return a session-compatible state dict."""
     parsed = parse_dsl(dsl_str)
-    _reset_state()
-    _dsl_state.update({
+    edge_keys = {_edge_key(e) for e in parsed["edges"]}
+    return {
         "shapes": parsed["shapes"],
-        "edges":  parsed["edges"],
+        "edges": parsed["edges"],
         "groups": parsed["groups"],
-    })
-    for e in parsed["edges"]:
-        _edge_keys.add(_edge_key(e))
+        "edge_keys": edge_keys,
+        "canvas_max_y": 60.0,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -986,7 +966,7 @@ def _parse_dsl_to_state(dsl_str: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def draw(*, input: str) -> str:
+def draw(*, input: str, board: str | None = None) -> str:
     """Add or update diagram elements from DSL. Always additive — never clears.
 
     **New nodes** get auto-layout positions. **Existing nodes** are upserted:
@@ -1033,6 +1013,7 @@ def draw(*, input: str) -> str:
 
     Args:
         input: DSL string. Semicolons or newlines separate statements.
+        board: Named board to draw on. Defaults to a CWD-keyed board.
 
     Returns:
         Summary like "+2 shapes, +1 edge(s): edge-a-b".
@@ -1041,10 +1022,12 @@ def draw(*, input: str) -> str:
         whiteboard.draw(input='a["Service A"];b["DB"];a-->b')
     """
     with LogSpan(span="excalidraw.draw") as s:
-        err = _ensure_ready()
-        if err:
-            s.add("error", err)
-            return err
+        # Load session state — no browser needed for draw
+        state = _session.load(board)
+        shapes = state["shapes"]
+        edges = state["edges"]
+        groups = state["groups"]
+        edge_keys: set[tuple[str, str, str, str | None, str | None]] = state["edge_keys"]
 
         parsed = parse_dsl(input)
         inline_styles = parsed.get("inline_styles", {})
@@ -1052,123 +1035,89 @@ def draw(*, input: str) -> str:
         # Auto-create nodes referenced in edges but not declared as shapes
         for edge in parsed["edges"]:
             for nid in (edge["src"], edge["dst"]):
-                if nid not in parsed["shapes"] and nid not in _dsl_state["shapes"]:
+                if nid not in parsed["shapes"] and nid not in shapes:
                     parsed["shapes"][nid] = {"label": nid, "classes": []}
 
         # Separate new shapes from existing shapes in one pass
         new_shapes: dict[str, Any] = {}
         existing_shape_updates: dict[str, Any] = {}
         for id_, sh in parsed["shapes"].items():
-            if id_ in _dsl_state["shapes"]:
+            if id_ in shapes:
                 existing_shape_updates[id_] = sh
             else:
                 new_shapes[id_] = sh
-        new_groups = {gid for gid in parsed["groups"] if gid not in _dsl_state["groups"]}
+        new_groups = {gid for gid in parsed["groups"] if gid not in groups}
 
-        merged_edges = list(_dsl_state["edges"])
         new_edges_to_commit: list[tuple[tuple[str, str, str, str | None, str | None], dict[str, Any]]] = []
         for e in parsed["edges"]:
             key = _edge_key(e)
-            if key not in _edge_keys:
-                merged_edges.append(e)
+            if key not in edge_keys:
                 new_edges_to_commit.append((key, e))
-        merged_groups = {**_dsl_state["groups"], **parsed["groups"]}
 
-        # New shapes stack below existing canvas content
-        base_y = 0.0
-        if new_shapes:
-            base_y = _get_canvas_max_y() + 40
-
-        # Assign separate x columns for each subgraph so bounding boxes don't overlap.
-        # Nodes not in any subgraph share a single ungrouped column.
-        subgraph_of: dict[str, str | None] = dict.fromkeys(new_shapes, None)
-        for gid, group in parsed["groups"].items():
-            for mid in group["members"]:
-                if mid in new_shapes:
-                    subgraph_of[mid] = gid
-        col_x: dict[str | None, float] = {}
-        col_y: dict[str | None, float] = {}
-        next_x = 100.0
-        for id_ in new_shapes:
-            sg = subgraph_of[id_]
-            if sg not in col_x:
-                col_x[sg] = next_x
-                col_y[sg] = base_y
-                next_x += 300.0
-
-        shape_payloads = []
-        for id_, shape in new_shapes.items():
-            sg = subgraph_of[id_]
-            x = col_x[sg]
-            y = col_y[sg]
-            col_y[sg] += 100.0
-            # Apply inline styles for new shapes
-            shape_payloads.append(_shape_payload(id_, shape, x, y, inline_styles.get(id_, {})))
-
-        # Build patch payloads for existing shapes that changed
-        patch_payloads = []
-        for id_, shape in existing_shape_updates.items():
-            patch: dict[str, Any] = {}
-            # Update label only if explicitly specified (not None)
-            if shape.get("label") is not None:
-                existing_label = _dsl_state["shapes"][id_].get("label", "")
-                if shape["label"] != existing_label:
-                    patch["text"] = shape["label"]
-            # Apply inline styles
-            patch.update(inline_styles.get(id_, {}))
-            if patch:
-                patch["id"] = id_
-                patch_payloads.append(patch)
-
-        # Apply inline style-only updates for nodes not in parsed["shapes"]
-        for id_, style in inline_styles.items():
-            if id_ not in parsed["shapes"] and id_ in _dsl_state["shapes"]:
-                patch_payloads.append({"id": id_, **style})
-
-        # Render only NEW edges
-        edge_payloads = []
-        for _key, e in new_edges_to_commit:
-            edge_payloads.append(
-                {"id": e["id"], "srcId": e["src"], "dstId": e["dst"],
-                 "label": e["label"], "startArrowhead": e.get("startArrowhead"),
-                 "endArrowhead": e.get("endArrowhead", "arrow"),
-                 "strokeStyle": e.get("strokeStyle", "solid"),
-                 "styleProps": e.get("styleProps", {})}
-            )
-
-        # Redraw ALL subgraphs — bounding boxes must reflect current member positions
-        subgraph_payloads = [
-            {"id": gid, "label": group["label"], "memberIds": group["members"], "savedBounds": None}
-            for gid, group in merged_groups.items()
-        ]
-
-        # Single batch draw for new shapes + edges
-        _js_batch_draw(shapes=shape_payloads, edges=edge_payloads, subgraphs=subgraph_payloads)
-
-        # Patch existing shapes (separate call to preserve their live positions)
-        if patch_payloads:
-            _js_patch_elements(patch_payloads)
-
-        # Commit state only after successful JS calls
+        # Update state: shapes (upsert)
         for id_, shape in parsed["shapes"].items():
             if shape.get("label") is not None:
-                _dsl_state["shapes"][id_] = shape
-            elif id_ not in _dsl_state["shapes"]:
-                _dsl_state["shapes"][id_] = {"label": id_, "classes": []}
-        _dsl_state["groups"].update(parsed["groups"])
+                shapes[id_] = shape
+            elif id_ not in shapes:
+                shapes[id_] = {"label": id_, "classes": []}
+
+        # Update state: groups
+        groups.update(parsed["groups"])
+
+        # Update state: edges
         for key, e in new_edges_to_commit:
-            _dsl_state["edges"].append(e)
-            _edge_keys.add(key)
-        _rendered_ids.update(s["id"] for s in shape_payloads)
-        _rendered_ids.update(e["id"] for e in edge_payloads)
+            edges.append(e)
+            edge_keys.add(key)
+
+        # Track canvas_max_y for additive positioning (used by next draw call)
+        base_y = state.get("canvas_max_y", 60.0) + 40 if new_shapes else state.get("canvas_max_y", 60.0)
+        col_y: dict[str | None, float] = {}
+        if new_shapes:
+            subgraph_of: dict[str, str | None] = dict.fromkeys(new_shapes, None)
+            for gid, group in parsed["groups"].items():
+                for mid in group["members"]:
+                    if mid in new_shapes:
+                        subgraph_of[mid] = gid
+            next_x = 100.0
+            col_x: dict[str | None, float] = {}
+            for id_ in new_shapes:
+                sg = subgraph_of[id_]
+                if sg not in col_x:
+                    col_x[sg] = next_x
+                    col_y[sg] = base_y
+                    next_x += 300.0
+            for id_ in new_shapes:
+                sg = subgraph_of[id_]
+                col_y[sg] += 100.0
+
+        new_canvas_max_y = max(col_y.values()) if col_y else state.get("canvas_max_y", 60.0)
+
+        # Count updated shapes for summary (one per shape, not per attribute)
+        patch_count = sum(
+            1
+            for id_, shape in existing_shape_updates.items()
+            if (
+                shape.get("label") is not None
+                and shape["label"] != shapes.get(id_, {}).get("label", "")
+            ) or inline_styles.get(id_)
+        )
+
+        # Save updated state to session file
+        _session.save({
+            "shapes": shapes,
+            "edges": edges,
+            "groups": groups,
+            "edge_keys": edge_keys,
+            "canvas_max_y": new_canvas_max_y,
+        }, board)
 
         new_edge_ids = [e["id"] for _, e in new_edges_to_commit]
         edge_msg = f", +{len(new_edge_ids)} edge(s): {', '.join(new_edge_ids)}" if new_edge_ids else ""
-        updated_msg = f", {len(patch_payloads)} updated" if patch_payloads else ""
+        updated_msg = f", {patch_count} updated" if patch_count else ""
         group_msg = f", +{len(new_groups)} group(s)" if new_groups else ""
 
         s.add("newShapes", len(new_shapes))
-        s.add("totalElements", len(_rendered_ids))
+        s.add("board", board or "cwd")
         return f"+{len(new_shapes)} shapes{updated_msg}{edge_msg}{group_msg}"
 
 
@@ -1341,7 +1290,6 @@ def note(*, input: str, background: str = _NOTE_DEFAULT_BG) -> str:
         inserted = len(shape_payloads)
         for payload in shape_payloads:
             _js_batch_draw(shapes=[payload], edges=[], subgraphs=[])
-            _rendered_ids.add(payload["id"])
 
         s.add("inserted", inserted)
         return f"inserted {inserted} note(s)"
@@ -1366,7 +1314,7 @@ def embed_dsl() -> str:
             s.add("error", err)
             return err
 
-        dsl_text = _build_dsl(_dsl_state)
+        dsl_text = _build_dsl(_session.load())
         if not dsl_text.strip():
             return "nothing to embed — canvas is empty"
 
@@ -1389,14 +1337,13 @@ def embed_dsl() -> str:
             "w": w, "h": h, "shape": "rectangle", "styleProps": style,
         }
         _js_batch_draw(shapes=[payload], edges=[], subgraphs=[])
-        _rendered_ids.add("dsl")
 
         n = len(lines)
         s.add("lines", n)
         return f"embedded DSL ({n} lines)"
 
 
-def erase(*, ids: list[str]) -> str:
+def erase(*, ids: list[str], board: str | None = None) -> str:
     """Remove individual elements from the canvas and Python state.
 
     Bound children (shape text, arrow labels) are removed automatically.
@@ -1420,6 +1367,7 @@ def erase(*, ids: list[str]) -> str:
 
     Args:
         ids: List of element IDs to remove.
+        board: Named board to operate on. Defaults to the CWD-keyed board.
 
     Returns:
         Summary such as "erased 2 element(s)".
@@ -1428,50 +1376,52 @@ def erase(*, ids: list[str]) -> str:
         excalidraw.erase(ids=["a", "edge-a-b"])
     """
     with LogSpan(span="excalidraw.erase", ids=ids) as s:
-        err = _ensure_ready()
-        if err:
-            s.add("error", err)
-            return err
+        # Load session state — no browser needed for erase
+        state = _session.load(board)
+        shapes = state["shapes"]
+        edges = state["edges"]
+        edge_keys: set[tuple[str, str, str, str | None, str | None]] = state["edge_keys"]
 
         id_set = set(ids)
+        edge_ids = {e["id"] for e in edges}
 
-        # Only erase IDs that are actually rendered
-        to_erase = [id_ for id_ in ids if id_ in _rendered_ids]
+        # Only erase IDs present in session state
+        to_erase = [id_ for id_ in ids if id_ in shapes or id_ in edge_ids]
+        shape_ids_to_erase = [id_ for id_ in ids if id_ in shapes]
         if not to_erase:
             return "erased 0 element(s)"
 
         # Find edges that become dangling (src or dst is being erased)
         orphaned_edge_ids = [
-            e["id"] for e in _dsl_state["edges"]
+            e["id"] for e in edges
             if e["src"] in id_set or e["dst"] in id_set
         ]
-        all_to_erase = list(to_erase) + [eid for eid in orphaned_edge_ids if eid not in to_erase]
 
-        ids_json = json.dumps(all_to_erase)
-        _browser_evaluate(f"() => window._batch_erase({ids_json})")
+        # Remove shapes
+        for id_ in shape_ids_to_erase:
+            shapes.pop(id_, None)
 
-        # Update Python state
-        for id_ in to_erase:
-            _dsl_state["shapes"].pop(id_, None)
-            _rendered_ids.discard(id_)
-            _rendered_ids.discard(id_ + "-text")
-            _rendered_ids.discard(id_ + "-label")
-
-        # Remove edges by their own ID or if their src/dst is being erased
+        # Remove edges by ID or dangling src/dst
         keys_to_remove = {
             _edge_key(e)
-            for e in _dsl_state["edges"]
+            for e in edges
             if e["id"] in id_set or e["src"] in id_set or e["dst"] in id_set
         }
-        _dsl_state["edges"][:] = [
-            e for e in _dsl_state["edges"]
+        edges[:] = [
+            e for e in edges
             if e["id"] not in id_set
             and e["src"] not in id_set
             and e["dst"] not in id_set
         ]
-        _edge_keys.difference_update(keys_to_remove)
-        for eid in orphaned_edge_ids:
-            _rendered_ids.discard(eid)
+        edge_keys.difference_update(keys_to_remove)
+
+        _session.save({
+            "shapes": shapes,
+            "edges": edges,
+            "groups": state["groups"],
+            "edge_keys": edge_keys,
+            "canvas_max_y": state.get("canvas_max_y", 60.0),
+        }, board)
 
         n = len(to_erase)
         dangling = len(orphaned_edge_ids)
@@ -1508,7 +1458,7 @@ def save(*, file: str) -> str:
             return err
 
         # Write current DSL as __otDSL element so load() can restore Python state
-        dsl_str = _build_dsl(_dsl_state)
+        dsl_str = _build_dsl(_session.load())
         if dsl_str.strip():
             _write_dsl_to_canvas(dsl_str)
 
@@ -1587,24 +1537,19 @@ def load(*, file: str) -> str:
             f"}}"
         )
 
-        # Sync Python state from __otDSL element
-        _reset_state()
+        # Sync Python state from __otDSL element and save to session file
         dsl_str = _read_dsl_from_canvas()
         if dsl_str:
-            _parse_dsl_to_state(dsl_str)
+            new_state = _parse_dsl_to_state(dsl_str)
+            _session.save(new_state)
             warning = ""
         else:
+            new_state = {"shapes": {}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0}
+            _session.save(new_state)
             warning = " [warning: no __otDSL element — Python state is empty; call whiteboard.sync() after adding one]"
 
-        # Rebuild _rendered_ids from state
-        for id_ in _dsl_state["shapes"]:
-            _rendered_ids.add(id_)
-            _rendered_ids.add(id_ + "-text")
-        for e in _dsl_state["edges"]:
-            _rendered_ids.add(e["id"])
-
-        n_shapes = len(_dsl_state["shapes"])
-        n_edges = len(_dsl_state["edges"])
+        n_shapes = len(new_state["shapes"])
+        n_edges = len(new_state["edges"])
         n_elements = len(elements)
         s.add("shapes", n_shapes)
         s.add("edges", n_edges)
@@ -1643,18 +1588,11 @@ def sync() -> str:
                 "Canvas may have been created outside whiteboard, or whiteboard.save() was not used."
             )
 
-        _parse_dsl_to_state(dsl_str)
+        new_state = _parse_dsl_to_state(dsl_str)
+        _session.save(new_state)
 
-        # Rebuild _rendered_ids
-        _rendered_ids.clear()
-        for id_ in _dsl_state["shapes"]:
-            _rendered_ids.add(id_)
-            _rendered_ids.add(id_ + "-text")
-        for e in _dsl_state["edges"]:
-            _rendered_ids.add(e["id"])
-
-        n_shapes = len(_dsl_state["shapes"])
-        n_edges = len(_dsl_state["edges"])
+        n_shapes = len(new_state["shapes"])
+        n_edges = len(new_state["edges"])
         s.add("shapes", n_shapes)
         s.add("edges", n_edges)
         return f"synced: {n_shapes} shapes, {n_edges} edges"
@@ -1793,7 +1731,7 @@ def read_scene(*, info: str = "default") -> str:
         return result
 
 
-def share() -> str:
+def share(*, board: str | None = None) -> str:
     """Generate a shareable Excalidraw link for the current canvas.
 
     Encrypts the full scene client-side (AES-GCM, 128-bit) and uploads it
@@ -1809,10 +1747,13 @@ def share() -> str:
         excalidraw.share()
     """
     with LogSpan(span="excalidraw.share") as s:
+        # Load session state and render to browser
+        state = _session.load(board)
         err = _ensure_ready()
         if err:
             s.add("error", err)
             return err
+        _rerender_from_state(state)
 
         # Read scene elements
         elements = _browser_evaluate_json(
@@ -1887,23 +1828,28 @@ def share() -> str:
         return url
 
 
-def clear() -> str:
-    """Clear all elements from canvas and reset Python DSL state.
+def clear(*, board: str | None = None) -> str:
+    """Delete the session file for the given board and optionally clear the canvas.
+
+    When called without a ``board`` argument, clears the CWD-keyed board.
+    If a named board is given, only that board's session file is deleted (no browser action).
 
     Returns:
         Confirmation message.
 
     Example:
         excalidraw.clear()
+        excalidraw.clear(board='arch')
     """
     with LogSpan(span="excalidraw.clear") as s:
-        err = _ensure_ready()
-        if err:
-            s.add("error", err)
-            return err
+        _session.clear_board(board)
+        s.add("board", board or "cwd")
 
-        _browser_evaluate("() => window.__drawApi.clear()")
-        _reset_state()
+        # Also clear the live canvas when using the default CWD board and browser is open
+        if board is None and _tab is not None:
+            with contextlib.suppress(Exception):
+                _browser_evaluate("() => window.__drawApi.clear()")
+
         return "canvas cleared"
 
 
@@ -1989,6 +1935,7 @@ def layout(
     cycle_breaking: str = "GREEDY",
     arrow_type: str | None = None,
     elk_options: dict[str, str] | None = None,
+    board: str | None = None,
 ) -> str:
     """Apply ELK.js graph layout to the current whiteboard.
 
@@ -2058,6 +2005,9 @@ def layout(
         if err:
             s.add("error", err)
             return err
+
+        # Load session state for shape labels and group membership
+        layout_state = _session.load(board)
 
         # Read the live scene: nodes, edges, selection, and group membership
         scene_js = _browser_evaluate_json("""() => {
@@ -2245,7 +2195,7 @@ async () => {{
             w, h = node_dims.get(id_, (160, 60))
             patches.append({"id": id_, "x": x, "y": y})
             # Also reposition the DSL-drawn text element if present
-            dsl_shape = _dsl_state["shapes"].get(id_)
+            dsl_shape = layout_state["shapes"].get(id_)
             if dsl_shape is not None:
                 font_size = _DEFAULT_FONT_SIZE
                 line_count = len((dsl_shape.get("label") or "").split("\n"))
@@ -2381,11 +2331,11 @@ async () => {{
 }}""")
 
         # Recompute subgraph bounding boxes using updated node positions
-        if _dsl_state["groups"]:
+        if layout_state["groups"]:
             subgraph_payloads = [
                 {"id": gid, "label": group["label"],
                  "memberIds": group["members"], "savedBounds": None}
-                for gid, group in _dsl_state["groups"].items()
+                for gid, group in layout_state["groups"].items()
             ]
             sg_json = json.dumps(subgraph_payloads)
             _browser_evaluate(f"() => window._batch_draw([], [], {sg_json})")
@@ -2459,13 +2409,14 @@ def align(*, ids: list[str], axis: str) -> str:
         return f"aligned {len(ids)} element(s) ({axis})"
 
 
-def screenshot(*, file: str | None = None) -> Any:
+def screenshot(*, file: str | None = None, board: str | None = None) -> Any:
     """Take a screenshot of the current canvas as PNG.
 
     Returns image content for inline display. Optionally saves to disk.
 
     Args:
         file: Optional path to save the screenshot (PNG).
+        board: Named board to render. Defaults to the CWD-keyed board.
 
     Returns:
         Screenshot image content, or confirmation message when file is given.
@@ -2475,10 +2426,13 @@ def screenshot(*, file: str | None = None) -> Any:
         excalidraw.screenshot(file="diagrams/canvas.png")
     """
     with LogSpan(span="excalidraw.screenshot") as s:
-        err = _check_browser()
+        # Load session state and render to browser
+        state = _session.load(board)
+        err = _ensure_ready()
         if err:
             s.add("error", err)
             return err
+        _rerender_from_state(state)
 
         if file is None:
             return _run(_tab.take_screenshot(as_base64=True))
@@ -2503,7 +2457,7 @@ def hard_reset() -> str:
     Example:
         excalidraw.hard_reset()
     """
-    _reset_state()
+    _session.clear_board(None)
 
     browser_ok = False
     if _check_browser() is None:
@@ -2516,6 +2470,29 @@ def hard_reset() -> str:
     if browser_ok:
         return "hard reset: state cleared, canvas cleared"
     return "hard reset: state cleared (browser unavailable)"
+
+
+def boards() -> str:
+    """List all active whiteboard session boards.
+
+    Scans ``~/.onetool/whiteboard/`` and returns each board's name,
+    last-modified time, and shape count.
+
+    Returns:
+        Human-readable list of boards or "no boards found".
+
+    Example:
+        whiteboard.boards()
+    """
+    board_list = _session.list_boards()
+    if not board_list:
+        return "no boards found"
+    import datetime
+    lines = []
+    for b in board_list:
+        mtime_str = datetime.datetime.fromtimestamp(b["mtime"]).strftime("%Y-%m-%d %H:%M")
+        lines.append(f"  {b['name']}  ({b['shape_count']} shapes, modified {mtime_str})")
+    return "boards:\n" + "\n".join(lines)
 
 
 def open() -> str:
@@ -2542,8 +2519,8 @@ def open() -> str:
         if err and not err.startswith("Warning:"):
             s.add("error", err)
             return err
-        # Always start fresh: reset Python state and clear canvas
-        _reset_state()
+        # Always start fresh: clear session file and canvas
+        _session.clear_board(None)
         with contextlib.suppress(Exception):
             _browser_evaluate("() => window.__drawApi.clear()")
         return "whiteboard ready"
@@ -2563,7 +2540,7 @@ def close() -> str:
         excalidraw.close()
     """
     global _browser, _tab
-    _reset_state()
+    _session.clear_board(None)
     b, _browser, _tab = _browser, None, None
     if b is not None:
         # Graceful shutdown via pydoll's stop() — sends Browser.close CDP

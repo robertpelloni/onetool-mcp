@@ -2203,6 +2203,7 @@ dependencies = [
     { name = "rich" },
     { name = "tiktoken" },
     { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -2308,6 +2309,7 @@ requires-dist = [
     { name = "tiktoken", specifier = ">=0.12.0" },
     { name = "trafilatura", marker = "extra == 'dev'", specifier = ">=2.0.0" },
     { name = "typer", specifier = ">=0.24.1" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 provides-extras = ["util", "dev", "scrape", "whiteboard", "all"]
 

@@ -472,15 +472,22 @@ class TestParseStyleProps:
 # ===========================================================================
 
 
-def _reset_exc_state() -> None:
-    """Reset module-level excalidraw state between tests."""
+def _reset_exc_state(tmp_wb_dir: Any = None) -> None:
+    """Reset excalidraw state between tests.
+
+    Clears the browser handles and optionally the session file for the CWD board.
+    When tmp_wb_dir is given, the session module's whiteboard dir is pointed there.
+    """
     import otdev.tools.excalidraw as exc
 
-    exc._dsl_state = {"shapes": {}, "edges": [], "groups": {}}
-    exc._edge_keys = set()
-    exc._rendered_ids = set()
     exc._tab = None
     exc._browser = None
+    # Delete CWD session file if it exists
+    from otdev.tools._excalidraw import session as _sess
+    try:
+        _sess.session_path(None).unlink(missing_ok=True)
+    except Exception:
+        pass
 
 
 def _make_mock_tab() -> MagicMock:
@@ -514,43 +521,46 @@ class TestPublicToolsSmoke:
     def _reset_state(self) -> None:
         _reset_exc_state()
 
-    def test_draw_calls_browser_evaluate(self) -> None:
+    def test_draw_is_browser_free(self) -> None:
+        """draw() must not open a browser — it is a pure session-file operation."""
         from otdev.tools import excalidraw
 
         self._reset_state()
-        mock_tab = _make_mock_tab()
-
-        with patch("otdev.tools.excalidraw._tab", mock_tab):
-            result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
+        # No browser mock needed — draw() should work without one
+        result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "shapes" in result
+        assert "+2 shapes" in result
 
-    def test_draw_returns_error_when_browser_not_available(self) -> None:
+    def test_draw_state_persists_to_session(self, tmp_path: Any) -> None:
+        """draw() writes state to the session file."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
-
-        self._reset_state()  # _tab = None
-
-        with patch("otdev.tools.excalidraw._open_browser"):  # no-op; leaves _tab=None
-            result = excalidraw.draw(input='a["A"]')
-
-        assert "Error" in result
-
-    def test_clear_calls_clear(self) -> None:
-        from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
-        evaluated: list[str] = []
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            excalidraw.draw(input='a["A"]\nb["B"]')
+            state = _sess.load(None)
+        assert "a" in state["shapes"]
+        assert "b" in state["shapes"]
 
-        def capture_eval(fn: str) -> str:
-            evaluated.append(fn)
-            return "null"
+    def test_clear_clears_session(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
-                result = excalidraw.clear()
+        from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        assert result == "canvas cleared"
-        assert any("clear" in c for c in evaluated)
+        self._reset_state()
+        # Create a session file
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
+            result = excalidraw.clear()
+            state = _sess.load(None)
+
+        assert "cleared" in result
+        assert len(state["shapes"]) == 0
 
     def test_scroll_calls_scroll(self) -> None:
         from otdev.tools import excalidraw
@@ -618,7 +628,10 @@ class TestPublicToolsSmoke:
         assert data["version"] == 2
 
     def test_load_restores_state(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
 
@@ -640,11 +653,16 @@ class TestPublicToolsSmoke:
                 "otdev.tools.excalidraw._read_dsl_from_canvas",
                 return_value='a["A"]\nb["B"]\na-->b',
             ),
+            _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path),
         ):
             result = excalidraw.load(file=str(diag_file))
+            state = _sess.load(None)
 
         assert "loaded" in result
         assert "2 shapes" in result
+        # Session file should be populated
+        assert "a" in state["shapes"]
+        assert "b" in state["shapes"]
 
     def test_zoom_rejects_negative_level(self) -> None:
         from otdev.tools import excalidraw
@@ -709,7 +727,10 @@ class TestPublicToolsSmoke:
 
         mock_tab.take_screenshot = mock_take_screenshot
 
-        with patch("otdev.tools.excalidraw._tab", mock_tab):
+        with (
+            patch("otdev.tools.excalidraw._tab", mock_tab),
+            patch("otdev.tools.excalidraw._rerender_from_state"),
+        ):
             result = excalidraw.screenshot()
 
         assert result == "screenshot-data"
@@ -727,7 +748,10 @@ class TestPublicToolsSmoke:
 
         mock_tab.take_screenshot = mock_take_screenshot
 
-        with patch("otdev.tools.excalidraw._tab", mock_tab):
+        with (
+            patch("otdev.tools.excalidraw._tab", mock_tab),
+            patch("otdev.tools.excalidraw._rerender_from_state"),
+        ):
             excalidraw.screenshot()
 
         assert calls, "take_screenshot must be called"
@@ -753,6 +777,7 @@ class TestPublicToolsSmoke:
         with (
             patch("otdev.tools.excalidraw._tab", mock_tab),
             patch("otdev.tools.excalidraw.resolve_cwd_path", return_value=tmp_path / "canvas.png"),
+            patch("otdev.tools.excalidraw._rerender_from_state"),
         ):
             result = excalidraw.screenshot(file=out_file)
 
@@ -769,19 +794,20 @@ class TestPublicToolsSmoke:
 
         assert result == "canvas cleared"
 
-    def test_hard_reset_clears_state_without_browser(self) -> None:
+    def test_hard_reset_clears_state_without_browser(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
-        _reset_exc_state()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids.add("a")
-
-        result = excalidraw.hard_reset()
+        self._reset_state()
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
+            result = excalidraw.hard_reset()
+            state = _sess.load(None)
 
         assert "state cleared" in result
-        assert exc._dsl_state["shapes"] == {}
-        assert exc._rendered_ids == set()
+        assert state["shapes"] == {}
 
     def test_hard_reset_clears_canvas_when_browser_available(self) -> None:
         from otdev.tools import excalidraw
@@ -810,28 +836,29 @@ class TestPublicToolsSmoke:
 
         assert result == "whiteboard ready"
 
-    def test_open_clears_canvas_and_state(self) -> None:
+    def test_open_clears_canvas_and_state(self, tmp_path: Any) -> None:
         """open() always starts fresh regardless of existing state."""
-        import otdev.tools.excalidraw as exc
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids = {"a"}
-
         evaluated: list[str] = []
 
         def capture_eval(fn: str) -> str:
             evaluated.append(fn)
             return "true"
 
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
-                result = excalidraw.open()
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
+            with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+                with patch("otdev.tools.excalidraw._browser_evaluate", side_effect=capture_eval):
+                    result = excalidraw.open()
+            state = _sess.load(None)
 
         assert result == "whiteboard ready"
-        assert exc._dsl_state["shapes"] == {}, "state should be cleared"
-        assert exc._rendered_ids == set(), "rendered_ids should be cleared"
+        assert state["shapes"] == {}, "session should be cleared"
         assert any("clear" in e for e in evaluated), "canvas clear should be called"
 
     def test_open_returns_error_when_browser_unavailable(self) -> None:
@@ -844,19 +871,19 @@ class TestPublicToolsSmoke:
 
         assert "Error" in result
 
-    def test_close_resets_state(self) -> None:
+    def test_close_resets_state(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids = {"a"}
-
-        with patch("otdev.tools.excalidraw._close_browser"):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
             result = excalidraw.close()
+            state = _sess.load(None)
 
         assert "closed" in result
-        assert exc._dsl_state["shapes"] == {}
-        assert exc._rendered_ids == set()
+        assert state["shapes"] == {}
 
     def test_close_resets_browser_state(self) -> None:
         from otdev.tools import excalidraw
@@ -873,6 +900,7 @@ class TestPublicToolsSmoke:
         assert excalidraw._tab is None
 
     def test_bootstrap_failure_returns_error(self) -> None:
+        """note() must return error when browser bootstrap fails (draw() is browser-free)."""
         from otdev.tools import excalidraw
 
         self._reset_state()
@@ -893,34 +921,33 @@ class TestPublicToolsSmoke:
         mock_tab.go_to = mock_go_to
 
         with patch("otdev.tools.excalidraw._tab", mock_tab):
-            result = excalidraw.draw(input='a["A"]')
+            result = excalidraw.note(input="n[note:\nhello\n]")
 
         assert "Error" in result
         assert "bootstrap" in result.lower()
 
-    def test_draw_additive_layout_uses_full_graph(self) -> None:
+    def test_draw_additive_accumulates_state(self, tmp_path: Any) -> None:
+        """Consecutive draw() calls accumulate shapes and edges in the session."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
-            with patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch:
-                excalidraw.draw(input='c["C"]\nb-->c')
-                assert mock_batch.called
-                _, kwargs = mock_batch.call_args
-                shapes = kwargs["shapes"]
-                assert len(shapes) == 1 and shapes[0]["id"] == "c"
-                assert shapes[0]["x"] > 0, "additive shape should be placed right of existing shapes"
+            excalidraw.draw(input='c["C"]\nb-->c')
+            state = _sess.load(None)
+
+        assert set(state["shapes"]) == {"a", "b", "c"}
+        assert len(state["edges"]) == 2
 
     def test_draw_auto_creates_unknown_node_in_edge(self) -> None:
         """Unknown edge endpoints are auto-created with label = node ID."""
         from otdev.tools import excalidraw
 
         self._reset_state()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            result = excalidraw.draw(input='a["A"]\nb["B"]\na-->typo')
+        result = excalidraw.draw(input='a["A"]\nb["B"]\na-->typo')
 
         assert "skipped" not in result
         assert "+3 shapes" in result
@@ -930,9 +957,7 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            result = excalidraw.draw(input="a-->b\nb-->c\nc-->d")
+        result = excalidraw.draw(input="a-->b\nb-->c\nc-->d")
 
         assert "+4 shapes" in result
 
@@ -940,9 +965,7 @@ class TestPublicToolsSmoke:
         from otdev.tools import excalidraw
 
         self._reset_state()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
+        result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "skipped" not in result
 
@@ -970,72 +993,60 @@ class TestPublicToolsSmoke:
             "_batch_draw must not receive a {shapes:…} object as first arg"
         assert fn.count(",") >= 2, "call must have at least 2 commas (three positional args)"
 
-    def test_draw_state_not_mutated_if_js_batch_draw_raises(self) -> None:
-        """draw() must not commit _dsl_state if _js_batch_draw raises."""
+    def test_draw_bad_dsl_raises_without_corrupting_session(self, tmp_path: Any) -> None:
+        """draw() with invalid DSL raises ValueError; prior session is unchanged."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            excalidraw.draw(input='a["A"]')
+            with pytest.raises(ValueError, match="Ellipse"):
+                excalidraw.draw(input='x(("Oval"))')  # ellipse not supported
+            state = _sess.load(None)
 
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw", side_effect=RuntimeError("JS error")),
-        ):
-            try:
-                excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
-            except RuntimeError:
-                pass
+        assert "a" in state["shapes"], "prior state must be preserved after error"
 
-        import otdev.tools.excalidraw as exc
-        assert exc._dsl_state["shapes"] == {}, "shapes must not be committed when JS call fails"
-        assert exc._dsl_state["edges"] == [], "edges must not be committed when JS call fails"
+    def test_draw_stores_shapes_and_edges_in_session(self, tmp_path: Any) -> None:
+        """draw() saves all new shapes and edges to the session file."""
+        from unittest.mock import patch as _patch
 
-    def test_draw_issues_single_batch_call(self) -> None:
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
-
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\nc["C"]\na-->b\nb-->c')
+            state = _sess.load(None)
 
-        assert mock_batch.call_count == 1, "draw() must issue exactly one batch call"
-        _, kwargs = mock_batch.call_args
-        assert len(kwargs["shapes"]) == 3
-        assert len(kwargs["edges"]) == 2
+        assert len(state["shapes"]) == 3
+        assert len(state["edges"]) == 2
 
     def test_draw_returns_edge_ids_in_output(self) -> None:
         """draw() includes new edge IDs in the return string (issue #6)."""
         from otdev.tools import excalidraw
 
         self._reset_state()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
+        result = excalidraw.draw(input='a["A"]\nb["B"]\na-->b')
 
         assert "edge-a-b" in result
 
-    def test_draw_upsert_existing_shape(self) -> None:
-        """draw() on an existing shape patches it (upsert) rather than skipping."""
+    def test_draw_upsert_existing_shape(self, tmp_path: Any) -> None:
+        """draw() on an existing shape updates its label in the session (upsert)."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset_state()
-        patches: list[Any] = []
-
-        def capture_patch(p: list[Any]) -> None:
-            patches.extend(p)
-
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_patch_elements", side_effect=capture_patch),
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]')
-            patches.clear()
             excalidraw.draw(input='a["Updated"]')
+            state = _sess.load(None)
 
-        assert any(p.get("id") == "a" and p.get("text") == "Updated" for p in patches), \
-            "existing shape label update should be sent as a patch"
+        assert state["shapes"]["a"]["label"] == "Updated"
 
 
 # ===========================================================================
@@ -1077,16 +1088,19 @@ class TestEdgeIdUniqueness:
         result = parse_dsl('a["A"]\nb["B"]\na --x b')
         assert result["edges"][0]["id"] == "edge-a-b-bar"
 
-    def test_draw_dedup_distinguishes_arrowhead_types(self) -> None:
-        import otdev.tools.excalidraw as exc
+    def test_draw_dedup_distinguishes_arrowhead_types(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
 
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->b\na<-->b')
+            state = _sess.load(None)
 
-        assert len(exc._dsl_state["edges"]) == 2, "a-->b and a<-->b should both be stored"
+        assert len(state["edges"]) == 2, "a-->b and a<-->b should both be stored"
 
 
 # ===========================================================================
@@ -1105,21 +1119,20 @@ class TestArrowLabels:
         result = parse_dsl('a["A"]\nb["B"]\na-->|read|b')
         assert "read" in result["edges"][0]["id"]
 
-    def test_connect_shape_called_with_label(self) -> None:
+    def test_connect_shape_called_with_label(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
 
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\na-->|writes|b')
-            assert mock_batch.called
-            _, kwargs = mock_batch.call_args
-            edges = kwargs["edges"]
-            assert len(edges) == 1
-            assert edges[0]["label"] == "writes"
+            state = _sess.load(None)
+
+        assert len(state["edges"]) == 1
+        assert state["edges"][0]["label"] == "writes"
 
 
 # ===========================================================================
@@ -1412,29 +1425,23 @@ class TestNotePlacement:
         shapes = captured[0]["shapes"]
         assert shapes[0]["y"] >= 400.0, "note y should be at least canvas_max_y + 100"
 
-    def test_draw_uses_canvas_max_y_for_stacking(self) -> None:
-        """draw() stacks new shapes below canvas max-y from _get_canvas_max_y."""
-        from unittest.mock import patch
+    def test_draw_uses_canvas_max_y_for_stacking(self, tmp_path: Any) -> None:
+        """draw() tracks canvas_max_y from session state for additive vertical stacking."""
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         self._reset()
 
-        captured: list[Any] = []
-
-        def capture_batch(**kwargs: Any) -> None:
-            captured.append(kwargs)
-
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._get_canvas_max_y", return_value=500.0),
-            patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_batch),
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            # Pre-populate session with a high canvas_max_y
+            _sess.save({"shapes": {}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 500.0})
             excalidraw.draw(input='a["A"]')
+            state = _sess.load(None)
 
-        assert captured, "batch draw should have been called"
-        shapes = captured[0]["shapes"]
-        assert shapes[0]["y"] >= 540.0, "shape y should be at least canvas_max_y + 40"
+        # After drawing, canvas_max_y should advance beyond 500 + 40 (base_y offset)
+        assert state["canvas_max_y"] >= 540.0, "canvas_max_y must increase beyond prior value"
 
 
 # ===========================================================================
@@ -1448,20 +1455,22 @@ class TestEmbedDsl:
     def _reset(self) -> None:
         _reset_exc_state()
 
-    def test_embed_dsl_inserts_dsl_box(self) -> None:
+    def test_embed_dsl_inserts_dsl_box(self, tmp_path: Any) -> None:
         from unittest.mock import patch
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-
+        # Populate session via draw() so embed_dsl() has content to embed
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            excalidraw.draw(input='a["A"]\nb["B"]')
 
         with (
             patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
             patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
+            _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path),
         ):
             result = excalidraw.embed_dsl()
 
@@ -1498,83 +1507,67 @@ class TestErase:
     def _reset(self) -> None:
         _reset_exc_state()
 
-    def test_erase_removes_shape_from_state(self) -> None:
-        from unittest.mock import patch
+    def test_erase_removes_shape_from_state(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-        exc._rendered_ids = {"a", "a-text", "b", "b-text"}
-
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}, "b": {"label": "B", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
             result = excalidraw.erase(ids=["a"])
+            state = _sess.load(None)
 
         assert "erased 1" in result
-        assert "a" not in exc._dsl_state["shapes"]
-        assert "a" not in exc._rendered_ids
-        assert "a-text" not in exc._rendered_ids
-        assert "b" in exc._dsl_state["shapes"]
+        assert "a" not in state["shapes"]
+        assert "b" in state["shapes"]
 
     def test_erase_unknown_id_returns_zero(self) -> None:
-        from unittest.mock import patch
-
         from otdev.tools import excalidraw
 
         self._reset()
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
-            result = excalidraw.erase(ids=["nonexistent"])
+        result = excalidraw.erase(ids=["nonexistent"])
 
         assert "erased 0" in result
 
-    def test_erase_removes_associated_edge(self) -> None:
-        from unittest.mock import patch
+    def test_erase_removes_associated_edge(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-        exc._dsl_state["edges"] = [
-            {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""}
-        ]
-        exc._rendered_ids = {"a", "b", "edge-a-b"}
-
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}, "b": {"label": "B", "classes": []}}, "edges": [{"id": "edge-a-b", "src": "a", "dst": "b", "label": ""}], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
             excalidraw.erase(ids=["edge-a-b"])
+            state = _sess.load(None)
 
-        assert exc._dsl_state["edges"] == []
+        assert state["edges"] == []
 
-    def test_erase_removes_dangling_edges(self) -> None:
+    def test_erase_removes_dangling_edges(self, tmp_path: Any) -> None:
         """Erasing a shape also removes edges that reference it as src or dst."""
-        from unittest.mock import patch
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         self._reset()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-        exc._dsl_state["shapes"]["c"] = {"label": "C", "classes": []}
-        exc._dsl_state["edges"] = [
-            {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""},
-            {"id": "edge-b-c", "src": "b", "dst": "c", "label": ""},
-        ]
-        exc._rendered_ids = {"a", "b", "c", "edge-a-b", "edge-b-c"}
-
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({
+                "shapes": {"a": {"label": "A", "classes": []}, "b": {"label": "B", "classes": []}, "c": {"label": "C", "classes": []}},
+                "edges": [
+                    {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""},
+                    {"id": "edge-b-c", "src": "b", "dst": "c", "label": ""},
+                ],
+                "groups": {},
+                "edge_keys": set(),
+                "canvas_max_y": 60.0,
+            })
             excalidraw.erase(ids=["b"])
+            state = _sess.load(None)
 
-        assert exc._dsl_state["edges"] == [], "edges referencing erased node should be removed"
-        assert "edge-a-b" not in exc._rendered_ids
-        assert "edge-b-c" not in exc._rendered_ids
+        assert state["edges"] == [], "edges referencing erased node should be removed"
 
     def test_erase_docstring_documents_edge_id_format(self) -> None:
         """erase() docstring must document the edge ID format."""
@@ -1869,42 +1862,39 @@ class TestIdPrenorm:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestEraseDanglingCount:
-    def test_erase_reports_dangling_edges(self) -> None:
-        from unittest.mock import patch
+    def test_erase_reports_dangling_edges(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         _reset_exc_state()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._dsl_state["shapes"]["b"] = {"label": "B", "classes": []}
-        exc._dsl_state["shapes"]["c"] = {"label": "C", "classes": []}
-        exc._dsl_state["edges"] = [
-            {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""},
-            {"id": "edge-b-c", "src": "b", "dst": "c", "label": ""},
-        ]
-        exc._rendered_ids = {"a", "b", "c", "edge-a-b", "edge-b-c"}
-
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({
+                "shapes": {"a": {"label": "A", "classes": []}, "b": {"label": "B", "classes": []}, "c": {"label": "C", "classes": []}},
+                "edges": [
+                    {"id": "edge-a-b", "src": "a", "dst": "b", "label": ""},
+                    {"id": "edge-b-c", "src": "b", "dst": "c", "label": ""},
+                ],
+                "groups": {},
+                "edge_keys": set(),
+                "canvas_max_y": 60.0,
+            })
             result = excalidraw.erase(ids=["b"])
 
         assert "erased 1" in result
         assert "dangling" in result
         assert "2" in result
 
-    def test_erase_no_dangling_message_when_no_edges(self) -> None:
-        from unittest.mock import patch
+    def test_erase_no_dangling_message_when_no_edges(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
-        import otdev.tools.excalidraw as exc
         _reset_exc_state()
-        exc._dsl_state["shapes"]["a"] = {"label": "A", "classes": []}
-        exc._rendered_ids = {"a", "a-text"}
-
-
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
+            _sess.save({"shapes": {"a": {"label": "A", "classes": []}}, "edges": [], "groups": {}, "edge_keys": set(), "canvas_max_y": 60.0})
             result = excalidraw.erase(ids=["a"])
 
         assert "erased 1" in result
@@ -2649,23 +2639,16 @@ class TestCrSharpStyleProp:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestSubgraphColumnLayout:
-    """draw() places each subgraph's nodes in a separate x column."""
+    """draw() saves subgraph membership; _rerender_from_state places nodes per their session state."""
 
-    def _captured_shapes(self) -> list[dict]:
-        """Run draw() with two subgraphs and capture the shape payloads sent to JS."""
-        from unittest.mock import patch
+    def _draw_and_get_session_state(self, tmp_path: Any) -> dict:
+        """Run draw() with two subgraphs and return session state."""
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
-
-        captured: list[dict] = []
-
-        def capture_js_batch_draw(
-            *, shapes: list[dict], edges: list[dict], subgraphs: list[dict]
-        ) -> None:
-            captured.extend(shapes)
-
         dsl = (
             'subgraph fe ["Frontend"]\n'
             '  a["A"]\n'
@@ -2676,38 +2659,28 @@ class TestSubgraphColumnLayout:
             '  d["D"]\n'
             'end'
         )
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw", side_effect=capture_js_batch_draw),
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input=dsl)
+            return _sess.load(None)
 
-        return captured
+    def test_subgraph_nodes_saved_in_session(self, tmp_path: Any) -> None:
+        """All nodes from both subgraphs are saved in session state."""
+        state = self._draw_and_get_session_state(tmp_path)
+        assert set(state["shapes"]) == {"a", "b", "c", "d"}
 
-    def test_subgraph_nodes_in_separate_columns(self) -> None:
-        shapes = self._captured_shapes()
-        # Find x positions for each subgraph's nodes
-        a = next((s for s in shapes if s["id"] == "a"), None)
-        c = next((s for s in shapes if s["id"] == "c"), None)
-        assert a is not None and c is not None
-        # Nodes from different subgraphs must be in different columns
-        assert a["x"] != c["x"], (
-            f"Expected separate x columns: a.x={a['x']}, c.x={c['x']}"
-        )
+    def test_subgraph_membership_saved_in_session(self, tmp_path: Any) -> None:
+        """draw() saves group membership for both subgraphs."""
+        state = self._draw_and_get_session_state(tmp_path)
+        assert "fe" in state["groups"]
+        assert "be" in state["groups"]
+        assert set(state["groups"]["fe"]["members"]) == {"a", "b"}
+        assert set(state["groups"]["be"]["members"]) == {"c", "d"}
 
-    def test_same_subgraph_nodes_share_column(self) -> None:
-        shapes = self._captured_shapes()
-        a = next((s for s in shapes if s["id"] == "a"), None)
-        b = next((s for s in shapes if s["id"] == "b"), None)
-        assert a is not None and b is not None
-        assert a["x"] == b["x"], (
-            f"Expected same x column: a.x={a['x']}, b.x={b['x']}"
-        )
-
-    def test_draw_two_subgraphs_reports_both_groups(self) -> None:
-        from unittest.mock import patch
+    def test_draw_two_subgraphs_reports_both_groups(self, tmp_path: Any) -> None:
+        from unittest.mock import patch as _patch
 
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
 
@@ -2719,7 +2692,7 @@ class TestSubgraphColumnLayout:
             '  b["B"]\n'
             'end'
         )
-        with patch("otdev.tools.excalidraw._tab", _make_mock_tab()):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             result = excalidraw.draw(input=dsl)
 
         assert "+2 group(s)" in result
@@ -2982,43 +2955,37 @@ class TestLayoutBoundaryArrows:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestUndirectedEdgePayload:
-    def test_undirected_edge_sends_none_arrowheads(self) -> None:
-        """a---b must send endArrowhead=None and startArrowhead=None to JS."""
+    def test_undirected_edge_sends_none_arrowheads(self, tmp_path: Any) -> None:
+        """a---b must store endArrowhead=None and startArrowhead=None in session."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
-
-
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\na---b')
-            assert mock_batch.called
-            _, kwargs = mock_batch.call_args
-            edges = kwargs["edges"]
-            assert len(edges) == 1
-            assert edges[0]["endArrowhead"] is None
-            assert edges[0]["startArrowhead"] is None
+            state = _sess.load(None)
 
-    def test_dashed_undirected_edge_sends_none_arrowheads(self) -> None:
-        """a-.-b must also send None arrowheads."""
+        assert len(state["edges"]) == 1
+        assert state["edges"][0]["endArrowhead"] is None
+        assert state["edges"][0]["startArrowhead"] is None
+
+    def test_dashed_undirected_edge_sends_none_arrowheads(self, tmp_path: Any) -> None:
+        """a-.-b must also store None arrowheads in session."""
+        from unittest.mock import patch as _patch
+
         from otdev.tools import excalidraw
+        from otdev.tools._excalidraw import session as _sess
 
         _reset_exc_state()
-
-
-        with (
-            patch("otdev.tools.excalidraw._tab", _make_mock_tab()),
-            patch("otdev.tools.excalidraw._js_batch_draw") as mock_batch,
-        ):
+        with _patch.object(_sess, "_whiteboard_dir", return_value=tmp_path):
             excalidraw.draw(input='a["A"]\nb["B"]\na-.-b')
-            assert mock_batch.called
-            _, kwargs = mock_batch.call_args
-            edges = kwargs["edges"]
-            assert len(edges) == 1
-            assert edges[0]["endArrowhead"] is None
-            assert edges[0]["startArrowhead"] is None
+            state = _sess.load(None)
+
+        assert len(state["edges"]) == 1
+        assert state["edges"][0]["endArrowhead"] is None
+        assert state["edges"][0]["startArrowhead"] is None
 
 
 # ===========================================================================

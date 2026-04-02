@@ -14,6 +14,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import sys
+import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -80,13 +81,16 @@ class LoadedTools:
     )  # User extension tools (non-internal inprocess)
 
 
-# Module cache: stores (LoadedTools, mtime_dict) for each tools_dir
+# Module cache: stores (LoadedTools, mtime_dict, last_validated) for each tools_dir
 # Uses OrderedDict for LRU eviction with bounded size
 _MODULE_CACHE_MAXSIZE = 16
-_module_cache: OrderedDict[Path, tuple[LoadedTools, dict[str, float]]] = OrderedDict()
+_module_cache: OrderedDict[Path, tuple[LoadedTools, dict[str, float], float]] = OrderedDict()
+
+# TTL for skipping per-file mtime checks when the cache was recently validated
+_CACHE_TTL = 1.0  # seconds
 
 
-def _cache_get(key: Path) -> tuple[LoadedTools, dict[str, float]] | None:
+def _cache_get(key: Path) -> tuple[LoadedTools, dict[str, float], float] | None:
     """Get from cache with LRU update."""
     if key in _module_cache:
         _module_cache.move_to_end(key)
@@ -94,7 +98,7 @@ def _cache_get(key: Path) -> tuple[LoadedTools, dict[str, float]] | None:
     return None
 
 
-def _cache_set(key: Path, value: tuple[LoadedTools, dict[str, float]]) -> None:
+def _cache_set(key: Path, value: tuple[LoadedTools, dict[str, float], float]) -> None:
     """Set in cache with LRU eviction."""
     if key in _module_cache:
         _module_cache.move_to_end(key)
@@ -162,6 +166,8 @@ def _get_tool_files(
 def _check_cache(cache_key: Path, current_files: set[Path]) -> LoadedTools | None:
     """Return cached registry if valid, None if stale or missing.
 
+    Skips per-file stat calls if the cache was validated within _CACHE_TTL seconds.
+
     Args:
         cache_key: Key for cache lookup.
         current_files: Set of current tool file paths.
@@ -173,11 +179,16 @@ def _check_cache(cache_key: Path, current_files: set[Path]) -> LoadedTools | Non
     if cached is None:
         return None
 
-    cached_registry, cached_mtimes = cached
+    cached_registry, cached_mtimes, last_validated = cached
     cached_files = {Path(f) for f in cached_mtimes}
 
     if current_files != cached_files:
         return None
+
+    now = time.time()
+    if now - last_validated < _CACHE_TTL:
+        # Recently validated — skip per-file stat syscalls
+        return cached_registry
 
     for py_file in current_files:
         try:
@@ -186,6 +197,8 @@ def _check_cache(cache_key: Path, current_files: set[Path]) -> LoadedTools | Non
         except OSError:
             return None
 
+    # Update last_validated timestamp
+    _cache_set(cache_key, (cached_registry, cached_mtimes, now))
     return cached_registry
 
 
@@ -387,7 +400,7 @@ def load_tool_registry(tools_dir: Path | None = None) -> LoadedTools:
         worker_tools=worker_tools_list,
         extension_tools=[t for t in inprocess_tools if not t.is_internal],
     )
-    _cache_set(cache_key, (registry, mtimes))
+    _cache_set(cache_key, (registry, mtimes, time.time()))
 
     return registry
 
@@ -432,6 +445,10 @@ def reset() -> None:
     """Clear tool loader module cache for reload.
 
     Use this as part of the config reload flow to force tools to be
-    reloaded from disk on next access.
+    reloaded from disk on next access. Also clears the namespace cache
+    so stale proxy objects are released.
     """
+    from ot.executor import pack_proxy
+
     _module_cache.clear()
+    pack_proxy.reset()

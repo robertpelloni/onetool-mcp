@@ -109,6 +109,10 @@ async def _lifespan(_server: FastMCP) -> AsyncIterator[None]:
         registry = get_registry()
         start_span.add("toolCount", len(registry.tools))
 
+        # Pre-warm tool registry so the first run() call is served from a warm cache
+        from ot.executor.tool_loader import load_tool_registry
+        load_tool_registry()
+
         # Fire anonymous startup telemetry (non-blocking daemon thread)
         from ot.telemetry import ping as _telemetry_ping
         _telemetry_ping()
