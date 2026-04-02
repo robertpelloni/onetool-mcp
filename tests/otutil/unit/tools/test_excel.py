@@ -495,12 +495,10 @@ def test_search_first_only(excel_file: Path) -> None:
     write(filepath=str(excel_file), data=[["Name"], ["Test1"], ["Test2"], ["Test3"]])
     result = search(filepath=str(excel_file), pattern="Test*", first_only=True)
 
-    # first_only=True returns a JSON list with one item for API consistency
-    data = json.loads(result)
-    assert isinstance(data, list)
-    assert len(data) == 1
-    assert data[0]["value"] == "Test1"
-    assert "cell" in data[0]
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0]["value"] == "Test1"
+    assert "cell" in result[0]
 
 
 @pytest.mark.unit
@@ -530,8 +528,7 @@ def test_search_no_matches(excel_file: Path) -> None:
     write(filepath=str(excel_file), data=[["Name"], ["Alpha"], ["Beta"]])
     result = search(filepath=str(excel_file), pattern="Gamma*")
 
-    # Result is a JSON string of an empty list
-    assert result == "[]"
+    assert result == []
 
 
 # =============================================================================
@@ -1003,5 +1000,4 @@ def test_hyperlinks_empty(excel_file: Path) -> None:
     write(filepath=str(excel_file), data=[["Text"], ["Hello"], ["World"]])
     result = hyperlinks(filepath=str(excel_file))
 
-    # Result is a JSON string of an empty list
-    assert result == "[]"
+    assert result == []

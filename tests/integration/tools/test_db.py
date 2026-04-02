@@ -9,7 +9,6 @@ Run:
 
 from __future__ import annotations
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -73,34 +72,34 @@ class TestTables:
     def test_lists_all_tables(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.tables(db_url=db_url))
+        result = db.tables(db_url=db_url)
         assert isinstance(result, list)
         assert set(result) == {"users", "orders"}
 
     def test_filter_by_substring(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.tables(db_url=db_url, filter="user"))
+        result = db.tables(db_url=db_url, filter="user")
         assert result == ["users"]
 
     def test_filter_case_insensitive(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.tables(db_url=db_url, filter="USER", ignore_case=True))
+        result = db.tables(db_url=db_url, filter="USER", ignore_case=True)
         assert result == ["users"]
 
     def test_filter_no_match(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.tables(db_url=db_url, filter="nonexistent"))
+        result = db.tables(db_url=db_url, filter="nonexistent")
         assert result == []
 
     def test_empty_db_url_returns_error(self) -> None:
         _require_sqlalchemy()
         from otdev.tools import db
 
-        result = json.loads(db.tables(db_url=""))
-        assert "error" in result
+        result = db.tables(db_url="")
+        assert isinstance(result, str) and result.startswith("Error:")
 
 
 class TestSchema:
@@ -109,7 +108,7 @@ class TestSchema:
     def test_single_table_schema(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.schema(table_names=["users"], db_url=db_url))
+        result = db.schema(table_names=["users"], db_url=db_url)
         assert isinstance(result, list) and len(result) == 1
 
         tbl = result[0]
@@ -128,7 +127,7 @@ class TestSchema:
     def test_table_with_foreign_key(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.schema(table_names=["orders"], db_url=db_url))
+        result = db.schema(table_names=["orders"], db_url=db_url)
         tbl = result[0]
         assert tbl["table_name"] == "orders"
 
@@ -142,7 +141,7 @@ class TestSchema:
     def test_multiple_tables(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.schema(table_names=["users", "orders"], db_url=db_url))
+        result = db.schema(table_names=["users", "orders"], db_url=db_url)
         assert len(result) == 2
         names = {t["table_name"] for t in result}
         assert names == {"users", "orders"}
@@ -150,15 +149,15 @@ class TestSchema:
     def test_missing_table_returns_error_entry(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.schema(table_names=["nonexistent"], db_url=db_url))
+        result = db.schema(table_names=["nonexistent"], db_url=db_url)
         assert result[0]["table_name"] == "nonexistent"
         assert "error" in result[0]
 
     def test_empty_table_names_returns_error(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.schema(table_names=[], db_url=db_url))
-        assert "error" in result
+        result = db.schema(table_names=[], db_url=db_url)
+        assert isinstance(result, str) and result.startswith("Error:")
 
 
 class TestQuery:
@@ -167,7 +166,7 @@ class TestQuery:
     def test_select_all_rows(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.query(sql="SELECT * FROM users", db_url=db_url))
+        result = db.query(sql="SELECT * FROM users", db_url=db_url)
         assert result["row_count"] == 3
         assert len(result["rows"]) == 3
         assert result["truncated"] is False
@@ -175,21 +174,17 @@ class TestQuery:
     def test_select_with_where(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(
-            db.query(sql="SELECT name FROM users WHERE active = 0", db_url=db_url)
-        )
+        result = db.query(sql="SELECT name FROM users WHERE active = 0", db_url=db_url)
         assert result["row_count"] == 1
         assert result["rows"][0]["name"] == "Carol"
 
     def test_parameterized_query(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(
-            db.query(
-                sql="SELECT * FROM users WHERE name = :name",
-                db_url=db_url,
-                params={"name": "Alice"},
-            )
+        result = db.query(
+            sql="SELECT * FROM users WHERE name = :name",
+            db_url=db_url,
+            params={"name": "Alice"},
         )
         assert result["row_count"] == 1
         assert result["rows"][0]["name"] == "Alice"
@@ -197,23 +192,19 @@ class TestQuery:
     def test_aggregation(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(
-            db.query(sql="SELECT COUNT(*) AS cnt FROM orders", db_url=db_url)
-        )
+        result = db.query(sql="SELECT COUNT(*) AS cnt FROM orders", db_url=db_url)
         assert result["rows"][0]["cnt"] == 3
 
     def test_join(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(
-            db.query(
-                sql=(
-                    "SELECT u.name, SUM(o.amount) AS total "
-                    "FROM users u JOIN orders o ON u.id = o.user_id "
-                    "GROUP BY u.id ORDER BY u.name"
-                ),
-                db_url=db_url,
-            )
+        result = db.query(
+            sql=(
+                "SELECT u.name, SUM(o.amount) AS total "
+                "FROM users u JOIN orders o ON u.id = o.user_id "
+                "GROUP BY u.id ORDER BY u.name"
+            ),
+            db_url=db_url,
         )
         assert result["row_count"] == 2
         names = [r["name"] for r in result["rows"]]
@@ -222,20 +213,18 @@ class TestQuery:
     def test_empty_result(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(
-            db.query(sql="SELECT * FROM users WHERE id = 9999", db_url=db_url)
-        )
+        result = db.query(sql="SELECT * FROM users WHERE id = 9999", db_url=db_url)
         assert result["row_count"] == 0
         assert result["rows"] == []
 
     def test_invalid_sql_returns_error(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.query(sql="SELECT * FROM no_such_table", db_url=db_url))
-        assert "error" in result
+        result = db.query(sql="SELECT * FROM no_such_table", db_url=db_url)
+        assert isinstance(result, str) and result.startswith("Error:")
 
     def test_empty_sql_returns_error(self, db_url: str) -> None:
         from otdev.tools import db
 
-        result = json.loads(db.query(sql="", db_url=db_url))
-        assert "error" in result
+        result = db.query(sql="", db_url=db_url)
+        assert isinstance(result, str) and result.startswith("Error:")

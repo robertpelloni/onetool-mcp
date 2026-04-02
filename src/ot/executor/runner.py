@@ -562,11 +562,11 @@ async def execute_command(
                 should_sanitize=sanitize,
                 format=result_fmt,
             )
-        except ValueError as e:
+        except Exception as e:
             return CommandResult(
                 command=command,
                 result=str(e),
                 executor="python",
                 success=False,
-                error_type="ValueError",
+                error_type=type(e).__name__,
             )

@@ -28,7 +28,6 @@ pack = "db"
 __all__ = ["query", "schema", "tables"]
 
 import contextlib
-import json
 import threading
 from collections import OrderedDict
 from datetime import date, datetime
@@ -180,7 +179,7 @@ def _convert_value_for_json(val: Any) -> Any:
 
 def tables(
     *, db_url: str, filter: str | None = None, ignore_case: bool = False
-) -> str:
+) -> list[str] | str:
     """List table names in the database.
 
     Args:
@@ -189,7 +188,7 @@ def tables(
         ignore_case: If True, filter matching is case-insensitive
 
     Returns:
-        JSON string containing array of table names
+        List of table names, or error string
 
     Example:
         # List all tables
@@ -205,7 +204,7 @@ def tables(
     with LogSpan(span="db.tables", dbUrl=db_url, filter=filter) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
-            return json.dumps({"error": "db_url parameter is required"})
+            return "Error: db_url parameter is required"
 
         try:
             from sqlalchemy import inspect as _inspect
@@ -223,14 +222,14 @@ def tables(
                         all_tables = [t for t in all_tables if filter in t]
 
                 s.add(resultCount=len(all_tables))
-                return json.dumps(all_tables)
+                return all_tables
 
         except Exception as e:
             s.add(error=str(e))
-            return json.dumps({"error": str(e)})
+            return f"Error: {e}"
 
 
-def schema(*, table_names: list[str], db_url: str) -> str:
+def schema(*, table_names: list[str], db_url: str) -> list[dict[str, Any]] | str:
     """Get schema definitions for specified tables.
 
     Returns column names, types, primary keys, and foreign key relationships.
@@ -240,7 +239,7 @@ def schema(*, table_names: list[str], db_url: str) -> str:
         db_url: Database URL (required)
 
     Returns:
-        JSON string containing schema information for each table
+        List of schema dicts for each table, or error string
 
     Example:
         # Single table
@@ -253,11 +252,11 @@ def schema(*, table_names: list[str], db_url: str) -> str:
     with LogSpan(span="db.schema", tables=table_names, dbUrl=db_url) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
-            return json.dumps({"error": "db_url parameter is required"})
+            return "Error: db_url parameter is required"
 
         if not table_names:
             s.add(error="no_tables")
-            return json.dumps({"error": "table_names parameter is required"})
+            return "Error: table_names parameter is required"
 
         try:
             from sqlalchemy import inspect as _inspect
@@ -271,11 +270,11 @@ def schema(*, table_names: list[str], db_url: str) -> str:
                     results.append(_get_table_schema(inspector, table_name))
 
                 s.add(resultCount=len(table_names))
-                return json.dumps(results)
+                return results
 
         except Exception as e:
             s.add(error=str(e))
-            return json.dumps({"error": str(e)})
+            return f"Error: {e}"
 
 
 def _get_table_schema(inspector: Any, table_name: str) -> dict[str, Any]:
@@ -333,61 +332,10 @@ def _get_table_schema(inspector: Any, table_name: str) -> dict[str, Any]:
     }
 
 
-def _format_table_schema(inspector: Any, table_name: str) -> str:
-    """Format schema for a single table."""
-    try:
-        columns = inspector.get_columns(table_name)
-    except Exception:
-        return f"{table_name}: [table not found]"
-
-    try:
-        foreign_keys = inspector.get_foreign_keys(table_name)
-        pk_constraint = inspector.get_pk_constraint(table_name)
-    except Exception:
-        foreign_keys = []
-        pk_constraint = {}
-
-    primary_keys = set(pk_constraint.get("constrained_columns", []))
-
-    result = [f"{table_name}:"]
-
-    # Process columns - use explicit key access to avoid mutating the dict
-    show_key_only = {"nullable", "autoincrement"}
-    skip_keys = {"name", "type", "comment"}
-    for column in columns:
-        name = column["name"]
-        col_type = str(column["type"])
-
-        parts = []
-        if name in primary_keys:
-            parts.append("primary key")
-        parts.append(col_type)
-
-        for k, v in column.items():
-            if k in skip_keys:
-                continue
-            if v:
-                if k in show_key_only:
-                    parts.append(k)
-                else:
-                    parts.append(f"{k}={v}")
-
-        result.append(f"    {name}: " + ", ".join(parts))
-
-    # Process relationships
-    if foreign_keys:
-        result.extend(["", "    Relationships:"])
-        for fk in foreign_keys:
-            constrained = ", ".join(fk["constrained_columns"])
-            referred_table = fk["referred_table"]
-            referred_cols = ", ".join(fk["referred_columns"])
-            result.append(f"      {constrained} -> {referred_table}.{referred_cols}")
-
-    return "\n".join(result)
 
 
-def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str:
-    """Execute a SQL query and return results as JSON.
+def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> dict[str, Any] | list[dict[str, Any]] | str:
+    """Execute a SQL query and return results.
 
     IMPORTANT: Always use the params parameter for variable substitution
     (e.g., 'WHERE id = :id' with params={'id': 123}) to prevent SQL injection.
@@ -398,8 +346,7 @@ def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str
         params: Query parameters for safe substitution
 
     Returns:
-        JSON string containing query results (list of dicts for SELECT,
-        success message dict for INSERT/UPDATE/DELETE, or error dict)
+        List of dicts for SELECT, success dict for INSERT/UPDATE/DELETE, or error string
 
     Example:
         # Basic query
@@ -423,11 +370,11 @@ def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str
     with LogSpan(span="db.query", sql=sql, dbUrl=db_url) as s:
         if not db_url or not db_url.strip():
             s.add(error="empty_db_url")
-            return json.dumps({"error": "db_url parameter is required"})
+            return "Error: db_url parameter is required"
 
         if not sql or not sql.strip():
             s.add(error="empty_query")
-            return json.dumps({"error": "sql parameter is required"})
+            return "Error: sql parameter is required"
 
         try:
             engine = _get_engine(db_url)
@@ -439,11 +386,11 @@ def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str
                 if not cursor_result.returns_rows:
                     affected = cursor_result.rowcount
                     s.add(rowsAffected=affected)
-                    return json.dumps({
+                    return {
                         "success": True,
                         "rows_affected": affected,
-                        "message": f"{affected} rows affected"
-                    })
+                        "message": f"{affected} rows affected",
+                    }
 
                 max_rows = _get_config().max_chars // 100  # Rough estimate for row limit
                 rows_data, row_count, truncated = _convert_query_results_to_json(
@@ -451,16 +398,15 @@ def query(*, sql: str, db_url: str, params: dict[str, Any] | None = None) -> str
                 )
                 s.add(rows=row_count, truncated=truncated)
 
-                result = {
+                return {
                     "rows": rows_data,
                     "row_count": row_count,
-                    "truncated": truncated
+                    "truncated": truncated,
                 }
-                return json.dumps(result)
 
         except Exception as e:
             s.add(error=str(e))
-            return json.dumps({"error": str(e)})
+            return f"Error: {e}"
 
 
 def _convert_query_results_to_json(
@@ -495,51 +441,3 @@ def _convert_query_results_to_json(
     return rows_data, row_count, truncated
 
 
-def _format_query_results(cursor_result: Any, max_chars: int) -> tuple[str, int, bool]:
-    """Format query results in vertical format.
-
-    Args:
-        cursor_result: SQLAlchemy cursor result
-        max_chars: Maximum characters for output
-
-    Returns:
-        Tuple of (formatted_output, row_count, was_truncated)
-    """
-    result: list[str] = []
-    size = 0
-    row_count = 0
-    displayed_count = 0
-    truncated = False
-    keys = list(cursor_result.keys())
-
-    while row := cursor_result.fetchone():
-        row_count += 1
-
-        if truncated:
-            continue
-
-        sub_result = [f"{row_count}. row"]
-        for col, val in zip(keys, row, strict=True):
-            sub_result.append(f"{col}: {_format_value(val)}")
-        sub_result.append("")
-
-        row_size = sum(len(x) + 1 for x in sub_result)
-        size += row_size
-
-        if size > max_chars:
-            truncated = True
-        else:
-            displayed_count += 1
-            result.extend(sub_result)
-
-    if row_count == 0:
-        return "No rows returned", 0, False
-
-    if truncated:
-        result.append(
-            f"Result: showing first {displayed_count} of {row_count} rows (output truncated)"
-        )
-    else:
-        result.append(f"Result: {row_count} rows")
-
-    return "\n".join(result), row_count, truncated

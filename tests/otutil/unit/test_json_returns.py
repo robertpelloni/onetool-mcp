@@ -63,43 +63,35 @@ class TestFileJsonReturns:
 @pytest.mark.unit
 @pytest.mark.tools
 class TestExcelJsonReturns:
-    """Excel tools returning structured data produce valid JSON."""
+    """Excel tools return native Python types (serialized by serialize_result())."""
 
-    def test_read_returns_json(self, tmp_excel: Path) -> None:
-        """excel.read returns JSON string of rows."""
+    def test_read_returns_list(self, tmp_excel: Path) -> None:
+        """excel.read returns a list of rows."""
         from otutil.tools.excel import read
 
         result = read(filepath=str(tmp_excel))
-        assert isinstance(result, str), f"Expected str, got {type(result)}"
-        data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) >= 2  # header + data row
+        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert len(result) >= 2  # header + data row
 
-    def test_info_returns_json(self, tmp_excel: Path) -> None:
-        """excel.info returns JSON string of workbook metadata."""
+    def test_info_returns_dict(self, tmp_excel: Path) -> None:
+        """excel.info returns a dict of workbook metadata."""
         from otutil.tools.excel import info
 
         result = info(filepath=str(tmp_excel))
-        assert isinstance(result, str), f"Expected str, got {type(result)}"
-        data = json.loads(result)
-        assert isinstance(data, dict)
-        assert "sheets" in data
+        assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+        assert "sheets" in result
 
-    def test_sheets_returns_json(self, tmp_excel: Path) -> None:
-        """excel.sheets returns JSON string of sheet list."""
+    def test_sheets_returns_list(self, tmp_excel: Path) -> None:
+        """excel.sheets returns a list of sheet dicts."""
         from otutil.tools.excel import sheets
 
         result = sheets(filepath=str(tmp_excel))
-        assert isinstance(result, str), f"Expected str, got {type(result)}"
-        data = json.loads(result)
-        assert isinstance(data, list)
-        assert len(data) >= 1
+        assert isinstance(result, list), f"Expected list, got {type(result)}"
+        assert len(result) >= 1
 
-    def test_search_returns_json(self, tmp_excel: Path) -> None:
-        """excel.search returns JSON string of matches."""
+    def test_search_returns_list(self, tmp_excel: Path) -> None:
+        """excel.search returns a list of matches."""
         from otutil.tools.excel import search
 
         result = search(filepath=str(tmp_excel), pattern="foo")
-        assert isinstance(result, str), f"Expected str, got {type(result)}"
-        data = json.loads(result)
-        assert isinstance(data, list)
+        assert isinstance(result, list), f"Expected list, got {type(result)}"

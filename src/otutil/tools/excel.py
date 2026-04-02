@@ -44,7 +44,6 @@ __ot_requires__ = {
 }
 
 import fnmatch
-import json
 import re
 from datetime import date, datetime, time
 from typing import TYPE_CHECKING, Any
@@ -217,7 +216,7 @@ def read(
     sheet_name: str | None = None,
     start_cell: str = "A1",
     end_cell: str | None = None,
-) -> str:
+) -> list[list[Any]] | str:
     """Read data from Excel worksheet.
 
     Args:
@@ -227,7 +226,7 @@ def read(
         end_cell: Ending cell reference (default: auto-detect)
 
     Returns:
-        Data as JSON list of lists, or error message
+        List of rows (each a list of cell values), or error string
 
     Example:
         excel.read(filepath="data.xlsx")
@@ -279,7 +278,7 @@ def read(
                 rows.append(row_data)
 
             s.add(rows=len(rows))
-            return json.dumps(rows)
+            return rows
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -355,7 +354,7 @@ def write(
             return f"Error: {e}"
 
 
-def info(*, filepath: str, include_ranges: bool = False) -> str:
+def info(*, filepath: str, include_ranges: bool = False) -> dict[str, Any] | str:
     """Get workbook metadata.
 
     Args:
@@ -400,7 +399,7 @@ def info(*, filepath: str, include_ranges: bool = False) -> str:
 
             wb.close()
             s.add(sheets=len(info_dict["sheets"]))
-            return json.dumps(info_dict)
+            return info_dict
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -543,7 +542,7 @@ def search(
     sheet_name: str | None = None,
     regex: bool = False,
     first_only: bool = False,
-) -> str:
+) -> list[dict[str, str]] | str:
     """Search for values matching a pattern.
 
     Args:
@@ -595,11 +594,11 @@ def search(
                         matches.append({"cell": cell.coordinate, "value": text})
                         if first_only:
                             s.add(resultCount=1)
-                            return json.dumps([matches[0]])
+                            return [matches[0]]
 
             wb.close()
             s.add(resultCount=len(matches))
-            return json.dumps(matches)
+            return matches
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -614,7 +613,7 @@ def tables(
     *,
     filepath: str,
     sheet_name: str | None = None,
-) -> str:
+) -> list[dict[str, str]] | str:
     """List all defined tables in worksheet.
 
     Args:
@@ -646,7 +645,7 @@ def tables(
 
             wb.close()
             s.add(resultCount=len(table_list))
-            return json.dumps(table_list)
+            return table_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -657,7 +656,7 @@ def table_info(
     filepath: str,
     table_name: str,
     sheet_name: str | None = None,
-) -> str:
+) -> dict[str, Any] | str:
     """Get detailed table information.
 
     Args:
@@ -706,7 +705,7 @@ def table_info(
 
             wb.close()
             s.add(found=True)
-            return json.dumps(info_dict)
+            return info_dict
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -718,7 +717,7 @@ def table_data(
     table_name: str,
     row_index: int | None = None,
     sheet_name: str | None = None,
-) -> str:
+) -> dict[str, Any] | list[dict[str, Any]] | str:
     """Get table data with optional row selection.
 
     Args:
@@ -784,13 +783,13 @@ def table_data(
             if row_index is not None:
                 if 0 <= row_index < len(rows_data):
                     s.add(resultCount=1)
-                    return json.dumps(rows_data[row_index])
+                    return rows_data[row_index]
                 else:
                     s.add(error="row_index_out_of_range")
                     return f"Error: Row index {row_index} out of range (0-{len(rows_data) - 1})"
 
             s.add(resultCount=len(rows_data))
-            return json.dumps(rows_data)
+            return rows_data
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -1138,7 +1137,7 @@ def create_table(
 # =============================================================================
 
 
-def sheets(*, filepath: str) -> str:
+def sheets(*, filepath: str) -> list[dict[str, str]] | str:
     """List all sheets with visibility and type.
 
     Args:
@@ -1166,7 +1165,7 @@ def sheets(*, filepath: str) -> str:
 
             wb.close()
             s.add(resultCount=len(sheet_list))
-            return json.dumps(sheet_list)
+            return sheet_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -1220,7 +1219,7 @@ def formulas(
     *,
     filepath: str,
     sheet_name: str | None = None,
-) -> str:
+) -> list[dict[str, str]] | str:
     """List all cells containing formulas.
 
     Args:
@@ -1262,7 +1261,7 @@ def formulas(
 
             wb.close()
             s.add(resultCount=len(formula_list))
-            return json.dumps(formula_list)
+            return formula_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -1272,7 +1271,7 @@ def hyperlinks(
     *,
     filepath: str,
     sheet_name: str | None = None,
-) -> str:
+) -> list[dict[str, str]] | str:
     """List all hyperlinks in worksheet.
 
     Args:
@@ -1312,7 +1311,7 @@ def hyperlinks(
 
             wb.close()
             s.add(resultCount=len(link_list))
-            return json.dumps(link_list)
+            return link_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
@@ -1322,7 +1321,7 @@ def merged_cells(
     *,
     filepath: str,
     sheet_name: str | None = None,
-) -> str:
+) -> list[str] | str:
     """List merged cell ranges in worksheet.
 
     Args:
@@ -1352,13 +1351,13 @@ def merged_cells(
 
             wb.close()
             s.add(resultCount=len(merged_list))
-            return json.dumps(merged_list)
+            return merged_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"
 
 
-def named_ranges(*, filepath: str) -> str:
+def named_ranges(*, filepath: str) -> list[dict[str, Any]] | str:
     """List all named ranges in workbook.
 
     Args:
@@ -1397,7 +1396,7 @@ def named_ranges(*, filepath: str) -> str:
 
             wb.close()
             s.add(resultCount=len(range_list))
-            return json.dumps(range_list)
+            return range_list
         except Exception as e:
             s.add(error=str(e))
             return f"Error: {e}"

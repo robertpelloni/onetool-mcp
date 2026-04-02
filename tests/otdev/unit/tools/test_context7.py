@@ -222,7 +222,7 @@ class TestSearchStrFormat:
         result = context7.search(query="nothing", library_name="nothing")
         assert result == "No libraries found."
 
-    def test_dict_format_returns_json(self, monkeypatch):
+    def test_dict_format_returns_dict(self, monkeypatch):
         from otdev.tools import context7
 
         monkeypatch.setattr(
@@ -231,13 +231,11 @@ class TestSearchStrFormat:
             lambda *a, **kw: (True, self._make_search_result()),
         )
 
-        import json
-
         result = context7.search(
             query="react", library_name="react", output_format="dict"
         )
-        parsed = json.loads(result)
-        assert "results" in parsed
+        assert isinstance(result, dict)
+        assert "results" in result
 
 
 @pytest.mark.unit

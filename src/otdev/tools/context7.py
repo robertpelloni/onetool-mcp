@@ -19,7 +19,6 @@ __ot_requires__ = {
     "secrets": ["CONTEXT7_API_KEY"],
 }
 
-import json
 import re
 from typing import Any
 
@@ -366,7 +365,7 @@ def search(*, query: str, library_name: str, output_format: str = "str") -> str:
 
         if output_format == "dict":
             s.add(resultType=type(result).__name__)
-            return json.dumps(result)
+            return result
 
         # Format as a human-readable markdown list
         results = result.get("results", []) if isinstance(result, dict) else []
@@ -457,7 +456,7 @@ def doc(
             note = f"[Resolved '{library_id}' → '{resolved_id}']\n\n"
 
         # Fetch context
-        params: dict[str, str] = {"libraryId": resolved_id}
+        params: dict[str, str] = {"libraryId": resolved_id, "type": "txt"}
         if query:
             params["query"] = query
 
