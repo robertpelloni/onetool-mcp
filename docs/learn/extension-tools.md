@@ -4,7 +4,7 @@
 
 Extension tools run in-process with full access to OneTool's logging, config, secrets, and inter-tool calling APIs. This is the recommended approach for most tools.
 
-## TL;DR
+## Quick Reference
 
 - Define `pack = "name"` and exported keyword-only functions.
 - Decorate each callable with `@tool` for registry discovery.

@@ -2,7 +2,7 @@
 
 Complete reference for `onetool.yaml` configuration.
 
-## TL;DR
+## Quick Reference
 
 - Use `onetool init --config ~/.onetool` for first-time setup.
 - Core config lives in `onetool.yaml`; secrets live in `secrets.yaml`.

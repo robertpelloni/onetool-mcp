@@ -3,7 +3,7 @@
 !!! warning "Not a Sandbox"
     The security model provides defense-in-depth but is **NOT a sandbox**. Never run code you do not trust. The allowlist model catches common dangerous patterns but cannot prevent all malicious code. Always review generated code before execution.
 
-## TL;DR
+## Summary
 
 - OneTool security is defense-in-depth, not absolute isolation.
 - Default policy is allowlist-based: unsafe code is rejected unless explicitly allowed.
