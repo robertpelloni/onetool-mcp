@@ -15,9 +15,9 @@ from .content import (
 )
 from .db import (
     _deserialize_meta,
-    _get_connection,
     _serialize_embedding,
     _serialize_meta,
+    _use_connection,
 )
 from .embedding import _maybe_embed
 
@@ -46,36 +46,35 @@ def context(
     """
     with LogSpan(span="mem.context", topic=topic, limit=limit) as s:
         try:
-            conn = _get_connection()
+            with _use_connection() as conn:
+                sql = """
+                    SELECT id, topic, content, category, tags, relevance, access_count
+                    FROM memories
+                    WHERE 1=1
+                """
+                params: list[Any] = []
 
-            sql = """
-                SELECT id, topic, content, category, tags, relevance, access_count
-                FROM memories
-                WHERE 1=1
-            """
-            params: list[Any] = []
+                topic_sql, topic_params = _topic_filter(topic)
+                sql += topic_sql
+                params.extend(topic_params)
 
-            topic_sql, topic_params = _topic_filter(topic)
-            sql += topic_sql
-            params.extend(topic_params)
+                sql += " ORDER BY access_count DESC, relevance DESC LIMIT ?"
+                params.append(limit)
 
-            sql += " ORDER BY access_count DESC, relevance DESC LIMIT ?"
-            params.append(limit)
+                rows = conn.execute(sql, params).fetchall()
 
-            rows = conn.execute(sql, params).fetchall()
+                if not rows:
+                    s.add("resultCount", 0)
+                    return "No memories found for context"
 
-            if not rows:
-                s.add("resultCount", 0)
-                return "No memories found for context"
-
-            # Increment access counts (batch)
-            ids = [r[0] for r in rows]
-            placeholders = ", ".join("?" for _ in ids)
-            conn.execute(
-                f"UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id IN ({placeholders})",
-                ids,
-            )
-            conn.commit()
+                # Increment access counts (batch)
+                ids = [r[0] for r in rows]
+                placeholders = ", ".join("?" for _ in ids)
+                conn.execute(
+                    f"UPDATE memories SET access_count = access_count + 1, last_accessed = datetime('now') WHERE id IN ({placeholders})",
+                    ids,
+                )
+                conn.commit()
 
             s.add("resultCount", len(rows))
 
@@ -116,69 +115,68 @@ def update_batch(
     """
     with LogSpan(span="mem.update_batch", search=search_text, replace=replace_text, dryRun=dry_run) as s:
         try:
-            conn = _get_connection()
+            with _use_connection() as conn:
+                escaped = search_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                sql = "SELECT id, topic, content, meta FROM memories WHERE content LIKE ? ESCAPE '\\'"
+                params: list[Any] = [f"%{escaped}%"]
 
-            escaped = search_text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            sql = "SELECT id, topic, content, meta FROM memories WHERE content LIKE ? ESCAPE '\\'"
-            params: list[Any] = [f"%{escaped}%"]
+                topic_sql, topic_params = _topic_filter(topic)
+                sql += topic_sql
+                params.extend(topic_params)
 
-            topic_sql, topic_params = _topic_filter(topic)
-            sql += topic_sql
-            params.extend(topic_params)
+                rows = conn.execute(sql, params).fetchall()
 
-            rows = conn.execute(sql, params).fetchall()
+                if not rows:
+                    s.add("matchCount", 0)
+                    return f"No memories contain '{search_text}'"
 
-            if not rows:
-                s.add("matchCount", 0)
-                return f"No memories contain '{search_text}'"
+                s.add("matchCount", len(rows))
 
-            s.add("matchCount", len(rows))
+                if dry_run:
+                    lines = [f"Dry run: {len(rows)} memories would be updated:\n"]
+                    for r in rows:
+                        occurrences = r[2].count(search_text)
+                        lines.append(f"  {r[1]} ({occurrences} occurrence{'s' if occurrences != 1 else ''}) id={r[0][:8]}...")
+                    return "\n".join(lines)
 
-            if dry_run:
-                lines = [f"Dry run: {len(rows)} memories would be updated:\n"]
+                updated = 0
                 for r in rows:
-                    occurrences = r[2].count(search_text)
-                    lines.append(f"  {r[1]} ({occurrences} occurrence{'s' if occurrences != 1 else ''}) id={r[0][:8]}...")
-                return "\n".join(lines)
+                    memory_id, _topic, old_content = r[0], r[1], r[2]
+                    existing_meta: dict[str, str] = _deserialize_meta(r[3])
 
-            updated = 0
-            for r in rows:
-                memory_id, _topic, old_content = r[0], r[1], r[2]
-                existing_meta: dict[str, str] = _deserialize_meta(r[3])
+                    # Save history
+                    history_id = str(uuid.uuid4())
+                    conn.execute(
+                        "INSERT INTO memory_history (id, memory_id, content) VALUES (?, ?, ?)",
+                        [history_id, memory_id, old_content],
+                    )
 
-                # Save history
-                history_id = str(uuid.uuid4())
-                conn.execute(
-                    "INSERT INTO memory_history (id, memory_id, content) VALUES (?, ?, ?)",
-                    [history_id, memory_id, old_content],
-                )
+                    new_content = old_content.replace(search_text, replace_text)
+                    new_hash = _content_hash(new_content)
+                    embedding = _maybe_embed(memory_id, new_content)
 
-                new_content = old_content.replace(search_text, replace_text)
-                new_hash = _content_hash(new_content)
-                embedding = _maybe_embed(memory_id, new_content)
+                    # Recompute TOC if the memory has sections
+                    if "sections" in existing_meta:
+                        headings = _parse_headings(new_content)
+                        if headings:
+                            existing_meta["sections"] = _encode_sections(headings)
+                            existing_meta["section_count"] = str(len(headings))
+                        else:
+                            del existing_meta["sections"]
+                            existing_meta.pop("section_count", None)
 
-                # Recompute TOC if the memory has sections
-                if "sections" in existing_meta:
-                    headings = _parse_headings(new_content)
-                    if headings:
-                        existing_meta["sections"] = _encode_sections(headings)
-                        existing_meta["section_count"] = str(len(headings))
-                    else:
-                        del existing_meta["sections"]
-                        existing_meta.pop("section_count", None)
+                    conn.execute(
+                        """
+                        UPDATE memories
+                        SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
+                        WHERE id = ?
+                        """,
+                        [new_content, new_hash, _serialize_embedding(embedding),
+                         _serialize_meta(existing_meta), memory_id],
+                    )
+                    updated += 1
 
-                conn.execute(
-                    """
-                    UPDATE memories
-                    SET content = ?, content_hash = ?, embedding = ?, meta = ?, updated_at = datetime('now')
-                    WHERE id = ?
-                    """,
-                    [new_content, new_hash, _serialize_embedding(embedding),
-                     _serialize_meta(existing_meta), memory_id],
-                )
-                updated += 1
-
-            conn.commit()
+                conn.commit()
             s.add("updated", updated)
             return f"Updated {updated} memories: replaced '{search_text}' with '{replace_text}'"
 

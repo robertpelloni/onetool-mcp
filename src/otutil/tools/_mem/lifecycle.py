@@ -9,7 +9,7 @@ from otpack import LogSpan
 
 from .config import _get_config
 from .content import _topic_filter
-from .db import _get_connection, _serialize_embedding
+from .db import _get_connection, _serialize_embedding, _use_connection
 from .embedding import _generate_embedding
 
 
@@ -86,15 +86,16 @@ def decay(
                 return "\n".join(lines)
 
             updated = 0
-            for d in decay_results:
-                if d["old_relevance"] != d["new_relevance"]:
-                    conn.execute(
-                        "UPDATE memories SET relevance = ? WHERE id = ?",
-                        [d["new_relevance"], d["id"]],
-                    )
-                    updated += 1
+            with _use_connection() as conn:
+                for d in decay_results:
+                    if d["old_relevance"] != d["new_relevance"]:
+                        conn.execute(
+                            "UPDATE memories SET relevance = ? WHERE id = ?",
+                            [d["new_relevance"], d["id"]],
+                        )
+                        updated += 1
 
-            conn.commit()
+                conn.commit()
             s.add("updated", updated)
             return f"Applied decay to {updated} memories (half_life={half_life}d)"
 
@@ -238,15 +239,16 @@ def reindex(
                 return f"Found {len(rows)} memories without embeddings. Run with dry_run=False to generate."
 
             generated = 0
-            for memory_id, content in rows:
-                embedding = _generate_embedding(content)
-                conn.execute(
-                    "UPDATE memories SET embedding = ? WHERE id = ?",
-                    [_serialize_embedding(embedding), memory_id],
-                )
-                generated += 1
+            with _use_connection() as conn:
+                for memory_id, content in rows:
+                    embedding = _generate_embedding(content)
+                    conn.execute(
+                        "UPDATE memories SET embedding = ? WHERE id = ?",
+                        [_serialize_embedding(embedding), memory_id],
+                    )
+                    generated += 1
 
-            conn.commit()
+                conn.commit()
             s.add("generated", generated)
             return f"Generated embeddings for {generated} memories"
 

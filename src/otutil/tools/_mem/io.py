@@ -16,6 +16,7 @@ from .db import (
     _serialize_embedding,
     _serialize_meta,
     _serialize_tags,
+    _use_connection,
 )
 from .embedding import _maybe_embed
 
@@ -144,58 +145,58 @@ def index(
                 return "Error: Invalid YAML format - expected 'memories' key"
 
             memories = data["memories"]
-            conn = _get_connection()
             imported = 0
             skipped = 0
             malformed = 0
 
-            for mem_data in memories:
-                topic = mem_data.get("topic", "")
-                content = mem_data.get("content", "")
-                if not topic or not content:
-                    malformed += 1
-                    continue
+            with _use_connection() as conn:
+                for mem_data in memories:
+                    topic = mem_data.get("topic", "")
+                    content = mem_data.get("content", "")
+                    if not topic or not content:
+                        malformed += 1
+                        continue
 
-                content_hash = _content_hash(content)
+                    content_hash = _content_hash(content)
 
-                # Check for existing
-                existing = conn.execute(
-                    "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
-                    [topic, content_hash],
-                ).fetchone()
+                    # Check for existing
+                    existing = conn.execute(
+                        "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
+                        [topic, content_hash],
+                    ).fetchone()
 
-                if existing:
-                    skipped += 1
-                    continue
+                    if existing:
+                        skipped += 1
+                        continue
 
-                memory_id = mem_data.get("id", str(uuid.uuid4()))
-                category = mem_data.get("category", "note")
-                mem_tags = mem_data.get("tags", [])
-                relevance = max(1, min(10, int(mem_data.get("relevance", 5))))
+                    memory_id = mem_data.get("id", str(uuid.uuid4()))
+                    category = mem_data.get("category", "note")
+                    mem_tags = mem_data.get("tags", [])
+                    relevance = max(1, min(10, int(mem_data.get("relevance", 5))))
 
-                # Restore meta if present
-                meta_raw = mem_data.get("meta", "{}")
-                if isinstance(meta_raw, dict):
-                    meta_str = _serialize_meta(meta_raw)
-                elif isinstance(meta_raw, str):
-                    # Validate it's valid JSON, normalise
-                    meta_str = _serialize_meta(_deserialize_meta(meta_raw))
-                else:
-                    meta_str = "{}"
+                    # Restore meta if present
+                    meta_raw = mem_data.get("meta", "{}")
+                    if isinstance(meta_raw, dict):
+                        meta_str = _serialize_meta(meta_raw)
+                    elif isinstance(meta_raw, str):
+                        # Validate it's valid JSON, normalise
+                        meta_str = _serialize_meta(_deserialize_meta(meta_raw))
+                    else:
+                        meta_str = "{}"
 
-                embedding = _maybe_embed(memory_id, content)
+                    embedding = _maybe_embed(memory_id, content)
 
-                conn.execute(
-                    """
-                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [memory_id, topic, content, content_hash, category,
-                     _serialize_tags(mem_tags), relevance, _serialize_embedding(embedding), meta_str],
-                )
-                imported += 1
+                    conn.execute(
+                        """
+                        INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        [memory_id, topic, content, content_hash, category,
+                         _serialize_tags(mem_tags), relevance, _serialize_embedding(embedding), meta_str],
+                    )
+                    imported += 1
 
-            conn.commit()
+                conn.commit()
             s.add("imported", imported)
             s.add("skipped", skipped)
             s.add("malformed", malformed)

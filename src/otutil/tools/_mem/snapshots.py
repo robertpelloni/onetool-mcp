@@ -16,6 +16,7 @@ from .db import (
     _serialize_embedding,
     _serialize_meta,
     _serialize_tags,
+    _use_connection,
 )
 from .embedding import _maybe_embed
 
@@ -229,74 +230,74 @@ def restore(
             restored = 0
             skipped = 0
             errors = []
-            conn = _get_connection()
 
-            for entry in memories:
-                mem_topic = entry.get("topic", "")
-                file_rel = entry.get("file", "")
-                category = entry.get("category", "note")
-                tags = entry.get("tags", [])
-                relevance = max(1, min(10, int(entry.get("relevance", 5))))
+            with _use_connection() as conn:
+                for entry in memories:
+                    mem_topic = entry.get("topic", "")
+                    file_rel = entry.get("file", "")
+                    category = entry.get("category", "note")
+                    tags = entry.get("tags", [])
+                    relevance = max(1, min(10, int(entry.get("relevance", 5))))
 
-                # Restore meta if present
-                meta_raw = entry.get("meta", {})
-                if isinstance(meta_raw, dict):
-                    meta_str = _serialize_meta(meta_raw)
-                elif isinstance(meta_raw, str):
-                    meta_str = _serialize_meta(_deserialize_meta(meta_raw))
-                else:
-                    meta_str = "{}"
+                    # Restore meta if present
+                    meta_raw = entry.get("meta", {})
+                    if isinstance(meta_raw, dict):
+                        meta_str = _serialize_meta(meta_raw)
+                    elif isinstance(meta_raw, str):
+                        meta_str = _serialize_meta(_deserialize_meta(meta_raw))
+                    else:
+                        meta_str = "{}"
 
-                if not mem_topic or not file_rel:
-                    errors.append("Missing topic or file in index entry")
-                    continue
+                    if not mem_topic or not file_rel:
+                        errors.append("Missing topic or file in index entry")
+                        continue
 
-                # Remap topic if override provided
-                if topic is not None:
-                    # Strip original filter prefix, prepend new topic
-                    rel = mem_topic
-                    if original_filter and mem_topic.startswith(original_filter):
-                        rel = mem_topic[len(original_filter):]
-                    elif original_filter and mem_topic == original_filter.rstrip("/"):
-                        rel = mem_topic.rsplit("/", 1)[-1]
-                    mem_topic = f"{topic}/{rel}" if rel else topic
+                    # Remap topic if override provided
+                    if topic is not None:
+                        # Strip original filter prefix, prepend new topic
+                        rel = mem_topic
+                        if original_filter and mem_topic.startswith(original_filter):
+                            rel = mem_topic[len(original_filter):]
+                        elif original_filter and mem_topic == original_filter.rstrip("/"):
+                            rel = mem_topic.rsplit("/", 1)[-1]
+                        mem_topic = f"{topic}/{rel}" if rel else topic
 
-                # Read content file
-                content_path = validated_path / file_rel
-                if not content_path.exists():
-                    errors.append(f"File not found: {file_rel}")
-                    continue
+                    # Read content file
+                    content_path = validated_path / file_rel
+                    if not content_path.exists():
+                        errors.append(f"File not found: {file_rel}")
+                        continue
 
-                content = content_path.read_text(encoding="utf-8")
-                content_hash = _content_hash(content)
+                    content = content_path.read_text(encoding="utf-8")
+                    content_hash = _content_hash(content)
 
-                # Check for existing
-                existing = conn.execute(
-                    "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
-                    [mem_topic, content_hash],
-                ).fetchone()
+                    # Check for existing
+                    existing = conn.execute(
+                        "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
+                        [mem_topic, content_hash],
+                    ).fetchone()
 
-                if existing and not overwrite:
-                    skipped += 1
-                    continue
+                    if existing and not overwrite:
+                        skipped += 1
+                        continue
 
-                if existing and overwrite:
-                    conn.execute("DELETE FROM memories WHERE id = ?", [existing[0]])
+                    if existing and overwrite:
+                        conn.execute("DELETE FROM memories WHERE id = ?", [existing[0]])
 
-                memory_id = str(uuid.uuid4())
-                embedding = _maybe_embed(memory_id, content)
+                    memory_id = str(uuid.uuid4())
+                    embedding = _maybe_embed(memory_id, content)
 
-                conn.execute(
-                    """
-                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    [memory_id, mem_topic, content, content_hash, category,
-                     _serialize_tags(tags), relevance, _serialize_embedding(embedding), meta_str],
-                )
-                restored += 1
+                    conn.execute(
+                        """
+                        INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        [memory_id, mem_topic, content, content_hash, category,
+                         _serialize_tags(tags), relevance, _serialize_embedding(embedding), meta_str],
+                    )
+                    restored += 1
 
-            conn.commit()
+                conn.commit()
             s.add("restored", restored)
             s.add("skipped", skipped)
             s.add("errors", len(errors))

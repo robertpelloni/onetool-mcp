@@ -172,14 +172,14 @@ class TestWrite:
     """Test mem.write() with mocked database and embeddings."""
 
     @patch("otutil.tools._mem.write._maybe_embed")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_stores_new_memory(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
         mock_embed.return_value = None
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         # No duplicate found
         conn.execute.return_value.fetchone.return_value = None
 
@@ -191,12 +191,12 @@ class TestWrite:
         insert_calls = [c for c in conn.execute.call_args_list if "INSERT" in str(c)]
         assert len(insert_calls) == 1
 
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_rejects_duplicate(self, mock_conn):
         from otutil.tools.mem import write
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = ("existing-id",)
 
         result = write(topic="test/topic", content="test content")
@@ -227,13 +227,13 @@ class TestWrite:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.write._maybe_embed")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_reads_from_file(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import write
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None
 
         test_file = tmp_path / "test.txt"
@@ -244,12 +244,12 @@ class TestWrite:
         assert "Stored memory" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_file_not_found(self, mock_conn, tmp_path):
         from otutil.tools.mem import write
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
 
         result = write(topic="test", file=str(tmp_path / "nonexistent.txt"))
 
@@ -713,12 +713,12 @@ class TestWriteWithoutEmbeddings:
     """Test that write stores NULL embedding when disabled."""
 
     @patch("otutil.tools._mem.write._maybe_embed", return_value=None)
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_write_stores_null_embedding(self, mock_conn, _mock_embed):
         from otutil.tools.mem import write
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None  # No duplicate
 
         result = write(topic="test/topic", content="test content")
@@ -947,24 +947,24 @@ class TestCount:
 class TestDelete:
     """Test mem.delete() with mocked database."""
 
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_deletes_by_id(self, mock_conn):
         from otutil.tools.mem import delete
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = ("id-123",)
 
         result = delete(id="id-123")
 
         assert "Deleted memory id-123" in result
 
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_requires_confirm_for_multi_delete(self, mock_conn):
         from otutil.tools.mem import delete
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = (5,)
 
         result = delete(topic="projects/")
@@ -985,13 +985,13 @@ class TestUpdate:
     """Test mem.update() with mocked database and embeddings."""
 
     @patch("otutil.tools._mem.mutations._maybe_embed")
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_updates_single_match(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
             ("id-123", "old content", '{}'),
         ]
@@ -1000,12 +1000,12 @@ class TestUpdate:
 
         assert "Updated memory" in result
 
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_rejects_multiple_matches(self, mock_conn):
         from otutil.tools.mem import update
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "content 1", '{}'),
             ("id-2", "content 2", '{}'),
@@ -1015,12 +1015,12 @@ class TestUpdate:
 
         assert "Multiple memories" in result
 
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_not_found(self, mock_conn):
         from otutil.tools.mem import update
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = []
 
         result = update(topic="nonexistent", content="new")
@@ -1034,13 +1034,13 @@ class TestAppend:
     """Test mem.append() with mocked database and embeddings."""
 
     @patch("otutil.tools._mem.mutations._maybe_embed")
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_appends_content(self, mock_conn, mock_embed):
         from otutil.tools.mem import append
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
 
         # Mock for single match via fetchall (id, content, meta)
         conn.execute.return_value.fetchall.return_value = [
@@ -1062,12 +1062,12 @@ class TestAppend:
 class TestContext:
     """Test mem.context() hot cache loading."""
 
-    @patch("otutil.tools._mem.maintenance._get_connection")
+    @patch("otutil.tools._mem.maintenance._use_connection")
     def test_loads_top_accessed(self, mock_conn):
         from otutil.tools.mem import context
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "hot/topic", "frequently accessed content", "rule", ["tag"], 8, 100),
         ]
@@ -1078,12 +1078,12 @@ class TestContext:
         assert "hot/topic" in result
         assert "frequently accessed content" in result
 
-    @patch("otutil.tools._mem.maintenance._get_connection")
+    @patch("otutil.tools._mem.maintenance._use_connection")
     def test_empty_context(self, mock_conn):
         from otutil.tools.mem import context
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = []
 
         result = context()
@@ -1101,12 +1101,12 @@ class TestContext:
 class TestUpdateBatch:
     """Test mem.update_batch() search-and-replace."""
 
-    @patch("otutil.tools._mem.maintenance._get_connection")
+    @patch("otutil.tools._mem.maintenance._use_connection")
     def test_dry_run_preview(self, mock_conn):
         from otutil.tools.mem import update_batch
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
             ("id-1", "topic/one", "old_name is used here", "{}"),
             ("id-2", "topic/two", "old_name appears twice: old_name", "{}"),
@@ -1117,12 +1117,12 @@ class TestUpdateBatch:
         assert "Dry run" in result
         assert "2 memories" in result
 
-    @patch("otutil.tools._mem.maintenance._get_connection")
+    @patch("otutil.tools._mem.maintenance._use_connection")
     def test_no_matches(self, mock_conn):
         from otutil.tools.mem import update_batch
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = []
 
         result = update_batch(search_text="nonexistent", replace_text="new")
@@ -1273,13 +1273,13 @@ class TestIndex:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.io._maybe_embed")
-    @patch("otutil.tools._mem.io._get_connection")
+    @patch("otutil.tools._mem.io._use_connection")
     def test_imports_from_yaml(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import index
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None  # No existing
 
         yaml_file = tmp_path / "memories.yaml"
@@ -1444,13 +1444,13 @@ class TestRestore:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.snapshots._maybe_embed")
-    @patch("otutil.tools._mem.snapshots._get_connection")
+    @patch("otutil.tools._mem.snapshots._use_connection")
     def test_restore_from_snapshot(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None  # No existing
 
         # Create snapshot directory
@@ -1483,13 +1483,13 @@ class TestRestore:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.snapshots._maybe_embed")
-    @patch("otutil.tools._mem.snapshots._get_connection")
+    @patch("otutil.tools._mem.snapshots._use_connection")
     def test_restore_skips_duplicates(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = ("existing-id",)  # Already exists
 
         snap_dir = tmp_path / "snap"
@@ -1510,13 +1510,13 @@ class TestRestore:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.snapshots._maybe_embed")
-    @patch("otutil.tools._mem.snapshots._get_connection")
+    @patch("otutil.tools._mem.snapshots._use_connection")
     def test_restore_overwrite(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = ("existing-id",)
 
         snap_dir = tmp_path / "snap"
@@ -1551,12 +1551,12 @@ class TestRestore:
         assert "index.yaml" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools._mem.snapshots._get_connection")
+    @patch("otutil.tools._mem.snapshots._use_connection")
     def test_restore_missing_file(self, mock_conn, tmp_path):
         from otutil.tools.mem import restore
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None
 
         snap_dir = tmp_path / "snap"
@@ -1576,13 +1576,13 @@ class TestRestore:
 
     @pytest.mark.usefixtures("_mock_cwd")
     @patch("otutil.tools._mem.snapshots._maybe_embed")
-    @patch("otutil.tools._mem.snapshots._get_connection")
+    @patch("otutil.tools._mem.snapshots._use_connection")
     def test_restore_topic_override(self, mock_conn, mock_embed, tmp_path):
         from otutil.tools.mem import restore
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None
 
         snap_dir = tmp_path / "snap"
@@ -1868,12 +1868,12 @@ class TestWriteValidation:
         assert "relevance" in result
 
     @pytest.mark.usefixtures("_mock_cwd")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_rejects_large_file(self, mock_conn, tmp_path):
         from otutil.tools.mem import write
 
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
 
         big_file = tmp_path / "big.txt"
         big_file.write_bytes(b"x" * 1_100_000)
@@ -2365,13 +2365,13 @@ class TestWriteWithToc:
     """Test mem.write() with toc=True."""
 
     @patch("otutil.tools._mem.write._maybe_embed")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_stores_sections_in_meta(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None  # No duplicate
 
         result = write(topic="spec", content=SAMPLE_MD, toc=True)
@@ -2389,13 +2389,13 @@ class TestWriteWithToc:
         assert meta["section_count"] == "4"
 
     @patch("otutil.tools._mem.write._maybe_embed")
-    @patch("otutil.tools._mem.write._get_connection")
+    @patch("otutil.tools._mem.write._use_connection")
     def test_without_toc_has_empty_meta(self, mock_conn, mock_embed):
         from otutil.tools.mem import write
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchone.return_value = None
 
         write(topic="simple", content="no headings", toc=False)
@@ -2412,13 +2412,13 @@ class TestUpdateRecomputesToc:
     """Test that update() recomputes toc when sections exist in meta."""
 
     @patch("otutil.tools._mem.mutations._maybe_embed")
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_recomputes_sections(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
 
         old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 5}])
         conn.execute.return_value.fetchall.return_value = [
@@ -2438,13 +2438,13 @@ class TestUpdateRecomputesToc:
         assert meta["section_count"] == "2"
 
     @patch("otutil.tools._mem.mutations._maybe_embed")
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_no_recompute_without_sections(self, mock_conn, mock_embed):
         from otutil.tools.mem import update
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
         conn.execute.return_value.fetchall.return_value = [
             ("id-123", "old content", '{}'),
         ]
@@ -2464,13 +2464,13 @@ class TestAppendRecomputesToc:
     """Test that append() recomputes toc when sections exist in meta."""
 
     @patch("otutil.tools._mem.mutations._maybe_embed")
-    @patch("otutil.tools._mem.mutations._get_connection")
+    @patch("otutil.tools._mem.mutations._use_connection")
     def test_recomputes_sections_on_append(self, mock_conn, mock_embed):
         from otutil.tools.mem import append
 
         mock_embed.return_value = None
         conn = MagicMock()
-        mock_conn.return_value = conn
+        mock_conn.return_value.__enter__.return_value = conn
 
         old_sections = _encode_sections([{"heading": "Old", "start": 1, "end": 3}])
         conn.execute.return_value.fetchall.return_value = [

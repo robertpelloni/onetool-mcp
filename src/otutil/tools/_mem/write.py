@@ -15,7 +15,7 @@ from .content import (
     _validate_category,
     _validate_tags,
 )
-from .db import _get_connection, _serialize_embedding, _serialize_meta, _serialize_tags
+from .db import _serialize_embedding, _serialize_meta, _serialize_tags, _use_connection
 from .embedding import _maybe_embed
 
 
@@ -97,31 +97,30 @@ def write(
                     meta["sections"] = _encode_sections(headings)
                     meta["section_count"] = str(len(headings))
 
-            conn = _get_connection()
+            with _use_connection() as conn:
+                # Check for duplicate content in same topic
+                existing = conn.execute(
+                    "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
+                    [topic, content_hash],
+                ).fetchone()
 
-            # Check for duplicate content in same topic
-            existing = conn.execute(
-                "SELECT id FROM memories WHERE topic = ? AND content_hash = ?",
-                [topic, content_hash],
-            ).fetchone()
+                if existing:
+                    s.add("duplicate", True)
+                    return f"Duplicate: Memory with same content already exists in topic '{topic}' (id: {existing[0]})"
 
-            if existing:
-                s.add("duplicate", True)
-                return f"Duplicate: Memory with same content already exists in topic '{topic}' (id: {existing[0]})"
+                memory_id = str(uuid.uuid4())
+                embedding = _maybe_embed(memory_id, content)
 
-            memory_id = str(uuid.uuid4())
-            embedding = _maybe_embed(memory_id, content)
-
-            conn.execute(
-                """
-                INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                [memory_id, topic, content, content_hash, category,
-                 _serialize_tags(validated_tags), relevance,
-                 _serialize_embedding(embedding), _serialize_meta(meta)],
-            )
-            conn.commit()
+                conn.execute(
+                    """
+                    INSERT INTO memories (id, topic, content, content_hash, category, tags, relevance, embedding, meta)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [memory_id, topic, content, content_hash, category,
+                     _serialize_tags(validated_tags), relevance,
+                     _serialize_embedding(embedding), _serialize_meta(meta)],
+                )
+                conn.commit()
 
             s.add("memoryId", memory_id)
             s.add("contentLen", len(content))
