@@ -1282,10 +1282,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#web" class="md-nav__link">
+  <a href="#webfetch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        web
+        webfetch
       
     </span>
   </a>
@@ -1391,6 +1391,17 @@
     <span class="md-ellipsis">
       
         Snippets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-server-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Server Configuration
       
     </span>
   </a>
@@ -3190,10 +3201,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#web" class="md-nav__link">
+  <a href="#webfetch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        web
+        webfetch
       
     </span>
   </a>
@@ -3299,6 +3310,17 @@
     <span class="md-ellipsis">
       
         Snippets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-server-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution Server Configuration
       
     </span>
   </a>
@@ -4195,7 +4217,7 @@ any <code>include:</code> entry.</p>
 </table>
 <h3 id="whiteboard">whiteboard<a class="headerlink" href="#whiteboard" title="Permanent link">&para;</a></h3>
 <p>No pack-specific <code>tools.whiteboard</code> settings.</p>
-<h3 id="web">web<a class="headerlink" href="#web" title="Permanent link">&para;</a></h3>
+<h3 id="webfetch">webfetch<a class="headerlink" href="#webfetch" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -4379,82 +4401,119 @@ any <code>include:</code> entry.</p>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="nt">custom</span><span class="p">:</span>
 </span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="nt">body</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;brave.search(query=&#39;test&#39;)&quot;</span><span class="w">  </span><span class="c1"># Inline overrides included</span>
 </span></code></pre></div>
+<h2 id="execution-server-configuration">Execution Server Configuration<a class="headerlink" href="#execution-server-configuration" title="Permanent link">&para;</a></h2>
+<p>Settings for the <code>onetool direct</code> subcommand group. Configure under <code>direct</code> in <code>onetool.yaml</code>.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">direct</span><span class="p">:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span><span class="w">    </span><span class="c1"># Routing mode: null=in-process only, &quot;enable&quot;=auto-start local server, &quot;HOST:PORT&quot;=remote</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8765</span><span class="w">    </span><span class="c1"># Port for the local execution server</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span><span class="w">   </span><span class="c1"># HTTP request timeout in seconds for `direct run` → server routing</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>direct.host</code></td>
+<td>string or null</td>
+<td><code>null</code></td>
+<td>Routing mode: absent = in-process only; <code>"enable"</code> = auto-start a local server on first use; <code>"HOST:PORT"</code> = route to a remote server. Any other value raises a config error.</td>
+</tr>
+<tr>
+<td><code>direct.port</code></td>
+<td>int (1–65535)</td>
+<td><code>8765</code></td>
+<td>Port for the local execution server</td>
+</tr>
+<tr>
+<td><code>direct.timeout</code></td>
+<td>int (≥1)</td>
+<td><code>60</code></td>
+<td>HTTP request timeout in seconds when routing to a server</td>
+</tr>
+</tbody>
+</table>
 <h2 id="statistics-configuration">Statistics Configuration<a class="headerlink" href="#statistics-configuration" title="Permanent link">&para;</a></h2>
 <p>Track runtime statistics:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">stats</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">persist_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stats</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">persist_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stats.jsonl</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">flush_interval_seconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">context_per_call</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30000</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="nt">time_overhead_per_call_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic/claude-opus-4.5</span>
-</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span><span class="nt">cost_per_million_input_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15.0</span>
-</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">  </span><span class="nt">cost_per_million_output_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">75.0</span>
-</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">  </span><span class="nt">chars_per_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">stats</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">persist_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stats</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">persist_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stats.jsonl</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="nt">flush_interval_seconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">  </span><span class="nt">context_per_call</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30000</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">  </span><span class="nt">time_overhead_per_call_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4000</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">  </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">anthropic/claude-opus-4-6</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">  </span><span class="nt">cost_per_million_input_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">15.0</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">  </span><span class="nt">cost_per_million_output_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">75.0</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">  </span><span class="nt">chars_per_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4.0</span>
 </span></code></pre></div>
 <p>View with <code>ot.stats()</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span>                           <span class="c1"># All-time</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="s2">&quot;day&quot;</span><span class="p">)</span>               <span class="c1"># Last 24 hours</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="s2">&quot;week&quot;</span><span class="p">,</span> <span class="n">tool</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="s2">&quot;stats_report.html&quot;</span><span class="p">)</span> <span class="c1"># HTML report</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span>                           <span class="c1"># All-time</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="s2">&quot;day&quot;</span><span class="p">)</span>               <span class="c1"># Last 24 hours</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">period</span><span class="o">=</span><span class="s2">&quot;week&quot;</span><span class="p">,</span> <span class="n">tool</span><span class="o">=</span><span class="s2">&quot;brave.search&quot;</span><span class="p">)</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="n">ot</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="s2">&quot;stats_report.html&quot;</span><span class="p">)</span> <span class="c1"># HTML report</span>
 </span></code></pre></div>
 <h2 id="transform-configuration">Transform Configuration<a class="headerlink" href="#transform-configuration" title="Permanent link">&para;</a></h2>
 <p>Configure the <code>ot_llm.transform()</code> tool for LLM-powered text transformations. Add under <code>tools:</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai/gpt-5-mini&quot;</span><span class="w">                  </span><span class="c1"># Model for transformations</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span><span class="w">    </span><span class="c1"># OpenAI-compatible API endpoint</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4096</span><span class="w">                            </span><span class="c1"># Max output tokens (optional)</span>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">                                 </span><span class="c1"># API timeout in seconds</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai/gpt-5-mini&quot;</span><span class="w">                  </span><span class="c1"># Model for transformations</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span><span class="w">    </span><span class="c1"># OpenAI-compatible API endpoint</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4096</span><span class="w">                            </span><span class="c1"># Max output tokens (optional)</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">                                 </span><span class="c1"># API timeout in seconds</span>
 </span></code></pre></div>
 <p>Requires <code>OPENAI_API_KEY</code> in secrets.yaml (or compatible provider key).</p>
 <h2 id="output-configuration">Output Configuration<a class="headerlink" href="#output-configuration" title="Permanent link">&para;</a></h2>
 <p>Control large output handling:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nt">output</span><span class="p">:</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span><span class="nt">max_inline_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3000</span><span class="w">       </span><span class="c1"># Threshold in bytes (0 to disable)</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span><span class="nt">result_store_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tmp</span><span class="w">       </span><span class="c1"># Directory for stored results</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span><span class="nt">result_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">            </span><span class="c1"># Time-to-live in seconds</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">  </span><span class="nt">preview_lines</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">           </span><span class="c1"># Lines in summary preview</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">output</span><span class="p">:</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">max_inline_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span><span class="w">       </span><span class="c1"># Threshold in bytes (0 to disable)</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">result_store_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tmp</span><span class="w">       </span><span class="c1"># Directory for stored results</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">result_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">            </span><span class="c1"># Time-to-live in seconds</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">preview_lines</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">           </span><span class="c1"># Lines in summary preview</span>
 </span></code></pre></div>
 <p>When output exceeds <code>max_inline_size</code>, OneTool stores the result and returns a handle. Query with <code>ot.result(handle="...")</code>.</p>
 <h2 id="security-configuration">Security Configuration<a class="headerlink" href="#security-configuration" title="Permanent link">&para;</a></h2>
 <p>OneTool uses an <strong>allowlist-based</strong> security model: everything is blocked by default, you explicitly allow what's safe. Tool namespaces (<code>ot.*</code>, <code>brave.*</code>, etc.) are auto-allowed.</p>
 <p>Security rules are defined in <code>security.yaml</code> (included by default):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nt">security</span><span class="p">:</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">validate_code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">          </span><span class="c1"># Enable AST validation</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                </span><span class="c1"># Enable security checks</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">builtins</span><span class="p">:</span>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">str</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">list</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dict</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">set</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tuple</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Types</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">len</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">range</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">enumerate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">zip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sorted</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># Iteration</span>
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">print</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">repr</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">]</span><span class="w">                      </span><span class="c1"># Output</span>
-</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>
-</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="w">  </span><span class="nt">imports</span><span class="p">:</span>
-</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">json</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">re</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">math</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">datetime</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">collections</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">itertools</span><span class="p p-Indicator">]</span>
-</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a><span class="w">    </span><span class="nt">warn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">yaml</span><span class="p p-Indicator">]</span><span class="w">               </span><span class="c1"># Allowed but logs warning</span>
-</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>
-</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a><span class="w">  </span><span class="nt">calls</span><span class="p">:</span>
-</span><span id="__span-19-16"><a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a><span class="w">    </span><span class="nt">block</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">pickle.*</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">yaml.load</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Blocked qualified calls</span>
-</span><span id="__span-19-17"><a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a><span class="w">    </span><span class="nt">warn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">random.seed</span><span class="p p-Indicator">]</span><span class="w">           </span><span class="c1"># Warned qualified calls</span>
-</span><span id="__span-19-18"><a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a>
-</span><span id="__span-19-19"><a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a><span class="w">  </span><span class="nt">dunders</span><span class="p">:</span>
-</span><span id="__span-19-20"><a id="__codelineno-19-20" name="__codelineno-19-20" href="#__codelineno-19-20"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">__format__</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">__sanitize__</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Allowed magic variables</span>
-</span><span id="__span-19-21"><a id="__codelineno-19-21" name="__codelineno-19-21" href="#__codelineno-19-21"></a>
-</span><span id="__span-19-22"><a id="__codelineno-19-22" name="__codelineno-19-22" href="#__codelineno-19-22"></a><span class="w">  </span><span class="nt">sanitize</span><span class="p">:</span>
-</span><span id="__span-19-23"><a id="__codelineno-19-23" name="__codelineno-19-23" href="#__codelineno-19-23"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">              </span><span class="c1"># Output sanitization (prompt injection protection)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">security</span><span class="p">:</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">validate_code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">          </span><span class="c1"># Enable AST validation</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                </span><span class="c1"># Enable security checks</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">  </span><span class="nt">builtins</span><span class="p">:</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">str</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">list</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">dict</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">set</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tuple</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Types</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">len</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">range</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">enumerate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">zip</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sorted</span><span class="p p-Indicator">]</span><span class="w">       </span><span class="c1"># Iteration</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">print</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">repr</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">format</span><span class="p p-Indicator">]</span><span class="w">                      </span><span class="c1"># Output</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">  </span><span class="nt">imports</span><span class="p">:</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">json</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">re</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">math</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">datetime</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">collections</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">itertools</span><span class="p p-Indicator">]</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="w">    </span><span class="nt">warn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">yaml</span><span class="p p-Indicator">]</span><span class="w">               </span><span class="c1"># Allowed but logs warning</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="w">  </span><span class="nt">calls</span><span class="p">:</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="w">    </span><span class="nt">block</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">pickle.*</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">yaml.load</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Blocked qualified calls</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="w">    </span><span class="nt">warn</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">random.seed</span><span class="p p-Indicator">]</span><span class="w">           </span><span class="c1"># Warned qualified calls</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>
+</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="w">  </span><span class="nt">dunders</span><span class="p">:</span>
+</span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a><span class="w">    </span><span class="nt">allow</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">__format__</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">__sanitize__</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Allowed magic variables</span>
+</span><span id="__span-20-21"><a id="__codelineno-20-21" name="__codelineno-20-21" href="#__codelineno-20-21"></a>
+</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a><span class="w">  </span><span class="nt">sanitize</span><span class="p">:</span>
+</span><span id="__span-20-23"><a id="__codelineno-20-23" name="__codelineno-20-23" href="#__codelineno-20-23"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">              </span><span class="c1"># Output sanitization (prompt injection protection)</span>
 </span></code></pre></div>
 <p><strong>Compact array format:</strong> Group related items for readability:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nt">allow</span><span class="p">:</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">str</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Grouped items</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">print</span><span class="w">              </span><span class="c1"># Single item</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nt">allow</span><span class="p">:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">str</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">int</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Grouped items</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">print</span><span class="w">              </span><span class="c1"># Single item</span>
 </span></code></pre></div>
 <h3 id="security-introspection">Security Introspection<a class="headerlink" href="#security-introspection" title="Permanent link">&para;</a></h3>
 <p>Check what's allowed at runtime:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>                    <span class="c1"># Summary of all rules</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>        <span class="c1"># Check specific pattern</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span> <span class="c1"># Check qualified call</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">()</span>                    <span class="c1"># Summary of all rules</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">)</span>        <span class="c1"># Check specific pattern</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="n">ot</span><span class="o">.</span><span class="n">security</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="s2">&quot;pickle.load&quot;</span><span class="p">)</span> <span class="c1"># Check qualified call</span>
 </span></code></pre></div>
 <h3 id="output-sanitization">Output Sanitization<a class="headerlink" href="#output-sanitization" title="Permanent link">&para;</a></h3>
 <p>The <code>security.sanitize</code> subsection protects against indirect prompt injection by sanitizing tool outputs:</p>
@@ -4494,48 +4553,48 @@ any <code>include:</code> entry.</p>
 </table>
 <h2 id="environment-variable-expansion">Environment Variable Expansion<a class="headerlink" href="#environment-variable-expansion" title="Permanent link">&para;</a></h2>
 <p>Config values support <code>${VAR}</code> and <code>${VAR:-default}</code> syntax. Variables are expanded at runtime from <code>secrets.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nt">servers</span><span class="p">:</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">myserver</span><span class="p">:</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${MY_SERVER_URL:-https://localhost:3000/mcp}</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nt">auth</span><span class="p">:</span>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bearer</span>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">      </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${MY_API_KEY}</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">servers</span><span class="p">:</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">myserver</span><span class="p">:</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${MY_SERVER_URL:-https://localhost:3000/mcp}</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="w">    </span><span class="nt">auth</span><span class="p">:</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bearer</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="w">      </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${MY_API_KEY}</span>
 </span></code></pre></div>
 <h2 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h2>
 <p>Invalid values are rejected at load time:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>ValueError: Invalid configuration in config/onetool.yaml:
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>  tools.brave.timeout: Input should be greater than or equal to 1
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>ValueError: Invalid configuration in config/onetool.yaml:
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  tools.brave.timeout: Input should be greater than or equal to 1
 </span></code></pre></div>
 <h2 id="example-configurations">Example Configurations<a class="headerlink" href="#example-configurations" title="Permanent link">&para;</a></h2>
 <h3 id="minimal">Minimal<a class="headerlink" href="#minimal" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nt">tools_dir</span><span class="p">:</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ottools/*.py</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nt">tools_dir</span><span class="p">:</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ottools/*.py</span>
 </span></code></pre></div>
 <h3 id="production">Production<a class="headerlink" href="#production" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="nt">tools_dir</span><span class="p">:</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ottools/*.py</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WARNING</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="nt">security</span><span class="p">:</span>
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="w">  </span><span class="nt">validate_code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>
-</span><span id="__span-25-11"><a id="__codelineno-25-11" name="__codelineno-25-11" href="#__codelineno-25-11"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-25-12"><a id="__codelineno-25-12" name="__codelineno-25-12" href="#__codelineno-25-12"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
-</span><span id="__span-25-13"><a id="__codelineno-25-13" name="__codelineno-25-13" href="#__codelineno-25-13"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai/gpt-5-mini&quot;</span>
-</span><span id="__span-25-14"><a id="__codelineno-25-14" name="__codelineno-25-14" href="#__codelineno-25-14"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span>
-</span><span id="__span-25-15"><a id="__codelineno-25-15" name="__codelineno-25-15" href="#__codelineno-25-15"></a><span class="w">  </span><span class="nt">brave</span><span class="p">:</span>
-</span><span id="__span-25-16"><a id="__codelineno-25-16" name="__codelineno-25-16" href="#__codelineno-25-16"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span>
-</span><span id="__span-25-17"><a id="__codelineno-25-17" name="__codelineno-25-17" href="#__codelineno-25-17"></a><span class="w">  </span><span class="nt">context7</span><span class="p">:</span>
-</span><span id="__span-25-18"><a id="__codelineno-25-18" name="__codelineno-25-18" href="#__codelineno-25-18"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60.0</span>
-</span><span id="__span-25-19"><a id="__codelineno-25-19" name="__codelineno-25-19" href="#__codelineno-25-19"></a><span class="w">  </span><span class="nt">db</span><span class="p">:</span>
-</span><span id="__span-25-20"><a id="__codelineno-25-20" name="__codelineno-25-20" href="#__codelineno-25-20"></a><span class="w">    </span><span class="nt">max_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span>
-</span><span id="__span-25-21"><a id="__codelineno-25-21" name="__codelineno-25-21" href="#__codelineno-25-21"></a><span class="w">  </span><span class="nt">ripgrep</span><span class="p">:</span>
-</span><span id="__span-25-22"><a id="__codelineno-25-22" name="__codelineno-25-22" href="#__codelineno-25-22"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="nt">tools_dir</span><span class="p">:</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/ottools/*.py</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="nt">log_level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">WARNING</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="nt">security</span><span class="p">:</span>
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="w">  </span><span class="nt">validate_code</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a><span class="w">  </span><span class="nt">ot_llm</span><span class="p">:</span>
+</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="w">    </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai/gpt-5-mini&quot;</span>
+</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://openrouter.ai/api/v1&quot;</span>
+</span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a><span class="w">  </span><span class="nt">brave</span><span class="p">:</span>
+</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span>
+</span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a><span class="w">  </span><span class="nt">context7</span><span class="p">:</span>
+</span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60.0</span>
+</span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a><span class="w">  </span><span class="nt">db</span><span class="p">:</span>
+</span><span id="__span-26-20"><a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a><span class="w">    </span><span class="nt">max_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span>
+</span><span id="__span-26-21"><a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a><span class="w">  </span><span class="nt">ripgrep</span><span class="p">:</span>
+</span><span id="__span-26-22"><a id="__codelineno-26-22" name="__codelineno-26-22" href="#__codelineno-26-22"></a><span class="w">    </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">120.0</span>
 </span></code></pre></div>
 
 
