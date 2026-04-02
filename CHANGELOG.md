@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.1] - 2026-04-03
+
+### CLI: `onetool direct`
+Agent harnesses can invoke tools via subprocess or HTTP rather than MCP. `onetool direct` is the stable shell contract for that pattern — same tool calls, zero MCP overhead, structured JSON output.
+- **`direct run`** — execute any tool call from the shell or a script; routes to a running host automatically, falls back to in-process; accepts stdin or a `.py` file
+- **`direct repl`** — interactive REPL with tab completion, history, and persistent pack state across lines
+- **`direct start / stop / restart / status / logs`** — manage a persistent HTTP execution host as a daemon; packs load once and state survives across calls; `start` blocks until the host is ready
+- **`direct list / search / help`** — discover and inspect tools without opening a session
+
+### Whiteboard
+- **Persistent sessions** — canvas state is now backed by a file; your whiteboard survives server restarts and browser reconnections without losing work
+- **Live updates** — incremental changes are pushed to the browser as they happen, rather than requiring a full page refresh
+
+### Tool Improvements
+- **`brave`** — `sources_only=True` returns just the source URLs without full result bodies
+- **`webfetch`** — `format='html'` returns raw HTML instead of extracted text, useful for scraping structured markup
+- **`tavily`** — `max_sources` cap controls how many sources are fetched in deep research mode
+- **`ctx.slice()`** — integer offsets now accepted in addition to line ranges
+
+### Configuration
+- **Env var overrides** — `OT_LOG_LEVEL`, `OT_LOG_DIR`, and `OT_COMPACT_MAX_LENGTH` can now be set without touching `onetool.yaml`; log lines include full timestamps
+
+### Deployment
+- **Docker** — official `Dockerfile` for containerised deployments
+
+---
+
 ## [2.2.0] - 2026-04-01
 
 ### New Tool Packs

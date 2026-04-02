@@ -2165,7 +2165,7 @@ wheels = [
 
 [[package]]
 name = "onetool-bench"
-version = "2.2.0"
+version = "2.2.1"
 source = { editable = "packages/onetool-bench" }
 dependencies = [
     { name = "onetool-mcp" },
@@ -2180,7 +2180,7 @@ requires-dist = [
 
 [[package]]
 name = "onetool-mcp"
-version = "2.2.0"
+version = "2.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "docstring-parser" },
@@ -2334,7 +2334,7 @@ docs = [
 
 [[package]]
 name = "onetool-pack"
-version = "2.2.0"
+version = "2.2.1"
 source = { editable = "packages/onetool-pack" }
 dependencies = [
     { name = "httpx" },

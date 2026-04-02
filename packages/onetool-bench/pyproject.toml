@@ -1,6 +1,6 @@
 [project]
 name = "onetool-bench"
-version = "2.2.0"
+version = "2.2.1"
 description = "Internal benchmark harness for OneTool"
 requires-python = ">=3.12"
 dependencies = [
