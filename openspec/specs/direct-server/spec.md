@@ -16,22 +16,20 @@ Flags:
 - `--config`/`-c` — path to `onetool.yaml`; optional (warning printed if omitted)
 - `--secrets`/`-s` — path to secrets file; optional
 - `--port`/`-p` — HTTP port (default: from `onetool.yaml` `direct.port`, fallback `8765`)
-- `--wait` — poll TCP until the host is ready before exiting (timeout 5s); exits 1 on timeout
 
 The host exposes a single endpoint: `POST /run` accepting `{"command": "..."}` and returning `{"result": "...", "success": true|false}`.
 
 #### Scenario: Start execution host
 
-- **WHEN** `onetool direct start -c onetool.yaml` is run
+- **WHEN** `onetool direct start --config onetool.yaml` is run
 - **THEN** the HTTP host SHALL start as a daemon process
 - **AND** the PID file SHALL be written to `~/.onetool/direct-server-{port}.pid` as JSON (includes pid, port, config, secrets, started, log)
 - **AND** the log file SHALL be written to `~/.onetool/direct-server-{port}.log`
-- **AND** the command SHALL exit immediately with code 0
 - **AND** a message SHALL be printed: `"Execution host started (PID <pid>) on port <port>"` followed by `"Log: <path>"`
 
-#### Scenario: --wait polls until ready
+#### Scenario: Start waits until host is ready
 
-- **WHEN** `onetool direct start --wait` is run
+- **WHEN** `onetool direct start` completes
 - **THEN** the command SHALL poll the TCP port until it accepts connections (up to 5 seconds)
 - **AND** exit 0 if ready within 5 seconds, exit 1 otherwise
 
@@ -105,7 +103,6 @@ Flags:
 - `--config`/`-c` — override config path (defaults to saved value from PID file)
 - `--secrets`/`-s` — override secrets path (defaults to saved value)
 - `--port`/`-p` — target port (default: 8765)
-- `--wait` — poll until the host is ready before exiting
 
 #### Scenario: Restart running server
 

@@ -36,6 +36,7 @@ PACK_SHORT_NAMES: dict[str, str] = {
     "ot_timer": "tmr",
     "whiteboard": "wb",
     "ot_context": "ctx",
+    "ot_direct": "direct",
     "ot_image": "img",
     "knowledge": "kb",
 }

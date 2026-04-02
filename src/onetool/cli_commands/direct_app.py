@@ -242,8 +242,6 @@ def _start_host(
     config: Path | None,
     secrets: Path | None,
     port: int,
-    *,
-    wait: bool = False,
 ) -> None:
     """Start the HTTP execution host as a daemon process."""
     import subprocess
@@ -283,13 +281,12 @@ def _start_host(
     err_console.print(f"Execution host started (PID {proc.pid}) on port {port}")
     err_console.print(f"Log: {log_path}")
 
-    if wait:
-        err_console.print("Waiting for host to be ready...")
-        if _tcp_probe_wait("127.0.0.1", port):
-            err_console.print("Host is ready.")
-        else:
-            err_console.print("[red]Execution host did not become ready within 5 seconds[/red]")
-            raise typer.Exit(1)
+    err_console.print("Waiting for host to be ready...")
+    if _tcp_probe_wait("127.0.0.1", port):
+        err_console.print("Host is ready.")
+    else:
+        err_console.print("[red]Execution host did not become ready within 5 seconds[/red]")
+        raise typer.Exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +404,7 @@ def direct_run(
             # Start the execution host with the same config, then route
             err_console.print("[dim]Starting execution host...[/dim]")
             try:
-                _start_host(config, secrets, port, wait=True)
+                _start_host(config, secrets, port)
             except typer.Exit:
                 raise
             except Exception as e:
@@ -670,7 +667,7 @@ def direct_repl(
 
         history_file = Path.home() / ".onetool" / "repl_history"
         history_file.parent.mkdir(parents=True, exist_ok=True)
-        with contextlib.suppress(FileNotFoundError):
+        with contextlib.suppress(OSError):
             _rl.read_history_file(str(history_file))
         _rl.set_history_length(1000)
 
@@ -784,23 +781,18 @@ def direct_start(
         int | None,
         typer.Option("--port", "-p", help="Port to listen on (overrides direct.port in config)"),
     ] = None,
-    wait: Annotated[
-        bool,
-        typer.Option("--wait", help="Poll until the host is ready before exiting"),
-    ] = False,
 ) -> None:
     """Start the HTTP execution host.
 
-    Starts the host as a background process. PID and log are written to
-    ~/.onetool/direct-server-{port}.pid and direct-server-{port}.log.
+    Starts the host and blocks until it is ready to accept connections.
+    PID and log are written to ~/.onetool/direct-server-{port}.pid and direct-server-{port}.log.
 
     Use 'onetool direct run' to route commands to the running host.
     Set direct.host: enable in onetool.yaml to auto-start the host on first use.
 
     Examples:
-        onetool direct start -c .onetool/onetool.yaml
-        onetool direct start -c .onetool/onetool.yaml --wait
-        onetool direct start -c .onetool/onetool.yaml --port 9000
+        onetool direct start --config .onetool/onetool.yaml
+        onetool direct start --config .onetool/onetool.yaml --port 9000
     """
     if config is None:
         err_console.print(
@@ -822,7 +814,7 @@ def direct_start(
     if resolved_port is None:
         resolved_port = _DEFAULT_PORT
 
-    _start_host(config, secrets, resolved_port, wait=wait)
+    _start_host(config, secrets, resolved_port)
 
 
 # ---------------------------------------------------------------------------
@@ -921,10 +913,6 @@ def direct_restart(
         int | None,
         typer.Option("--port", "-p", help="Port (default: saved port or 8765)"),
     ] = None,
-    wait: Annotated[
-        bool,
-        typer.Option("--wait", help="Poll until server is ready before exiting"),
-    ] = False,
 ) -> None:
     """Stop the running execution host and start it again.
 
@@ -954,7 +942,7 @@ def direct_restart(
         err_console.print("No execution host running; starting fresh")
         resolved_port = port if port is not None else _DEFAULT_PORT
 
-    _start_host(config, secrets, resolved_port, wait=wait)
+    _start_host(config, secrets, resolved_port)
 
 
 # ---------------------------------------------------------------------------
