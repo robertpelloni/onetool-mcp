@@ -450,6 +450,75 @@ def is_log_verbose() -> bool:
     return False
 
 
+def get_log_level() -> str:
+    """Get the effective log level.
+
+    Priority:
+    - OT_LOG_LEVEL environment variable (highest priority)
+    - log_level field in config file
+    - Default: "INFO"
+
+    Returns:
+        Log level string: DEBUG, INFO, WARNING, or ERROR
+    """
+    env_val = os.getenv("OT_LOG_LEVEL", "").upper()
+    if env_val in ("DEBUG", "INFO", "WARNING", "ERROR"):
+        return env_val
+
+    with _config_lock:
+        if _config is not None:
+            return _config.log_level
+
+    return "INFO"
+
+
+def get_log_dir() -> str:
+    """Get the effective log directory.
+
+    Priority:
+    - OT_LOG_DIR environment variable (highest priority)
+    - log_dir field in config file
+    - Default: "logs"
+
+    Returns:
+        Log directory path string (relative or absolute)
+    """
+    env_val = os.getenv("OT_LOG_DIR", "")
+    if env_val:
+        return env_val
+
+    with _config_lock:
+        if _config is not None:
+            return _config.log_dir
+
+    return "logs"
+
+
+def get_compact_max_length() -> int:
+    """Get the effective compact output max length.
+
+    Priority:
+    - OT_COMPACT_MAX_LENGTH environment variable (highest priority)
+    - compact_max_length field in config file
+    - Default: 120
+
+    Returns:
+        Max value length for compact console output
+    """
+    env_val = os.getenv("OT_COMPACT_MAX_LENGTH", "")
+    if env_val:
+        try:
+            return int(env_val)
+        except ValueError:
+            pass
+
+    with _config_lock:
+        if _config is not None:
+            return _config.compact_max_length
+
+    return 120
+
+
 def get_llm_config() -> LlmConfig:
     """Get the top-level llm: config section.
 

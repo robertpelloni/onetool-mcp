@@ -605,6 +605,140 @@ def test_include_with_snippets_section() -> None:
         assert config.snippets["test_snip"].body == "test.call()"
 
 
+# ==================== Env Var Override Tests ====================
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_log_level_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """OT_LOG_LEVEL env var overrides config value."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_log_level
+
+    monkeypatch.setenv("OT_LOG_LEVEL", "DEBUG")
+    loader_module._config = None
+    try:
+        assert get_log_level() == "DEBUG"
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_log_level_invalid_env_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Invalid OT_LOG_LEVEL value falls through to config default."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_config, get_log_level
+
+    monkeypatch.setenv("OT_LOG_LEVEL", "VERBOSE")  # Not a valid level
+    config_path = tmp_path / "onetool.yaml"
+    import yaml as yaml_mod
+    config_path.write_text(yaml_mod.dump({"version": 2, "log_level": "WARNING"}))
+
+    loader_module._config = None
+    try:
+        get_config(config_path)
+        assert get_log_level() == "WARNING"
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_log_level_default_when_no_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_log_level returns 'INFO' when no env var and no config loaded."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_log_level
+
+    monkeypatch.delenv("OT_LOG_LEVEL", raising=False)
+    loader_module._config = None
+    try:
+        assert get_log_level() == "INFO"
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_log_dir_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """OT_LOG_DIR env var overrides config value."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_log_dir
+
+    monkeypatch.setenv("OT_LOG_DIR", "/tmp/custom-logs")
+    loader_module._config = None
+    try:
+        assert get_log_dir() == "/tmp/custom-logs"
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_log_dir_default_when_no_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_log_dir returns 'logs' when no env var and no config loaded."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_log_dir
+
+    monkeypatch.delenv("OT_LOG_DIR", raising=False)
+    loader_module._config = None
+    try:
+        assert get_log_dir() == "logs"
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_compact_max_length_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """OT_COMPACT_MAX_LENGTH env var overrides config value."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_compact_max_length
+
+    monkeypatch.setenv("OT_COMPACT_MAX_LENGTH", "200")
+    loader_module._config = None
+    try:
+        assert get_compact_max_length() == 200
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_compact_max_length_invalid_env_ignored(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Non-integer OT_COMPACT_MAX_LENGTH falls through to config default."""
+    import yaml as yaml_mod
+
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_compact_max_length, get_config
+
+    monkeypatch.setenv("OT_COMPACT_MAX_LENGTH", "notanumber")
+    config_path = tmp_path / "onetool.yaml"
+    config_path.write_text(yaml_mod.dump({"version": 2, "compact_max_length": 80}))
+
+    loader_module._config = None
+    try:
+        get_config(config_path)
+        assert get_compact_max_length() == 80
+    finally:
+        loader_module._config = None
+
+
+@pytest.mark.unit
+@pytest.mark.core
+def test_get_compact_max_length_default_when_no_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_compact_max_length returns 120 when no env var and no config loaded."""
+    import ot.config.loader as loader_module
+    from ot.config.loader import get_compact_max_length
+
+    monkeypatch.delenv("OT_COMPACT_MAX_LENGTH", raising=False)
+    loader_module._config = None
+    try:
+        assert get_compact_max_length() == 120
+    finally:
+        loader_module._config = None
+
+
 # ==================== Deep Merge Tests ====================
 
 

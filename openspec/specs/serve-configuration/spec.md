@@ -802,7 +802,7 @@ The system SHALL support explicit environment pass-through for subprocess env se
 
 ### Requirement: Logging Configuration in YAML
 
-The system SHALL support logging settings in YAML config instead of environment variables.
+The system SHALL support logging settings in YAML config and environment variable overrides.
 
 #### Scenario: Log level in config
 - **GIVEN** configuration with `log_level: DEBUG`
@@ -810,17 +810,37 @@ The system SHALL support logging settings in YAML config instead of environment 
 - **THEN** it SHALL use DEBUG logging level
 - **DEFAULT** INFO
 
+#### Scenario: Log level via environment variable
+- **GIVEN** `OT_LOG_LEVEL=DEBUG` environment variable
+- **WHEN** the server starts
+- **THEN** it SHALL use DEBUG logging level
+- **AND** the env var SHALL take priority over `log_level` in YAML
+- **VALID VALUES** DEBUG, INFO, WARNING, ERROR (invalid values are ignored)
+
 #### Scenario: Log directory in config
 - **GIVEN** configuration with `log_dir: custom/logs`
 - **WHEN** the server starts
 - **THEN** logs SHALL be written to the specified directory relative to `.onetool/`
 - **DEFAULT** `logs` (logs written to `.onetool/logs/`)
 
+#### Scenario: Log directory via environment variable
+- **GIVEN** `OT_LOG_DIR=/tmp/my-logs` environment variable
+- **WHEN** the server starts
+- **THEN** logs SHALL be written to the specified path
+- **AND** the env var SHALL take priority over `log_dir` in YAML
+
 #### Scenario: Compact max length in config
 - **GIVEN** configuration with `compact_max_length: 200`
 - **WHEN** compact console output is used
 - **THEN** values SHALL be truncated at 200 characters
 - **DEFAULT** 120
+
+#### Scenario: Compact max length via environment variable
+- **GIVEN** `OT_COMPACT_MAX_LENGTH=200` environment variable
+- **WHEN** compact console output is used
+- **THEN** values SHALL be truncated at 200 characters
+- **AND** the env var SHALL take priority over `compact_max_length` in YAML
+- **AND** non-integer values SHALL be ignored (config default used instead)
 
 ### Requirement: Remote GitHub MCP Server Configuration
 

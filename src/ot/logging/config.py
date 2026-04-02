@@ -18,7 +18,7 @@ from typing import Any
 
 from loguru import logger
 
-from ot.config.loader import get_config
+from ot.config.loader import get_config, get_log_dir, get_log_level
 
 
 class InterceptHandler(logging.Handler):
@@ -111,12 +111,12 @@ def json_serializer(record: dict[str, Any]) -> str:
 def dev_formatter(record: dict[str, Any]) -> str:
     """Format log record as dev-friendly single line.
 
-    Format: HH:MM:SS.mmm | LEVL | file:line | span | key=value | ...
+    Format: YYYY-MM-DD HH:MM:SS.mmm | LEVL | file:line | span | key=value | ...
     """
     extra = record["extra"]
 
-    # Short timestamp (time only, date is in filename)
-    timestamp = record["time"].strftime("%H:%M:%S.%f")[:-3]
+    # Full date + time (rotation is size-based, not date-based)
+    timestamp = record["time"].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
     # 6-char level with padding
     level_map = {
@@ -206,8 +206,14 @@ def configure_logging(log_name: str = "onetool", level: str | None = None) -> No
     logger.remove()
 
     config = get_config()
-    level = (level or config.log_level).upper()
-    log_dir = config.get_log_dir_path()
+    level = (level or get_log_level()).upper()
+    env_log_dir = get_log_dir()
+    # If OT_LOG_DIR is set (or differs from config default), use it as-is;
+    # otherwise defer to the model's resolver (handles relative paths).
+    if env_log_dir != config.log_dir:
+        log_dir = Path(env_log_dir)
+    else:
+        log_dir = config.get_log_dir_path()
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / f"{log_name}.log"
 
@@ -220,7 +226,7 @@ def configure_logging(log_name: str = "onetool", level: str | None = None) -> No
         format="{extra[dev]}",
         colorize=False,
         backtrace=True,
-        diagnose=True,
+        diagnose=False,
         rotation="10 MB",
         retention="5 days",
     )
