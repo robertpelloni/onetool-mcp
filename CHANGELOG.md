@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2] - 2026-04-03
+
+### Fix
+- **Installation** — `onetool-pack` is now bundled directly into the wheel; no separate package install required on new machines
+
+---
+
 ## [2.2.1] - 2026-04-03
 
 ### CLI: `onetool direct`

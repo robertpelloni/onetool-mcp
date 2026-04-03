@@ -1,6 +1,6 @@
 [project]
 name = "onetool-mcp"
-version = "2.2.1"
+version = "2.2.2"
 description = "🧿 One MCP for developers - No tool tax, no context rot. 100+ tools including Brave, Google, Context7, Excalidraw, AWS, Version Checker, Excel, File Ops, Database, Playwright, Chrome DevTools and many more."
 mcpName = "io.github.beycom/onetool"
 readme = "README.md"
@@ -40,7 +40,6 @@ dependencies = [
     "pyrage>=1.3.0",
     "keyring>=25.7.0",
     "resvg-py>=0.2.6",
-    "onetool-pack",               # Shared pack utilities (logging, config, http, cache, etc.)
     "uvicorn>=0.30",              # ASGI server for `onetool direct` HTTP host
 ]
 
@@ -86,7 +85,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ot", "src/ottools", "src/onetool", "src/otdev", "src/otutil"]
+packages = ["src/ot", "src/ottools", "src/onetool", "src/otdev", "src/otutil", "packages/onetool-pack/src/otpack"]
 artifacts = ["src/ottools/_panel/dist/**"]
 
 [dependency-groups]

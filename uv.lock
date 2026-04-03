@@ -2165,7 +2165,7 @@ wheels = [
 
 [[package]]
 name = "onetool-bench"
-version = "2.2.1"
+version = "2.2.2"
 source = { editable = "packages/onetool-bench" }
 dependencies = [
     { name = "onetool-mcp" },
@@ -2180,7 +2180,7 @@ requires-dist = [
 
 [[package]]
 name = "onetool-mcp"
-version = "2.2.1"
+version = "2.2.2"
 source = { editable = "." }
 dependencies = [
     { name = "docstring-parser" },
@@ -2191,7 +2191,6 @@ dependencies = [
     { name = "keyring" },
     { name = "loguru" },
     { name = "mcp" },
-    { name = "onetool-pack" },
     { name = "openai" },
     { name = "pillow" },
     { name = "pillow-heif" },
@@ -2285,7 +2284,6 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "mcp", specifier = ">=1.26.0" },
     { name = "onetool-mcp", extras = ["util", "dev"], marker = "extra == 'all'" },
-    { name = "onetool-pack", editable = "packages/onetool-pack" },
     { name = "openai", specifier = ">=2.30.0" },
     { name = "openpyxl", marker = "extra == 'util'", specifier = ">=3.1.5" },
     { name = "pathspec", marker = "extra == 'util'", specifier = ">=1.0.4" },
@@ -2334,7 +2332,7 @@ docs = [
 
 [[package]]
 name = "onetool-pack"
-version = "2.2.1"
+version = "2.2.2"
 source = { editable = "packages/onetool-pack" }
 dependencies = [
     { name = "httpx" },
