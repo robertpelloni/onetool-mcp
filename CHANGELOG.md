@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3] - 2026-05-19
+
+### Fix
+- **Image Tool** — Added Linux clipboard support (`wl-paste`, `xclip`) for `ot_image` to avoid `NotImplementedError`.
+
+---
+
 ## [2.2.2] - 2026-04-03
 
 ### Fix
