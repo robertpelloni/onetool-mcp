@@ -135,3 +135,6 @@ tests/explore/*-results.md
 
 # Test data (downloaded via `just test::setup`)
 tests/data/
+
+# Jules AI session logs (auto-generated, not needed in repo)
+.jules/sessions/
