@@ -94,7 +94,6 @@ def resolve_source(img: str) -> tuple[str, bytes | str]:
     Raises:
         FileNotFoundError: If a file path does not exist.
         ValueError: If a URL does not return image bytes.
-        NotImplementedError: If clipboard is requested on Linux.
         RuntimeError: For other unrecoverable load failures.
     """
     if img in ("clip", "clipboard"):

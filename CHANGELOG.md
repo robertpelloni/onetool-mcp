@@ -201,3 +201,6 @@ Agent harnesses can invoke tools via subprocess or HTTP rather than MCP. `onetoo
 - add transform_file and data param
 - remove code_search tool
 - remove timed tool
+
+### Chore
+- **Image Tool** — Removed outdated `NotImplementedError` handling in `ot_image` loading logic since Linux clipboard is now supported.
