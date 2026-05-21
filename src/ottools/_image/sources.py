@@ -94,7 +94,6 @@ def resolve_source(img: str) -> tuple[str, bytes | str]:
     Raises:
         FileNotFoundError: If a file path does not exist.
         ValueError: If a URL does not return image bytes.
-        NotImplementedError: If clipboard is requested on Linux.
         RuntimeError: For other unrecoverable load failures.
     """
     if img in ("clip", "clipboard"):
@@ -178,22 +177,45 @@ def _grab_clipboard() -> bytes:
         PNG bytes of the clipboard image.
 
     Raises:
-        NotImplementedError: On Linux (not yet supported).
         ValueError: If the clipboard contains no image.
-        ImportError: If Pillow is not installed.
+        ImportError: If Pillow is not installed (on Windows/macOS).
     """
     if sys.platform == "linux":
-        raise NotImplementedError(
-            "Clipboard capture is not supported on Linux. "
-            "Use a file path or URL instead."
+        import subprocess
+
+        # Try Wayland (wl-paste)
+        try:
+            p = subprocess.run(
+                ["wl-paste", "--type", "image/png"],
+                capture_output=True,
+                check=False,
+            )
+            if p.returncode == 0 and p.stdout:
+                return p.stdout
+        except FileNotFoundError:
+            pass
+
+        # Try X11 (xclip)
+        try:
+            p = subprocess.run(
+                ["xclip", "-selection", "clipboard", "-t", "image/png", "-o"],
+                capture_output=True,
+                check=False,
+            )
+            if p.returncode == 0 and p.stdout:
+                return p.stdout
+        except FileNotFoundError:
+            pass
+
+        raise ValueError(
+            "No image found in clipboard, or required tools (wl-paste, xclip) are missing."
         )
 
     try:
         from PIL import Image, ImageGrab
     except ImportError as exc:
         raise ImportError(
-            "Pillow is required for clipboard capture. "
-            "Install with: pip install Pillow"
+            "Pillow is required for clipboard capture. Install with: pip install Pillow"
         ) from exc
 
     import io

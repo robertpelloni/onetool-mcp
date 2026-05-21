@@ -112,9 +112,6 @@ def load(*, img: str, handle: str | None = None, max_edge: int = 1568) -> dict[s
         # Resolve source type and raw bytes
         try:
             source_type, data = resolve_source(img)
-        except NotImplementedError as e:
-            s.add(error="clipboard_unsupported")
-            return {"error": str(e)}
         except (FileNotFoundError, IsADirectoryError, ValueError, RuntimeError) as e:
             s.add(error=str(e))
             return {"error": str(e)}

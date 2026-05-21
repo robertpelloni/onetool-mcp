@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3] - 2026-05-19
+
+### Fix
+- **Image Tool** — Added Linux clipboard support (`wl-paste`, `xclip`) for `ot_image` to avoid `NotImplementedError`.
+
+---
+
 ## [2.2.2] - 2026-04-03
 
 ### Fix
@@ -194,3 +201,6 @@ Agent harnesses can invoke tools via subprocess or HTTP rather than MCP. `onetoo
 - add transform_file and data param
 - remove code_search tool
 - remove timed tool
+
+### Chore
+- **Image Tool** — Removed outdated `NotImplementedError` handling in `ot_image` loading logic since Linux clipboard is now supported.

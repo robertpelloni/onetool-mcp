@@ -10,7 +10,7 @@ import base64
 import io
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -19,6 +19,7 @@ import pytest
 
 try:
     import cairosvg  # noqa: F401
+
     _CAIROSVG_AVAILABLE = True
 except (ImportError, OSError):
     _CAIROSVG_AVAILABLE = False
@@ -65,7 +66,7 @@ def _make_meta(
         "resized": False,
         "max_edge": 1568,
         "original_format": "PNG",
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "summary": None,
     }
 
@@ -83,7 +84,9 @@ class TestImageConfig:
     @patch("ottools._image.config.get_tool_config")
     @patch("ottools._image.config.get_secret")
     @patch("ot.config.get_llm_config", side_effect=Exception("no llm config"))
-    def test_defaults(self, _mock_llm: MagicMock, mock_secret: MagicMock, mock_gtc: MagicMock) -> None:
+    def test_defaults(
+        self, _mock_llm: MagicMock, mock_secret: MagicMock, mock_gtc: MagicMock
+    ) -> None:
         from ottools._image.config import Config, get_image_config
 
         mock_gtc.return_value = Config()
@@ -105,8 +108,8 @@ class TestImageConfig:
     def test_base_url_and_model_fallback_from_llm_config(
         self, mock_glc: MagicMock, mock_gtc: MagicMock
     ) -> None:
-        from ottools._image.config import Config, get_image_config
         from ot.config.models import LlmConfig
+        from ottools._image.config import Config, get_image_config
 
         mock_gtc.return_value = Config()
         mock_glc.return_value = LlmConfig(
@@ -181,7 +184,9 @@ class TestValidateImageBytes:
     def test_valid_svg(self) -> None:
         from ottools._image.sources import validate_image_bytes
 
-        fmt = validate_image_bytes(b"<svg xmlns='http://www.w3.org/2000/svg'>", "icon.svg")
+        fmt = validate_image_bytes(
+            b"<svg xmlns='http://www.w3.org/2000/svg'>", "icon.svg"
+        )
         assert fmt == "SVG"
 
     def test_valid_svg_xml_declaration(self) -> None:
@@ -199,7 +204,9 @@ class TestValidateImageBytes:
     def test_valid_svg_uppercase(self) -> None:
         from ottools._image.sources import validate_image_bytes
 
-        fmt = validate_image_bytes(b"<SVG xmlns='http://www.w3.org/2000/svg'>", "icon.svg")
+        fmt = validate_image_bytes(
+            b"<SVG xmlns='http://www.w3.org/2000/svg'>", "icon.svg"
+        )
         assert fmt == "SVG"
 
     def test_invalid_format_raises(self) -> None:
@@ -275,13 +282,19 @@ class TestResolveSource:
             _load_file("/nonexistent/path/image.png")
 
     @pytest.mark.skipif(sys.platform != "linux", reason="Linux-only")
-    def test_clipboard_linux_raises(self) -> None:
+    def test_clipboard_linux_raises_if_tools_missing(self) -> None:
+        from unittest.mock import MagicMock, patch
+
         from ottools._image.sources import _grab_clipboard
 
-        with pytest.raises(NotImplementedError, match="Linux"):
-            _grab_clipboard()
+        mock_run = MagicMock(side_effect=FileNotFoundError)
+        with patch("subprocess.run", mock_run):
+            with pytest.raises(ValueError, match="No image found"):
+                _grab_clipboard()
 
-    @pytest.mark.skipif(sys.platform == "linux", reason="clipboard not supported on Linux")
+    @pytest.mark.skipif(
+        sys.platform == "linux", reason="Pillow clipboard not supported on Linux"
+    )
     def test_clipboard_file_reference_loads_first_path(self, tmp_path: Path) -> None:
         """list return from ImageGrab.grabclipboard() resolves to first path."""
         from ottools._image.sources import _grab_clipboard
@@ -295,7 +308,9 @@ class TestResolveSource:
 
         assert result == png
 
-    @pytest.mark.skipif(sys.platform == "linux", reason="clipboard not supported on Linux")
+    @pytest.mark.skipif(
+        sys.platform == "linux", reason="Pillow clipboard not supported on Linux"
+    )
     def test_clipboard_empty_list_raises(self) -> None:
         from ottools._image.sources import _grab_clipboard
 
@@ -360,7 +375,7 @@ class TestPrepareForModel:
         assert result.model_bytes[:4] == b"\x89PNG"
 
     def test_heic_registers_pillow_heif(self) -> None:
-        from unittest.mock import MagicMock, call, patch
+        from unittest.mock import MagicMock, patch
 
         from ottools._image.resize import prepare_for_model
 
@@ -377,7 +392,9 @@ class TestPrepareForModel:
         with patch.dict("sys.modules", {"pillow_heif": mock_heif}):
             with patch("PIL.Image.open", return_value=mock_img) as mock_open:
                 mock_img.resize.return_value = mock_img
-                mock_img.save = MagicMock(side_effect=lambda buf, format: buf.write(b"\x89PNG\r\n\x1a\n"))
+                mock_img.save = MagicMock(
+                    side_effect=lambda buf, format: buf.write(b"\x89PNG\r\n\x1a\n")
+                )
                 prepare_for_model(heic_bytes, max_edge=1568)
 
         mock_heif.register_heif_opener.assert_called_once()
@@ -399,7 +416,9 @@ class TestPrepareForModel:
             if original is not None:
                 sys.modules["pillow_heif"] = original
 
-    @pytest.mark.skipif(not _CAIROSVG_AVAILABLE, reason="cairosvg/libcairo not available")
+    @pytest.mark.skipif(
+        not _CAIROSVG_AVAILABLE, reason="cairosvg/libcairo not available"
+    )
     def test_svg_rasterized_to_png(self) -> None:
         from ottools._image.resize import prepare_for_model
 
@@ -431,7 +450,9 @@ class TestStore:
         from ottools._image import store
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
-            store.save_image(_make_png_bytes(), "img_abc12345", _make_meta("img_abc12345"))
+            store.save_image(
+                _make_png_bytes(), "img_abc12345", _make_meta("img_abc12345")
+            )
             loaded = store.load_meta("img_abc12345")
             assert loaded is not None
             assert loaded["handle"] == "img_abc12345"
@@ -447,7 +468,9 @@ class TestStore:
         from ottools._image import store
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
-            store.save_image(_make_png_bytes(), "img_test1", _make_meta("img_test1", dims=[50, 50]))
+            store.save_image(
+                _make_png_bytes(), "img_test1", _make_meta("img_test1", dims=[50, 50])
+            )
             store.save_summary("img_test1", {"text": "hello", "mode": "light"})
             loaded = store.load_meta("img_test1")
             assert loaded is not None
@@ -458,7 +481,11 @@ class TestStore:
 
         with patch.object(store, "_images_dir", return_value=tmp_path):
             sha = "a" * 64
-            store.save_image(_make_png_bytes(10, 10), "img_aaaaaaaa", _make_meta("img_aaaaaaaa", dims=[10, 10], sha=sha))
+            store.save_image(
+                _make_png_bytes(10, 10),
+                "img_aaaaaaaa",
+                _make_meta("img_aaaaaaaa", dims=[10, 10], sha=sha),
+            )
             found = store.find_by_hash(sha)
             assert found == "img_aaaaaaaa"
 
@@ -469,7 +496,6 @@ class TestStore:
             assert store.find_by_hash("b" * 64) is None
 
     def test_lru_eviction_at_limit(self) -> None:
-        from ottools._image import store
         from ot.utils.cache import Cache
 
         # Use a small temp cache to test eviction (session_cache is sized at import)
@@ -539,6 +565,7 @@ class TestVision:
 
     def setup_method(self) -> None:
         import ottools._image.vision as _v
+
         _v._client = None
         _v._client_key = ("", "")
         self._api_key_patch = patch(
@@ -588,7 +615,9 @@ class TestVision:
 
         with patch("ottools._image.vision.OpenAI") as MockOpenAI:
             MockOpenAI.return_value.chat.completions.create.return_value = mock_response
-            answers = ask_questions(_make_png_bytes(), ["What is in the image?"], config)
+            answers = ask_questions(
+                _make_png_bytes(), ["What is in the image?"], config
+            )
 
         assert answers == ["It is a cat."]
 
@@ -597,9 +626,9 @@ class TestVision:
 
         config = self._make_config()
         mock_response = MagicMock()
-        mock_response.choices[0].message.content = (
-            "1. A screenshot of a terminal.\n2. Yes, it is dark mode."
-        )
+        mock_response.choices[
+            0
+        ].message.content = "1. A screenshot of a terminal.\n2. Yes, it is dark mode."
 
         with patch("ottools._image.vision.OpenAI") as MockOpenAI:
             MockOpenAI.return_value.chat.completions.create.return_value = mock_response
@@ -674,7 +703,9 @@ class TestVision:
 
         config = self._make_config()
         mock_response = MagicMock()
-        mock_response.choices[0].message.content = (
+        mock_response.choices[
+            0
+        ].message.content = (
             "### 1. A screenshot of a terminal.\n### 2. Yes, it is dark mode."
         )
 
@@ -696,9 +727,9 @@ class TestVision:
 
         config = self._make_config()
         mock_response = MagicMock()
-        mock_response.choices[0].message.content = (
-            "**1.** Python code editor.\n**2.** Light mode."
-        )
+        mock_response.choices[
+            0
+        ].message.content = "**1.** Python code editor.\n**2.** Light mode."
 
         with patch("ottools._image.vision.OpenAI") as MockOpenAI:
             MockOpenAI.return_value.chat.completions.create.return_value = mock_response
@@ -837,14 +868,35 @@ class TestLoad:
         assert "error" in result
         assert "already exists" in result["error"]
 
-    def test_linux_clipboard_returns_error(self) -> None:
+    def test_linux_clipboard_raises_if_tools_missing(self) -> None:
+        from unittest.mock import MagicMock, patch
+
         from ottools._image import tools
 
+        mock_run = MagicMock(side_effect=FileNotFoundError)
+
         with patch("ottools._image.sources.sys.platform", "linux"):
-            result = tools.load(img="clip")
+            with patch("subprocess.run", mock_run):
+                result = tools.load(img="clip")
 
         assert "error" in result
-        assert "linux" in result["error"].lower()
+        assert "no image found" in result["error"].lower()
+
+    def test_linux_clipboard_success_wl_paste(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        from ottools._image import tools
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        # Use a minimal valid PNG
+        mock_result.stdout = b"\x89PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0dIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0aIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\x0d\x0a-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+
+        with patch("ottools._image.sources.sys.platform", "linux"):
+            with patch("subprocess.run", return_value=mock_result):
+                result = tools.load(img="clip")
+
+        assert "handle" in result
 
     def test_background_summary_spawned_on_load(self, tmp_path: Path) -> None:
         from ottools._image import store, tools
@@ -875,13 +927,17 @@ class TestLoad:
         assert call_kwargs.kwargs.get("daemon") is True
         mock_t.start.assert_called_once()
 
-    def test_background_summary_worker_skips_when_no_model(self, tmp_path: Path) -> None:
+    def test_background_summary_worker_skips_when_no_model(
+        self, tmp_path: Path
+    ) -> None:
         """Worker exits early when model is not configured; no API call made."""
         from ottools._image import tools
         from ottools._image.config import Config
 
-        with patch("ottools._image.tools.get_image_config") as mock_cfg, \
-             patch("ottools._image.tools.extract_summary") as mock_extract:
+        with (
+            patch("ottools._image.tools.get_image_config") as mock_cfg,
+            patch("ottools._image.tools.extract_summary") as mock_extract,
+        ):
             mock_cfg.return_value = Config(session_cache_size=10, model="")
             tools._background_summarise("img_abc12345", b"fake_bytes")
 
@@ -895,6 +951,7 @@ class TestAsk:
 
     def setup_method(self) -> None:
         import ottools._image.vision as _v
+
         _v._client = None
         _v._client_key = ("", "")
         self._thread_patcher = patch("ottools._image.tools.threading.Thread")
@@ -945,7 +1002,9 @@ class TestAsk:
                 result = tools.ask(img=handle, q="Describe the image.")
 
         assert "result" in result
-        assert result["result"] == [{"question": "Describe the image.", "answer": "A red square."}]
+        assert result["result"] == [
+            {"question": "Describe the image.", "answer": "A red square."}
+        ]
         assert result["handle"] == handle
 
     def test_unknown_handle_returns_error(self, tmp_path: Path) -> None:
@@ -1003,7 +1062,9 @@ class TestAsk:
                 result = tools.ask(img=bare, q="Describe the image.")
 
         assert "result" in result
-        assert result["result"] == [{"question": "Describe the image.", "answer": "A red square."}]
+        assert result["result"] == [
+            {"question": "Describe the image.", "answer": "A red square."}
+        ]
 
 
 @pytest.mark.unit
@@ -1013,6 +1074,7 @@ class TestSummary:
 
     def setup_method(self) -> None:
         import ottools._image.vision as _v
+
         _v._client = None
         _v._client_key = ("", "")
         self._thread_patcher = patch("ottools._image.tools.threading.Thread")
@@ -1104,7 +1166,9 @@ class TestSummary:
     def test_clip_ask_delegates_to_ask(self, tmp_path: Path) -> None:
         from ottools._image import tools
 
-        with patch.object(tools, "ask", return_value={"result": [], "handle": "#h"}) as mock_ask:
+        with patch.object(
+            tools, "ask", return_value={"result": [], "handle": "#h"}
+        ) as mock_ask:
             tools.clip_ask(q="What is this?")
 
         mock_ask.assert_called_once_with(img="clip", q="What is this?", max_edge=1568)
@@ -1112,7 +1176,9 @@ class TestSummary:
     def test_clip_ask_custom_max_edge(self, tmp_path: Path) -> None:
         from ottools._image import tools
 
-        with patch.object(tools, "ask", return_value={"result": [], "handle": "#h"}) as mock_ask:
+        with patch.object(
+            tools, "ask", return_value={"result": [], "handle": "#h"}
+        ) as mock_ask:
             tools.clip_ask(q="Describe", max_edge=800)
 
         mock_ask.assert_called_once_with(img="clip", q="Describe", max_edge=800)
@@ -1120,7 +1186,11 @@ class TestSummary:
     def test_clip_view_delegates_to_summary(self, tmp_path: Path) -> None:
         from ottools._image import tools
 
-        with patch.object(tools, "summary", return_value={"summary": {}, "handle": "#h", "cached": False}) as mock_summary:
+        with patch.object(
+            tools,
+            "summary",
+            return_value={"summary": {}, "handle": "#h", "cached": False},
+        ) as mock_summary:
             tools.clip_view()
 
         mock_summary.assert_called_once_with(img="clip")
@@ -1147,7 +1217,7 @@ class TestLifecycle:
             "resized": False,
             "max_edge": 1568,
             "original_format": "PNG",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "summary": None,
         }
         meta.update(overrides)
@@ -1222,8 +1292,8 @@ class TestLifecycle:
         from ottools._image import store
         from ottools._image.lifecycle import purge_images
 
-        old_ts = (datetime.now(timezone.utc) - timedelta(hours=3)).isoformat()
-        new_ts = datetime.now(timezone.utc).isoformat()
+        old_ts = (datetime.now(UTC) - timedelta(hours=3)).isoformat()
+        new_ts = datetime.now(UTC).isoformat()
 
         self._write_meta(tmp_path, "img_old", created_at=old_ts)
         self._write_meta(tmp_path, "img_new", created_at=new_ts)
