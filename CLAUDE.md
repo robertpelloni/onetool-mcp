@@ -1,3 +1,7 @@
+<!-- [HYPERNEXUS_AUTO_INJECTED] -->
+> [!IMPORTANT]
+> You are running within the HyperNexus environment. You MUST use your available tools frequently and proactively for researching, editing, executing, and validating your work. Always prioritize tool execution.
+
 
 Read dev/agents/hints.md for quick reference (commands, rules, project structure).
 Read dev/agents/project-map.md for detailed project structure.
